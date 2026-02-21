@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel da Coordenação</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+    <main class="admin-page">
+        <header class="admin-header">
+            <h1>Painel da Coordenação</h1>
+            <p>Gestão de professores, cotas, recursos e relatórios.</p>
+            <div class="scheduler-actions">
+                <button id="btnVoltarServicos" type="button">Voltar aos serviços</button>
+                <button id="btnSair" type="button">Sair</button>
+            </div>
+        </header>
+
+        <section class="admin-grid">
+            <article class="admin-card">
+                <h2>Cadastrar professor</h2>
+                <form id="formProfessor" class="admin-form">
+                    <input id="profNome" type="text" placeholder="Nome" required>
+                    <input id="profEmail" type="email" placeholder="Email" required>
+                    <input id="profSenha" type="text" placeholder="Senha inicial" required>
+                    <input id="profAulas" type="number" min="0" placeholder="Aulas semanais" value="0" required>
+                    <input id="profTurmas" type="number" min="0" placeholder="Quantidade de turmas" value="0" required>
+                    <button class="btn-destaque" type="submit">Cadastrar</button>
+                </form>
+                <p id="msgProfessor"></p>
+            </article>
+
+            <article class="admin-card">
+                <h2>Regras de cota proporcional</h2>
+                <form id="formCotaRegras" class="admin-form">
+                    <input id="cotaBase" type="number" min="0" placeholder="Base de páginas" required>
+                    <input id="cotaPorAula" type="number" min="0" placeholder="Páginas por aula" required>
+                    <input id="cotaPorTurma" type="number" min="0" placeholder="Páginas por turma" required>
+                    <button class="btn-destaque" type="submit">Salvar regras</button>
+                </form>
+
+                <div class="admin-inline">
+                    <input id="mesReferenciaCota" type="month">
+                    <button id="btnRecalcularCotas" type="button">Recalcular cotas do mês</button>
+                </div>
+                <p id="msgCotas"></p>
+            </article>
+
+            <article class="admin-card admin-card-wide">
+                <h2>Professores e cotas</h2>
+                <ul id="listaProfessoresAdmin" class="admin-list"></ul>
+            </article>
+
+            <article class="admin-card">
+                <h2>Cadastrar recurso</h2>
+                <form id="formRecurso" class="admin-form">
+                    <input id="recursoNome" type="text" placeholder="Nome do recurso" required>
+                    <input id="recursoTipo" type="text" placeholder="Tipo (Projetor, Notebook...)" required>
+                    <input id="recursoDescricao" type="text" placeholder="Descrição (opcional)">
+                    <button class="btn-destaque" type="submit">Cadastrar recurso</button>
+                </form>
+                <p id="msgRecurso"></p>
+            </article>
+
+            <article class="admin-card">
+                <h2>Recursos cadastrados</h2>
+                <ul id="listaRecursosAdmin" class="admin-list"></ul>
+            </article>
+
+            <article class="admin-card admin-card-wide">
+                <h2>Relatórios</h2>
+                <div class="admin-inline">
+                    <input id="relDataInicio" type="date">
+                    <input id="relDataFim" type="date">
+                    <button id="btnGerarRelatorios" type="button">Gerar relatórios</button>
+                </div>
+                <p id="msgRelatorios"></p>
+
+                <h3>Impressão por professor</h3>
+                <ul id="relatorioImpressaoAdmin" class="admin-list"></ul>
+
+                <h3>Uso de recursos por equipamento</h3>
+                <ul id="relatorioRecursosAdmin" class="admin-list"></ul>
+
+                <h3>Uso de recursos por professor</h3>
+                <ul id="relatorioRecursosProfessorAdmin" class="admin-list"></ul>
+            </article>
+
+            <article class="admin-card">
+                <h2>Fila de impressão atual</h2>
+                <ul id="fila-admin" class="admin-list"></ul>
+            </article>
+
+            <article class="admin-card">
+                <h2>Histórico de impressão</h2>
+                <div class="admin-inline">
+                    <input type="date" id="inicio">
+                    <input type="date" id="fim">
+                    <button id="btnBuscarHistorico" type="button">Filtrar</button>
+                </div>
+                <ul id="historico-admin" class="admin-list"></ul>
+            </article>
+        </section>
+    </main>
+
+    <script src="/static/js/admin.js"></script>
+</body>
+
+</html>

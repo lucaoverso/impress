@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Professor - Impressão</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+
+    <main class="print-page">
+        <section class="print-toolbar">
+            <h3>📄 Nova impressão</h3>
+            <div class="scheduler-actions">
+                <button id="btnVoltarServicos" type="button">Voltar aos serviços</button>
+                <button id="btnIrAgendamento" type="button">Abrir agendamento</button>
+                <button id="btnSair" type="button">Sair</button>
+            </div>
+            <input type="file" id="arquivo" accept=".pdf">
+            <select id="orientacao">
+                <option value="retrato">Retrato</option>
+                <option value="paisagem">Paisagem</option>
+            </select>
+
+            <input type="number" id="copias" placeholder="Cópias" min="1" step="1" value="1">
+            <label>
+                <input type="checkbox" id="duplex">
+                Frente e verso
+            </label>
+
+            <select id="paginasPorFolha">
+                <option value="1">1 página por folha</option>
+                <option value="2">2 páginas por folha</option>
+                <option value="4">4 páginas por folha</option>
+            </select>
+            <input
+                type="text"
+                id="intervaloPaginas"
+                placeholder="Intervalo de páginas (ex: 1-5, 8, 10-14)"
+            >
+
+            <button id="btnEnviar">Enviar</button>
+            <button id="btnAnterior">⬅</button>
+            <span id="contadorFolha"></span>
+            <button id="btnProxima">➡</button>
+
+            <p id="msg"></p>
+            <p id="consumo"></p>
+            <p id="intervaloInfo"></p>
+        </section>
+
+        <section class="print-preview-pane">
+            <div id="previewContainer"></div>
+        </section>
+    </main>
+
+    <hr>
+
+    <!-- COTA -->
+    <section>
+        <h3>📊 Sua cota</h3>
+        <p id="cota">Carregando...</p>
+    </section>
+
+    <hr>
+    <!-- FILA -->
+    <section>
+        <h3>🕒 Seus pedidos</h3>
+        <ul id="lista-jobs"></ul>
+    </section>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+            "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    </script>
+    <script src="/static/js/professor.js"></script>
+</body>
+
+</html>

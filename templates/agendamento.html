@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendamento de Equipamentos</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+    <main class="scheduler-page">
+        <section class="scheduler-toolbar">
+            <h2>Agendamento de Equipamentos</h2>
+            <p id="agendamentoUsuario"></p>
+
+            <div class="scheduler-actions">
+                <button id="btnVoltarServicos" type="button">Voltar aos serviços</button>
+                <button id="btnIrImpressao" type="button">Abrir impressão</button>
+                <button id="btnSair" type="button">Sair</button>
+            </div>
+
+            <hr>
+
+            <h3>Novo agendamento</h3>
+            <label for="recursoSelect">Recurso</label>
+            <select id="recursoSelect"></select>
+
+            <label for="dataReserva">Data</label>
+            <input id="dataReserva" type="date">
+
+            <label for="turnoReserva">Turno</label>
+            <select id="turnoReserva"></select>
+
+            <label for="aulaReserva">Aula</label>
+            <select id="aulaReserva"></select>
+
+            <label for="turmaReserva">Turma</label>
+            <select id="turmaReserva"></select>
+
+            <label for="observacaoReserva">Observação</label>
+            <textarea id="observacaoReserva" rows="3" placeholder="Opcional"></textarea>
+
+            <button id="btnAgendar" class="btn-destaque" type="button">Agendar recurso</button>
+            <p id="msgAgendamento"></p>
+        </section>
+
+        <section class="scheduler-content">
+            <article class="calendar-card">
+                <header class="calendar-header">
+                    <button id="btnMesAnterior" type="button">◀</button>
+                    <h3 id="mesAtual"></h3>
+                    <button id="btnMesProximo" type="button">▶</button>
+                    <button id="btnMesHoje" type="button">Hoje</button>
+                </header>
+                <div id="calendarioGrid" class="calendar-grid"></div>
+            </article>
+
+            <article class="calendar-card">
+                <h3 id="tituloDia">Reservas do dia</h3>
+                <ul id="listaReservasDia"></ul>
+            </article>
+
+            <article class="calendar-card">
+                <h3>Meus agendamentos</h3>
+                <ul id="listaMinhasReservas"></ul>
+            </article>
+        </section>
+    </main>
+
+    <script src="/static/js/agendamento.js"></script>
+</body>
+
+</html>

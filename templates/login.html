@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Suíte Escolar</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+    <main class="auth-page">
+        <section class="auth-card">
+            <header class="auth-header">
+                <p class="auth-badge">Portal Escolar</p>
+                <h1>Suíte Escolar</h1>
+                <p>Acesse sua conta para continuar.</p>
+            </header>
+
+            <form class="form" onsubmit="event.preventDefault(); login();">
+                <h2>Entrar</h2>
+                <input id="email" type="email" autocomplete="email" placeholder="Email" required>
+                <input id="senha" type="password" autocomplete="current-password" placeholder="Senha" required>
+                <button type="submit" class="btn-destaque">Entrar</button>
+                <p id="erro" role="alert" aria-live="polite"></p>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>Desenvolvido por Lucas Sbaraini</p>
+        <p>2026</p>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+
+</html>

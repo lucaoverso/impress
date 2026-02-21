@@ -1,6 +1,4 @@
 from pydantic import BaseModel
-from datetime import datetime
-from pydantic import BaseModel
 
 class JobCreate(BaseModel):
     copias: int
@@ -26,4 +24,34 @@ class UsuarioOut(BaseModel):
     email: str
     perfil: str
 
+class AgendamentoIn(BaseModel):
+    recurso_id: int
+    data: str
+    turno: str
+    aula: str
+    turma: str
+    observacao: str = ""
 
+class ProfessorCreateIn(BaseModel):
+    nome: str
+    email: str
+    senha: str
+    aulas_semanais: int = 0
+    turmas_quantidade: int = 0
+
+class ProfessorCargaIn(BaseModel):
+    aulas_semanais: int
+    turmas_quantidade: int
+
+class RecursoCreateIn(BaseModel):
+    nome: str
+    tipo: str
+    descricao: str = ""
+
+class RecursoStatusIn(BaseModel):
+    ativo: bool
+
+class RegrasCotaIn(BaseModel):
+    base_paginas: int
+    paginas_por_aula: int
+    paginas_por_turma: int
