@@ -10,9 +10,14 @@ const headers = {
 
 let pdfDoc = null;
 let folhaAtual = 1;
-const QUALIDADE_MAX_DPR = 2.5;
-const FOLHA_PADDING = 12;
-const FOLHA_GAP = 10;
+let renderTokenAtual = 0;
+let resizeTimer = null;
+const QUALIDADE_MAX_DPR = 1.4;
+const FOLHA_PADDING = 8;
+const FOLHA_GAP = 6;
+const LARGURA_MINIATURA_MOBILE = 164;
+const LABEL_PREVIEW_RESERVA = 72;
+const RESERVA_BORDA_PREVIEW = 24;
 
 const TAMANHO_FOLHA = {
     retrato: { largura: 794, altura: 1123 },
@@ -31,6 +36,63 @@ function obterConfigLayout(paginasPorFolha) {
         return { colunas: 2, linhas: 1 };
     }
     return { colunas: 2, linhas: 2 };
+}
+
+function obterDimensoesMiniatura(tamanhoFolha, isMobile) {
+    const pane = document.querySelector(".print-preview-pane");
+
+    const larguraDisponivel = pane
+        ? Math.max(120, pane.clientWidth - RESERVA_BORDA_PREVIEW)
+        : Math.max(120, window.innerWidth - 56);
+    const alturaDisponivelBase = pane
+        ? Math.max(120, pane.clientHeight - RESERVA_BORDA_PREVIEW)
+        : Math.max(120, Math.floor(window.innerHeight * (isMobile ? 0.28 : 0.5)));
+
+    const alturaDisponivel = isMobile
+        ? Math.max(110, alturaDisponivelBase - LABEL_PREVIEW_RESERVA)
+        : alturaDisponivelBase;
+    const larguraAlvo = isMobile
+        ? Math.min(LARGURA_MINIATURA_MOBILE, larguraDisponivel)
+        : larguraDisponivel;
+    const escala = Math.min(
+        larguraAlvo / tamanhoFolha.largura,
+        alturaDisponivel / tamanhoFolha.altura
+    );
+
+    return {
+        largura: Math.max(96, Math.round(tamanhoFolha.largura * escala)),
+        altura: Math.max(110, Math.round(tamanhoFolha.altura * escala))
+    };
+}
+
+function mostrarPreviewVazio(texto = "Selecione um PDF para visualizar as páginas.") {
+    const container = el("previewContainer");
+    container.innerHTML = "";
+
+    const msg = document.createElement("p");
+    msg.className = "preview-empty";
+    msg.innerText = texto;
+    container.appendChild(msg);
+}
+
+function atualizarDestaqueFolha() {
+    const thumbs = document.querySelectorAll("#previewContainer .print-sheet-thumb");
+    thumbs.forEach((thumb) => {
+        const numeroFolha = Number(thumb.dataset.folha);
+        thumb.classList.toggle("is-active", numeroFolha === folhaAtual);
+    });
+}
+
+function centralizarFolhaAtiva(suave = true) {
+    const folhaAtiva = document.querySelector(`#previewContainer .print-sheet-thumb[data-folha="${folhaAtual}"]`);
+    if (!folhaAtiva) {
+        return;
+    }
+    folhaAtiva.scrollIntoView({
+        behavior: suave ? "smooth" : "auto",
+        block: "nearest",
+        inline: "center"
+    });
 }
 
 function obterOrientacaoPreview() {
@@ -201,6 +263,12 @@ async function carregarFila() {
 
 async function carregarPreview(file) {
     if (!file) {
+        pdfDoc = null;
+        folhaAtual = 1;
+        renderTokenAtual += 1;
+        mostrarPreviewVazio();
+        calcularConsumo();
+        atualizarContador();
         return;
     }
 
@@ -212,18 +280,22 @@ async function carregarPreview(file) {
 
 function atualizarPreview() {
     atualizarComportamentoOrientacao();
-    renderFolha();
     calcularConsumo();
     atualizarContador();
+    renderFolha();
 }
 
 function totalFolhasVisualizacao() {
     if (!pdfDoc) {
         return 0;
     }
-    const paginasPorFolha = Number(el("paginasPorFolha").value);
-    const paginasSelecionadas = obterPaginasSelecionadas();
-    return Math.max(1, Math.ceil(paginasSelecionadas.length / paginasPorFolha));
+    try {
+        const paginasPorFolha = Number(el("paginasPorFolha").value);
+        const paginasSelecionadas = obterPaginasSelecionadas();
+        return Math.max(1, Math.ceil(paginasSelecionadas.length / paginasPorFolha));
+    } catch {
+        return 0;
+    }
 }
 
 function atualizarContador() {
@@ -232,17 +304,48 @@ function atualizarContador() {
         return;
     }
     const total = totalFolhasVisualizacao();
+    if (!total) {
+        el("contadorFolha").innerText = "";
+        return;
+    }
     if (folhaAtual > total) {
         folhaAtual = total;
     }
     el("contadorFolha").innerText = `Folha ${folhaAtual} de ${total}`;
 }
 
+function irParaFolha(indiceFolha) {
+    if (!pdfDoc) {
+        return;
+    }
+    const total = totalFolhasVisualizacao();
+    if (!total) {
+        return;
+    }
+    const destino = Math.min(Math.max(1, indiceFolha), total);
+    if (destino === folhaAtual) {
+        return;
+    }
+
+    folhaAtual = destino;
+    atualizarContador();
+    const isMobile = window.innerWidth <= 980;
+    if (isMobile) {
+        atualizarDestaqueFolha();
+        centralizarFolhaAtiva();
+        return;
+    }
+    renderFolha();
+}
+
 async function renderFolha() {
     const container = el("previewContainer");
     container.innerHTML = "";
+    const isMobile = window.innerWidth <= 980;
+    container.classList.toggle("is-carousel", isMobile);
 
     if (!pdfDoc) {
+        mostrarPreviewVazio();
         return;
     }
 
@@ -251,6 +354,7 @@ async function renderFolha() {
         paginasSelecionadas = obterPaginasSelecionadas();
     } catch (err) {
         el("intervaloInfo").innerText = err.message;
+        mostrarPreviewVazio("Corrija o intervalo para visualizar as folhas.");
         return;
     }
 
@@ -258,74 +362,110 @@ async function renderFolha() {
     const orientacao = obterOrientacaoPreview();
     const configLayout = obterConfigLayout(paginasPorFolha);
     const tamanhoFolha = TAMANHO_FOLHA[orientacao];
-    const inicio = (folhaAtual - 1) * paginasPorFolha;
-    const paginasDaFolha = paginasSelecionadas.slice(inicio, inicio + paginasPorFolha);
+    const totalFolhas = Math.max(1, Math.ceil(paginasSelecionadas.length / paginasPorFolha));
 
-    const folha = document.createElement("div");
-    folha.classList.add("print-sheet");
-    folha.style.display = "grid";
-    folha.style.gap = `${FOLHA_GAP}px`;
-    folha.style.padding = `${FOLHA_PADDING}px`;
-    folha.style.background = "#fff";
-    folha.style.margin = "20px auto";
-    folha.style.boxShadow = "0 0 10px rgba(0,0,0,0.2)";
-    folha.style.width = `${tamanhoFolha.largura}px`;
-    folha.style.height = `${tamanhoFolha.altura}px`;
-    folha.style.gridTemplateColumns = `repeat(${configLayout.colunas}, minmax(0, 1fr))`;
-    folha.style.gridTemplateRows = `repeat(${configLayout.linhas}, minmax(0, 1fr))`;
+    if (folhaAtual > totalFolhas) {
+        folhaAtual = totalFolhas;
+    }
 
-    container.appendChild(folha);
+    const folhasParaRenderizar = isMobile
+        ? Array.from({ length: totalFolhas }, (_, i) => i + 1)
+        : [folhaAtual];
+    const tamanhoMiniatura = obterDimensoesMiniatura(tamanhoFolha, isMobile);
 
-    const areaLargura = tamanhoFolha.largura - (FOLHA_PADDING * 2) - (FOLHA_GAP * (configLayout.colunas - 1));
-    const areaAltura = tamanhoFolha.altura - (FOLHA_PADDING * 2) - (FOLHA_GAP * (configLayout.linhas - 1));
+    const areaLargura = tamanhoMiniatura.largura - (FOLHA_PADDING * 2) - (FOLHA_GAP * (configLayout.colunas - 1));
+    const areaAltura = tamanhoMiniatura.altura - (FOLHA_PADDING * 2) - (FOLHA_GAP * (configLayout.linhas - 1));
     const larguraCelula = areaLargura / configLayout.colunas;
     const alturaCelula = areaAltura / configLayout.linhas;
     const dpr = Math.min(window.devicePixelRatio || 1, QUALIDADE_MAX_DPR);
+    const token = ++renderTokenAtual;
 
-    for (const numeroPagina of paginasDaFolha) {
-        const page = await pdfDoc.getPage(numeroPagina);
-        const viewportBase = page.getViewport({ scale: 1 });
-        const escalaAjuste = Math.min(
-            larguraCelula / viewportBase.width,
-            alturaCelula / viewportBase.height
-        );
-        const escalaRender = escalaAjuste * dpr;
-        const viewport = page.getViewport({ scale: escalaRender });
+    for (const indiceFolha of folhasParaRenderizar) {
+        if (token !== renderTokenAtual) {
+            return;
+        }
 
-        const wrapper = document.createElement("div");
-        wrapper.classList.add("preview-cell");
-        wrapper.style.display = "flex";
-        wrapper.style.alignItems = "center";
-        wrapper.style.justifyContent = "center";
-        wrapper.style.overflow = "hidden";
-        wrapper.style.background = "#fff";
-        wrapper.style.border = "1px solid #e5e7eb";
+        const inicio = (indiceFolha - 1) * paginasPorFolha;
+        const paginasDaFolha = paginasSelecionadas.slice(inicio, inicio + paginasPorFolha);
 
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
+        const thumb = document.createElement("article");
+        thumb.classList.add("print-sheet-thumb");
+        thumb.dataset.folha = String(indiceFolha);
+        if (indiceFolha === folhaAtual) {
+            thumb.classList.add("is-active");
+        }
+        if (isMobile) {
+            thumb.addEventListener("click", () => irParaFolha(indiceFolha));
+        }
 
-        canvas.width = Math.floor(viewport.width);
-        canvas.height = Math.floor(viewport.height);
-        canvas.style.width = `${Math.floor(viewport.width / dpr)}px`;
-        canvas.style.height = `${Math.floor(viewport.height / dpr)}px`;
-        canvas.style.maxWidth = "100%";
-        canvas.style.maxHeight = "100%";
+        const folha = document.createElement("div");
+        folha.classList.add("print-sheet");
+        folha.style.display = "grid";
+        folha.style.gap = `${FOLHA_GAP}px`;
+        folha.style.padding = `${FOLHA_PADDING}px`;
+        folha.style.width = `${tamanhoMiniatura.largura}px`;
+        folha.style.height = `${tamanhoMiniatura.altura}px`;
+        folha.style.gridTemplateColumns = `repeat(${configLayout.colunas}, minmax(0, 1fr))`;
+        folha.style.gridTemplateRows = `repeat(${configLayout.linhas}, minmax(0, 1fr))`;
 
-        wrapper.appendChild(canvas);
-        folha.appendChild(wrapper);
+        thumb.appendChild(folha);
 
-        await page.render({
-            canvasContext: ctx,
-            viewport
-        }).promise;
+        const label = document.createElement("p");
+        label.classList.add("sheet-label");
+        label.innerText = `Folha ${indiceFolha} de ${totalFolhas}`;
+        thumb.appendChild(label);
+
+        container.appendChild(thumb);
+
+        for (const numeroPagina of paginasDaFolha) {
+            if (token !== renderTokenAtual) {
+                return;
+            }
+
+            const page = await pdfDoc.getPage(numeroPagina);
+            const viewportBase = page.getViewport({ scale: 1 });
+            const escalaAjuste = Math.min(
+                larguraCelula / viewportBase.width,
+                alturaCelula / viewportBase.height
+            );
+            const escalaRender = escalaAjuste * dpr;
+            const viewport = page.getViewport({ scale: escalaRender });
+
+            const wrapper = document.createElement("div");
+            wrapper.classList.add("preview-cell");
+
+            const canvas = document.createElement("canvas");
+            const ctx = canvas.getContext("2d");
+
+            canvas.width = Math.floor(viewport.width);
+            canvas.height = Math.floor(viewport.height);
+            canvas.style.width = `${Math.floor(viewport.width / dpr)}px`;
+            canvas.style.height = `${Math.floor(viewport.height / dpr)}px`;
+            canvas.style.maxWidth = "100%";
+            canvas.style.maxHeight = "100%";
+
+            wrapper.appendChild(canvas);
+            folha.appendChild(wrapper);
+
+            await page.render({
+                canvasContext: ctx,
+                viewport
+            }).promise;
+        }
+
+        for (let i = paginasDaFolha.length; i < paginasPorFolha; i++) {
+            const vazio = document.createElement("div");
+            vazio.classList.add("preview-cell");
+            vazio.style.border = "1px dashed #d1d5db";
+            vazio.style.background = "#f8fafc";
+            folha.appendChild(vazio);
+        }
     }
 
-    for (let i = paginasDaFolha.length; i < paginasPorFolha; i++) {
-        const vazio = document.createElement("div");
-        vazio.classList.add("preview-cell");
-        vazio.style.border = "1px dashed #d1d5db";
-        vazio.style.background = "#f8fafc";
-        folha.appendChild(vazio);
+    atualizarContador();
+    atualizarDestaqueFolha();
+    if (isMobile) {
+        centralizarFolhaAtiva(false);
     }
 }
 
@@ -333,21 +473,26 @@ function proximaFolha() {
     if (!pdfDoc) {
         return;
     }
-    const total = totalFolhasVisualizacao();
-    if (folhaAtual < total) {
-        folhaAtual += 1;
-        atualizarPreview();
-    }
+    irParaFolha(folhaAtual + 1);
 }
 
 function folhaAnterior() {
     if (!pdfDoc) {
         return;
     }
-    if (folhaAtual > 1) {
-        folhaAtual -= 1;
-        atualizarPreview();
+    irParaFolha(folhaAtual - 1);
+}
+
+function reagendarRenderAposResize() {
+    if (!pdfDoc) {
+        return;
     }
+    if (resizeTimer) {
+        clearTimeout(resizeTimer);
+    }
+    resizeTimer = setTimeout(() => {
+        renderFolha();
+    }, 120);
 }
 
 function registrarEventos() {
@@ -363,6 +508,7 @@ function registrarEventos() {
     el("btnEnviar").addEventListener("click", enviarImpressao);
     el("btnAnterior").addEventListener("click", folhaAnterior);
     el("btnProxima").addEventListener("click", proximaFolha);
+    window.addEventListener("resize", reagendarRenderAposResize);
 
     const btnVoltarServicos = el("btnVoltarServicos");
     const btnIrAgendamento = el("btnIrAgendamento");
@@ -397,3 +543,4 @@ registrarEventos();
 atualizarComportamentoOrientacao();
 carregarCota();
 carregarFila();
+mostrarPreviewVazio();

@@ -1,4 +1,9 @@
 async function login() {
+    const token = localStorage.getItem("token");
+    if (token) {
+        window.location.href = "/servicos";
+        return;
+    }
     const email = document.getElementById("email").value;
     const senha = document.getElementById("senha").value;
 

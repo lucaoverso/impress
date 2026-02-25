@@ -20,33 +20,43 @@ def get_connection():
 def criar_job(
     usuario_id: int,
     arquivo: str,
+    arquivo_path: str,
     copias: int,
     paginas_totais: int,
     paginas_por_folha: int = 1,
     duplex: bool = False,
     orientacao: str = "retrato",
+    intervalo_paginas: str = "",
+    printer_name: str = "",
+    cups_options: str = "{}",
 ):
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
         INSERT INTO jobs (
-            usuario_id, arquivo, copias, paginas_por_folha, duplex, orientacao,
-            paginas_totais, status, prioridade, criado_em
+            usuario_id, arquivo, arquivo_path, copias, paginas_por_folha, duplex, orientacao,
+            intervalo_paginas, cups_options, printer_name, paginas_totais, status, prioridade, criado_em
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'PENDENTE', 0, datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDENTE', 0, datetime('now'))
     """, (
         usuario_id,
         arquivo,
+        arquivo_path,
         copias,
         paginas_por_folha,
         int(bool(duplex)),
         orientacao,
+        intervalo_paginas,
+        cups_options,
+        printer_name or None,
         paginas_totais,
     ))
 
+    job_id = cursor.lastrowid
     conn.commit()
     conn.close()
+    return job_id
 
 def listar_jobs_ativos():
     conn = get_connection()
@@ -136,10 +146,16 @@ def criar_tabelas():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             usuario_id INTEGER,
             arquivo TEXT NOT NULL,
+            arquivo_path TEXT,
             copias INTEGER NOT NULL,
             paginas_por_folha INTEGER NOT NULL DEFAULT 1,
             duplex INTEGER NOT NULL DEFAULT 0,
             orientacao TEXT NOT NULL DEFAULT 'retrato',
+            intervalo_paginas TEXT NOT NULL DEFAULT '',
+            cups_options TEXT NOT NULL DEFAULT '{}',
+            printer_name TEXT,
+            cups_job_id INTEGER,
+            erro_mensagem TEXT,
             paginas_totais INTEGER NOT NULL DEFAULT 0,
             status TEXT NOT NULL,
             prioridade INTEGER NOT NULL,
@@ -267,6 +283,22 @@ def _garantir_colunas_jobs(cursor):
         cursor.execute(
             "ALTER TABLE jobs ADD COLUMN paginas_totais INTEGER NOT NULL DEFAULT 0"
         )
+    if "arquivo_path" not in colunas:
+        cursor.execute("ALTER TABLE jobs ADD COLUMN arquivo_path TEXT")
+    if "intervalo_paginas" not in colunas:
+        cursor.execute(
+            "ALTER TABLE jobs ADD COLUMN intervalo_paginas TEXT NOT NULL DEFAULT ''"
+        )
+    if "cups_options" not in colunas:
+        cursor.execute(
+            "ALTER TABLE jobs ADD COLUMN cups_options TEXT NOT NULL DEFAULT '{}'"
+        )
+    if "printer_name" not in colunas:
+        cursor.execute("ALTER TABLE jobs ADD COLUMN printer_name TEXT")
+    if "cups_job_id" not in colunas:
+        cursor.execute("ALTER TABLE jobs ADD COLUMN cups_job_id INTEGER")
+    if "erro_mensagem" not in colunas:
+        cursor.execute("ALTER TABLE jobs ADD COLUMN erro_mensagem TEXT")
     if "finalizado_em" not in colunas:
         cursor.execute("ALTER TABLE jobs ADD COLUMN finalizado_em TEXT")
 
@@ -661,15 +693,47 @@ def atualizar_status(job_id, status):
     if status in (STATUS_CONCLUIDO, STATUS_FINALIZADO_LEGADO):
         cursor.execute("""
             UPDATE jobs
-            SET status = ?, finalizado_em = datetime('now')
+            SET status = ?, finalizado_em = datetime('now'), erro_mensagem = NULL
             WHERE id = ?
         """, (status, job_id))
-    else:
+    elif status == "ERRO":
         cursor.execute("""
             UPDATE jobs
             SET status = ?
             WHERE id = ?
         """, (status, job_id))
+    else:
+        cursor.execute("""
+            UPDATE jobs
+            SET status = ?, erro_mensagem = NULL
+            WHERE id = ?
+        """, (status, job_id))
+
+    conn.commit()
+    conn.close()
+
+def atualizar_job_cups(job_id, cups_job_id, printer_name):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE jobs
+        SET cups_job_id = ?, printer_name = ?
+        WHERE id = ?
+    """, (cups_job_id, printer_name or None, job_id))
+
+    conn.commit()
+    conn.close()
+
+def atualizar_erro_job(job_id, erro_mensagem: str):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE jobs
+        SET erro_mensagem = ?
+        WHERE id = ?
+    """, (str(erro_mensagem)[:1000], job_id))
 
     conn.commit()
     conn.close()

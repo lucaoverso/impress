@@ -1,0 +1,18 @@
+[Unit]
+Description=Sistema Impress Worker (fila CUPS)
+After=network.target cups.service sistema-impress-api.service
+Requires=cups.service
+
+[Service]
+Type=simple
+User=sistema-impress
+Group=lp
+WorkingDirectory=/opt/sistema-impress
+EnvironmentFile=/opt/sistema-impress/.env
+ExecStart=/opt/sistema-impress/.venv/bin/python worker_main.py
+Restart=always
+RestartSec=3
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

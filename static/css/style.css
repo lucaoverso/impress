@@ -173,63 +173,499 @@ footer {
     }
 }
 
-.print-page {
-    display: grid;
-    grid-template-columns: 320px 1fr;
-    gap: 16px;
-    padding: 16px;
+.professor-page {
+    min-height: 100svh;
+    padding: 10px;
+    overflow: hidden;
+    background:
+        radial-gradient(circle at 20% 10%, #f2f2f6, transparent 38%),
+        linear-gradient(180deg, #d8d8dd 0%, #e2e2e7 58%, #ececef 100%);
 }
 
-.print-toolbar {
-    background: #f8fafc;
-    border: 1px solid #dbe2eb;
-    border-radius: 14px;
+.print-ios-layout {
+    width: min(1320px, 100%);
+    height: calc(100svh - 20px);
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: minmax(320px, 430px) minmax(0, 1fr);
+    gap: 12px;
+}
+
+.print-options-panel,
+.print-preview-stage {
+    min-height: 0;
+    border-radius: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.72);
+    background: rgba(239, 239, 244, 0.86);
+    backdrop-filter: blur(4px);
     padding: 14px;
+}
+
+.print-options-panel {
     display: flex;
     flex-direction: column;
+    gap: 12px;
+    overflow: auto;
+}
+
+.print-ios-topbar {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    align-items: center;
     gap: 10px;
-    align-self: start;
-    position: sticky;
-    top: 12px;
 }
 
-.print-toolbar select,
-.print-toolbar button {
-    height: 42px;
-    border-radius: 10px;
-    border: 1px solid #cfd8e3;
-    padding: 0 10px;
-    background: #fff;
+.print-ios-topbar h1 {
+    text-align: center;
+    font-size: 36px;
+    line-height: 1;
+    letter-spacing: -0.03em;
 }
 
-.print-toolbar button {
+.print-ios-top-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.print-circle-btn {
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #111827;
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1;
     cursor: pointer;
 }
 
-.print-preview-pane {
-    border: 1px solid #d7dee8;
+.print-circle-btn.is-muted {
+    background: #d1d1d6;
+    color: #f8fafc;
+}
+
+.ios-group {
+    border-radius: 24px;
+    border: 1px solid #dddde5;
+    background: #f8f8fa;
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+}
+
+.ios-group-file label {
+    font-size: 13px;
+    font-weight: 700;
+    color: #5a6675;
+    margin-bottom: 6px;
+}
+
+.ios-group-file input[type="file"] {
+    min-height: 44px;
     border-radius: 14px;
-    background: linear-gradient(180deg, #eef2f7 0%, #e8edf4 100%);
-    min-height: 70vh;
+    border: 1px dashed #c4c9d3;
+    background: #ffffff;
+    padding: 9px;
+}
+
+.ios-row {
+    display: grid;
+    grid-template-columns: minmax(100px, 1fr) minmax(140px, 220px);
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+}
+
+.ios-row label,
+.ios-row > span {
+    font-size: 17px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.ios-row input[type="text"],
+.ios-row input[type="number"],
+.ios-row select {
+    width: 100%;
+    height: 42px;
+    border-radius: 12px;
+    border: 1px solid #ced3dd;
+    background: #eef0f4;
+    color: #111827;
+    padding: 0 10px;
+}
+
+#copias {
+    max-width: 92px;
+    margin-left: auto;
+    text-align: center;
+    font-size: 26px;
+}
+
+#intervaloPaginas {
+    margin-left: auto;
+    text-align: right;
+}
+
+#intervaloPaginas::placeholder {
+    color: #8a8f98;
+}
+
+#paginasPorFolha,
+#orientacao {
+    margin-left: auto;
+}
+
+.ios-divider {
+    height: 1px;
+    background: #d5d7de;
+}
+
+.ios-row-check {
+    grid-template-columns: 1fr auto;
+}
+
+.print-checkbox {
+    position: relative;
+    width: 54px;
+    height: 32px;
+}
+
+.print-checkbox input[type="checkbox"] {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.print-checkbox span {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 999px;
+    background: #d1d1d6;
+    transition: background-color 0.2s ease;
+}
+
+.print-checkbox span::after {
+    content: "";
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 26px;
+    height: 26px;
+    border-radius: 999px;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+    transition: transform 0.2s ease;
+}
+
+.print-checkbox input[type="checkbox"]:checked + span {
+    background: #34c759;
+}
+
+.print-checkbox input[type="checkbox"]:checked + span::after {
+    transform: translateX(22px);
+}
+
+.print-send-btn {
+    height: 50px;
+    border-radius: 16px;
+    border: none;
+    font-size: 17px;
+}
+
+.print-status {
+    min-height: 56px;
+}
+
+.print-feedback,
+.print-consumo,
+.print-feedback-muted {
+    min-height: 18px;
+}
+
+.print-feedback {
+    color: #0b5b55;
+    font-weight: 700;
+}
+
+.print-consumo {
+    font-weight: 700;
+}
+
+.print-feedback-muted {
+    color: #556273;
+    font-size: 13px;
+}
+
+.print-meta-compact {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+}
+
+.print-meta-card {
+    border-radius: 20px;
+    border: 1px solid #dddde4;
+    background: #f8f8fa;
+    padding: 12px;
+}
+
+.print-meta-card h2 {
+    font-size: 16px;
+    margin-bottom: 6px;
+}
+
+.print-jobs-card {
+    min-height: 110px;
+    max-height: 180px;
     overflow: auto;
-    padding: 18px;
+}
+
+#lista-jobs {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+#lista-jobs li {
+    border-radius: 10px;
+    border: 1px solid #d8dce5;
+    background: #ffffff;
+    padding: 8px 10px;
+    word-break: break-word;
+    font-size: 13px;
+}
+
+.print-preview-stage {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    gap: 12px;
+    overflow: hidden;
+}
+
+.print-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.print-preview-header .auth-badge {
+    margin-bottom: 0;
+}
+
+.print-pagination {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) 36px;
+    align-items: center;
+    gap: 6px;
+    min-width: 210px;
+    border-radius: 999px;
+    border: 1px solid #dddde4;
+    background: #f7f7f9;
+    padding: 4px;
+}
+
+.print-pagination button {
+    width: 36px;
+    height: 36px;
+    border: 1px solid #dadde6;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #334155;
+    cursor: pointer;
+}
+
+#contadorFolha {
+    text-align: center;
+    font-size: 16px;
+    font-weight: 700;
+    color: #374151;
+    white-space: nowrap;
+}
+
+.print-preview-pane {
+    border-radius: 24px;
+    border: 1px solid #dedee5;
+    background: #e7e7eb;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    padding: 10px 10px 14px;
+}
+
+#previewContainer {
+    min-height: 100%;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 4px 6px 10px;
+}
+
+#previewContainer.is-carousel {
+    width: max-content;
+    align-items: flex-end;
+    justify-content: flex-start;
+}
+
+.preview-empty {
+    min-width: 260px;
+    padding: 20px;
+    border-radius: 16px;
+    border: 1px dashed #c8cdd8;
+    background: #f7f9fc;
+    color: #5f6b7b;
+    text-align: center;
+    font-weight: 600;
+}
+
+#previewContainer .print-sheet-thumb {
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    cursor: default;
+}
+
+#previewContainer.is-carousel .print-sheet-thumb {
+    cursor: pointer;
 }
 
 #previewContainer .print-sheet {
-    transform-origin: top center;
+    border-radius: 9px;
+    border: 1px solid #e3e6ee;
+    background: #ffffff;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.15);
+    overflow: hidden;
+}
+
+#previewContainer .print-sheet-thumb.is-active .print-sheet {
+    border-color: #93c5fd;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3), 0 8px 22px rgba(15, 23, 42, 0.18);
+}
+
+#previewContainer .sheet-label {
+    display: none;
+    border-radius: 999px;
+    border: 1px solid #dadde5;
+    background: rgba(255, 255, 255, 0.92);
+    color: #4b5563;
+    font-size: 15px;
+    font-weight: 700;
+    padding: 8px 16px;
+}
+
+#previewContainer .print-sheet-thumb.is-active .sheet-label {
+    border-color: #b9d2ff;
+    background: #e8f1ff;
+    color: #1d4ed8;
 }
 
 #previewContainer .preview-cell {
-    border-radius: 8px;
+    border-radius: 6px;
     background: #ffffff;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+@media (max-width: 1100px) {
+    .print-ios-layout {
+        grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+    }
 }
 
 @media (max-width: 980px) {
-    .print-page {
-        grid-template-columns: 1fr;
+    .professor-page {
+        padding: 8px;
     }
-    .print-toolbar {
-        position: static;
+
+    .print-ios-layout {
+        height: calc(100svh - 16px);
+        grid-template-columns: 1fr;
+        grid-template-rows: minmax(0, 58svh) minmax(0, 1fr);
+        gap: 10px;
+    }
+
+    .print-options-panel,
+    .print-preview-stage {
+        border-radius: 26px;
+        padding: 12px;
+    }
+
+    .print-ios-topbar h1 {
+        font-size: 30px;
+    }
+
+    .print-preview-header {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .print-pagination {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .ios-row {
+        grid-template-columns: 1fr;
+        gap: 6px;
+    }
+
+    .ios-row input[type="text"],
+    .ios-row input[type="number"],
+    .ios-row select {
+        max-width: none;
+        margin-left: 0;
+        text-align: left;
+    }
+
+    .ios-row-check {
+        grid-template-columns: 1fr auto;
+        align-items: center;
+    }
+
+    .print-jobs-card {
+        max-height: 140px;
+    }
+
+    .print-preview-pane {
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+    }
+
+    #previewContainer.is-carousel .print-sheet-thumb {
+        scroll-snap-align: center;
+    }
+
+    #previewContainer.is-carousel .sheet-label {
+        display: block;
+    }
+}
+
+@media (max-width: 520px) {
+    .print-ios-topbar h1 {
+        font-size: 26px;
+    }
+
+    .print-circle-btn {
+        width: 44px;
+        height: 44px;
+        font-size: 17px;
+    }
+
+    .print-options-panel,
+    .print-preview-stage {
+        border-radius: 22px;
     }
 }
 

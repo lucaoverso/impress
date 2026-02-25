@@ -1,0 +1,18 @@
+[Unit]
+Description=Sistema Impress API (FastAPI)
+After=network.target cups.service
+Requires=cups.service
+
+[Service]
+Type=simple
+User=sistema-impress
+Group=lp
+WorkingDirectory=/opt/sistema-impress
+EnvironmentFile=/opt/sistema-impress/.env
+ExecStart=/opt/sistema-impress/.venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --proxy-headers
+Restart=always
+RestartSec=3
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

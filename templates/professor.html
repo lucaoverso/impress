@@ -1,75 +1,109 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Professor - Impressão</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 
-<body>
+<body class="professor-page">
+    <main class="print-ios-layout">
+        <section class="print-options-panel">
+            <header class="print-ios-topbar">
+                <button id="btnVoltarServicos" class="print-circle-btn" type="button" aria-label="Voltar aos serviços">X</button>
+                <h1>Opções</h1>
+                <div class="print-ios-top-actions">
+                    <button id="btnIrAgendamento" class="print-circle-btn" type="button" aria-label="Abrir agendamento">Ag</button>
+                    <button id="btnSair" class="print-circle-btn is-muted" type="button" aria-label="Sair">Sa</button>
+                </div>
+            </header>
 
-    <main class="print-page">
-        <section class="print-toolbar">
-            <h3>📄 Nova impressão</h3>
-            <div class="scheduler-actions">
-                <button id="btnVoltarServicos" type="button">Voltar aos serviços</button>
-                <button id="btnIrAgendamento" type="button">Abrir agendamento</button>
-                <button id="btnSair" type="button">Sair</button>
+            <article class="ios-group ios-group-file">
+                <label for="arquivo">Arquivo PDF</label>
+                <input type="file" id="arquivo" accept=".pdf">
+            </article>
+
+            <article class="ios-group">
+                <div class="ios-row">
+                    <label for="copias">Cópias</label>
+                    <input type="number" id="copias" min="1" step="1" value="1">
+                </div>
+
+                <div class="ios-divider"></div>
+                <div class="ios-row">
+                    <label for="intervaloPaginas">Intervalo</label>
+                    <input type="text" id="intervaloPaginas" placeholder="1-5, 8, 10-14">
+                </div>
+
+                <div class="ios-divider"></div>
+                <div class="ios-row">
+                    <label for="paginasPorFolha">Layout</label>
+                    <select id="paginasPorFolha">
+                        <option value="1">1 página por folha</option>
+                        <option value="2">2 páginas por folha</option>
+                        <option value="4">4 páginas por folha</option>
+                    </select>
+                </div>
+
+                <div class="ios-divider"></div>
+                <div class="ios-row">
+                    <label for="orientacao">Orientação</label>
+                    <select id="orientacao">
+                        <option value="retrato">Retrato</option>
+                        <option value="paisagem">Paisagem</option>
+                    </select>
+                </div>
+
+                <div class="ios-divider"></div>
+                <div class="ios-row ios-row-check">
+                    <span>Frente e verso</span>
+                    <label class="print-checkbox" for="duplex">
+                        <input type="checkbox" id="duplex">
+                        <span></span>
+                    </label>
+                </div>
+            </article>
+
+            <button id="btnEnviar" class="btn-destaque print-send-btn" type="button">Imprimir</button>
+
+            <div class="print-status">
+                <p id="msg" class="print-feedback"></p>
+                <p id="consumo" class="print-consumo"></p>
+                <p id="intervaloInfo" class="print-feedback-muted"></p>
             </div>
-            <input type="file" id="arquivo" accept=".pdf">
-            <select id="orientacao">
-                <option value="retrato">Retrato</option>
-                <option value="paisagem">Paisagem</option>
-            </select>
 
-            <input type="number" id="copias" placeholder="Cópias" min="1" step="1" value="1">
-            <label>
-                <input type="checkbox" id="duplex">
-                Frente e verso
-            </label>
+            <div class="print-meta-compact">
+                <article class="print-meta-card">
+                    <h2>Sua cota</h2>
+                    <p id="cota">Carregando...</p>
+                </article>
 
-            <select id="paginasPorFolha">
-                <option value="1">1 página por folha</option>
-                <option value="2">2 páginas por folha</option>
-                <option value="4">4 páginas por folha</option>
-            </select>
-            <input
-                type="text"
-                id="intervaloPaginas"
-                placeholder="Intervalo de páginas (ex: 1-5, 8, 10-14)"
-            >
-
-            <button id="btnEnviar">Enviar</button>
-            <button id="btnAnterior">⬅</button>
-            <span id="contadorFolha"></span>
-            <button id="btnProxima">➡</button>
-
-            <p id="msg"></p>
-            <p id="consumo"></p>
-            <p id="intervaloInfo"></p>
+                <article class="print-meta-card print-jobs-card">
+                    <h2>Seus pedidos</h2>
+                    <ul id="lista-jobs"></ul>
+                </article>
+            </div>
         </section>
 
-        <section class="print-preview-pane">
-            <div id="previewContainer"></div>
+        <section class="print-preview-stage">
+            <header class="print-preview-header">
+                <p class="auth-badge">Pré-visualização</p>
+                <div class="print-pagination" role="group" aria-label="Navegação da pré-visualização">
+                    <button id="btnAnterior" type="button" aria-label="Folha anterior">◀</button>
+                    <span id="contadorFolha"></span>
+                    <button id="btnProxima" type="button" aria-label="Próxima folha">▶</button>
+                </div>
+            </header>
+
+            <section class="print-preview-pane">
+                <div id="previewContainer"></div>
+            </section>
         </section>
     </main>
 
-    <hr>
-
-    <!-- COTA -->
-    <section>
-        <h3>📊 Sua cota</h3>
-        <p id="cota">Carregando...</p>
-    </section>
-
-    <hr>
-    <!-- FILA -->
-    <section>
-        <h3>🕒 Seus pedidos</h3>
-        <ul id="lista-jobs"></ul>
-    </section>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc =
             "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";

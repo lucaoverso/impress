@@ -1,7 +1,10 @@
 import threading
 import os
-import tempfile
+import json
+import re
+import uuid
 import sqlite3
+from pathlib import Path
 from contextlib import asynccontextmanager
 from math import ceil
 from datetime import datetime
@@ -77,6 +80,10 @@ from database import (
     calcular_limite_cota_usuario
 )
 
+SPOOL_DIR = os.getenv("SPOOL_DIR", "spool")
+DEFAULT_PRINTER_NAME = os.getenv("CUPS_PRINTER", "").strip()
+ENABLE_EMBEDDED_WORKER = os.getenv("ENABLE_EMBEDDED_WORKER", "").strip().lower() in {"1", "true", "yes"}
+
 # =========================================================
 # LIFESPAN (STARTUP / SHUTDOWN)
 # =========================================================
@@ -103,14 +110,15 @@ async def lifespan(app: FastAPI):
 
     seed_recursos_padrao()
 
-    # Worker de impressão
-    worker_thread = threading.Thread(
-        target=worker_loop,
-        daemon=True
-    )
-    worker_thread.start()
-
-    print("🚀 Aplicação iniciada com worker ativo")
+    if ENABLE_EMBEDDED_WORKER:
+        worker_thread = threading.Thread(
+            target=worker_loop,
+            daemon=True
+        )
+        worker_thread.start()
+        print("🚀 Aplicação iniciada com worker embutido ativo")
+    else:
+        print("🚀 Aplicação iniciada (worker externo esperado)")
 
     yield  # aplicação rodando
 
@@ -244,6 +252,41 @@ def validar_numero_nao_negativo(valor: int, campo: str):
         raise HTTPException(400, f"{campo} não pode ser negativo.")
     return int(valor)
 
+def garantir_diretorio_spool() -> Path:
+    caminho_spool = Path(SPOOL_DIR)
+    caminho_spool.mkdir(parents=True, exist_ok=True)
+    return caminho_spool
+
+def sanitizar_nome_arquivo(nome_arquivo: str) -> str:
+    nome_base = os.path.basename(nome_arquivo or "").strip().replace(" ", "_")
+    nome_limpo = re.sub(r"[^A-Za-z0-9._-]", "_", nome_base)
+    if not nome_limpo.lower().endswith(".pdf"):
+        nome_limpo += ".pdf"
+    return nome_limpo or "documento.pdf"
+
+def montar_opcoes_cups(
+    paginas_por_folha: int,
+    duplex: bool,
+    orientacao: str,
+    intervalo_paginas: str
+):
+    if duplex:
+        sides = "two-sided-short-edge" if orientacao == "paisagem" else "two-sided-long-edge"
+    else:
+        sides = "one-sided"
+
+    opcoes = {
+        "number-up": paginas_por_folha,
+        "sides": sides,
+        "orientation-requested": 4 if orientacao == "paisagem" else 3,
+    }
+
+    intervalo = (intervalo_paginas or "").strip()
+    if intervalo:
+        opcoes["page-ranges"] = intervalo
+
+    return opcoes
+
 
 # =========================================================
 # ROTAS BÁSICAS
@@ -287,45 +330,85 @@ def imprimir(
     if orientacao not in ("retrato", "paisagem"):
         raise HTTPException(400, "Orientação inválida")
 
-    # Salva o arquivo em caminho temporário único
-    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-        tmp.write(arquivo.file.read())
-        caminho = tmp.name
+    conteudo_arquivo = arquivo.file.read()
+    if not conteudo_arquivo:
+        raise HTTPException(400, "Arquivo vazio")
+
+    caminho_spool = garantir_diretorio_spool()
+    nome_arquivo_spool = f"{uuid.uuid4().hex}_{sanitizar_nome_arquivo(arquivo.filename)}"
+    caminho_arquivo = caminho_spool / nome_arquivo_spool
+
+    try:
+        with caminho_arquivo.open("wb") as destino:
+            destino.write(conteudo_arquivo)
+    except OSError as exc:
+        raise HTTPException(500, "Falha ao armazenar o arquivo para impressão.") from exc
 
     try:
         # 🔢 Conta páginas reais do PDF
-        paginas_pdf = contar_paginas_pdf(caminho)
-    finally:
-        if os.path.exists(caminho):
-            os.remove(caminho)
+        paginas_pdf = contar_paginas_pdf(str(caminho_arquivo))
+    except Exception:
+        if caminho_arquivo.exists():
+            caminho_arquivo.unlink()
+        raise
 
-    paginas_selecionadas = contar_paginas_intervalo(intervalo_paginas, paginas_pdf)
+    intervalo_normalizado = (intervalo_paginas or "").strip()
+    try:
+        paginas_selecionadas = contar_paginas_intervalo(intervalo_normalizado, paginas_pdf)
+    except Exception:
+        if caminho_arquivo.exists():
+            caminho_arquivo.unlink()
+        raise
+
     folhas_por_copia = ceil(paginas_selecionadas / paginas_por_folha)
     if duplex:
         folhas_por_copia = ceil(folhas_por_copia / 2)
     paginas_totais = folhas_por_copia * copias
 
-    autorizado, restante = validar_e_consumir_cota(
-        usuario_id=usuario["id"],
-        paginas=paginas_totais
-    )
+    try:
+        autorizado, restante = validar_e_consumir_cota(
+            usuario_id=usuario["id"],
+            paginas=paginas_totais
+        )
+    except Exception:
+        if caminho_arquivo.exists():
+            caminho_arquivo.unlink()
+        raise
 
     if not autorizado:
+        if caminho_arquivo.exists():
+            caminho_arquivo.unlink()
         raise HTTPException(
             403,
             f"Cota insuficiente. Documento consome {paginas_totais} páginas. "
             f"Restam {restante}."
         )
 
-    criar_job(
-        usuario_id=usuario["id"],
-        arquivo=arquivo.filename,
-        copias=copias,
-        paginas_totais=paginas_totais,
+    opcoes_cups = montar_opcoes_cups(
         paginas_por_folha=paginas_por_folha,
         duplex=duplex,
-        orientacao=orientacao
+        orientacao=orientacao,
+        intervalo_paginas=intervalo_normalizado
     )
+
+    try:
+        criar_job(
+            usuario_id=usuario["id"],
+            arquivo=arquivo.filename,
+            arquivo_path=str(caminho_arquivo),
+            copias=copias,
+            paginas_totais=paginas_totais,
+            paginas_por_folha=paginas_por_folha,
+            duplex=duplex,
+            orientacao=orientacao,
+            intervalo_paginas=intervalo_normalizado,
+            printer_name=DEFAULT_PRINTER_NAME,
+            cups_options=json.dumps(opcoes_cups, ensure_ascii=True)
+        )
+    except Exception:
+        if caminho_arquivo.exists():
+            caminho_arquivo.unlink()
+        raise
 
     return {
         "mensagem": "Job criado com sucesso",
