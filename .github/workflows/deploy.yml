@@ -1,4 +1,4 @@
-name: Deploy no servidor
+name: Deploy no servidor (API + Worker)
 
 on:
   push:
@@ -7,15 +7,18 @@ on:
 jobs:
   deploy:
     runs-on: self-hosted
-
     steps:
-      - name: Atualizar código no servidor (como sistema-impress)
+      - name: Atualizar código (como sistema-impress)
         run: |
+          sudo rm -f /opt/sistema-impress/.git/index.lock || true
           sudo -u sistema-impress git -C /opt/sistema-impress config --global --add safe.directory /opt/sistema-impress
-          sudo -u sistema-impress git -C /opt/sistema-impress fetch --all
+          sudo -u sistema-impress git -C /opt/sistema-impress fetch --all --prune
           sudo -u sistema-impress git -C /opt/sistema-impress reset --hard origin/main
+          sudo -u sistema-impress git -C /opt/sistema-impress clean -fd
 
-      - name: Reiniciar serviço
+      - name: Reiniciar serviços
         run: |
-          sudo systemctl restart sistema-impress
-          sudo systemctl status sistema-impress --no-pager -l
+          sudo systemctl restart sistema-impress-api.service
+          sudo systemctl restart sistema-impress-worker.service
+          sudo systemctl status sistema-impress-api.service --no-pager -l
+          sudo systemctl status sistema-impress-worker.service --no-pager -l
