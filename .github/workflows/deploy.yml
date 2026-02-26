@@ -10,7 +10,7 @@ jobs:
     steps:
       - name: Atualizar código (como sistema-impress)
         run: |
-          sudo rm -f /opt/sistema-impress/.git/index.lock || true
+          sudo -u sistema-impress rm -f /opt/sistema-impress/.git/index.lock || true
           sudo -u sistema-impress git -C /opt/sistema-impress config --global --add safe.directory /opt/sistema-impress
           sudo -u sistema-impress git -C /opt/sistema-impress fetch --all --prune
           sudo -u sistema-impress git -C /opt/sistema-impress reset --hard origin/main
