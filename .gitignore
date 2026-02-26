@@ -1,5 +1,6 @@
 /__pycache__/
 /services/__pycache__/
 /venv/
+/data/
 /.env
 /spool/
