@@ -80,7 +80,10 @@ from database import (
     calcular_limite_cota_usuario
 )
 
-SPOOL_DIR = os.getenv("SPOOL_DIR", "spool")
+BASE_DIR = Path(__file__).resolve().parent
+STATIC_DIR = BASE_DIR / "static"
+TEMPLATES_DIR = BASE_DIR / "templates"
+SPOOL_DIR = os.getenv("SPOOL_DIR", str(BASE_DIR / "spool"))
 DEFAULT_PRINTER_NAME = os.getenv("CUPS_PRINTER", "").strip()
 ENABLE_EMBEDDED_WORKER = os.getenv("ENABLE_EMBEDDED_WORKER", "").strip().lower() in {"1", "true", "yes"}
 
@@ -139,8 +142,8 @@ app = FastAPI(
 app.include_router(auth_router)
 
 # Static / Templates
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 TURNOS_CONFIG = {
     "INTEGRAL": {"nome": "Período integral", "aulas": 8},

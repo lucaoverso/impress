@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cadastro de Professor - Sistema EEPJD</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="{{ request.url_for('static', path='css/style.css') }}">
 </head>
 
 <body>
@@ -48,7 +48,7 @@
         <p>2026</p>
     </footer>
 
-    <script src="/static/js/cadastro-professor.js"></script>
+    <script src="{{ request.url_for('static', path='js/cadastro-professor.js') }}"></script>
 </body>
 
 </html>

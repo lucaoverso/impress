@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Suíte Escolar</title>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="{{ request.url_for('static', path='css/style.css') }}">
 </head>
 
 <body>
@@ -33,7 +33,7 @@
         <p>2026</p>
     </footer>
 
-    <script src="/static/js/app.js"></script>
+    <script src="{{ request.url_for('static', path='js/app.js') }}"></script>
 </body>
 
 </html>
