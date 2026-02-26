@@ -19,7 +19,7 @@ async function carregarUsuario() {
 
         const usuario = await res.json();
         const titulo = document.getElementById("tituloBoasVindas");
-        titulo.innerText = `Olá, ${usuario.nome}. Escolha o serviço`;
+        titulo.innerText = `Olá, ${usuario.nome.split(" ")[0]}. Escolha o serviço`;
     } catch (err) {
         localStorage.removeItem("token");
         window.location.href = "/login-page";

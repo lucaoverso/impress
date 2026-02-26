@@ -25,9 +25,21 @@
                 <form id="formProfessor" class="admin-form">
                     <input id="profNome" type="text" placeholder="Nome" required>
                     <input id="profEmail" type="email" placeholder="Email" required>
-                    <input id="profSenha" type="text" placeholder="Senha inicial" required>
-                    <input id="profAulas" type="number" min="0" placeholder="Aulas semanais" value="0" required>
-                    <input id="profTurmas" type="number" min="0" placeholder="Quantidade de turmas" value="0" required>
+                    <input id="profSenha" type="password" placeholder="Senha inicial" required>
+                    <p id="profSenhaHint" class="booking-detail">Mínimo 8 caracteres com maiúscula, minúscula, número e caractere especial.</p>
+                    <input id="profDataNascimento" type="date" required>
+                    <input id="profAulas" type="number" min="0" placeholder="Quantidade de aulas semanais" value="0" required>
+
+                    <div class="admin-fieldset">
+                        <p>Turmas atendidas</p>
+                        <div id="profTurmasLista" class="admin-checkbox-grid"></div>
+                    </div>
+
+                    <div class="admin-fieldset">
+                        <p>Disciplinas</p>
+                        <div id="profDisciplinasLista" class="admin-checkbox-grid"></div>
+                    </div>
+
                     <button class="btn-destaque" type="submit">Cadastrar</button>
                 </form>
                 <p id="msgProfessor"></p>
@@ -36,6 +48,7 @@
             <article class="admin-card">
                 <h2>Regras de cota proporcional</h2>
                 <form id="formCotaRegras" class="admin-form">
+                    <input id="cotaMensalEscola" type="number" min="0" placeholder="Cota mensal da escola" required>
                     <input id="cotaBase" type="number" min="0" placeholder="Base de páginas" required>
                     <input id="cotaPorAula" type="number" min="0" placeholder="Páginas por aula" required>
                     <input id="cotaPorTurma" type="number" min="0" placeholder="Páginas por turma" required>

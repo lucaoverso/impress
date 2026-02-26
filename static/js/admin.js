@@ -13,6 +13,9 @@ const headersJson = {
     "Content-Type": "application/json"
 };
 
+const SENHA_FORTE_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+let opcoesProfessor = { turmas: [], disciplinas: [] };
+
 function el(id) {
     return document.getElementById(id);
 }
@@ -53,6 +56,72 @@ async function fetchJson(url, options = {}) {
         throw new Error(normalizarErro(res, body));
     }
     return body;
+}
+
+function validarSenhaForte(senha) {
+    return SENHA_FORTE_REGEX.test(senha || "");
+}
+
+function atualizarHintSenha() {
+    const senha = el("profSenha").value.trim();
+    const hint = el("profSenhaHint");
+    if (!senha) {
+        hint.style.color = "#4b5563";
+        return;
+    }
+    hint.style.color = validarSenhaForte(senha) ? "#0f766e" : "#b42318";
+}
+
+function renderCheckboxes(containerId, opcoes, prefixo) {
+    const container = el(containerId);
+    container.innerHTML = "";
+
+    opcoes.forEach((item, index) => {
+        const id = `${prefixo}_${index}`;
+        const label = document.createElement("label");
+        label.className = "admin-checkbox-item";
+
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.id = id;
+        input.value = item;
+
+        const texto = document.createElement("span");
+        texto.innerText = item;
+
+        label.appendChild(input);
+        label.appendChild(texto);
+        container.appendChild(label);
+    });
+}
+
+function listarSelecionados(containerId) {
+    return Array.from(el(containerId).querySelectorAll("input[type='checkbox']:checked"))
+        .map((input) => input.value);
+}
+
+function resumoLista(lista, limite = 3) {
+    if (!Array.isArray(lista) || lista.length === 0) return "Não informado";
+    if (lista.length <= limite) return lista.join(", ");
+    return `${lista.slice(0, limite).join(", ")} +${lista.length - limite}`;
+}
+
+function formatarDataBr(dataIso) {
+    if (!dataIso) return "Não informada";
+    const data = new Date(`${dataIso}T00:00:00`);
+    if (Number.isNaN(data.getTime())) return dataIso;
+    return data.toLocaleDateString("pt-BR");
+}
+
+async function carregarOpcoesProfessor() {
+    const dados = await fetchJson("/admin/professores/opcoes", { headers });
+    opcoesProfessor = {
+        turmas: Array.isArray(dados.turmas) ? dados.turmas : [],
+        disciplinas: Array.isArray(dados.disciplinas) ? dados.disciplinas : []
+    };
+
+    renderCheckboxes("profTurmasLista", opcoesProfessor.turmas, "turma");
+    renderCheckboxes("profDisciplinasLista", opcoesProfessor.disciplinas, "disciplina");
 }
 
 function queryPeriodo(prefix = "") {
@@ -149,6 +218,7 @@ async function carregarProfessores() {
     const dados = await fetchJson(`/admin/professores?mes=${mes}`, { headers });
 
     if (dados.regras_cota) {
+        el("cotaMensalEscola").value = dados.regras_cota.cota_mensal_escola ?? 0;
         el("cotaBase").value = dados.regras_cota.base_paginas ?? 0;
         el("cotaPorAula").value = dados.regras_cota.paginas_por_aula ?? 0;
         el("cotaPorTurma").value = dados.regras_cota.paginas_por_turma ?? 0;
@@ -163,6 +233,10 @@ async function carregarProfessores() {
 
         const titulo = document.createElement("p");
         titulo.innerText = `${prof.nome} (${prof.email})`;
+
+        const cadastro = document.createElement("p");
+        cadastro.className = "booking-detail";
+        cadastro.innerText = `Nascimento: ${formatarDataBr(prof.data_nascimento)} | Turmas: ${resumoLista(prof.turmas)} | Disciplinas: ${resumoLista(prof.disciplinas)}`;
 
         const meta = document.createElement("p");
         const limiteMes = prof.cota_mes ? prof.cota_mes.limite_paginas : "-";
@@ -210,6 +284,7 @@ async function carregarProfessores() {
         linha.appendChild(btnSalvar);
 
         li.appendChild(titulo);
+        li.appendChild(cadastro);
         li.appendChild(meta);
         li.appendChild(linha);
         ul.appendChild(li);
@@ -218,6 +293,24 @@ async function carregarProfessores() {
 
 async function cadastrarProfessor(event) {
     event.preventDefault();
+    const senha = el("profSenha").value.trim();
+    if (!validarSenhaForte(senha)) {
+        setMensagem("msgProfessor", "Senha fora do padrão de segurança.", true);
+        return;
+    }
+
+    const turmas = listarSelecionados("profTurmasLista");
+    const disciplinas = listarSelecionados("profDisciplinasLista");
+
+    if (turmas.length === 0) {
+        setMensagem("msgProfessor", "Selecione ao menos uma turma.", true);
+        return;
+    }
+    if (disciplinas.length === 0) {
+        setMensagem("msgProfessor", "Selecione ao menos uma disciplina.", true);
+        return;
+    }
+
     try {
         await fetchJson("/admin/professores", {
             method: "POST",
@@ -225,16 +318,18 @@ async function cadastrarProfessor(event) {
             body: JSON.stringify({
                 nome: el("profNome").value.trim(),
                 email: el("profEmail").value.trim(),
-                senha: el("profSenha").value.trim(),
+                senha,
+                data_nascimento: el("profDataNascimento").value,
                 aulas_semanais: Number(el("profAulas").value),
-                turmas_quantidade: Number(el("profTurmas").value)
+                turmas,
+                disciplinas
             })
         });
 
         setMensagem("msgProfessor", "Professor cadastrado com sucesso.");
         el("formProfessor").reset();
         el("profAulas").value = "0";
-        el("profTurmas").value = "0";
+        atualizarHintSenha();
         await carregarProfessores();
     } catch (err) {
         setMensagem("msgProfessor", err.message, true);
@@ -248,6 +343,7 @@ async function salvarRegrasCota(event) {
             method: "PUT",
             headers: headersJson,
             body: JSON.stringify({
+                cota_mensal_escola: Number(el("cotaMensalEscola").value),
                 base_paginas: Number(el("cotaBase").value),
                 paginas_por_aula: Number(el("cotaPorAula").value),
                 paginas_por_turma: Number(el("cotaPorTurma").value)
@@ -389,6 +485,7 @@ function registrarEventos() {
     el("formProfessor").addEventListener("submit", cadastrarProfessor);
     el("formCotaRegras").addEventListener("submit", salvarRegrasCota);
     el("formRecurso").addEventListener("submit", cadastrarRecurso);
+    el("profSenha").addEventListener("input", atualizarHintSenha);
 
     el("btnRecalcularCotas").addEventListener("click", recalcularCotasMes);
     el("btnGerarRelatorios").addEventListener("click", carregarRelatorios);
@@ -408,7 +505,9 @@ function registrarEventos() {
 async function init() {
     try {
         el("mesReferenciaCota").value = mesAtualIso();
+        await carregarOpcoesProfessor();
         registrarEventos();
+        atualizarHintSenha();
         await Promise.all([
             carregarFilaAdmin(),
             buscarHistorico(),

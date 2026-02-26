@@ -5,19 +5,31 @@
 }
 
 :root {
+    --font-sans: "Nunito", "Avenir Next", "Segoe UI", sans-serif;
     --bg-main: #f2efe9;
     --bg-accent: #d7e9ff;
     --card-bg: #ffffff;
+    --surface-0: #ffffff;
+    --surface-1: #f8fbff;
+    --surface-2: #eef3f8;
     --text-main: #1f2a37;
     --text-muted: #4b5563;
     --line: #d8dee8;
+    --line-soft: #d8e1ec;
+    --line-strong: #c9d2de;
     --brand: #0f766e;
     --brand-strong: #0b5b55;
+    --brand-soft: #d6f2ef;
     --error: #dc2626;
+    --radius-sm: 8px;
+    --radius-md: 10px;
+    --radius-lg: 14px;
+    --shadow-card: 0 10px 24px rgba(15, 23, 42, 0.08);
+    --focus-ring: 0 0 0 3px rgba(15, 118, 110, 0.18);
 }
 
 body {
-    font-family: "Nunito", "Avenir Next", "Segoe UI", sans-serif;
+    font-family: var(--font-sans);
     background:
         radial-gradient(circle at 20% 15%, var(--bg-accent), transparent 38%),
         radial-gradient(circle at 85% 5%, #fbe3b7, transparent 30%),
@@ -30,6 +42,94 @@ body {
     flex-direction: column;
 }
 
+h1,
+h2,
+h3 {
+    color: var(--text-main);
+    letter-spacing: -0.01em;
+}
+
+button,
+input,
+select,
+textarea {
+    font: inherit;
+    color: var(--text-main);
+}
+
+input[type="checkbox"],
+input[type="radio"] {
+    accent-color: var(--brand);
+}
+
+button {
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-md);
+    background: var(--surface-0);
+    color: var(--text-main);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
+}
+
+button:hover {
+    border-color: #aeb9c7;
+}
+
+button:active {
+    transform: translateY(1px);
+}
+
+button:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+select,
+textarea,
+input:not([type="checkbox"]):not([type="radio"]) {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--surface-0);
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+input:not([type="checkbox"]):not([type="radio"]),
+select {
+    height: 48px;
+    padding: 0 14px;
+    font-size: 16px;
+}
+
+textarea {
+    min-height: 72px;
+    padding: 10px 14px;
+}
+
+input:not([type="checkbox"]):not([type="radio"])::placeholder,
+textarea::placeholder {
+    color: #8b97a6;
+}
+
+select:focus,
+textarea:focus,
+input:not([type="checkbox"]):not([type="radio"]):focus {
+    border-color: var(--brand);
+    box-shadow: var(--focus-ring);
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid var(--line-soft);
+}
+
 .auth-page {
     flex: 1;
     display: grid;
@@ -40,7 +140,7 @@ body {
 .auth-card {
     width: 100%;
     max-width: 420px;
-    background: #ffffff;
+    background: var(--card-bg);
     border: 1px solid rgba(255, 255, 255, 0.8);
     border-radius: 24px;
     box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
@@ -58,7 +158,7 @@ body {
     letter-spacing: 0.05em;
     text-transform: uppercase;
     color: var(--brand-strong);
-    background: #d6f2ef;
+    background: var(--brand-soft);
     padding: 4px 10px;
     border-radius: 999px;
     margin-bottom: 10px;
@@ -84,27 +184,6 @@ body {
 .form h2 {
     font-size: 20px;
     margin-bottom: 4px;
-}
-
-input {
-    height: 48px;
-    padding: 0 14px;
-    font-size: 16px;
-    border-radius: 12px;
-    border: 1px solid var(--line);
-    background: #ffffff;
-    color: var(--text-main);
-    outline: none;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-input::placeholder {
-    color: #8b97a6;
-}
-
-input:focus {
-    border-color: var(--brand);
-    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18);
 }
 
 .btn-destaque {
@@ -136,6 +215,106 @@ input:focus {
     margin-top: 4px;
 }
 
+.register-page {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    padding: 20px 16px;
+}
+
+.register-card {
+    width: 100%;
+    max-width: 760px;
+    background: var(--card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 24px;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+    overflow: hidden;
+}
+
+.register-header {
+    padding: 24px 24px 10px;
+}
+
+.register-header h1 {
+    font-size: 32px;
+    line-height: 1.1;
+    margin-bottom: 8px;
+}
+
+.register-header p {
+    color: var(--text-muted);
+}
+
+.register-form {
+    padding: 12px 24px 24px;
+    display: grid;
+    gap: 10px;
+}
+
+.register-fieldset {
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-md);
+    padding: 10px;
+    background: var(--surface-1);
+}
+
+.register-fieldset p {
+    font-size: 13px;
+    color: var(--text-main);
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.register-checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 6px;
+    max-height: 170px;
+    overflow: auto;
+    padding-right: 2px;
+}
+
+.register-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-sm);
+    background: var(--surface-0);
+    padding: 6px 8px;
+}
+
+.register-checkbox-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    min-height: 16px;
+    margin: 0;
+    padding: 0;
+    border-radius: 4px;
+    box-shadow: none;
+    flex: 0 0 16px;
+}
+
+.register-checkbox-item span {
+    font-size: 13px;
+    color: var(--text-main);
+}
+
+.register-secondary-btn {
+    height: 44px;
+    border-radius: 12px;
+    border-color: var(--line-strong);
+    background: var(--surface-0);
+    color: var(--text-main);
+}
+
+#msgCadastro {
+    min-height: 20px;
+    font-size: 14px;
+    text-align: center;
+}
+
 footer {
     text-align: center;
     padding: 12px 16px 18px;
@@ -146,6 +325,10 @@ footer {
 @media (min-width: 768px) {
     .auth-page {
         padding: 32px;
+    }
+
+    .register-page {
+        padding: 30px;
     }
 
     .auth-card {
@@ -232,12 +415,11 @@ footer {
     height: 48px;
     border: none;
     border-radius: 999px;
-    background: #ffffff;
-    color: #111827;
+    background: var(--surface-0);
+    color: var(--text-main);
     font-size: 19px;
     font-weight: 700;
     line-height: 1;
-    cursor: pointer;
 }
 
 .print-circle-btn.is-muted {
@@ -247,7 +429,7 @@ footer {
 
 .ios-group {
     border-radius: 24px;
-    border: 1px solid #dddde5;
+    border: 1px solid var(--line-soft);
     background: #f8f8fa;
     padding: 10px 14px;
     display: flex;
@@ -264,7 +446,7 @@ footer {
 .ios-group-file input[type="file"] {
     min-height: 44px;
     border-radius: 14px;
-    border: 1px dashed #c4c9d3;
+    border: 1px dashed var(--line-strong);
     background: #ffffff;
     padding: 9px;
 }
@@ -290,7 +472,7 @@ footer {
     width: 100%;
     height: 42px;
     border-radius: 12px;
-    border: 1px solid #ced3dd;
+    border: 1px solid var(--line-strong);
     background: #eef0f4;
     color: #111827;
     padding: 0 10px;
@@ -319,7 +501,7 @@ footer {
 
 .ios-divider {
     height: 1px;
-    background: #d5d7de;
+    background: var(--line-soft);
 }
 
 .ios-row-check {
@@ -408,7 +590,7 @@ footer {
 
 .print-meta-card {
     border-radius: 20px;
-    border: 1px solid #dddde4;
+    border: 1px solid var(--line-soft);
     background: #f8f8fa;
     padding: 12px;
 }
@@ -433,8 +615,8 @@ footer {
 
 #lista-jobs li {
     border-radius: 10px;
-    border: 1px solid #d8dce5;
-    background: #ffffff;
+    border: 1px solid var(--line-soft);
+    background: var(--surface-0);
     padding: 8px 10px;
     word-break: break-word;
     font-size: 13px;
@@ -465,7 +647,7 @@ footer {
     gap: 6px;
     min-width: 210px;
     border-radius: 999px;
-    border: 1px solid #dddde4;
+    border: 1px solid var(--line-soft);
     background: #f7f7f9;
     padding: 4px;
 }
@@ -473,11 +655,10 @@ footer {
 .print-pagination button {
     width: 36px;
     height: 36px;
-    border: 1px solid #dadde6;
+    border: 1px solid var(--line-soft);
     border-radius: 999px;
-    background: #ffffff;
-    color: #334155;
-    cursor: pointer;
+    background: var(--surface-0);
+    color: var(--text-main);
 }
 
 #contadorFolha {
@@ -490,7 +671,7 @@ footer {
 
 .print-preview-pane {
     border-radius: 24px;
-    border: 1px solid #dedee5;
+    border: 1px solid var(--line-soft);
     background: #e7e7eb;
     overflow-x: hidden;
     overflow-y: hidden;
@@ -518,7 +699,7 @@ footer {
     min-width: 260px;
     padding: 20px;
     border-radius: 16px;
-    border: 1px dashed #c8cdd8;
+    border: 1px dashed var(--line-strong);
     background: #f7f9fc;
     color: #5f6b7b;
     text-align: center;
@@ -540,8 +721,8 @@ footer {
 
 #previewContainer .print-sheet {
     border-radius: 9px;
-    border: 1px solid #e3e6ee;
-    background: #ffffff;
+    border: 1px solid var(--line-soft);
+    background: var(--surface-0);
     box-shadow: 0 8px 22px rgba(15, 23, 42, 0.15);
     overflow: hidden;
 }
@@ -554,7 +735,7 @@ footer {
 #previewContainer .sheet-label {
     display: none;
     border-radius: 999px;
-    border: 1px solid #dadde5;
+    border: 1px solid var(--line-soft);
     background: rgba(255, 255, 255, 0.92);
     color: #4b5563;
     font-size: 15px;
@@ -570,8 +751,8 @@ footer {
 
 #previewContainer .preview-cell {
     border-radius: 6px;
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
+    background: var(--surface-0);
+    border: 1px solid var(--line-soft);
     overflow: hidden;
     display: flex;
     align-items: center;
@@ -697,10 +878,10 @@ footer {
 }
 
 .service-card {
-    background: #ffffff;
-    border: 1px solid #d8e1ec;
+    background: var(--surface-0);
+    border: 1px solid var(--line-soft);
     border-radius: 18px;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+    box-shadow: var(--shadow-card);
     padding: 20px;
     display: flex;
     flex-direction: column;
@@ -721,11 +902,8 @@ footer {
 
 .services-actions button {
     height: 40px;
-    border-radius: 10px;
-    border: 1px solid #c8d2df;
     padding: 0 14px;
-    background: #fff;
-    cursor: pointer;
+    min-width: 96px;
 }
 
 .scheduler-page {
@@ -737,8 +915,8 @@ footer {
 
 .scheduler-toolbar {
     background: #f8fafc;
-    border: 1px solid #dbe2eb;
-    border-radius: 14px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-lg);
     padding: 14px;
     display: flex;
     flex-direction: column;
@@ -755,15 +933,13 @@ footer {
 
 .scheduler-toolbar label {
     font-size: 13px;
-    color: #4a5565;
+    color: var(--text-muted);
 }
 
 .scheduler-toolbar select,
 .scheduler-toolbar textarea,
 .scheduler-toolbar button {
-    border-radius: 10px;
-    border: 1px solid #cfd8e3;
-    background: #fff;
+    border-radius: var(--radius-md);
 }
 
 .scheduler-toolbar select,
@@ -776,10 +952,6 @@ footer {
     padding: 8px 10px;
     resize: vertical;
     min-height: 72px;
-}
-
-.scheduler-toolbar button {
-    cursor: pointer;
 }
 
 .scheduler-actions {
@@ -801,11 +973,11 @@ footer {
 }
 
 .calendar-card {
-    background: #fff;
-    border: 1px solid #d8e1ec;
-    border-radius: 14px;
+    background: var(--surface-0);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-lg);
     padding: 14px;
-    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.07);
+    box-shadow: var(--shadow-card);
 }
 
 .calendar-header {
@@ -822,11 +994,8 @@ footer {
 
 .calendar-header button {
     height: 34px;
-    border-radius: 8px;
-    border: 1px solid #cad3de;
-    background: #fff;
+    border-radius: var(--radius-sm);
     padding: 0 10px;
-    cursor: pointer;
 }
 
 .calendar-grid {
@@ -850,8 +1019,8 @@ footer {
 .calendar-day {
     min-height: 76px;
     border-radius: 10px;
-    border: 1px solid #d6dee8;
-    background: #f9fbfe;
+    border: 1px solid var(--line-soft);
+    background: var(--surface-1);
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -862,7 +1031,7 @@ footer {
 }
 
 .calendar-day:hover {
-    border-color: #95a5ba;
+    border-color: #9aabbe;
 }
 
 .calendar-day.is-selected {
@@ -893,10 +1062,10 @@ footer {
 }
 
 .booking-item {
-    border: 1px solid #d8e1ec;
-    border-radius: 10px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-md);
     padding: 10px;
-    background: #f8fbff;
+    background: var(--surface-1);
     display: flex;
     flex-direction: column;
     gap: 6px;
@@ -905,11 +1074,8 @@ footer {
 .booking-item button {
     width: fit-content;
     height: 32px;
-    border-radius: 8px;
-    border: 1px solid #cad3de;
-    background: #fff;
+    border-radius: var(--radius-sm);
     padding: 0 10px;
-    cursor: pointer;
 }
 
 .booking-detail {
@@ -968,10 +1134,10 @@ footer {
 }
 
 .admin-card {
-    background: #ffffff;
-    border: 1px solid #d8e1ec;
-    border-radius: 14px;
-    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+    background: var(--surface-0);
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-card);
     padding: 14px;
 }
 
@@ -994,18 +1160,61 @@ footer {
     gap: 8px;
 }
 
+.admin-fieldset {
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-md);
+    padding: 10px;
+    background: var(--surface-1);
+}
+
+.admin-fieldset p {
+    font-size: 13px;
+    color: var(--text-main);
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.admin-checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 6px;
+    max-height: 160px;
+    overflow: auto;
+    padding-right: 2px;
+}
+
+.admin-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-sm);
+    background: var(--surface-0);
+    padding: 6px 8px;
+}
+
+.admin-checkbox-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    min-height: 16px;
+    margin: 0;
+    padding: 0;
+    border-radius: 4px;
+    box-shadow: none;
+    flex: 0 0 16px;
+}
+
+.admin-checkbox-item span {
+    font-size: 13px;
+    color: var(--text-main);
+}
+
 .admin-form input,
 .admin-form select,
 .admin-form button {
     height: 40px;
-    border-radius: 10px;
-    border: 1px solid #cfd8e3;
     padding: 0 10px;
-    background: #fff;
-}
-
-.admin-form button {
-    cursor: pointer;
+    border-radius: var(--radius-md);
 }
 
 .admin-inline {
@@ -1018,14 +1227,8 @@ footer {
 .admin-inline input,
 .admin-inline button {
     height: 36px;
-    border-radius: 8px;
-    border: 1px solid #c9d2de;
     padding: 0 10px;
-    background: #fff;
-}
-
-.admin-inline button {
-    cursor: pointer;
+    border-radius: var(--radius-sm);
 }
 
 .admin-list {
@@ -1036,10 +1239,10 @@ footer {
 }
 
 .admin-list-item {
-    border: 1px solid #d8e1ec;
-    border-radius: 10px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-md);
     padding: 10px;
-    background: #f8fbff;
+    background: var(--surface-1);
     display: flex;
     flex-direction: column;
     gap: 8px;
@@ -1048,11 +1251,8 @@ footer {
 .admin-list-item button {
     width: fit-content;
     height: 32px;
-    border-radius: 8px;
-    border: 1px solid #c9d2de;
-    background: #fff;
+    border-radius: var(--radius-sm);
     padding: 0 10px;
-    cursor: pointer;
 }
 
 @media (max-width: 1100px) {

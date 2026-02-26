@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 class JobCreate(BaseModel):
     copias: int
@@ -36,8 +36,10 @@ class ProfessorCreateIn(BaseModel):
     nome: str
     email: str
     senha: str
+    data_nascimento: str
     aulas_semanais: int = 0
-    turmas_quantidade: int = 0
+    turmas: list[str] = Field(default_factory=list)
+    disciplinas: list[str] = Field(default_factory=list)
 
 class ProfessorCargaIn(BaseModel):
     aulas_semanais: int
@@ -55,3 +57,4 @@ class RegrasCotaIn(BaseModel):
     base_paginas: int
     paginas_por_aula: int
     paginas_por_turma: int
+    cota_mensal_escola: int

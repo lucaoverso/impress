@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de Professor - Suíte Escolar</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+
+<body>
+    <main class="register-page">
+        <section class="register-card">
+            <header class="register-header">
+                <p class="auth-badge">Portal Escolar</p>
+                <h1>Cadastro de Professor</h1>
+                <p>Preencha seus dados para criar sua conta no sistema.</p>
+            </header>
+
+            <form id="formCadastroProfessor" class="register-form">
+                <input id="cadNome" type="text" placeholder="Nome completo" required>
+                <input id="cadEmail" type="email" autocomplete="email" placeholder="Email" required>
+                <input id="cadSenha" type="password" autocomplete="new-password" placeholder="Senha" required>
+                <p id="cadSenhaHint" class="booking-detail">Mínimo 8 caracteres com maiúscula, minúscula, número e caractere especial.</p>
+                <input id="cadSenhaConfirmacao" type="password" autocomplete="new-password" placeholder="Confirmar senha" required>
+                <input id="cadDataNascimento" type="date" required>
+                <input id="cadAulas" type="number" min="0" placeholder="Quantidade de aulas semanais" value="0" required>
+
+                <div class="register-fieldset">
+                    <p>Turmas atendidas</p>
+                    <div id="cadTurmasLista" class="register-checkbox-grid"></div>
+                </div>
+
+                <div class="register-fieldset">
+                    <p>Disciplinas</p>
+                    <div id="cadDisciplinasLista" class="register-checkbox-grid"></div>
+                </div>
+
+                <button type="submit" class="btn-destaque">Criar conta</button>
+                <button id="btnVoltarLogin" type="button" class="register-secondary-btn">Voltar para login</button>
+                <p id="msgCadastro" role="alert" aria-live="polite"></p>
+            </form>
+        </section>
+    </main>
+
+    <footer>
+        <p>Desenvolvido por Lucas Sbaraini</p>
+        <p>2026</p>
+    </footer>
+
+    <script src="/static/js/cadastro-professor.js"></script>
+</body>
+
+</html>

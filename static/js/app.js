@@ -28,3 +28,21 @@ async function login() {
         window.location.href = "/servicos";
     }
 }
+
+function configurarLoginPage() {
+    const btnCadastro = document.getElementById("btnCadastroProfessor");
+    if (btnCadastro) {
+        btnCadastro.addEventListener("click", () => {
+            window.location.href = "/cadastro-professor";
+        });
+    }
+
+    const emailInput = document.getElementById("email");
+    const params = new URLSearchParams(window.location.search);
+    const emailPrefill = params.get("email");
+    if (emailInput && emailPrefill) {
+        emailInput.value = emailPrefill;
+    }
+}
+
+window.addEventListener("DOMContentLoaded", configurarLoginPage);

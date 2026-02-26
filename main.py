@@ -149,6 +149,25 @@ TURNOS_CONFIG = {
     "VESPERTINO_EM": {"nome": "Vespertino E.M.", "aulas": 6},
 }
 
+DISCIPLINAS_DISPONIVEIS = [
+    "Português",
+    "Matemática",
+    "Ciências",
+    "História",
+    "Geografia",
+    "Inglês",
+    "Artes",
+    "Educação Física",
+    "Física",
+    "Química",
+    "Biologia",
+    "Filosofia",
+    "Sociologia",
+]
+
+DISCIPLINAS_VALIDAS = set(DISCIPLINAS_DISPONIVEIS)
+SENHA_FORTE_REGEX = re.compile(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$")
+
 def gerar_turmas_validas():
     turmas = []
     for ano in range(6, 10):
@@ -162,6 +181,90 @@ def gerar_turmas_validas():
     return turmas
 
 TURMAS_VALIDAS = set(gerar_turmas_validas())
+
+def validar_data_nascimento_professor(data_txt: str) -> str:
+    try:
+        data_nascimento = datetime.strptime(data_txt, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise HTTPException(400, "Data de nascimento inválida. Use o formato YYYY-MM-DD.") from exc
+
+    hoje = datetime.now().date()
+    if data_nascimento >= hoje:
+        raise HTTPException(400, "Data de nascimento deve ser anterior à data atual.")
+    if data_nascimento.year < 1900:
+        raise HTTPException(400, "Data de nascimento inválida.")
+    return data_nascimento.isoformat()
+
+def validar_senha_forte(senha: str) -> str:
+    if not SENHA_FORTE_REGEX.match(senha or ""):
+        raise HTTPException(
+            400,
+            "A senha deve ter no mínimo 8 caracteres, incluindo letra maiúscula, letra minúscula, número e caractere especial."
+        )
+    return senha
+
+def _normalizar_lista_texto(itens: list[str]) -> list[str]:
+    normalizados = []
+    for item in itens or []:
+        texto = str(item).strip()
+        if texto and texto not in normalizados:
+            normalizados.append(texto)
+    return normalizados
+
+def validar_turmas_professor(turmas: list[str]) -> list[str]:
+    turmas_normalizadas = _normalizar_lista_texto(turmas)
+    if not turmas_normalizadas:
+        raise HTTPException(400, "Selecione ao menos uma turma.")
+
+    turmas_invalidas = [turma for turma in turmas_normalizadas if turma not in TURMAS_VALIDAS]
+    if turmas_invalidas:
+        raise HTTPException(400, "Uma ou mais turmas selecionadas são inválidas.")
+    return turmas_normalizadas
+
+def validar_disciplinas_professor(disciplinas: list[str]) -> list[str]:
+    disciplinas_normalizadas = _normalizar_lista_texto(disciplinas)
+    if not disciplinas_normalizadas:
+        raise HTTPException(400, "Selecione ao menos uma disciplina.")
+
+    invalidas = [disc for disc in disciplinas_normalizadas if disc not in DISCIPLINAS_VALIDAS]
+    if invalidas:
+        raise HTTPException(400, "Uma ou mais disciplinas selecionadas são inválidas.")
+    return disciplinas_normalizadas
+
+def obter_opcoes_cadastro_professor():
+    return {
+        "turmas": gerar_turmas_validas(),
+        "disciplinas": DISCIPLINAS_DISPONIVEIS
+    }
+
+def validar_payload_cadastro_professor(payload: ProfessorCreateIn):
+    nome = payload.nome.strip()
+    email = payload.email.strip().lower()
+    senha = payload.senha.strip()
+
+    if not nome:
+        raise HTTPException(400, "Nome é obrigatório.")
+    if not email:
+        raise HTTPException(400, "Email é obrigatório.")
+    if not senha:
+        raise HTTPException(400, "Senha é obrigatória.")
+
+    data_nascimento = validar_data_nascimento_professor(payload.data_nascimento)
+    aulas_semanais = validar_numero_nao_negativo(payload.aulas_semanais, "Aulas semanais")
+    turmas = validar_turmas_professor(payload.turmas)
+    disciplinas = validar_disciplinas_professor(payload.disciplinas)
+    validar_senha_forte(senha)
+
+    return {
+        "nome": nome,
+        "email": email,
+        "senha": senha,
+        "data_nascimento": data_nascimento,
+        "aulas_semanais": aulas_semanais,
+        "turmas": turmas,
+        "turmas_quantidade": len(turmas),
+        "disciplinas": disciplinas,
+    }
 
 def contar_paginas_intervalo(intervalo: str, total_paginas: int) -> int:
     if not intervalo or not intervalo.strip():
@@ -607,6 +710,11 @@ def agendamento_page(request: Request):
     return templates.TemplateResponse("agendamento.html", {"request": request})
 
 
+@app.get("/cadastro-professor")
+def cadastro_professor_page(request: Request):
+    return templates.TemplateResponse("cadastro_professor.html", {"request": request})
+
+
 @app.get("/admin")
 def admin_page(request: Request):
     return templates.TemplateResponse("admin.html", {"request": request})
@@ -671,6 +779,35 @@ def relatorio_recursos_admin(
         "por_professor": gerar_relatorio_uso_recursos_por_professor(data_inicio_norm, data_fim_norm)
     }
 
+@app.get("/professores/opcoes")
+def opcoes_professores_publico():
+    return obter_opcoes_cadastro_professor()
+
+@app.post("/professores/cadastro")
+def criar_professor_publico(payload: ProfessorCreateIn):
+    dados = validar_payload_cadastro_professor(payload)
+
+    try:
+        professor_id = criar_professor(
+            nome=dados["nome"],
+            email=dados["email"],
+            senha_hash=hash_senha(dados["senha"]),
+            data_nascimento=dados["data_nascimento"],
+            aulas_semanais=dados["aulas_semanais"],
+            turmas_quantidade=dados["turmas_quantidade"],
+            turmas=dados["turmas"],
+            disciplinas=dados["disciplinas"]
+        )
+    except sqlite3.IntegrityError as exc:
+        raise HTTPException(409, "Já existe um usuário com este email.") from exc
+
+    return {"mensagem": "Cadastro realizado com sucesso.", "professor_id": professor_id}
+
+@app.get("/admin/professores/opcoes")
+def opcoes_professores_admin(usuario = Depends(get_usuario_logado)):
+    exigir_admin(usuario)
+    return obter_opcoes_cadastro_professor()
+
 @app.get("/admin/professores")
 def listar_professores_painel(
     mes: str = None,
@@ -696,27 +833,18 @@ def criar_professor_painel(
     usuario = Depends(get_usuario_logado)
 ):
     exigir_admin(usuario)
-
-    nome = payload.nome.strip()
-    email = payload.email.strip().lower()
-    senha = payload.senha.strip()
-    aulas_semanais = validar_numero_nao_negativo(payload.aulas_semanais, "Aulas semanais")
-    turmas_quantidade = validar_numero_nao_negativo(payload.turmas_quantidade, "Quantidade de turmas")
-
-    if not nome:
-        raise HTTPException(400, "Nome é obrigatório.")
-    if not email:
-        raise HTTPException(400, "Email é obrigatório.")
-    if not senha:
-        raise HTTPException(400, "Senha é obrigatória.")
+    dados = validar_payload_cadastro_professor(payload)
 
     try:
         professor_id = criar_professor(
-            nome=nome,
-            email=email,
-            senha_hash=hash_senha(senha),
-            aulas_semanais=aulas_semanais,
-            turmas_quantidade=turmas_quantidade
+            nome=dados["nome"],
+            email=dados["email"],
+            senha_hash=hash_senha(dados["senha"]),
+            data_nascimento=dados["data_nascimento"],
+            aulas_semanais=dados["aulas_semanais"],
+            turmas_quantidade=dados["turmas_quantidade"],
+            turmas=dados["turmas"],
+            disciplinas=dados["disciplinas"]
         )
     except sqlite3.IntegrityError as exc:
         raise HTTPException(409, "Já existe um usuário com este email.") from exc
@@ -758,8 +886,9 @@ def atualizar_regras_cota_admin(
     base_paginas = validar_numero_nao_negativo(payload.base_paginas, "Base de páginas")
     paginas_por_aula = validar_numero_nao_negativo(payload.paginas_por_aula, "Páginas por aula")
     paginas_por_turma = validar_numero_nao_negativo(payload.paginas_por_turma, "Páginas por turma")
+    cota_mensal_escola = validar_numero_nao_negativo(payload.cota_mensal_escola, "Cota mensal da escola")
 
-    atualizar_regras_cota(base_paginas, paginas_por_aula, paginas_por_turma)
+    atualizar_regras_cota(base_paginas, paginas_por_aula, paginas_por_turma, cota_mensal_escola)
     return {"mensagem": "Regras de cota atualizadas com sucesso."}
 
 @app.post("/admin/cotas/recalcular")

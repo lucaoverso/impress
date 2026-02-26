@@ -1,6 +1,7 @@
 import sqlite3
 import uuid
 import hashlib
+import json
 
 STATUS_CONCLUIDO = "CONCLUIDO"
 STATUS_FINALIZADO_LEGADO = "FINALIZADO"
@@ -9,6 +10,7 @@ STATUS_AGENDAMENTO_CANCELADO = "CANCELADO"
 COTA_BASE_PADRAO = 80
 COTA_POR_AULA_PADRAO = 6
 COTA_POR_TURMA_PADRAO = 12
+COTA_MENSAL_ESCOLA_PADRAO = 4000
 
 DB_NAME = "impressao.db"
 
@@ -130,7 +132,8 @@ def criar_tabelas():
             nome TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL,
             senha_hash TEXT NOT NULL,
-            perfil TEXT NOT NULL
+            perfil TEXT NOT NULL,
+            data_nascimento TEXT
         )
     """)
 
@@ -179,6 +182,8 @@ def criar_tabelas():
             usuario_id INTEGER PRIMARY KEY,
             aulas_semanais INTEGER NOT NULL DEFAULT 0,
             turmas_quantidade INTEGER NOT NULL DEFAULT 0,
+            turmas TEXT NOT NULL DEFAULT '[]',
+            disciplinas TEXT NOT NULL DEFAULT '[]',
             atualizado_em TEXT NOT NULL,
             FOREIGN KEY(usuario_id) REFERENCES usuarios(id)
         )
@@ -190,6 +195,7 @@ def criar_tabelas():
             base_paginas INTEGER NOT NULL,
             paginas_por_aula INTEGER NOT NULL,
             paginas_por_turma INTEGER NOT NULL,
+            cota_mensal_escola INTEGER NOT NULL DEFAULT 4000,
             atualizado_em TEXT NOT NULL
         )
     """)
@@ -222,9 +228,11 @@ def criar_tabelas():
         )
     """)
 
+    _garantir_colunas_usuarios(cursor)
     _garantir_colunas_jobs(cursor)
     _garantir_colunas_agendamentos(cursor)
     _garantir_colunas_professores_carga(cursor)
+    _garantir_colunas_cota_regras(cursor)
 
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_jobs_status_prioridade_criado_em
@@ -253,17 +261,26 @@ def criar_tabelas():
 
     cursor.execute("""
         INSERT OR IGNORE INTO cota_regras (
-            id, base_paginas, paginas_por_aula, paginas_por_turma, atualizado_em
+            id, base_paginas, paginas_por_aula, paginas_por_turma, cota_mensal_escola, atualizado_em
         )
-        VALUES (1, ?, ?, ?, datetime('now'))
+        VALUES (1, ?, ?, ?, ?, datetime('now'))
     """, (
         COTA_BASE_PADRAO,
         COTA_POR_AULA_PADRAO,
         COTA_POR_TURMA_PADRAO,
+        COTA_MENSAL_ESCOLA_PADRAO,
     ))
 
     conn.commit()
     conn.close()
+
+def _garantir_colunas_usuarios(cursor):
+    cursor.execute("PRAGMA table_info(usuarios)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+
+    if "data_nascimento" not in colunas:
+        cursor.execute("ALTER TABLE usuarios ADD COLUMN data_nascimento TEXT")
+
 
 def _garantir_colunas_jobs(cursor):
     cursor.execute("PRAGMA table_info(jobs)")
@@ -337,6 +354,24 @@ def _garantir_colunas_professores_carga(cursor):
         cursor.execute(
             "ALTER TABLE professores_carga ADD COLUMN atualizado_em TEXT NOT NULL DEFAULT datetime('now')"
         )
+    if "turmas" not in colunas:
+        cursor.execute(
+            "ALTER TABLE professores_carga ADD COLUMN turmas TEXT NOT NULL DEFAULT '[]'"
+        )
+    if "disciplinas" not in colunas:
+        cursor.execute(
+            "ALTER TABLE professores_carga ADD COLUMN disciplinas TEXT NOT NULL DEFAULT '[]'"
+        )
+
+
+def _garantir_colunas_cota_regras(cursor):
+    cursor.execute("PRAGMA table_info(cota_regras)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+
+    if "cota_mensal_escola" not in colunas:
+        cursor.execute(
+            "ALTER TABLE cota_regras ADD COLUMN cota_mensal_escola INTEGER NOT NULL DEFAULT 4000"
+        )
 
 def salvar_token(token: str, usuario_id: int):
     conn = get_connection()
@@ -406,7 +441,7 @@ def buscar_usuario_por_id(usuario_id: int):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT id, nome, email, perfil
+        SELECT id, nome, email, perfil, data_nascimento
         FROM usuarios
         WHERE id = ?
     """, (usuario_id,))
@@ -432,26 +467,62 @@ def criar_usuario_se_nao_existir(nome, email, senha_hash, perfil):
     conn.commit()
     conn.close()
 
+def _serializar_lista_texto(valores):
+    if not valores:
+        return "[]"
+
+    normalizados = []
+    for valor in valores:
+        texto = str(valor).strip()
+        if texto and texto not in normalizados:
+            normalizados.append(texto)
+    return json.dumps(normalizados, ensure_ascii=False)
+
+def _desserializar_lista_texto(valor):
+    if not valor:
+        return []
+    try:
+        dados = json.loads(valor)
+    except (TypeError, json.JSONDecodeError):
+        return []
+    if not isinstance(dados, list):
+        return []
+
+    normalizados = []
+    for item in dados:
+        texto = str(item).strip()
+        if texto and texto not in normalizados:
+            normalizados.append(texto)
+    return normalizados
+
 def criar_professor(
     nome: str,
     email: str,
     senha_hash: str,
+    data_nascimento: str = "",
     aulas_semanais: int = 0,
     turmas_quantidade: int = 0,
+    turmas: list[str] = None,
+    disciplinas: list[str] = None,
 ):
     conn = get_connection()
     cursor = conn.cursor()
 
+    turmas_json = _serializar_lista_texto(turmas)
+    disciplinas_json = _serializar_lista_texto(disciplinas)
+
     cursor.execute("""
-        INSERT INTO usuarios (nome, email, senha_hash, perfil)
-        VALUES (?, ?, ?, 'professor')
-    """, (nome, email, senha_hash))
+        INSERT INTO usuarios (nome, email, senha_hash, perfil, data_nascimento)
+        VALUES (?, ?, ?, 'professor', ?)
+    """, (nome, email, senha_hash, data_nascimento or None))
 
     usuario_id = cursor.lastrowid
     cursor.execute("""
-        INSERT INTO professores_carga (usuario_id, aulas_semanais, turmas_quantidade, atualizado_em)
-        VALUES (?, ?, ?, datetime('now'))
-    """, (usuario_id, aulas_semanais, turmas_quantidade))
+        INSERT INTO professores_carga (
+            usuario_id, aulas_semanais, turmas_quantidade, turmas, disciplinas, atualizado_em
+        )
+        VALUES (?, ?, ?, ?, ?, datetime('now'))
+    """, (usuario_id, aulas_semanais, turmas_quantidade, turmas_json, disciplinas_json))
 
     conn.commit()
     conn.close()
@@ -478,7 +549,7 @@ def obter_regras_cota():
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT base_paginas, paginas_por_aula, paginas_por_turma, atualizado_em
+        SELECT base_paginas, paginas_por_aula, paginas_por_turma, cota_mensal_escola, atualizado_em
         FROM cota_regras
         WHERE id = 1
     """)
@@ -490,28 +561,109 @@ def obter_regras_cota():
             "base_paginas": COTA_BASE_PADRAO,
             "paginas_por_aula": COTA_POR_AULA_PADRAO,
             "paginas_por_turma": COTA_POR_TURMA_PADRAO,
+            "cota_mensal_escola": COTA_MENSAL_ESCOLA_PADRAO,
             "atualizado_em": None,
         }
     return dict(row)
 
-def atualizar_regras_cota(base_paginas: int, paginas_por_aula: int, paginas_por_turma: int):
+def atualizar_regras_cota(
+    base_paginas: int,
+    paginas_por_aula: int,
+    paginas_por_turma: int,
+    cota_mensal_escola: int,
+):
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
         INSERT INTO cota_regras (
-            id, base_paginas, paginas_por_aula, paginas_por_turma, atualizado_em
+            id, base_paginas, paginas_por_aula, paginas_por_turma, cota_mensal_escola, atualizado_em
         )
-        VALUES (1, ?, ?, ?, datetime('now'))
+        VALUES (1, ?, ?, ?, ?, datetime('now'))
         ON CONFLICT(id) DO UPDATE SET
             base_paginas = excluded.base_paginas,
             paginas_por_aula = excluded.paginas_por_aula,
             paginas_por_turma = excluded.paginas_por_turma,
+            cota_mensal_escola = excluded.cota_mensal_escola,
             atualizado_em = datetime('now')
-    """, (base_paginas, paginas_por_aula, paginas_por_turma))
+    """, (base_paginas, paginas_por_aula, paginas_por_turma, cota_mensal_escola))
 
     conn.commit()
     conn.close()
+
+def _calcular_peso_professor(
+    regras: dict,
+    aulas_semanais: int,
+    turmas_quantidade: int,
+):
+    peso = (
+        int(regras["base_paginas"])
+        + int(aulas_semanais) * int(regras["paginas_por_aula"])
+        + int(turmas_quantidade) * int(regras["paginas_por_turma"])
+    )
+    return max(peso, 0)
+
+def calcular_limites_cota_professores():
+    regras = obter_regras_cota()
+    cota_total = max(int(regras["cota_mensal_escola"]), 0)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            u.id,
+            COALESCE(pc.aulas_semanais, 0) AS aulas_semanais,
+            COALESCE(pc.turmas_quantidade, 0) AS turmas_quantidade
+        FROM usuarios u
+        LEFT JOIN professores_carga pc ON pc.usuario_id = u.id
+        WHERE u.perfil = 'professor'
+        ORDER BY u.id ASC
+    """)
+    rows = cursor.fetchall()
+    conn.close()
+
+    if not rows:
+        return {}
+
+    pesos = {}
+    total_pesos = 0
+    for row in rows:
+        peso = _calcular_peso_professor(
+            regras=regras,
+            aulas_semanais=row["aulas_semanais"],
+            turmas_quantidade=row["turmas_quantidade"]
+        )
+        pesos[int(row["id"])] = peso
+        total_pesos += peso
+
+    limites = {}
+
+    if total_pesos <= 0:
+        limite_base = cota_total // len(rows)
+        sobra = cota_total % len(rows)
+        for indice, row in enumerate(rows):
+            limites[int(row["id"])] = limite_base + (1 if indice < sobra else 0)
+        return limites
+
+    distribuicao = []
+    acumulado = 0
+    for row in rows:
+        usuario_id = int(row["id"])
+        quota_bruta = cota_total * pesos[usuario_id] / total_pesos
+        quota_inteira = int(quota_bruta)
+        limites[usuario_id] = quota_inteira
+        acumulado += quota_inteira
+        distribuicao.append((quota_bruta - quota_inteira, usuario_id))
+
+    sobra = cota_total - acumulado
+    if sobra > 0:
+        distribuicao.sort(key=lambda item: (-item[0], item[1]))
+        for indice in range(sobra):
+            usuario_id = distribuicao[indice % len(distribuicao)][1]
+            limites[usuario_id] += 1
+
+    return limites
 
 def calcular_limite_cota_usuario(usuario_id: int):
     conn = get_connection()
@@ -526,7 +678,7 @@ def calcular_limite_cota_usuario(usuario_id: int):
 
     if not row_usuario:
         conn.close()
-        return COTA_BASE_PADRAO
+        return 0
 
     regras = obter_regras_cota()
     perfil = row_usuario["perfil"]
@@ -534,24 +686,9 @@ def calcular_limite_cota_usuario(usuario_id: int):
     if perfil != "professor":
         conn.close()
         return int(regras["base_paginas"])
-
-    cursor.execute("""
-        SELECT aulas_semanais, turmas_quantidade
-        FROM professores_carga
-        WHERE usuario_id = ?
-    """, (usuario_id,))
-    carga = cursor.fetchone()
     conn.close()
-
-    aulas_semanais = int(carga["aulas_semanais"]) if carga else 0
-    turmas_quantidade = int(carga["turmas_quantidade"]) if carga else 0
-
-    limite = (
-        int(regras["base_paginas"])
-        + aulas_semanais * int(regras["paginas_por_aula"])
-        + turmas_quantidade * int(regras["paginas_por_turma"])
-    )
-    return max(limite, 0)
+    limites = calcular_limites_cota_professores()
+    return max(int(limites.get(int(usuario_id), 0)), 0)
 
 def listar_professores_admin(mes: str = None):
     conn = get_connection()
@@ -562,8 +699,11 @@ def listar_professores_admin(mes: str = None):
             u.id,
             u.nome,
             u.email,
+            u.data_nascimento,
             COALESCE(pc.aulas_semanais, 0) AS aulas_semanais,
-            COALESCE(pc.turmas_quantidade, 0) AS turmas_quantidade
+            COALESCE(pc.turmas_quantidade, 0) AS turmas_quantidade,
+            COALESCE(pc.turmas, '[]') AS turmas,
+            COALESCE(pc.disciplinas, '[]') AS disciplinas
         FROM usuarios u
         LEFT JOIN professores_carga pc ON pc.usuario_id = u.id
         WHERE u.perfil = 'professor'
@@ -572,6 +712,10 @@ def listar_professores_admin(mes: str = None):
     cursor.execute(query)
     rows = cursor.fetchall()
     professores = [dict(row) for row in rows]
+
+    for professor in professores:
+        professor["turmas"] = _desserializar_lista_texto(professor.get("turmas"))
+        professor["disciplinas"] = _desserializar_lista_texto(professor.get("disciplinas"))
 
     if mes:
         for professor in professores:
@@ -825,8 +969,9 @@ def atualizar_limite_cota_mes(usuario_id: int, mes: str, limite_paginas: int):
 
 def recalcular_cotas_mes(mes: str):
     professores = listar_professores_admin()
+    limites = calcular_limites_cota_professores()
     for professor in professores:
-        limite = calcular_limite_cota_usuario(professor["id"])
+        limite = int(limites.get(int(professor["id"]), 0))
         atualizar_limite_cota_mes(professor["id"], mes, limite)
 
 def gerar_relatorio_consumo():
