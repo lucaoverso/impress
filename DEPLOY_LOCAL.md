@@ -50,12 +50,17 @@ Ajuste obrigatório em `.env`:
 - `SPOOL_DIR=/var/spool/sistema-impress`
 - `ENABLE_EMBEDDED_WORKER=false`
 
+Ajuste recomendado em `.env` para o banco fora da pasta do código:
+- `DB_PATH=/opt/sistema-impress-data/impressao.db`
+
 ## 6) Diretórios e permissões
 
 ```bash
 sudo mkdir -p /var/spool/sistema-impress
+sudo mkdir -p /opt/sistema-impress-data
 sudo chown -R sistema-impress:lp /var/spool/sistema-impress
 sudo chown -R sistema-impress:lp /opt/sistema-impress
+sudo chown -R sistema-impress:lp /opt/sistema-impress-data
 ```
 
 ## 7) Configurar CUPS e impressora

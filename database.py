@@ -2,6 +2,9 @@ import sqlite3
 import uuid
 import hashlib
 import json
+import os
+import shutil
+from pathlib import Path
 
 STATUS_CONCLUIDO = "CONCLUIDO"
 STATUS_FINALIZADO_LEGADO = "FINALIZADO"
@@ -12,10 +15,47 @@ COTA_POR_AULA_PADRAO = 6
 COTA_POR_TURMA_PADRAO = 12
 COTA_MENSAL_ESCOLA_PADRAO = 4000
 
-DB_NAME = "impressao.db"
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR_PADRAO = BASE_DIR.parent / "sistema-impress-data"
+DB_PATH_PADRAO = DATA_DIR_PADRAO / "impressao.db"
+DB_PATH_LEGADO = BASE_DIR / "impressao.db"
+
+_db_path_env = os.getenv("DB_PATH", "").strip()
+if _db_path_env:
+    DB_PATH = Path(_db_path_env).expanduser()
+    if not DB_PATH.is_absolute():
+        DB_PATH = (BASE_DIR / DB_PATH).resolve()
+else:
+    DB_PATH = DB_PATH_PADRAO
+
+_BANCO_PREPARADO = False
+
+def _garantir_banco_preparado():
+    global _BANCO_PREPARADO
+    if _BANCO_PREPARADO:
+        return
+
+    try:
+        DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+    except OSError as exc:
+        raise RuntimeError(
+            f"Não foi possível criar diretório do banco em {DB_PATH.parent}."
+        ) from exc
+
+    # Migração automática do banco legado na raiz do projeto para o novo caminho.
+    if DB_PATH != DB_PATH_LEGADO and not DB_PATH.exists() and DB_PATH_LEGADO.exists():
+        try:
+            shutil.copy2(DB_PATH_LEGADO, DB_PATH)
+        except OSError as exc:
+            raise RuntimeError(
+                "Falha ao migrar banco legado para o novo diretório de dados."
+            ) from exc
+
+    _BANCO_PREPARADO = True
 
 def get_connection():
-    conn = sqlite3.connect(DB_NAME)
+    _garantir_banco_preparado()
+    conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     return conn
 

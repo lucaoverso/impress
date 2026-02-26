@@ -1,6 +1,24 @@
-/__pycache__/
-/services/__pycache__/
-/venv/
-/data/
-/.env
-/spool/
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+
+# Environment variables
+.env
+
+# SQLite
+*.db
+impressao.db
+
+# Dados locais
+data/
+spool/
+
+# IDE
+.vscode/
+.idea/
