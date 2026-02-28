@@ -14,6 +14,37 @@ COTA_BASE_PADRAO = 80
 COTA_POR_AULA_PADRAO = 6
 COTA_POR_TURMA_PADRAO = 12
 COTA_MENSAL_ESCOLA_PADRAO = 4000
+TURMAS_PADRAO = [
+    "6º ano A",
+    "6º ano B",
+    "7º ano A",
+    "7º ano B",
+    "8º ano A",
+    "8º ano B",
+    "9º ano A",
+    "9º ano B",
+    "1 E.M A",
+    "1 E.M B",
+    "2 E.M A",
+    "2 E.M B",
+    "3 E.M A",
+    "3 E.M B",
+]
+DISCIPLINAS_PADRAO = [
+    "Português",
+    "Matemática",
+    "Ciências",
+    "História",
+    "Geografia",
+    "Inglês",
+    "Artes",
+    "Educação Física",
+    "Física",
+    "Química",
+    "Biologia",
+    "Filosofia",
+    "Sociologia",
+]
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR_PADRAO = BASE_DIR.parent / "sistema-impress-data"
@@ -251,6 +282,24 @@ def criar_tabelas():
     """)
 
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS turmas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT UNIQUE NOT NULL,
+            ativo INTEGER NOT NULL DEFAULT 1,
+            criado_em TEXT NOT NULL
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS disciplinas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT UNIQUE NOT NULL,
+            ativo INTEGER NOT NULL DEFAULT 1,
+            criado_em TEXT NOT NULL
+        )
+    """)
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS agendamentos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             recurso_id INTEGER NOT NULL,
@@ -273,6 +322,8 @@ def criar_tabelas():
     _garantir_colunas_agendamentos(cursor)
     _garantir_colunas_professores_carga(cursor)
     _garantir_colunas_cota_regras(cursor)
+    _seed_catalogos_academicos(cursor)
+    _migrar_catalogos_academicos(cursor)
 
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_jobs_status_prioridade_criado_em
@@ -313,6 +364,55 @@ def criar_tabelas():
 
     conn.commit()
     conn.close()
+
+def _normalizar_nome_catalogo(nome: str) -> str:
+    return str(nome or "").strip()
+
+def _seed_catalogos_academicos(cursor):
+    cursor.executemany("""
+        INSERT OR IGNORE INTO turmas (nome, ativo, criado_em)
+        VALUES (?, 1, datetime('now'))
+    """, [(nome,) for nome in TURMAS_PADRAO])
+
+    cursor.executemany("""
+        INSERT OR IGNORE INTO disciplinas (nome, ativo, criado_em)
+        VALUES (?, 1, datetime('now'))
+    """, [(nome,) for nome in DISCIPLINAS_PADRAO])
+
+def _migrar_catalogos_academicos(cursor):
+    cursor.execute("""
+        SELECT COALESCE(turmas, '[]') AS turmas, COALESCE(disciplinas, '[]') AS disciplinas
+        FROM professores_carga
+    """)
+    for row in cursor.fetchall():
+        for turma in _desserializar_lista_texto(row["turmas"]):
+            nome = _normalizar_nome_catalogo(turma)
+            if nome:
+                cursor.execute("""
+                    INSERT OR IGNORE INTO turmas (nome, ativo, criado_em)
+                    VALUES (?, 1, datetime('now'))
+                """, (nome,))
+
+        for disciplina in _desserializar_lista_texto(row["disciplinas"]):
+            nome = _normalizar_nome_catalogo(disciplina)
+            if nome:
+                cursor.execute("""
+                    INSERT OR IGNORE INTO disciplinas (nome, ativo, criado_em)
+                    VALUES (?, 1, datetime('now'))
+                """, (nome,))
+
+    cursor.execute("""
+        SELECT DISTINCT turma
+        FROM agendamentos
+        WHERE turma IS NOT NULL AND TRIM(turma) <> ''
+    """)
+    for row in cursor.fetchall():
+        nome = _normalizar_nome_catalogo(row["turma"])
+        if nome:
+            cursor.execute("""
+                INSERT OR IGNORE INTO turmas (nome, ativo, criado_em)
+                VALUES (?, 1, datetime('now'))
+            """, (nome,))
 
 def _garantir_colunas_usuarios(cursor):
     cursor.execute("PRAGMA table_info(usuarios)")
@@ -792,6 +892,120 @@ def seed_recursos_padrao():
 
     conn.commit()
     conn.close()
+
+def listar_turmas(incluir_inativas: bool = False):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT id, nome, ativo, criado_em
+        FROM turmas
+    """
+    params = []
+
+    if not incluir_inativas:
+        query += " WHERE ativo = 1"
+
+    query += " ORDER BY nome COLLATE NOCASE ASC"
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [dict(row) for row in rows]
+
+def listar_turmas_ativas():
+    return listar_turmas(incluir_inativas=False)
+
+def criar_turma(nome: str):
+    nome_limpo = _normalizar_nome_catalogo(nome)
+    if not nome_limpo:
+        raise ValueError("Nome da turma é obrigatório.")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO turmas (nome, ativo, criado_em)
+        VALUES (?, 1, datetime('now'))
+    """, (nome_limpo,))
+
+    turma_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return turma_id
+
+def atualizar_status_turma(turma_id: int, ativo: bool):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE turmas
+        SET ativo = ?
+        WHERE id = ?
+    """, (1 if ativo else 0, turma_id))
+
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+def listar_disciplinas(incluir_inativas: bool = False):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT id, nome, ativo, criado_em
+        FROM disciplinas
+    """
+    params = []
+
+    if not incluir_inativas:
+        query += " WHERE ativo = 1"
+
+    query += " ORDER BY nome COLLATE NOCASE ASC"
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [dict(row) for row in rows]
+
+def listar_disciplinas_ativas():
+    return listar_disciplinas(incluir_inativas=False)
+
+def criar_disciplina(nome: str):
+    nome_limpo = _normalizar_nome_catalogo(nome)
+    if not nome_limpo:
+        raise ValueError("Nome da disciplina é obrigatório.")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO disciplinas (nome, ativo, criado_em)
+        VALUES (?, 1, datetime('now'))
+    """, (nome_limpo,))
+
+    disciplina_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return disciplina_id
+
+def atualizar_status_disciplina(disciplina_id: int, ativo: bool):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE disciplinas
+        SET ativo = ?
+        WHERE id = ?
+    """, (1 if ativo else 0, disciplina_id))
+
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
 
 
 def gerar_token():

@@ -45,6 +45,12 @@ class ProfessorCargaIn(BaseModel):
     aulas_semanais: int
     turmas_quantidade: int
 
+class TurmaCreateIn(BaseModel):
+    nome: str
+
+class DisciplinaCreateIn(BaseModel):
+    nome: str
+
 class RecursoCreateIn(BaseModel):
     nome: str
     tipo: str

@@ -76,6 +76,14 @@ function renderCheckboxes(containerId, opcoes, prefixo) {
     const container = el(containerId);
     container.innerHTML = "";
 
+    if (!Array.isArray(opcoes) || opcoes.length === 0) {
+        const vazio = document.createElement("p");
+        vazio.className = "booking-empty";
+        vazio.innerText = "Nenhuma opção ativa cadastrada.";
+        container.appendChild(vazio);
+        return;
+    }
+
     opcoes.forEach((item, index) => {
         const id = `${prefixo}_${index}`;
         const label = document.createElement("label");
@@ -122,6 +130,138 @@ async function carregarOpcoesProfessor() {
 
     renderCheckboxes("profTurmasLista", opcoesProfessor.turmas, "turma");
     renderCheckboxes("profDisciplinasLista", opcoesProfessor.disciplinas, "disciplina");
+}
+
+async function carregarTurmasAdmin() {
+    const turmas = await fetchJson("/admin/turmas?incluir_inativas=true", { headers });
+    const ul = el("listaTurmasAdmin");
+    ul.innerHTML = "";
+
+    if (!Array.isArray(turmas) || turmas.length === 0) {
+        const vazio = document.createElement("li");
+        vazio.className = "booking-empty";
+        vazio.innerText = "Nenhuma turma cadastrada.";
+        ul.appendChild(vazio);
+        return;
+    }
+
+    turmas.forEach((turma) => {
+        const li = document.createElement("li");
+        li.className = "admin-list-item";
+
+        const titulo = document.createElement("p");
+        titulo.innerText = turma.nome;
+
+        const detalhe = document.createElement("p");
+        detalhe.className = "booking-detail";
+        detalhe.innerText = `Status: ${turma.ativo ? "Ativa" : "Inativa"}`;
+
+        const btnStatus = document.createElement("button");
+        btnStatus.type = "button";
+        btnStatus.innerText = turma.ativo ? "Desativar" : "Ativar";
+        btnStatus.addEventListener("click", async () => {
+            try {
+                await fetchJson(`/admin/turmas/${turma.id}/status`, {
+                    method: "PUT",
+                    headers: headersJson,
+                    body: JSON.stringify({ ativo: !Boolean(turma.ativo) })
+                });
+                await Promise.all([carregarTurmasAdmin(), carregarOpcoesProfessor()]);
+            } catch (err) {
+                setMensagem("msgTurma", err.message, true);
+            }
+        });
+
+        li.appendChild(titulo);
+        li.appendChild(detalhe);
+        li.appendChild(btnStatus);
+        ul.appendChild(li);
+    });
+}
+
+async function cadastrarTurma(event) {
+    event.preventDefault();
+    try {
+        await fetchJson("/admin/turmas", {
+            method: "POST",
+            headers: headersJson,
+            body: JSON.stringify({
+                nome: el("turmaNome").value.trim()
+            })
+        });
+
+        setMensagem("msgTurma", "Turma cadastrada com sucesso.");
+        el("formTurma").reset();
+        await Promise.all([carregarTurmasAdmin(), carregarOpcoesProfessor()]);
+    } catch (err) {
+        setMensagem("msgTurma", err.message, true);
+    }
+}
+
+async function carregarDisciplinasAdmin() {
+    const disciplinas = await fetchJson("/admin/disciplinas?incluir_inativas=true", { headers });
+    const ul = el("listaDisciplinasAdmin");
+    ul.innerHTML = "";
+
+    if (!Array.isArray(disciplinas) || disciplinas.length === 0) {
+        const vazio = document.createElement("li");
+        vazio.className = "booking-empty";
+        vazio.innerText = "Nenhuma disciplina cadastrada.";
+        ul.appendChild(vazio);
+        return;
+    }
+
+    disciplinas.forEach((disciplina) => {
+        const li = document.createElement("li");
+        li.className = "admin-list-item";
+
+        const titulo = document.createElement("p");
+        titulo.innerText = disciplina.nome;
+
+        const detalhe = document.createElement("p");
+        detalhe.className = "booking-detail";
+        detalhe.innerText = `Status: ${disciplina.ativo ? "Ativa" : "Inativa"}`;
+
+        const btnStatus = document.createElement("button");
+        btnStatus.type = "button";
+        btnStatus.innerText = disciplina.ativo ? "Desativar" : "Ativar";
+        btnStatus.addEventListener("click", async () => {
+            try {
+                await fetchJson(`/admin/disciplinas/${disciplina.id}/status`, {
+                    method: "PUT",
+                    headers: headersJson,
+                    body: JSON.stringify({ ativo: !Boolean(disciplina.ativo) })
+                });
+                await Promise.all([carregarDisciplinasAdmin(), carregarOpcoesProfessor()]);
+            } catch (err) {
+                setMensagem("msgDisciplina", err.message, true);
+            }
+        });
+
+        li.appendChild(titulo);
+        li.appendChild(detalhe);
+        li.appendChild(btnStatus);
+        ul.appendChild(li);
+    });
+}
+
+async function cadastrarDisciplina(event) {
+    event.preventDefault();
+    try {
+        await fetchJson("/admin/disciplinas", {
+            method: "POST",
+            headers: headersJson,
+            body: JSON.stringify({
+                nome: el("disciplinaNome").value.trim()
+            })
+        });
+
+        setMensagem("msgDisciplina", "Disciplina cadastrada com sucesso.");
+        el("formDisciplina").reset();
+        await Promise.all([carregarDisciplinasAdmin(), carregarOpcoesProfessor()]);
+    } catch (err) {
+        setMensagem("msgDisciplina", err.message, true);
+    }
 }
 
 function queryPeriodo(prefix = "") {
@@ -483,6 +623,8 @@ async function carregarRelatorios() {
 
 function registrarEventos() {
     el("formProfessor").addEventListener("submit", cadastrarProfessor);
+    el("formTurma").addEventListener("submit", cadastrarTurma);
+    el("formDisciplina").addEventListener("submit", cadastrarDisciplina);
     el("formCotaRegras").addEventListener("submit", salvarRegrasCota);
     el("formRecurso").addEventListener("submit", cadastrarRecurso);
     el("profSenha").addEventListener("input", atualizarHintSenha);
@@ -513,7 +655,9 @@ async function init() {
             buscarHistorico(),
             carregarProfessores(),
             carregarRecursos(),
-            carregarRelatorios()
+            carregarRelatorios(),
+            carregarTurmasAdmin(),
+            carregarDisciplinasAdmin()
         ]);
     } catch (err) {
         setMensagem("msgRelatorios", err.message, true);

@@ -27,15 +27,7 @@ const OPCAO_TURNOS_FALLBACK = [
     { id: "VESPERTINO_EM", nome: "Vespertino E.M.", aulas: 6 }
 ];
 
-const OPCOES_TURMAS_FALLBACK = [
-    "6º ano A", "6º ano B",
-    "7º ano A", "7º ano B",
-    "8º ano A", "8º ano B",
-    "9º ano A", "9º ano B",
-    "1 E.M A", "1 E.M B",
-    "2 E.M A", "2 E.M B",
-    "3 E.M A", "3 E.M B"
-];
+const OPCOES_TURMAS_FALLBACK = [];
 
 let usuarioAtual = null;
 let recursos = [];
@@ -127,6 +119,15 @@ function preencherSelectTurmas() {
     const select = el("turmaReserva");
     select.innerHTML = "";
 
+    if (turmas.length === 0) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.innerText = "Nenhuma turma ativa cadastrada";
+        option.selected = true;
+        select.appendChild(option);
+        return;
+    }
+
     turmas.forEach((turma) => {
         const option = document.createElement("option");
         option.value = turma;
@@ -166,9 +167,7 @@ async function carregarOpcoesAgendamento() {
         turnos = Array.isArray(data.turnos) && data.turnos.length > 0
             ? data.turnos
             : OPCAO_TURNOS_FALLBACK;
-        turmas = Array.isArray(data.turmas) && data.turmas.length > 0
-            ? data.turmas
-            : OPCOES_TURMAS_FALLBACK;
+        turmas = Array.isArray(data.turmas) ? data.turmas : OPCOES_TURMAS_FALLBACK;
     } catch (err) {
         turnos = OPCAO_TURNOS_FALLBACK;
         turmas = OPCOES_TURMAS_FALLBACK;
@@ -392,6 +391,11 @@ async function cancelarReserva(idReserva) {
 }
 
 async function agendarRecurso() {
+    if (turmas.length === 0) {
+        setMensagem("Não há turmas ativas cadastradas. Procure a coordenação.", "erro");
+        return;
+    }
+
     const recursoId = Number(el("recursoSelect").value);
     const data = el("dataReserva").value;
     const turno = el("turnoReserva").value;

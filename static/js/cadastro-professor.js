@@ -28,6 +28,14 @@ function renderCheckboxes(containerId, opcoes, prefixo) {
     const container = el(containerId);
     container.innerHTML = "";
 
+    if (!Array.isArray(opcoes) || opcoes.length === 0) {
+        const vazio = document.createElement("p");
+        vazio.className = "booking-empty";
+        vazio.innerText = "Nenhuma opção ativa cadastrada.";
+        container.appendChild(vazio);
+        return;
+    }
+
     opcoes.forEach((item, index) => {
         const id = `${prefixo}_${index}`;
         const label = document.createElement("label");
@@ -79,6 +87,10 @@ async function carregarOpcoes() {
 
     renderCheckboxes("cadTurmasLista", turmas, "turma");
     renderCheckboxes("cadDisciplinasLista", disciplinas, "disciplina");
+
+    if (turmas.length === 0 || disciplinas.length === 0) {
+        setMensagem("Cadastro indisponível: peça ao administrador para ativar turmas e disciplinas.", true);
+    }
 }
 
 async function cadastrarProfessor(event) {

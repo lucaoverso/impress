@@ -30,6 +30,8 @@ from models import (
     AgendamentoIn,
     ProfessorCreateIn,
     ProfessorCargaIn,
+    TurmaCreateIn,
+    DisciplinaCreateIn,
     RecursoCreateIn,
     RecursoStatusIn,
     RegrasCotaIn
@@ -64,6 +66,14 @@ from database import (
     listar_recursos,
     criar_recurso,
     atualizar_status_recurso,
+    listar_turmas,
+    listar_turmas_ativas,
+    criar_turma,
+    atualizar_status_turma,
+    listar_disciplinas,
+    listar_disciplinas_ativas,
+    criar_disciplina,
+    atualizar_status_disciplina,
     buscar_recurso_por_id,
     buscar_usuario_por_id,
     buscar_agendamento_conflito,
@@ -151,39 +161,13 @@ TURNOS_CONFIG = {
     "VESPERTINO": {"nome": "Vespertino", "aulas": 5},
     "VESPERTINO_EM": {"nome": "Vespertino E.M.", "aulas": 6},
 }
-
-DISCIPLINAS_DISPONIVEIS = [
-    "Português",
-    "Matemática",
-    "Ciências",
-    "História",
-    "Geografia",
-    "Inglês",
-    "Artes",
-    "Educação Física",
-    "Física",
-    "Química",
-    "Biologia",
-    "Filosofia",
-    "Sociologia",
-]
-
-DISCIPLINAS_VALIDAS = set(DISCIPLINAS_DISPONIVEIS)
 SENHA_FORTE_REGEX = re.compile(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$")
 
-def gerar_turmas_validas():
-    turmas = []
-    for ano in range(6, 10):
-        turmas.append(f"{ano}º ano A")
-        turmas.append(f"{ano}º ano B")
+def obter_nomes_turmas_ativas() -> list[str]:
+    return [turma["nome"] for turma in listar_turmas_ativas()]
 
-    for serie in range(1, 4):
-        turmas.append(f"{serie} E.M A")
-        turmas.append(f"{serie} E.M B")
-
-    return turmas
-
-TURMAS_VALIDAS = set(gerar_turmas_validas())
+def obter_nomes_disciplinas_ativas() -> list[str]:
+    return [disciplina["nome"] for disciplina in listar_disciplinas_ativas()]
 
 def validar_data_nascimento_professor(data_txt: str) -> str:
     try:
@@ -219,7 +203,8 @@ def validar_turmas_professor(turmas: list[str]) -> list[str]:
     if not turmas_normalizadas:
         raise HTTPException(400, "Selecione ao menos uma turma.")
 
-    turmas_invalidas = [turma for turma in turmas_normalizadas if turma not in TURMAS_VALIDAS]
+    turmas_validas = set(obter_nomes_turmas_ativas())
+    turmas_invalidas = [turma for turma in turmas_normalizadas if turma not in turmas_validas]
     if turmas_invalidas:
         raise HTTPException(400, "Uma ou mais turmas selecionadas são inválidas.")
     return turmas_normalizadas
@@ -229,15 +214,16 @@ def validar_disciplinas_professor(disciplinas: list[str]) -> list[str]:
     if not disciplinas_normalizadas:
         raise HTTPException(400, "Selecione ao menos uma disciplina.")
 
-    invalidas = [disc for disc in disciplinas_normalizadas if disc not in DISCIPLINAS_VALIDAS]
+    disciplinas_validas = set(obter_nomes_disciplinas_ativas())
+    invalidas = [disc for disc in disciplinas_normalizadas if disc not in disciplinas_validas]
     if invalidas:
         raise HTTPException(400, "Uma ou mais disciplinas selecionadas são inválidas.")
     return disciplinas_normalizadas
 
 def obter_opcoes_cadastro_professor():
     return {
-        "turmas": gerar_turmas_validas(),
-        "disciplinas": DISCIPLINAS_DISPONIVEIS
+        "turmas": obter_nomes_turmas_ativas(),
+        "disciplinas": obter_nomes_disciplinas_ativas(),
     }
 
 def validar_payload_cadastro_professor(payload: ProfessorCreateIn):
@@ -335,7 +321,8 @@ def validar_aula(aula: str, turno: str) -> str:
 
 def validar_turma(turma: str) -> str:
     turma_limpa = str(turma).strip()
-    if turma_limpa not in TURMAS_VALIDAS:
+    turmas_validas = set(obter_nomes_turmas_ativas())
+    if turma_limpa not in turmas_validas:
         raise HTTPException(400, "Turma inválida.")
     return turma_limpa
 
@@ -597,7 +584,7 @@ def opcoes_agendamento(usuario = Depends(get_usuario_logado)):
     ]
     return {
         "turnos": turnos,
-        "turmas": gerar_turmas_validas()
+        "turmas": obter_nomes_turmas_ativas(),
     }
 
 
@@ -781,6 +768,82 @@ def relatorio_recursos_admin(
         "por_recurso": gerar_relatorio_uso_recursos(data_inicio_norm, data_fim_norm),
         "por_professor": gerar_relatorio_uso_recursos_por_professor(data_inicio_norm, data_fim_norm)
     }
+
+@app.get("/admin/turmas")
+def listar_turmas_admin_api(
+    incluir_inativas: bool = True,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    return listar_turmas(incluir_inativas=incluir_inativas)
+
+@app.post("/admin/turmas")
+def criar_turma_admin(
+    payload: TurmaCreateIn,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    nome = payload.nome.strip()
+
+    if not nome:
+        raise HTTPException(400, "Nome da turma é obrigatório.")
+
+    try:
+        turma_id = criar_turma(nome)
+    except sqlite3.IntegrityError as exc:
+        raise HTTPException(409, "Já existe uma turma com este nome.") from exc
+
+    return {"mensagem": "Turma cadastrada com sucesso.", "turma_id": turma_id}
+
+@app.put("/admin/turmas/{turma_id}/status")
+def atualizar_status_turma_admin(
+    turma_id: int,
+    payload: RecursoStatusIn,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    alterado = atualizar_status_turma(turma_id, payload.ativo)
+    if not alterado:
+        raise HTTPException(404, "Turma não encontrada.")
+    return {"mensagem": "Status da turma atualizado com sucesso."}
+
+@app.get("/admin/disciplinas")
+def listar_disciplinas_admin_api(
+    incluir_inativas: bool = True,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    return listar_disciplinas(incluir_inativas=incluir_inativas)
+
+@app.post("/admin/disciplinas")
+def criar_disciplina_admin(
+    payload: DisciplinaCreateIn,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    nome = payload.nome.strip()
+
+    if not nome:
+        raise HTTPException(400, "Nome da disciplina é obrigatório.")
+
+    try:
+        disciplina_id = criar_disciplina(nome)
+    except sqlite3.IntegrityError as exc:
+        raise HTTPException(409, "Já existe uma disciplina com este nome.") from exc
+
+    return {"mensagem": "Disciplina cadastrada com sucesso.", "disciplina_id": disciplina_id}
+
+@app.put("/admin/disciplinas/{disciplina_id}/status")
+def atualizar_status_disciplina_admin(
+    disciplina_id: int,
+    payload: RecursoStatusIn,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    alterado = atualizar_status_disciplina(disciplina_id, payload.ativo)
+    if not alterado:
+        raise HTTPException(404, "Disciplina não encontrada.")
+    return {"mensagem": "Status da disciplina atualizado com sucesso."}
 
 @app.get("/professores/opcoes")
 def opcoes_professores_publico():

@@ -46,6 +46,34 @@
             </article>
 
             <article class="admin-card">
+                <h2>Cadastrar turma</h2>
+                <form id="formTurma" class="admin-form">
+                    <input id="turmaNome" type="text" placeholder="Nome da turma (ex: 6º ano A)" required>
+                    <button class="btn-destaque" type="submit">Cadastrar turma</button>
+                </form>
+                <p id="msgTurma"></p>
+            </article>
+
+            <article class="admin-card">
+                <h2>Turmas cadastradas</h2>
+                <ul id="listaTurmasAdmin" class="admin-list"></ul>
+            </article>
+
+            <article class="admin-card">
+                <h2>Cadastrar disciplina</h2>
+                <form id="formDisciplina" class="admin-form">
+                    <input id="disciplinaNome" type="text" placeholder="Nome da disciplina" required>
+                    <button class="btn-destaque" type="submit">Cadastrar disciplina</button>
+                </form>
+                <p id="msgDisciplina"></p>
+            </article>
+
+            <article class="admin-card">
+                <h2>Disciplinas cadastradas</h2>
+                <ul id="listaDisciplinasAdmin" class="admin-list"></ul>
+            </article>
+
+            <article class="admin-card">
                 <h2>Regras de cota proporcional</h2>
                 <form id="formCotaRegras" class="admin-form">
                     <input id="cotaMensalEscola" type="number" min="0" placeholder="Cota mensal da escola" required>
