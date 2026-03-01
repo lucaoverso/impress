@@ -358,80 +358,83 @@ footer {
 
 .professor-page {
     min-height: 100svh;
-    padding: 10px;
+    padding: 14px;
     overflow: hidden;
     background:
-        radial-gradient(circle at 20% 10%, #f2f2f6, transparent 38%),
-        linear-gradient(180deg, #d8d8dd 0%, #e2e2e7 58%, #ececef 100%);
+        radial-gradient(circle at 12% 14%, #dfeaf8, transparent 32%),
+        radial-gradient(circle at 92% 8%, #fceec8, transparent 24%),
+        linear-gradient(180deg, #eef3f9 0%, #e6edf6 62%, #dfe8f3 100%);
 }
 
 .print-ios-layout {
-    width: min(1320px, 100%);
-    height: calc(100svh - 20px);
+    width: min(1360px, 100%);
+    height: calc(100svh - 28px);
     margin: 0 auto;
     display: grid;
-    grid-template-columns: minmax(320px, 430px) minmax(0, 1fr);
-    gap: 12px;
+    grid-template-columns: minmax(340px, 430px) minmax(0, 1fr);
+    gap: 16px;
 }
 
 .print-options-panel,
 .print-preview-stage {
     min-height: 0;
-    border-radius: 30px;
-    border: 1px solid rgba(255, 255, 255, 0.72);
-    background: rgba(239, 239, 244, 0.86);
-    backdrop-filter: blur(4px);
-    padding: 14px;
+    border-radius: 18px;
+    border: 1px solid #d1dceb;
+    background: #fdfefe;
+    box-shadow: 0 12px 32px rgba(15, 23, 42, 0.08);
+    padding: 16px;
 }
 
 .print-options-panel {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 14px;
     overflow: auto;
 }
 
 .print-ios-topbar {
-    display: grid;
-    grid-template-columns: auto 1fr auto;
+    display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 2px;
 }
 
 .print-ios-topbar h1 {
-    text-align: center;
-    font-size: 36px;
-    line-height: 1;
-    letter-spacing: -0.03em;
+    font-size: 26px;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
 }
 
 .print-ios-top-actions {
     display: flex;
     gap: 8px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .print-circle-btn {
-    width: 48px;
-    height: 48px;
-    border: none;
-    border-radius: 999px;
-    background: var(--surface-0);
+    height: 38px;
+    border: 1px solid var(--line-strong);
+    border-radius: 10px;
+    background: #ffffff;
     color: var(--text-main);
-    font-size: 19px;
+    font-size: 14px;
     font-weight: 700;
-    line-height: 1;
+    line-height: 1.2;
+    padding: 0 12px;
 }
 
 .print-circle-btn.is-muted {
-    background: #d1d1d6;
-    color: #f8fafc;
+    background: #f2f5fa;
 }
 
 .ios-group {
-    border-radius: 24px;
+    border-radius: 14px;
     border: 1px solid var(--line-soft);
-    background: #f8f8fa;
-    padding: 10px 14px;
+    background: #f8fbff;
+    padding: 12px 14px;
     display: flex;
     flex-direction: column;
 }
@@ -439,30 +442,30 @@ footer {
 .ios-group-file label {
     font-size: 13px;
     font-weight: 700;
-    color: #5a6675;
+    color: #4f5d6f;
     margin-bottom: 6px;
 }
 
 .ios-group-file input[type="file"] {
-    min-height: 44px;
-    border-radius: 14px;
+    min-height: 42px;
+    border-radius: 10px;
     border: 1px dashed var(--line-strong);
     background: #ffffff;
-    padding: 9px;
+    padding: 8px;
 }
 
 .ios-row {
     display: grid;
-    grid-template-columns: minmax(100px, 1fr) minmax(140px, 220px);
+    grid-template-columns: minmax(130px, 1fr) minmax(150px, 1fr);
     align-items: center;
-    gap: 12px;
-    padding: 8px 0;
+    gap: 10px;
+    padding: 10px 0;
 }
 
 .ios-row label,
 .ios-row > span {
-    font-size: 17px;
-    font-weight: 600;
+    font-size: 14px;
+    font-weight: 700;
     color: #111827;
 }
 
@@ -470,139 +473,107 @@ footer {
 .ios-row input[type="number"],
 .ios-row select {
     width: 100%;
-    height: 42px;
-    border-radius: 12px;
-    border: 1px solid var(--line-strong);
-    background: #eef0f4;
+    height: 40px;
+    border-radius: 10px;
+    border: 1px solid var(--line);
+    background: #ffffff;
     color: #111827;
-    padding: 0 10px;
+    padding: 0 12px;
 }
 
 #copias {
-    max-width: 92px;
+    max-width: 110px;
     margin-left: auto;
     text-align: center;
-    font-size: 26px;
+    font-size: 18px;
+    font-weight: 700;
 }
 
 #intervaloPaginas {
-    margin-left: auto;
-    text-align: right;
+    margin-left: 0;
+    text-align: left;
 }
 
 #intervaloPaginas::placeholder {
-    color: #8a8f98;
+    color: #8a96a7;
 }
 
 #paginasPorFolha,
 #orientacao {
-    margin-left: auto;
+    margin-left: 0;
 }
 
 .ios-divider {
     height: 1px;
     background: var(--line-soft);
+    margin: 2px 0;
 }
 
 .ios-row-check {
     grid-template-columns: 1fr auto;
+    align-items: center;
 }
 
-.print-checkbox {
-    position: relative;
-    width: 54px;
-    height: 32px;
-}
-
-.print-checkbox input[type="checkbox"] {
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    pointer-events: none;
-}
-
-.print-checkbox span {
-    display: block;
-    width: 100%;
-    height: 100%;
-    border-radius: 999px;
-    background: #d1d1d6;
-    transition: background-color 0.2s ease;
-}
-
-.print-checkbox span::after {
-    content: "";
-    position: absolute;
-    top: 3px;
-    left: 3px;
-    width: 26px;
-    height: 26px;
-    border-radius: 999px;
-    background: #ffffff;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
-    transition: transform 0.2s ease;
-}
-
-.print-checkbox input[type="checkbox"]:checked + span {
-    background: #34c759;
-}
-
-.print-checkbox input[type="checkbox"]:checked + span::after {
-    transform: translateX(22px);
+.print-check-input {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
 }
 
 .print-send-btn {
-    height: 50px;
-    border-radius: 16px;
+    height: 44px;
+    border-radius: 10px;
     border: none;
-    font-size: 17px;
+    font-size: 15px;
 }
 
 .print-status {
-    min-height: 56px;
+    min-height: 60px;
+    padding: 4px 2px;
 }
 
 .print-feedback,
 .print-consumo,
 .print-feedback-muted {
-    min-height: 18px;
+    min-height: 20px;
 }
 
 .print-feedback {
-    color: #0b5b55;
+    color: #0f766e;
     font-weight: 700;
 }
 
 .print-consumo {
     font-weight: 700;
+    color: #1f2937;
 }
 
 .print-feedback-muted {
-    color: #556273;
-    font-size: 13px;
+    color: #526174;
+    font-size: 12px;
 }
 
 .print-meta-compact {
     display: grid;
     grid-template-columns: 1fr;
-    gap: 10px;
+    gap: 12px;
 }
 
 .print-meta-card {
-    border-radius: 20px;
+    border-radius: 14px;
     border: 1px solid var(--line-soft);
-    background: #f8f8fa;
-    padding: 12px;
+    background: #f7fafc;
+    padding: 12px 14px;
 }
 
 .print-meta-card h2 {
-    font-size: 16px;
+    font-size: 15px;
     margin-bottom: 6px;
 }
 
 .print-jobs-card {
     min-height: 110px;
-    max-height: 180px;
+    max-height: 220px;
     overflow: auto;
 }
 
@@ -614,7 +585,7 @@ footer {
 }
 
 #lista-jobs li {
-    border-radius: 10px;
+    border-radius: 8px;
     border: 1px solid var(--line-soft);
     background: var(--surface-0);
     padding: 8px 10px;
@@ -633,7 +604,8 @@ footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 10px;
+    flex-wrap: wrap;
 }
 
 .print-preview-header .auth-badge {
@@ -645,38 +617,49 @@ footer {
     grid-template-columns: 36px minmax(0, 1fr) 36px;
     align-items: center;
     gap: 6px;
-    min-width: 210px;
-    border-radius: 999px;
+    min-width: 220px;
+    border-radius: 10px;
     border: 1px solid var(--line-soft);
-    background: #f7f7f9;
+    background: #f6f9fd;
     padding: 4px;
 }
 
+.print-pagination.is-desktop-scroll {
+    grid-template-columns: minmax(0, 1fr);
+    min-width: 180px;
+    padding: 6px 12px;
+}
+
+.print-pagination.is-desktop-scroll button {
+    display: none;
+}
+
 .print-pagination button {
-    width: 36px;
-    height: 36px;
-    border: 1px solid var(--line-soft);
-    border-radius: 999px;
-    background: var(--surface-0);
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #ffffff;
     color: var(--text-main);
 }
 
 #contadorFolha {
     text-align: center;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 700;
     color: #374151;
     white-space: nowrap;
 }
 
 .print-preview-pane {
-    border-radius: 24px;
+    border-radius: 14px;
     border: 1px solid var(--line-soft);
-    background: #e7e7eb;
+    background: #edf2f8;
     overflow-x: hidden;
-    overflow-y: hidden;
+    overflow-y: auto;
     overscroll-behavior-x: contain;
-    padding: 10px 10px 14px;
+    overscroll-behavior-y: contain;
+    padding: 12px;
 }
 
 #previewContainer {
@@ -695,10 +678,19 @@ footer {
     justify-content: flex-start;
 }
 
+#previewContainer.is-desktop-scroll {
+    width: 100%;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 14px;
+    padding: 2px 4px 16px;
+}
+
 .preview-empty {
     min-width: 260px;
     padding: 20px;
-    border-radius: 16px;
+    border-radius: 12px;
     border: 1px dashed var(--line-strong);
     background: #f7f9fc;
     color: #5f6b7b;
@@ -720,27 +712,27 @@ footer {
 }
 
 #previewContainer .print-sheet {
-    border-radius: 9px;
+    border-radius: 8px;
     border: 1px solid var(--line-soft);
     background: var(--surface-0);
-    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.15);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.12);
     overflow: hidden;
 }
 
 #previewContainer .print-sheet-thumb.is-active .print-sheet {
-    border-color: #93c5fd;
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3), 0 8px 22px rgba(15, 23, 42, 0.18);
+    border-color: #76a9fa;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.26), 0 8px 18px rgba(15, 23, 42, 0.15);
 }
 
 #previewContainer .sheet-label {
     display: none;
-    border-radius: 999px;
+    border-radius: 8px;
     border: 1px solid var(--line-soft);
-    background: rgba(255, 255, 255, 0.92);
+    background: #ffffff;
     color: #4b5563;
-    font-size: 15px;
+    font-size: 13px;
     font-weight: 700;
-    padding: 8px 16px;
+    padding: 6px 10px;
 }
 
 #previewContainer .print-sheet-thumb.is-active .sheet-label {
@@ -757,11 +749,53 @@ footer {
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    cursor: pointer;
+    transition: opacity 0.18s ease, filter 0.18s ease, border-color 0.18s ease;
+}
+
+#previewContainer .preview-cell.is-selected {
+    border-color: #74a5ff;
+    box-shadow: inset 0 0 0 1px rgba(59, 130, 246, 0.35), 0 0 0 1px rgba(59, 130, 246, 0.22);
+}
+
+#previewContainer .preview-cell canvas {
+    display: block;
+}
+
+#previewContainer .preview-cell.is-unchecked {
+    opacity: 0.35;
+    filter: saturate(0.35);
+    border-style: dashed;
+    border-color: #9aa8bb;
+}
+
+#previewContainer .preview-page-tag {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    z-index: 2;
+    border-radius: 999px;
+    border: 1px solid #c7d2de;
+    background: rgba(247, 250, 253, 0.95);
+    color: #5b6b7f;
+    font-size: 10px;
+    font-weight: 700;
+    line-height: 1.1;
+    padding: 3px 7px;
+    pointer-events: none;
+}
+
+#previewContainer .preview-cell.is-selected .preview-page-tag {
+    border-color: #93b6ff;
+    background: rgba(232, 241, 255, 0.95);
+    color: #1d4ed8;
 }
 
 @media (max-width: 1100px) {
     .print-ios-layout {
-        grid-template-columns: minmax(280px, 380px) minmax(0, 1fr);
+        grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+        gap: 12px;
     }
 }
 
@@ -779,22 +813,45 @@ footer {
 
     .print-options-panel,
     .print-preview-stage {
-        border-radius: 26px;
-        padding: 12px;
+        border-radius: 14px;
+        padding: 10px;
     }
 
-    .print-ios-topbar h1 {
-        font-size: 30px;
-    }
-
-    .print-preview-header {
+    .print-ios-topbar {
         flex-direction: column;
         align-items: stretch;
     }
 
+    .print-ios-topbar h1 {
+        font-size: 22px;
+    }
+
+    .print-preview-header {
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: nowrap;
+        gap: 8px;
+    }
+
     .print-pagination {
         min-width: 0;
-        width: 100%;
+        width: auto;
+        grid-template-columns: minmax(0, 1fr);
+        padding: 5px 10px;
+        border-color: #a9d7ca;
+        background: #d8f0ea;
+        border-radius: 999px;
+    }
+
+    .print-pagination button {
+        display: none;
+    }
+
+    #contadorFolha {
+        font-size: 13px;
+        color: #0f766e;
+        font-weight: 800;
     }
 
     .ios-row {
@@ -806,7 +863,6 @@ footer {
     .ios-row input[type="number"],
     .ios-row select {
         max-width: none;
-        margin-left: 0;
         text-align: left;
     }
 
@@ -820,8 +876,15 @@ footer {
     }
 
     .print-preview-pane {
+        padding: 8px;
         overflow-x: auto;
+        overflow-y: hidden;
         scroll-snap-type: x mandatory;
+    }
+
+    #previewContainer {
+        gap: 8px;
+        padding: 2px 2px 8px;
     }
 
     #previewContainer.is-carousel .print-sheet-thumb {
@@ -830,23 +893,30 @@ footer {
 
     #previewContainer.is-carousel .sheet-label {
         display: block;
+        font-size: 12px;
+        padding: 5px 8px;
+    }
+
+    #previewContainer .preview-page-tag {
+        font-size: 9px;
+        padding: 2px 6px;
     }
 }
 
 @media (max-width: 520px) {
     .print-ios-topbar h1 {
-        font-size: 26px;
+        font-size: 20px;
     }
 
     .print-circle-btn {
-        width: 44px;
-        height: 44px;
-        font-size: 17px;
+        height: 36px;
+        font-size: 13px;
+        padding: 0 10px;
     }
 
     .print-options-panel,
     .print-preview-stage {
-        border-radius: 22px;
+        border-radius: 12px;
     }
 }
 

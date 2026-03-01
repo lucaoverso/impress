@@ -47,9 +47,19 @@ class ProfessorCargaIn(BaseModel):
 
 class TurmaCreateIn(BaseModel):
     nome: str
+    turno: str
+    quantidade_estudantes: int = 0
+
+class TurmaUpdateIn(BaseModel):
+    turno: str
+    quantidade_estudantes: int
 
 class DisciplinaCreateIn(BaseModel):
     nome: str
+    aulas_semanais: int = 0
+
+class DisciplinaUpdateIn(BaseModel):
+    aulas_semanais: int
 
 class RecursoCreateIn(BaseModel):
     nome: str

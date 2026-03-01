@@ -15,6 +15,12 @@ const headersJson = {
 
 const SENHA_FORTE_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 let opcoesProfessor = { turmas: [], disciplinas: [] };
+const TURNO_LABEL = {
+    INTEGRAL: "Período integral",
+    MATUTINO: "Matutino",
+    VESPERTINO: "Vespertino",
+    VESPERTINO_EM: "Vespertino E.M."
+};
 
 function el(id) {
     return document.getElementById(id);
@@ -121,6 +127,10 @@ function formatarDataBr(dataIso) {
     return data.toLocaleDateString("pt-BR");
 }
 
+function nomeTurno(turno) {
+    return TURNO_LABEL[turno] || turno || "Não informado";
+}
+
 async function carregarOpcoesProfessor() {
     const dados = await fetchJson("/admin/professores/opcoes", { headers });
     opcoesProfessor = {
@@ -154,7 +164,45 @@ async function carregarTurmasAdmin() {
 
         const detalhe = document.createElement("p");
         detalhe.className = "booking-detail";
-        detalhe.innerText = `Status: ${turma.ativo ? "Ativa" : "Inativa"}`;
+        detalhe.innerText = `Turno: ${nomeTurno(turma.turno)} | Estudantes: ${turma.quantidade_estudantes ?? 0} | Status: ${turma.ativo ? "Ativa" : "Inativa"}`;
+
+        const linha = document.createElement("div");
+        linha.className = "admin-inline";
+
+        const inputTurno = document.createElement("select");
+        ["MATUTINO", "VESPERTINO", "VESPERTINO_EM", "INTEGRAL"].forEach((turno) => {
+            const option = document.createElement("option");
+            option.value = turno;
+            option.innerText = nomeTurno(turno);
+            inputTurno.appendChild(option);
+        });
+        inputTurno.value = turma.turno && TURNO_LABEL[turma.turno] ? turma.turno : "MATUTINO";
+
+        const inputQuantidade = document.createElement("input");
+        inputQuantidade.type = "number";
+        inputQuantidade.min = "0";
+        inputQuantidade.value = String(turma.quantidade_estudantes ?? 0);
+        inputQuantidade.title = "Quantidade de estudantes";
+
+        const btnSalvarDados = document.createElement("button");
+        btnSalvarDados.type = "button";
+        btnSalvarDados.innerText = "Salvar dados";
+        btnSalvarDados.addEventListener("click", async () => {
+            try {
+                await fetchJson(`/admin/turmas/${turma.id}`, {
+                    method: "PUT",
+                    headers: headersJson,
+                    body: JSON.stringify({
+                        turno: inputTurno.value,
+                        quantidade_estudantes: Number(inputQuantidade.value)
+                    })
+                });
+                setMensagem("msgTurma", `Dados da turma ${turma.nome} atualizados.`);
+                await carregarTurmasAdmin();
+            } catch (err) {
+                setMensagem("msgTurma", err.message, true);
+            }
+        });
 
         const btnStatus = document.createElement("button");
         btnStatus.type = "button";
@@ -172,8 +220,13 @@ async function carregarTurmasAdmin() {
             }
         });
 
+        linha.appendChild(inputTurno);
+        linha.appendChild(inputQuantidade);
+        linha.appendChild(btnSalvarDados);
+
         li.appendChild(titulo);
         li.appendChild(detalhe);
+        li.appendChild(linha);
         li.appendChild(btnStatus);
         ul.appendChild(li);
     });
@@ -186,12 +239,16 @@ async function cadastrarTurma(event) {
             method: "POST",
             headers: headersJson,
             body: JSON.stringify({
-                nome: el("turmaNome").value.trim()
+                nome: el("turmaNome").value.trim(),
+                turno: el("turmaTurno").value,
+                quantidade_estudantes: Number(el("turmaQuantidadeEstudantes").value)
             })
         });
 
         setMensagem("msgTurma", "Turma cadastrada com sucesso.");
         el("formTurma").reset();
+        el("turmaTurno").value = "MATUTINO";
+        el("turmaQuantidadeEstudantes").value = "0";
         await Promise.all([carregarTurmasAdmin(), carregarOpcoesProfessor()]);
     } catch (err) {
         setMensagem("msgTurma", err.message, true);
@@ -220,7 +277,35 @@ async function carregarDisciplinasAdmin() {
 
         const detalhe = document.createElement("p");
         detalhe.className = "booking-detail";
-        detalhe.innerText = `Status: ${disciplina.ativo ? "Ativa" : "Inativa"}`;
+        detalhe.innerText = `Aulas semanais: ${disciplina.aulas_semanais ?? 0} | Status: ${disciplina.ativo ? "Ativa" : "Inativa"}`;
+
+        const linha = document.createElement("div");
+        linha.className = "admin-inline";
+
+        const inputAulas = document.createElement("input");
+        inputAulas.type = "number";
+        inputAulas.min = "0";
+        inputAulas.value = String(disciplina.aulas_semanais ?? 0);
+        inputAulas.title = "Aulas semanais";
+
+        const btnSalvarDados = document.createElement("button");
+        btnSalvarDados.type = "button";
+        btnSalvarDados.innerText = "Salvar aulas";
+        btnSalvarDados.addEventListener("click", async () => {
+            try {
+                await fetchJson(`/admin/disciplinas/${disciplina.id}`, {
+                    method: "PUT",
+                    headers: headersJson,
+                    body: JSON.stringify({
+                        aulas_semanais: Number(inputAulas.value)
+                    })
+                });
+                setMensagem("msgDisciplina", `Aulas da disciplina ${disciplina.nome} atualizadas.`);
+                await carregarDisciplinasAdmin();
+            } catch (err) {
+                setMensagem("msgDisciplina", err.message, true);
+            }
+        });
 
         const btnStatus = document.createElement("button");
         btnStatus.type = "button";
@@ -238,8 +323,12 @@ async function carregarDisciplinasAdmin() {
             }
         });
 
+        linha.appendChild(inputAulas);
+        linha.appendChild(btnSalvarDados);
+
         li.appendChild(titulo);
         li.appendChild(detalhe);
+        li.appendChild(linha);
         li.appendChild(btnStatus);
         ul.appendChild(li);
     });
@@ -252,12 +341,14 @@ async function cadastrarDisciplina(event) {
             method: "POST",
             headers: headersJson,
             body: JSON.stringify({
-                nome: el("disciplinaNome").value.trim()
+                nome: el("disciplinaNome").value.trim(),
+                aulas_semanais: Number(el("disciplinaAulasSemanais").value)
             })
         });
 
         setMensagem("msgDisciplina", "Disciplina cadastrada com sucesso.");
         el("formDisciplina").reset();
+        el("disciplinaAulasSemanais").value = "0";
         await Promise.all([carregarDisciplinasAdmin(), carregarOpcoesProfessor()]);
     } catch (err) {
         setMensagem("msgDisciplina", err.message, true);

@@ -12,12 +12,13 @@ let pdfDoc = null;
 let folhaAtual = 1;
 let renderTokenAtual = 0;
 let resizeTimer = null;
+let previewScrollRaf = null;
 const QUALIDADE_MAX_DPR = 1.4;
 const FOLHA_PADDING = 8;
 const FOLHA_GAP = 6;
-const LARGURA_MINIATURA_MOBILE = 164;
-const LABEL_PREVIEW_RESERVA = 72;
+const LABEL_PREVIEW_RESERVA = 38;
 const RESERVA_BORDA_PREVIEW = 24;
+const BREAKPOINT_MOBILE_PREVIEW = 980;
 
 const TAMANHO_FOLHA = {
     retrato: { largura: 794, altura: 1123 },
@@ -26,6 +27,18 @@ const TAMANHO_FOLHA = {
 
 function el(id) {
     return document.getElementById(id);
+}
+
+function isPreviewMobile() {
+    return window.innerWidth <= BREAKPOINT_MOBILE_PREVIEW;
+}
+
+function atualizarModoNavegacaoPreview(isMobile) {
+    const paginacao = document.querySelector(".print-pagination");
+    if (!paginacao) {
+        return;
+    }
+    paginacao.classList.toggle("is-desktop-scroll", !isMobile);
 }
 
 function obterConfigLayout(paginasPorFolha) {
@@ -46,13 +59,13 @@ function obterDimensoesMiniatura(tamanhoFolha, isMobile) {
         : Math.max(120, window.innerWidth - 56);
     const alturaDisponivelBase = pane
         ? Math.max(120, pane.clientHeight - RESERVA_BORDA_PREVIEW)
-        : Math.max(120, Math.floor(window.innerHeight * (isMobile ? 0.28 : 0.5)));
+        : Math.max(120, Math.floor(window.innerHeight * (isMobile ? 0.36 : 0.5)));
 
     const alturaDisponivel = isMobile
-        ? Math.max(110, alturaDisponivelBase - LABEL_PREVIEW_RESERVA)
+        ? Math.max(140, alturaDisponivelBase - LABEL_PREVIEW_RESERVA)
         : alturaDisponivelBase;
     const larguraAlvo = isMobile
-        ? Math.min(LARGURA_MINIATURA_MOBILE, larguraDisponivel)
+        ? Math.max(170, larguraDisponivel)
         : larguraDisponivel;
     const escala = Math.min(
         larguraAlvo / tamanhoFolha.largura,
@@ -61,13 +74,17 @@ function obterDimensoesMiniatura(tamanhoFolha, isMobile) {
 
     return {
         largura: Math.max(96, Math.round(tamanhoFolha.largura * escala)),
-        altura: Math.max(110, Math.round(tamanhoFolha.altura * escala))
+        altura: Math.max(130, Math.round(tamanhoFolha.altura * escala))
     };
 }
 
 function mostrarPreviewVazio(texto = "Selecione um PDF para visualizar as páginas.") {
     const container = el("previewContainer");
     container.innerHTML = "";
+    const isMobile = isPreviewMobile();
+    container.classList.toggle("is-carousel", isMobile);
+    container.classList.toggle("is-desktop-scroll", !isMobile);
+    atualizarModoNavegacaoPreview(isMobile);
 
     const msg = document.createElement("p");
     msg.className = "preview-empty";
@@ -88,10 +105,11 @@ function centralizarFolhaAtiva(suave = true) {
     if (!folhaAtiva) {
         return;
     }
+    const isMobile = isPreviewMobile();
     folhaAtiva.scrollIntoView({
         behavior: suave ? "smooth" : "auto",
-        block: "nearest",
-        inline: "center"
+        block: isMobile ? "nearest" : "start",
+        inline: isMobile ? "center" : "nearest"
     });
 }
 
@@ -166,6 +184,91 @@ function obterPaginasSelecionadas() {
     const resultado = Array.from(paginas).sort((a, b) => a - b);
     infoEl.innerText = `${resultado.length} página(s) selecionada(s).`;
     return resultado;
+}
+
+function gerarIntervaloApartirPaginas(paginasSelecionadas, totalPaginas) {
+    const ordenadas = Array.from(new Set(paginasSelecionadas || []))
+        .filter((pagina) => Number.isInteger(pagina) && pagina > 0 && pagina <= totalPaginas)
+        .sort((a, b) => a - b);
+
+    if (ordenadas.length === 0) {
+        return "";
+    }
+
+    if (ordenadas.length === totalPaginas && ordenadas[0] === 1 && ordenadas[ordenadas.length - 1] === totalPaginas) {
+        return "";
+    }
+
+    const partes = [];
+    let inicio = ordenadas[0];
+    let fim = ordenadas[0];
+
+    for (let i = 1; i < ordenadas.length; i++) {
+        const atual = ordenadas[i];
+        if (atual === fim + 1) {
+            fim = atual;
+            continue;
+        }
+
+        partes.push(inicio === fim ? `${inicio}` : `${inicio}-${fim}`);
+        inicio = atual;
+        fim = atual;
+    }
+    partes.push(inicio === fim ? `${inicio}` : `${inicio}-${fim}`);
+    return partes.join(", ");
+}
+
+function aplicarEstadoSelecaoWrapper(wrapper, paginaSelecionada, numeroPagina) {
+    if (!wrapper) {
+        return;
+    }
+
+    wrapper.classList.toggle("is-selected", paginaSelecionada);
+    wrapper.classList.toggle("is-unchecked", !paginaSelecionada);
+
+    const marcador = wrapper.querySelector(".preview-page-tag");
+    if (marcador) {
+        marcador.innerText = `Pg ${numeroPagina}`;
+    }
+}
+
+function atualizarEstadoVisualPagina(numeroPagina, paginaSelecionada) {
+    const wrapper = document.querySelector(`#previewContainer .preview-cell[data-page="${numeroPagina}"]`);
+    if (!wrapper) {
+        return;
+    }
+    aplicarEstadoSelecaoWrapper(wrapper, paginaSelecionada, numeroPagina);
+}
+
+function alternarSelecaoPagina(numeroPagina) {
+    if (!pdfDoc || !Number.isInteger(numeroPagina) || numeroPagina <= 0) {
+        return;
+    }
+
+    let paginasSelecionadas;
+    try {
+        paginasSelecionadas = obterPaginasSelecionadas();
+    } catch (err) {
+        el("msg").innerText = err.message;
+        return;
+    }
+
+    const selecionadas = new Set(paginasSelecionadas);
+    if (selecionadas.has(numeroPagina)) {
+        if (selecionadas.size === 1) {
+            el("msg").innerText = "Mantenha ao menos uma página selecionada.";
+            return;
+        }
+        selecionadas.delete(numeroPagina);
+    } else {
+        selecionadas.add(numeroPagina);
+    }
+
+    const resultado = Array.from(selecionadas).sort((a, b) => a - b);
+    el("intervaloPaginas").value = gerarIntervaloApartirPaginas(resultado, pdfDoc.numPages);
+    el("msg").innerText = "";
+    atualizarEstadoVisualPagina(numeroPagina, selecionadas.has(numeroPagina));
+    calcularConsumo();
 }
 
 function calcularConsumo() {
@@ -265,6 +368,7 @@ async function carregarPreview(file) {
     if (!file) {
         pdfDoc = null;
         folhaAtual = 1;
+        el("intervaloPaginas").value = "";
         renderTokenAtual += 1;
         mostrarPreviewVazio();
         calcularConsumo();
@@ -272,6 +376,8 @@ async function carregarPreview(file) {
         return;
     }
 
+    // Novo upload deve iniciar com todas as páginas selecionadas.
+    el("intervaloPaginas").value = "";
     const arrayBuffer = await file.arrayBuffer();
     pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     folhaAtual = 1;
@@ -289,13 +395,9 @@ function totalFolhasVisualizacao() {
     if (!pdfDoc) {
         return 0;
     }
-    try {
-        const paginasPorFolha = Number(el("paginasPorFolha").value);
-        const paginasSelecionadas = obterPaginasSelecionadas();
-        return Math.max(1, Math.ceil(paginasSelecionadas.length / paginasPorFolha));
-    } catch {
-        return 0;
-    }
+
+    const paginasPorFolha = Number(el("paginasPorFolha").value);
+    return Math.max(1, Math.ceil(pdfDoc.numPages / paginasPorFolha));
 }
 
 function atualizarContador() {
@@ -311,7 +413,7 @@ function atualizarContador() {
     if (folhaAtual > total) {
         folhaAtual = total;
     }
-    el("contadorFolha").innerText = `Folha ${folhaAtual} de ${total}`;
+    el("contadorFolha").innerText = `Página ${folhaAtual} de ${total}`;
 }
 
 function irParaFolha(indiceFolha) {
@@ -329,20 +431,78 @@ function irParaFolha(indiceFolha) {
 
     folhaAtual = destino;
     atualizarContador();
-    const isMobile = window.innerWidth <= 980;
-    if (isMobile) {
-        atualizarDestaqueFolha();
-        centralizarFolhaAtiva();
+    atualizarDestaqueFolha();
+    centralizarFolhaAtiva();
+}
+
+function atualizarFolhaAtualPorScroll() {
+    if (!pdfDoc) {
         return;
     }
-    renderFolha();
+
+    const pane = document.querySelector(".print-preview-pane");
+    const thumbs = Array.from(document.querySelectorAll("#previewContainer .print-sheet-thumb"));
+    if (!pane || thumbs.length === 0) {
+        return;
+    }
+
+    const paneRect = pane.getBoundingClientRect();
+    const mobile = isPreviewMobile();
+    let folhaDetectada = folhaAtual;
+    let menorDistancia = Number.POSITIVE_INFINITY;
+
+    thumbs.forEach((thumb) => {
+        const rect = thumb.getBoundingClientRect();
+        let distancia = Number.POSITIVE_INFINITY;
+
+        if (mobile) {
+            if (rect.right < paneRect.left || rect.left > paneRect.right) {
+                return;
+            }
+            const referenciaX = paneRect.left + (paneRect.width / 2);
+            const centroX = rect.left + (rect.width / 2);
+            distancia = Math.abs(referenciaX - centroX);
+        } else {
+            if (rect.bottom < paneRect.top || rect.top > paneRect.bottom) {
+                return;
+            }
+            const referenciaY = paneRect.top + Math.min(140, paneRect.height * 0.35);
+            const dentroDaFaixa = referenciaY >= rect.top && referenciaY <= rect.bottom;
+            distancia = dentroDaFaixa
+                ? 0
+                : Math.min(Math.abs(referenciaY - rect.top), Math.abs(referenciaY - rect.bottom));
+        }
+
+        if (distancia < menorDistancia) {
+            menorDistancia = distancia;
+            folhaDetectada = Number(thumb.dataset.folha) || folhaDetectada;
+        }
+    });
+
+    if (folhaDetectada !== folhaAtual) {
+        folhaAtual = folhaDetectada;
+        atualizarContador();
+        atualizarDestaqueFolha();
+    }
+}
+
+function reagirScrollPreview() {
+    if (previewScrollRaf) {
+        return;
+    }
+    previewScrollRaf = requestAnimationFrame(() => {
+        previewScrollRaf = null;
+        atualizarFolhaAtualPorScroll();
+    });
 }
 
 async function renderFolha() {
     const container = el("previewContainer");
     container.innerHTML = "";
-    const isMobile = window.innerWidth <= 980;
+    const isMobile = isPreviewMobile();
     container.classList.toggle("is-carousel", isMobile);
+    container.classList.toggle("is-desktop-scroll", !isMobile);
+    atualizarModoNavegacaoPreview(isMobile);
 
     if (!pdfDoc) {
         mostrarPreviewVazio();
@@ -362,15 +522,15 @@ async function renderFolha() {
     const orientacao = obterOrientacaoPreview();
     const configLayout = obterConfigLayout(paginasPorFolha);
     const tamanhoFolha = TAMANHO_FOLHA[orientacao];
-    const totalFolhas = Math.max(1, Math.ceil(paginasSelecionadas.length / paginasPorFolha));
+    const paginasPreview = Array.from({ length: pdfDoc.numPages }, (_, i) => i + 1);
+    const paginasSelecionadasSet = new Set(paginasSelecionadas);
+    const totalFolhas = Math.max(1, Math.ceil(paginasPreview.length / paginasPorFolha));
 
     if (folhaAtual > totalFolhas) {
         folhaAtual = totalFolhas;
     }
 
-    const folhasParaRenderizar = isMobile
-        ? Array.from({ length: totalFolhas }, (_, i) => i + 1)
-        : [folhaAtual];
+    const folhasParaRenderizar = Array.from({ length: totalFolhas }, (_, i) => i + 1);
     const tamanhoMiniatura = obterDimensoesMiniatura(tamanhoFolha, isMobile);
 
     const areaLargura = tamanhoMiniatura.largura - (FOLHA_PADDING * 2) - (FOLHA_GAP * (configLayout.colunas - 1));
@@ -386,7 +546,7 @@ async function renderFolha() {
         }
 
         const inicio = (indiceFolha - 1) * paginasPorFolha;
-        const paginasDaFolha = paginasSelecionadas.slice(inicio, inicio + paginasPorFolha);
+        const paginasDaFolha = paginasPreview.slice(inicio, inicio + paginasPorFolha);
 
         const thumb = document.createElement("article");
         thumb.classList.add("print-sheet-thumb");
@@ -433,6 +593,9 @@ async function renderFolha() {
 
             const wrapper = document.createElement("div");
             wrapper.classList.add("preview-cell");
+            wrapper.dataset.page = String(numeroPagina);
+
+            const paginaSelecionada = paginasSelecionadasSet.has(numeroPagina);
 
             const canvas = document.createElement("canvas");
             const ctx = canvas.getContext("2d");
@@ -444,8 +607,19 @@ async function renderFolha() {
             canvas.style.maxWidth = "100%";
             canvas.style.maxHeight = "100%";
 
+            const marcador = document.createElement("span");
+            marcador.classList.add("preview-page-tag");
+            marcador.innerText = `Pg ${numeroPagina}`;
+            wrapper.appendChild(marcador);
+            aplicarEstadoSelecaoWrapper(wrapper, paginaSelecionada, numeroPagina);
+
             wrapper.appendChild(canvas);
             folha.appendChild(wrapper);
+
+            wrapper.addEventListener("click", (event) => {
+                event.stopPropagation();
+                alternarSelecaoPagina(numeroPagina);
+            });
 
             await page.render({
                 canvasContext: ctx,
@@ -466,6 +640,10 @@ async function renderFolha() {
     atualizarDestaqueFolha();
     if (isMobile) {
         centralizarFolhaAtiva(false);
+    } else {
+        requestAnimationFrame(() => {
+            atualizarFolhaAtualPorScroll();
+        });
     }
 }
 
@@ -484,18 +662,21 @@ function folhaAnterior() {
 }
 
 function reagendarRenderAposResize() {
-    if (!pdfDoc) {
-        return;
-    }
     if (resizeTimer) {
         clearTimeout(resizeTimer);
     }
     resizeTimer = setTimeout(() => {
+        if (!pdfDoc) {
+            mostrarPreviewVazio();
+            return;
+        }
         renderFolha();
     }, 120);
 }
 
 function registrarEventos() {
+    const previewPane = document.querySelector(".print-preview-pane");
+
     el("arquivo").addEventListener("change", (e) => carregarPreview(e.target.files[0]));
     el("orientacao").addEventListener("change", atualizarPreview);
     el("copias").addEventListener("input", calcularConsumo);
@@ -509,6 +690,9 @@ function registrarEventos() {
     el("btnAnterior").addEventListener("click", folhaAnterior);
     el("btnProxima").addEventListener("click", proximaFolha);
     window.addEventListener("resize", reagendarRenderAposResize);
+    if (previewPane) {
+        previewPane.addEventListener("scroll", reagirScrollPreview, { passive: true });
+    }
 
     const btnVoltarServicos = el("btnVoltarServicos");
     const btnIrAgendamento = el("btnIrAgendamento");

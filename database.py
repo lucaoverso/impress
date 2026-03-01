@@ -285,6 +285,8 @@ def criar_tabelas():
         CREATE TABLE IF NOT EXISTS turmas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT UNIQUE NOT NULL,
+            turno TEXT NOT NULL DEFAULT '',
+            quantidade_estudantes INTEGER NOT NULL DEFAULT 0,
             ativo INTEGER NOT NULL DEFAULT 1,
             criado_em TEXT NOT NULL
         )
@@ -294,6 +296,7 @@ def criar_tabelas():
         CREATE TABLE IF NOT EXISTS disciplinas (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT UNIQUE NOT NULL,
+            aulas_semanais INTEGER NOT NULL DEFAULT 0,
             ativo INTEGER NOT NULL DEFAULT 1,
             criado_em TEXT NOT NULL
         )
@@ -322,6 +325,8 @@ def criar_tabelas():
     _garantir_colunas_agendamentos(cursor)
     _garantir_colunas_professores_carga(cursor)
     _garantir_colunas_cota_regras(cursor)
+    _garantir_colunas_turmas(cursor)
+    _garantir_colunas_disciplinas(cursor)
     _seed_catalogos_academicos(cursor)
     _migrar_catalogos_academicos(cursor)
 
@@ -370,13 +375,13 @@ def _normalizar_nome_catalogo(nome: str) -> str:
 
 def _seed_catalogos_academicos(cursor):
     cursor.executemany("""
-        INSERT OR IGNORE INTO turmas (nome, ativo, criado_em)
-        VALUES (?, 1, datetime('now'))
+        INSERT OR IGNORE INTO turmas (nome, turno, quantidade_estudantes, ativo, criado_em)
+        VALUES (?, '', 0, 1, datetime('now'))
     """, [(nome,) for nome in TURMAS_PADRAO])
 
     cursor.executemany("""
-        INSERT OR IGNORE INTO disciplinas (nome, ativo, criado_em)
-        VALUES (?, 1, datetime('now'))
+        INSERT OR IGNORE INTO disciplinas (nome, aulas_semanais, ativo, criado_em)
+        VALUES (?, 0, 1, datetime('now'))
     """, [(nome,) for nome in DISCIPLINAS_PADRAO])
 
 def _migrar_catalogos_academicos(cursor):
@@ -389,16 +394,16 @@ def _migrar_catalogos_academicos(cursor):
             nome = _normalizar_nome_catalogo(turma)
             if nome:
                 cursor.execute("""
-                    INSERT OR IGNORE INTO turmas (nome, ativo, criado_em)
-                    VALUES (?, 1, datetime('now'))
+                    INSERT OR IGNORE INTO turmas (nome, turno, quantidade_estudantes, ativo, criado_em)
+                    VALUES (?, '', 0, 1, datetime('now'))
                 """, (nome,))
 
         for disciplina in _desserializar_lista_texto(row["disciplinas"]):
             nome = _normalizar_nome_catalogo(disciplina)
             if nome:
                 cursor.execute("""
-                    INSERT OR IGNORE INTO disciplinas (nome, ativo, criado_em)
-                    VALUES (?, 1, datetime('now'))
+                    INSERT OR IGNORE INTO disciplinas (nome, aulas_semanais, ativo, criado_em)
+                    VALUES (?, 0, 1, datetime('now'))
                 """, (nome,))
 
     cursor.execute("""
@@ -410,8 +415,8 @@ def _migrar_catalogos_academicos(cursor):
         nome = _normalizar_nome_catalogo(row["turma"])
         if nome:
             cursor.execute("""
-                INSERT OR IGNORE INTO turmas (nome, ativo, criado_em)
-                VALUES (?, 1, datetime('now'))
+                INSERT OR IGNORE INTO turmas (nome, turno, quantidade_estudantes, ativo, criado_em)
+                VALUES (?, '', 0, 1, datetime('now'))
             """, (nome,))
 
 def _garantir_colunas_usuarios(cursor):
@@ -511,6 +516,28 @@ def _garantir_colunas_cota_regras(cursor):
     if "cota_mensal_escola" not in colunas:
         cursor.execute(
             "ALTER TABLE cota_regras ADD COLUMN cota_mensal_escola INTEGER NOT NULL DEFAULT 4000"
+        )
+
+def _garantir_colunas_turmas(cursor):
+    cursor.execute("PRAGMA table_info(turmas)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+
+    if "turno" not in colunas:
+        cursor.execute(
+            "ALTER TABLE turmas ADD COLUMN turno TEXT NOT NULL DEFAULT ''"
+        )
+    if "quantidade_estudantes" not in colunas:
+        cursor.execute(
+            "ALTER TABLE turmas ADD COLUMN quantidade_estudantes INTEGER NOT NULL DEFAULT 0"
+        )
+
+def _garantir_colunas_disciplinas(cursor):
+    cursor.execute("PRAGMA table_info(disciplinas)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+
+    if "aulas_semanais" not in colunas:
+        cursor.execute(
+            "ALTER TABLE disciplinas ADD COLUMN aulas_semanais INTEGER NOT NULL DEFAULT 0"
         )
 
 def salvar_token(token: str, usuario_id: int):
@@ -898,7 +925,7 @@ def listar_turmas(incluir_inativas: bool = False):
     cursor = conn.cursor()
 
     query = """
-        SELECT id, nome, ativo, criado_em
+        SELECT id, nome, turno, quantidade_estudantes, ativo, criado_em
         FROM turmas
     """
     params = []
@@ -917,23 +944,47 @@ def listar_turmas(incluir_inativas: bool = False):
 def listar_turmas_ativas():
     return listar_turmas(incluir_inativas=False)
 
-def criar_turma(nome: str):
+def criar_turma(nome: str, turno: str = "", quantidade_estudantes: int = 0):
     nome_limpo = _normalizar_nome_catalogo(nome)
     if not nome_limpo:
         raise ValueError("Nome da turma é obrigatório.")
+    turno_limpo = str(turno or "").strip().upper()
+    quantidade_estudantes_valor = int(quantidade_estudantes or 0)
+    if quantidade_estudantes_valor < 0:
+        raise ValueError("Quantidade de estudantes não pode ser negativa.")
 
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO turmas (nome, ativo, criado_em)
-        VALUES (?, 1, datetime('now'))
-    """, (nome_limpo,))
+        INSERT INTO turmas (nome, turno, quantidade_estudantes, ativo, criado_em)
+        VALUES (?, ?, ?, 1, datetime('now'))
+    """, (nome_limpo, turno_limpo, quantidade_estudantes_valor))
 
     turma_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return turma_id
+
+def atualizar_turma_dados(turma_id: int, turno: str, quantidade_estudantes: int):
+    turno_limpo = str(turno or "").strip().upper()
+    quantidade_estudantes_valor = int(quantidade_estudantes or 0)
+    if quantidade_estudantes_valor < 0:
+        raise ValueError("Quantidade de estudantes não pode ser negativa.")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE turmas
+        SET turno = ?, quantidade_estudantes = ?
+        WHERE id = ?
+    """, (turno_limpo, quantidade_estudantes_valor, turma_id))
+
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
 
 def atualizar_status_turma(turma_id: int, ativo: bool):
     conn = get_connection()
@@ -955,7 +1006,7 @@ def listar_disciplinas(incluir_inativas: bool = False):
     cursor = conn.cursor()
 
     query = """
-        SELECT id, nome, ativo, criado_em
+        SELECT id, nome, aulas_semanais, ativo, criado_em
         FROM disciplinas
     """
     params = []
@@ -974,23 +1025,45 @@ def listar_disciplinas(incluir_inativas: bool = False):
 def listar_disciplinas_ativas():
     return listar_disciplinas(incluir_inativas=False)
 
-def criar_disciplina(nome: str):
+def criar_disciplina(nome: str, aulas_semanais: int = 0):
     nome_limpo = _normalizar_nome_catalogo(nome)
     if not nome_limpo:
         raise ValueError("Nome da disciplina é obrigatório.")
+    aulas_semanais_valor = int(aulas_semanais or 0)
+    if aulas_semanais_valor < 0:
+        raise ValueError("Aulas semanais não pode ser negativo.")
 
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO disciplinas (nome, ativo, criado_em)
-        VALUES (?, 1, datetime('now'))
-    """, (nome_limpo,))
+        INSERT INTO disciplinas (nome, aulas_semanais, ativo, criado_em)
+        VALUES (?, ?, 1, datetime('now'))
+    """, (nome_limpo, aulas_semanais_valor))
 
     disciplina_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return disciplina_id
+
+def atualizar_disciplina_dados(disciplina_id: int, aulas_semanais: int):
+    aulas_semanais_valor = int(aulas_semanais or 0)
+    if aulas_semanais_valor < 0:
+        raise ValueError("Aulas semanais não pode ser negativo.")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE disciplinas
+        SET aulas_semanais = ?
+        WHERE id = ?
+    """, (aulas_semanais_valor, disciplina_id))
+
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
 
 def atualizar_status_disciplina(disciplina_id: int, ativo: bool):
     conn = get_connection()

@@ -31,7 +31,9 @@ from models import (
     ProfessorCreateIn,
     ProfessorCargaIn,
     TurmaCreateIn,
+    TurmaUpdateIn,
     DisciplinaCreateIn,
+    DisciplinaUpdateIn,
     RecursoCreateIn,
     RecursoStatusIn,
     RegrasCotaIn
@@ -69,10 +71,12 @@ from database import (
     listar_turmas,
     listar_turmas_ativas,
     criar_turma,
+    atualizar_turma_dados,
     atualizar_status_turma,
     listar_disciplinas,
     listar_disciplinas_ativas,
     criar_disciplina,
+    atualizar_disciplina_dados,
     atualizar_status_disciplina,
     buscar_recurso_por_id,
     buscar_usuario_por_id,
@@ -784,16 +788,47 @@ def criar_turma_admin(
 ):
     exigir_admin(usuario)
     nome = payload.nome.strip()
+    turno = validar_turno(payload.turno)
+    quantidade_estudantes = validar_numero_nao_negativo(
+        payload.quantidade_estudantes,
+        "Quantidade de estudantes"
+    )
 
     if not nome:
         raise HTTPException(400, "Nome da turma é obrigatório.")
 
     try:
-        turma_id = criar_turma(nome)
+        turma_id = criar_turma(
+            nome=nome,
+            turno=turno,
+            quantidade_estudantes=quantidade_estudantes
+        )
     except sqlite3.IntegrityError as exc:
         raise HTTPException(409, "Já existe uma turma com este nome.") from exc
 
     return {"mensagem": "Turma cadastrada com sucesso.", "turma_id": turma_id}
+
+@app.put("/admin/turmas/{turma_id}")
+def atualizar_turma_admin(
+    turma_id: int,
+    payload: TurmaUpdateIn,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    turno = validar_turno(payload.turno)
+    quantidade_estudantes = validar_numero_nao_negativo(
+        payload.quantidade_estudantes,
+        "Quantidade de estudantes"
+    )
+
+    alterado = atualizar_turma_dados(
+        turma_id=turma_id,
+        turno=turno,
+        quantidade_estudantes=quantidade_estudantes
+    )
+    if not alterado:
+        raise HTTPException(404, "Turma não encontrada.")
+    return {"mensagem": "Dados da turma atualizados com sucesso."}
 
 @app.put("/admin/turmas/{turma_id}/status")
 def atualizar_status_turma_admin(
@@ -822,16 +857,33 @@ def criar_disciplina_admin(
 ):
     exigir_admin(usuario)
     nome = payload.nome.strip()
+    aulas_semanais = validar_numero_nao_negativo(payload.aulas_semanais, "Aulas semanais")
 
     if not nome:
         raise HTTPException(400, "Nome da disciplina é obrigatório.")
 
     try:
-        disciplina_id = criar_disciplina(nome)
+        disciplina_id = criar_disciplina(nome=nome, aulas_semanais=aulas_semanais)
     except sqlite3.IntegrityError as exc:
         raise HTTPException(409, "Já existe uma disciplina com este nome.") from exc
 
     return {"mensagem": "Disciplina cadastrada com sucesso.", "disciplina_id": disciplina_id}
+
+@app.put("/admin/disciplinas/{disciplina_id}")
+def atualizar_disciplina_admin(
+    disciplina_id: int,
+    payload: DisciplinaUpdateIn,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    aulas_semanais = validar_numero_nao_negativo(payload.aulas_semanais, "Aulas semanais")
+    alterado = atualizar_disciplina_dados(
+        disciplina_id=disciplina_id,
+        aulas_semanais=aulas_semanais
+    )
+    if not alterado:
+        raise HTTPException(404, "Disciplina não encontrada.")
+    return {"mensagem": "Dados da disciplina atualizados com sucesso."}
 
 @app.put("/admin/disciplinas/{disciplina_id}/status")
 def atualizar_status_disciplina_admin(

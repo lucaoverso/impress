@@ -49,6 +49,13 @@
                 <h2>Cadastrar turma</h2>
                 <form id="formTurma" class="admin-form">
                     <input id="turmaNome" type="text" placeholder="Nome da turma (ex: 6º ano A)" required>
+                    <select id="turmaTurno" required>
+                        <option value="MATUTINO">Matutino</option>
+                        <option value="VESPERTINO">Vespertino</option>
+                        <option value="VESPERTINO_EM">Vespertino E.M.</option>
+                        <option value="INTEGRAL">Período integral</option>
+                    </select>
+                    <input id="turmaQuantidadeEstudantes" type="number" min="0" placeholder="Quantidade de estudantes" value="0" required>
                     <button class="btn-destaque" type="submit">Cadastrar turma</button>
                 </form>
                 <p id="msgTurma"></p>
@@ -63,6 +70,7 @@
                 <h2>Cadastrar disciplina</h2>
                 <form id="formDisciplina" class="admin-form">
                     <input id="disciplinaNome" type="text" placeholder="Nome da disciplina" required>
+                    <input id="disciplinaAulasSemanais" type="number" min="0" placeholder="Aulas semanais" value="0" required>
                     <button class="btn-destaque" type="submit">Cadastrar disciplina</button>
                 </form>
                 <p id="msgDisciplina"></p>
@@ -76,9 +84,13 @@
             <article class="admin-card">
                 <h2>Regras de cota proporcional</h2>
                 <form id="formCotaRegras" class="admin-form">
+                    <label for="cotaMensalEscola">Cota Mensal Escola:</label>
                     <input id="cotaMensalEscola" type="number" min="0" placeholder="Cota mensal da escola" required>
+                    <label for="cotaBase">Cota Base:</label>
                     <input id="cotaBase" type="number" min="0" placeholder="Base de páginas" required>
+                    <label for="cotaPorAula">Páginas por aula:</label>
                     <input id="cotaPorAula" type="number" min="0" placeholder="Páginas por aula" required>
+                    <label for="cotaPorTurma">Páginas por turma:</label>
                     <input id="cotaPorTurma" type="number" min="0" placeholder="Páginas por turma" required>
                     <button class="btn-destaque" type="submit">Salvar regras</button>
                 </form>
