@@ -14,9 +14,7 @@
             <header class="print-ios-topbar">
                 <h1>Impressão</h1>
                 <div class="print-ios-top-actions">
-                    <button id="btnVoltarServicos" class="print-circle-btn" type="button" aria-label="Voltar aos serviços">Serviços</button>
-                    <button id="btnIrAgendamento" class="print-circle-btn" type="button" aria-label="Abrir agendamento">Agendamento</button>
-                    <button id="btnSair" class="print-circle-btn is-muted" type="button" aria-label="Sair">Sair</button>
+                    <button id="btnVoltarServicos" class="print-circle-btn" type="button">Voltar aos Serviços</button>
                 </div>
             </header>
 
@@ -70,18 +68,6 @@
                 <p id="consumo" class="print-consumo"></p>
                 <p id="intervaloInfo" class="print-feedback-muted"></p>
             </div>
-
-            <div class="print-meta-compact">
-                <article class="print-meta-card">
-                    <h2>Sua cota</h2>
-                    <p id="cota">Carregando...</p>
-                </article>
-
-                <article class="print-meta-card print-jobs-card">
-                    <h2>Seus pedidos</h2>
-                    <ul id="lista-jobs"></ul>
-                </article>
-            </div>
         </section>
 
         <section class="print-preview-stage">
@@ -98,6 +84,24 @@
                 <div id="previewContainer"></div>
             </section>
         </section>
+
+        <aside class="print-meta-panel">
+            <header class="print-meta-header">
+                <p class="auth-badge">Cota e histórico</p>
+            </header>
+
+            <div class="print-meta-compact">
+                <article class="print-meta-card">
+                    <h2>Sua cota</h2>
+                    <p id="cota">Carregando...</p>
+                </article>
+
+                <article class="print-meta-card print-jobs-card">
+                    <h2>Seus pedidos</h2>
+                    <ul id="lista-jobs"></ul>
+                </article>
+            </div>
+        </aside>
     </main>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>

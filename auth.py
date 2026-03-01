@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Header
 from models import LoginIn
-from services.auth_service import autenticar_usuario, validar_token
+from services.auth_service import autenticar_usuario, validar_token, obter_ttl_token_dias
 
 router = APIRouter()
 
@@ -11,10 +11,12 @@ def login(dados: LoginIn):
     if not resultado:
         raise HTTPException(401, "Credenciais inválidas")
 
-    token, usuario = resultado
+    token, usuario, expira_em = resultado
     return {
         "token": token,
-        "perfil": usuario["perfil"]
+        "perfil": usuario["perfil"],
+        "expira_em": expira_em,
+        "token_ttl_dias": obter_ttl_token_dias()
     }
 
 def get_usuario_logado(authorization: str = Header(...)):

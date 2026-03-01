@@ -11,29 +11,37 @@
 <body>
     <main class="services-page">
         <header class="services-header">
-            <p class="auth-badge">Suíte de Serviços</p>
-            <h1 id="tituloBoasVindas">Escolha o serviço</h1>
-            <p>Selecione o módulo que deseja usar agora.</p>
+            <div class="logo">
+                <p class="auth-badge">Suíte de Serviços</p>
+                <h1 id="tituloBoasVindas">Escolha o serviço</h1>
+                <p>Selecione o módulo que deseja usar agora.</p>
+            </div>
+            <section class="services-actions">
+                <button id="btnSair" type="button">Sair</button>
+            </section>
         </header>
 
         <section class="services-grid">
             <article class="service-card">
+                <img class="service-img" src="/static/img/impressao.png" alt="impressão">
                 <h2>Impressão de atividades</h2>
                 <p>Envie PDF, configure cópias, intervalo de páginas e acompanhe o consumo da cota.</p>
                 <button id="btnIrImpressao" class="btn-destaque" type="button">Ir para impressão</button>
             </article>
 
             <article class="service-card">
+                <img class="service-img" src="/static/img/agendamento.png" alt="agendamento">
                 <h2>Agendamento de equipamentos</h2>
                 <p>Reserve recursos tecnológicos por data e aula com visão de calendário e disponibilidade.</p>
                 <button id="btnIrAgendamento" class="btn-destaque" type="button">Ir para agendamento</button>
             </article>
         </section>
-
-        <section class="services-actions">
-            <button id="btnSair" type="button">Sair</button>
-        </section>
     </main>
+
+    <footer>
+        <p>Desenvolvido por Lucas Sbaraini</p>
+        <p>2026</p>
+    </footer>
 
     <script src="{{ request.url_for('static', path='js/servicos.js') }}"></script>
 </body>

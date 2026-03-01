@@ -165,6 +165,12 @@ TURNOS_CONFIG = {
     "VESPERTINO": {"nome": "Vespertino", "aulas": 5},
     "VESPERTINO_EM": {"nome": "Vespertino E.M.", "aulas": 6},
 }
+FAIXA_GLOBAL_OFFSET_POR_TURNO = {
+    "MATUTINO": 0,
+    "INTEGRAL": 0,
+    "VESPERTINO": 5,
+    "VESPERTINO_EM": 5,
+}
 SENHA_FORTE_REGEX = re.compile(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$")
 
 def obter_nomes_turmas_ativas() -> list[str]:
@@ -323,12 +329,22 @@ def validar_aula(aula: str, turno: str) -> str:
 
     return aula_limpa
 
-def validar_turma(turma: str) -> str:
+def calcular_faixa_global(turno: str, aula: str) -> int:
+    turno_limpo = validar_turno(turno)
+    numero_aula = int(validar_aula(aula, turno_limpo))
+    return numero_aula + FAIXA_GLOBAL_OFFSET_POR_TURNO[turno_limpo]
+
+def validar_turma(turma: str) -> dict:
     turma_limpa = str(turma).strip()
-    turmas_validas = set(obter_nomes_turmas_ativas())
-    if turma_limpa not in turmas_validas:
+    if not turma_limpa:
         raise HTTPException(400, "Turma inválida.")
-    return turma_limpa
+
+    for turma_db in listar_turmas_ativas():
+        nome_turma = str(turma_db.get("nome", "")).strip()
+        if nome_turma == turma_limpa:
+            return dict(turma_db)
+
+    raise HTTPException(400, "Turma inválida.")
 
 def validar_mes_referencia(mes: str) -> str:
     try:
@@ -586,9 +602,21 @@ def opcoes_agendamento(usuario = Depends(get_usuario_logado)):
         {"id": turno_id, "nome": cfg["nome"], "aulas": cfg["aulas"]}
         for turno_id, cfg in TURNOS_CONFIG.items()
     ]
+    turmas = []
+    for turma in listar_turmas_ativas():
+        turno_turma = str(turma.get("turno") or "").strip().upper()
+        config_turno = TURNOS_CONFIG.get(turno_turma)
+        turmas.append({
+            "nome": turma["nome"],
+            "turno": turno_turma,
+            "turno_nome": config_turno["nome"] if config_turno else "Turno não configurado",
+            "aulas": config_turno["aulas"] if config_turno else 0,
+            "turno_valido": bool(config_turno),
+            "quantidade_estudantes": int(turma.get("quantidade_estudantes") or 0),
+        })
     return {
         "turnos": turnos,
-        "turmas": obter_nomes_turmas_ativas(),
+        "turmas": turmas,
     }
 
 
@@ -622,18 +650,21 @@ def criar_reserva_agendamento(
         raise HTTPException(404, "Recurso não encontrado.")
 
     data_reserva = validar_data_agendamento(payload.data)
-    turno = validar_turno(payload.turno)
-    aula = validar_aula(payload.aula, turno)
     turma = validar_turma(payload.turma)
+    turno = str(turma.get("turno") or "").strip().upper()
+    if turno not in TURNOS_CONFIG:
+        raise HTTPException(400, "Turma sem turno configurado. Atualize o cadastro da turma no painel admin.")
+
+    aula = validar_aula(payload.aula, turno)
+    faixa_global = calcular_faixa_global(turno, aula)
 
     conflito = buscar_agendamento_conflito(
         recurso_id=payload.recurso_id,
         data=data_reserva,
-        turno=turno,
-        aula=aula
+        faixa_global=faixa_global
     )
     if conflito:
-        raise HTTPException(409, "Este recurso já está reservado nessa data e aula.")
+        raise HTTPException(409, "Este recurso já está reservado nessa faixa de aula (aulas simultâneas).")
 
     observacao = (payload.observacao or "").strip()
     agendamento_id = criar_agendamento(
@@ -642,7 +673,8 @@ def criar_reserva_agendamento(
         data=data_reserva,
         turno=turno,
         aula=aula,
-        turma=turma,
+        faixa_global=faixa_global,
+        turma=turma["nome"],
         observacao=observacao
     )
 

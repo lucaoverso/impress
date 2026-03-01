@@ -367,16 +367,18 @@ footer {
 }
 
 .print-ios-layout {
-    width: min(1360px, 100%);
+    width: min(1580px, 100%);
     height: calc(100svh - 28px);
     margin: 0 auto;
     display: grid;
-    grid-template-columns: minmax(340px, 430px) minmax(0, 1fr);
+    grid-template-columns: minmax(320px, 420px) minmax(0, 1fr) minmax(250px, 300px);
+    grid-template-areas: "options preview meta";
     gap: 16px;
 }
 
 .print-options-panel,
-.print-preview-stage {
+.print-preview-stage,
+.print-meta-panel {
     min-height: 0;
     border-radius: 18px;
     border: 1px solid #d1dceb;
@@ -386,6 +388,7 @@ footer {
 }
 
 .print-options-panel {
+    grid-area: options;
     display: flex;
     flex-direction: column;
     gap: 14px;
@@ -594,10 +597,33 @@ footer {
 }
 
 .print-preview-stage {
+    grid-area: preview;
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
     gap: 12px;
     overflow: hidden;
+}
+
+.print-meta-panel {
+    grid-area: meta;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    overflow: auto;
+}
+
+.print-meta-header .auth-badge {
+    margin-bottom: 0;
+}
+
+.print-meta-panel .print-meta-compact {
+    min-height: 0;
+}
+
+.print-meta-panel .print-jobs-card {
+    min-height: 180px;
+    max-height: none;
+    flex: 1;
 }
 
 .print-preview-header {
@@ -792,10 +818,26 @@ footer {
     color: #1d4ed8;
 }
 
+@media (max-width: 1320px) {
+    .print-ios-layout {
+        width: min(1300px, 100%);
+        grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) auto;
+        grid-template-areas:
+            "options preview"
+            "meta preview";
+        gap: 12px;
+    }
+
+    .print-meta-panel .print-jobs-card {
+        min-height: 140px;
+    }
+}
+
 @media (max-width: 1100px) {
     .print-ios-layout {
-        grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
-        gap: 12px;
+        grid-template-columns: minmax(280px, 340px) minmax(0, 1fr);
+        gap: 10px;
     }
 }
 
@@ -808,13 +850,21 @@ footer {
         height: calc(100svh - 16px);
         grid-template-columns: 1fr;
         grid-template-rows: minmax(0, 58svh) minmax(0, 1fr);
+        grid-template-areas:
+            "options"
+            "preview";
         gap: 10px;
     }
 
     .print-options-panel,
-    .print-preview-stage {
+    .print-preview-stage,
+    .print-meta-panel {
         border-radius: 14px;
         padding: 10px;
+    }
+
+    .print-meta-panel {
+        display: none;
     }
 
     .print-ios-topbar {
@@ -929,6 +979,8 @@ footer {
 
 .services-header {
     margin-bottom: 22px;
+    display: flex;
+    justify-content: space-between;
 }
 
 .services-header h1 {
@@ -956,6 +1008,14 @@ footer {
     display: flex;
     flex-direction: column;
     gap: 12px;
+}
+
+.service-card img {
+    width: 40%;
+    margin: auto;
+    border-radius: 12px;
+    object-fit: cover;
+    text-align: center;
 }
 
 .service-card h2 {

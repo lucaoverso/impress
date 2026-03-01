@@ -54,6 +54,7 @@ async function fetchJson(url, options = {}) {
 
     if (res.status === 401) {
         localStorage.removeItem("token");
+        localStorage.removeItem("token_expira_em");
         window.location.href = "/login-page";
         throw new Error("Sessão expirada.");
     }
@@ -481,13 +482,15 @@ async function carregarProfessores() {
         const inputAulas = document.createElement("input");
         inputAulas.type = "number";
         inputAulas.min = "0";
-        inputAulas.value = String(prof.aulas_semanais ?? 0);
+        inputAulas.value = String(prof.aulas_semanais ?? "");
         inputAulas.title = "Aulas semanais";
+        inputAulas.placeholder = "Quantidade de aulas semanais";
 
         const inputTurmas = document.createElement("input");
         inputTurmas.type = "number";
         inputTurmas.min = "0";
-        inputTurmas.value = String(prof.turmas_quantidade ?? 0);
+        inputTurmas.placeholder = "Quantidade de turmas";
+        inputTurmas.value = String(prof.turmas_quantidade ?? "");
         inputTurmas.title = "Quantidade de turmas";
 
         const btnSalvar = document.createElement("button");
@@ -731,6 +734,7 @@ function registrarEventos() {
 
     el("btnSair").addEventListener("click", () => {
         localStorage.removeItem("token");
+        localStorage.removeItem("token_expira_em");
         window.location.href = "/login-page";
     });
 }

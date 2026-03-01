@@ -13,6 +13,7 @@ async function carregarUsuario() {
         const res = await fetch("/me", { headers });
         if (!res.ok) {
             localStorage.removeItem("token");
+            localStorage.removeItem("token_expira_em");
             window.location.href = "/login-page";
             return;
         }
@@ -22,6 +23,7 @@ async function carregarUsuario() {
         titulo.innerText = `Olá, ${usuario.nome.split(" ")[0]}. Escolha o serviço`;
     } catch (err) {
         localStorage.removeItem("token");
+        localStorage.removeItem("token_expira_em");
         window.location.href = "/login-page";
     }
 }
@@ -37,6 +39,7 @@ function registrarEventos() {
 
     document.getElementById("btnSair").addEventListener("click", () => {
         localStorage.removeItem("token");
+        localStorage.removeItem("token_expira_em");
         window.location.href = "/login-page";
     });
 }

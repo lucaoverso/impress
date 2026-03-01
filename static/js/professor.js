@@ -8,6 +8,21 @@ const headers = {
     "Authorization": "Bearer " + token
 };
 
+function encerrarSessao() {
+    localStorage.removeItem("token");
+    localStorage.removeItem("token_expira_em");
+    window.location.href = "/login-page";
+}
+
+async function fetchComAuth(url, options = {}) {
+    const res = await fetch(url, options);
+    if (res.status === 401) {
+        encerrarSessao();
+        throw new Error("Sessão expirada.");
+    }
+    return res;
+}
+
 let pdfDoc = null;
 let folhaAtual = 1;
 let renderTokenAtual = 0;
@@ -39,6 +54,27 @@ function atualizarModoNavegacaoPreview(isMobile) {
         return;
     }
     paginacao.classList.toggle("is-desktop-scroll", !isMobile);
+}
+
+function ajustarPosicaoPainelMeta() {
+    const metaCompact = document.querySelector(".print-meta-compact");
+    const optionsPanel = document.querySelector(".print-options-panel");
+    const metaPanel = document.querySelector(".print-meta-panel");
+    if (!metaCompact || !optionsPanel || !metaPanel) {
+        return;
+    }
+
+    const mobile = isPreviewMobile();
+    if (mobile) {
+        if (!optionsPanel.contains(metaCompact)) {
+            optionsPanel.appendChild(metaCompact);
+        }
+        return;
+    }
+
+    if (!metaPanel.contains(metaCompact)) {
+        metaPanel.appendChild(metaCompact);
+    }
 }
 
 function obterConfigLayout(paginasPorFolha) {
@@ -326,7 +362,7 @@ async function enviarImpressao() {
         formData.append("intervalo_paginas", intervaloPaginas);
     }
 
-    const res = await fetch("/imprimir", {
+    const res = await fetchComAuth("/imprimir", {
         method: "POST",
         headers,
         body: formData
@@ -345,13 +381,13 @@ async function enviarImpressao() {
 }
 
 async function carregarCota() {
-    const res = await fetch("/minha-cota", { headers });
+    const res = await fetchComAuth("/minha-cota", { headers });
     const data = await res.json();
     el("cota").innerText = `Restante: ${data.restante} páginas`;
 }
 
 async function carregarFila() {
-    const res = await fetch("/meus-jobs", { headers });
+    const res = await fetchComAuth("/meus-jobs", { headers });
     const jobs = await res.json();
 
     const ul = el("lista-jobs");
@@ -666,6 +702,7 @@ function reagendarRenderAposResize() {
         clearTimeout(resizeTimer);
     }
     resizeTimer = setTimeout(() => {
+        ajustarPosicaoPainelMeta();
         if (!pdfDoc) {
             mostrarPreviewVazio();
             return;
@@ -676,6 +713,7 @@ function reagendarRenderAposResize() {
 
 function registrarEventos() {
     const previewPane = document.querySelector(".print-preview-pane");
+    ajustarPosicaoPainelMeta();
 
     el("arquivo").addEventListener("change", (e) => carregarPreview(e.target.files[0]));
     el("orientacao").addEventListener("change", atualizarPreview);
@@ -712,8 +750,7 @@ function registrarEventos() {
 
     if (btnSair) {
         btnSair.addEventListener("click", () => {
-            localStorage.removeItem("token");
-            window.location.href = "/login-page";
+            encerrarSessao();
         });
     }
 }

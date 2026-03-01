@@ -14,6 +14,7 @@ COTA_BASE_PADRAO = 80
 COTA_POR_AULA_PADRAO = 6
 COTA_POR_TURMA_PADRAO = 12
 COTA_MENSAL_ESCOLA_PADRAO = 4000
+TOKEN_TTL_DIAS_PADRAO = 7
 TURMAS_PADRAO = [
     "6º ano A",
     "6º ano B",
@@ -60,6 +61,16 @@ else:
     DB_PATH = DB_PATH_PADRAO
 
 _BANCO_PREPARADO = False
+
+def _resolver_ttl_token_dias() -> int:
+    valor_bruto = os.getenv("TOKEN_TTL_DIAS", str(TOKEN_TTL_DIAS_PADRAO)).strip()
+    try:
+        valor = int(valor_bruto)
+    except ValueError:
+        return TOKEN_TTL_DIAS_PADRAO
+    return valor if valor in (7, 15) else TOKEN_TTL_DIAS_PADRAO
+
+TOKEN_TTL_DIAS = _resolver_ttl_token_dias()
 
 def _garantir_banco_preparado():
     global _BANCO_PREPARADO
@@ -211,7 +222,9 @@ def criar_tabelas():
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS tokens (
             token TEXT PRIMARY KEY,
-            usuario_id INTEGER NOT NULL
+            usuario_id INTEGER NOT NULL,
+            criado_em TEXT NOT NULL DEFAULT '',
+            expira_em TEXT NOT NULL DEFAULT ''
         )
     """)
 
@@ -310,6 +323,7 @@ def criar_tabelas():
             data TEXT NOT NULL,
             turno TEXT NOT NULL DEFAULT 'MATUTINO',
             aula TEXT NOT NULL,
+            faixa_global INTEGER NOT NULL DEFAULT 0,
             turma TEXT NOT NULL DEFAULT '',
             observacao TEXT,
             status TEXT NOT NULL DEFAULT 'ATIVO',
@@ -321,6 +335,7 @@ def criar_tabelas():
     """)
 
     _garantir_colunas_usuarios(cursor)
+    _garantir_colunas_tokens(cursor)
     _garantir_colunas_jobs(cursor)
     _garantir_colunas_agendamentos(cursor)
     _garantir_colunas_professores_carga(cursor)
@@ -341,6 +356,16 @@ def criar_tabelas():
     """)
 
     cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_tokens_usuario_id
+        ON tokens(usuario_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_tokens_expira_em
+        ON tokens(expira_em)
+    """)
+
+    cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_agendamentos_data_recurso_aula_status
         ON agendamentos(data, recurso_id, aula, status)
     """)
@@ -348,6 +373,11 @@ def criar_tabelas():
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_agendamentos_data_recurso_turno_aula_status
         ON agendamentos(data, recurso_id, turno, aula, status)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_agendamentos_data_recurso_faixa_status
+        ON agendamentos(data, recurso_id, faixa_global, status)
     """)
 
     cursor.execute("""
@@ -426,6 +456,35 @@ def _garantir_colunas_usuarios(cursor):
     if "data_nascimento" not in colunas:
         cursor.execute("ALTER TABLE usuarios ADD COLUMN data_nascimento TEXT")
 
+def _garantir_colunas_tokens(cursor):
+    cursor.execute("PRAGMA table_info(tokens)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+
+    if "criado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE tokens ADD COLUMN criado_em TEXT NOT NULL DEFAULT ''"
+        )
+    if "expira_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE tokens ADD COLUMN expira_em TEXT NOT NULL DEFAULT ''"
+        )
+
+    cursor.execute("""
+        UPDATE tokens
+        SET criado_em = datetime('now')
+        WHERE TRIM(COALESCE(criado_em, '')) = ''
+    """)
+    cursor.execute("""
+        UPDATE tokens
+        SET expira_em = datetime('now', ?)
+        WHERE TRIM(COALESCE(expira_em, '')) = ''
+    """, (f"+{TOKEN_TTL_DIAS} days",))
+
+    cursor.execute("""
+        DELETE FROM tokens
+        WHERE expira_em <= datetime('now')
+    """)
+
 
 def _garantir_colunas_jobs(cursor):
     cursor.execute("PRAGMA table_info(jobs)")
@@ -482,6 +541,23 @@ def _garantir_colunas_agendamentos(cursor):
         )
     if "cancelado_em" not in colunas:
         cursor.execute("ALTER TABLE agendamentos ADD COLUMN cancelado_em TEXT")
+    if "faixa_global" not in colunas:
+        cursor.execute(
+            "ALTER TABLE agendamentos ADD COLUMN faixa_global INTEGER NOT NULL DEFAULT 0"
+        )
+
+    # Faixa global padroniza simultaneidade entre turnos:
+    # MATUTINO/INTEGRAL iniciam na faixa 1; VESPERTINO/VESPERTINO_EM iniciam na faixa 6.
+    cursor.execute("""
+        UPDATE agendamentos
+        SET faixa_global = (
+            CASE
+                WHEN UPPER(COALESCE(turno, '')) IN ('MATUTINO', 'INTEGRAL') THEN CAST(COALESCE(NULLIF(TRIM(aula), ''), '0') AS INTEGER)
+                WHEN UPPER(COALESCE(turno, '')) IN ('VESPERTINO', 'VESPERTINO_EM') THEN CAST(COALESCE(NULLIF(TRIM(aula), ''), '0') AS INTEGER) + 5
+                ELSE CAST(COALESCE(NULLIF(TRIM(aula), ''), '0') AS INTEGER)
+            END
+        )
+    """)
 
 def _garantir_colunas_professores_carga(cursor):
     cursor.execute("PRAGMA table_info(professores_carga)")
@@ -540,14 +616,27 @@ def _garantir_colunas_disciplinas(cursor):
             "ALTER TABLE disciplinas ADD COLUMN aulas_semanais INTEGER NOT NULL DEFAULT 0"
         )
 
-def salvar_token(token: str, usuario_id: int):
+def salvar_token(token: str, usuario_id: int, expira_em: str):
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO tokens (token, usuario_id)
-        VALUES (?, ?)
-    """, (token, usuario_id))
+        INSERT INTO tokens (token, usuario_id, criado_em, expira_em)
+        VALUES (?, ?, datetime('now'), ?)
+    """, (token, usuario_id, expira_em))
+
+    conn.commit()
+    conn.close()
+
+def limpar_tokens_expirados():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        DELETE FROM tokens
+        WHERE TRIM(COALESCE(expira_em, '')) = ''
+           OR expira_em <= datetime('now')
+    """)
 
     conn.commit()
     conn.close()
@@ -561,6 +650,7 @@ def buscar_usuario_por_token(token: str):
         FROM usuarios u
         JOIN tokens t ON u.id = t.usuario_id
         WHERE t.token = ?
+          AND t.expira_em > datetime('now')
     """, (token,))
 
     row = cursor.fetchone()
@@ -1495,7 +1585,7 @@ def buscar_recurso_por_id(recurso_id: int):
     conn.close()
     return dict(row) if row else None
 
-def buscar_agendamento_conflito(recurso_id: int, data: str, turno: str, aula: str):
+def buscar_agendamento_conflito(recurso_id: int, data: str, faixa_global: int):
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -1504,11 +1594,10 @@ def buscar_agendamento_conflito(recurso_id: int, data: str, turno: str, aula: st
         FROM agendamentos
         WHERE recurso_id = ?
           AND data = ?
-          AND turno = ?
-          AND aula = ?
+          AND faixa_global = ?
           AND status = ?
         LIMIT 1
-    """, (recurso_id, data, turno, aula, STATUS_AGENDAMENTO_ATIVO))
+    """, (recurso_id, data, int(faixa_global), STATUS_AGENDAMENTO_ATIVO))
 
     row = cursor.fetchone()
     conn.close()
@@ -1520,6 +1609,7 @@ def criar_agendamento(
     data: str,
     turno: str,
     aula: str,
+    faixa_global: int,
     turma: str,
     observacao: str = "",
 ):
@@ -1528,15 +1618,16 @@ def criar_agendamento(
 
     cursor.execute("""
         INSERT INTO agendamentos (
-            recurso_id, usuario_id, data, turno, aula, turma, observacao, status, criado_em
+            recurso_id, usuario_id, data, turno, aula, faixa_global, turma, observacao, status, criado_em
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     """, (
         recurso_id,
         usuario_id,
         data,
         turno,
         aula,
+        int(faixa_global),
         turma,
         observacao,
         STATUS_AGENDAMENTO_ATIVO,
@@ -1568,6 +1659,7 @@ def listar_agendamentos(
             a.data,
             a.turno,
             a.aula,
+            a.faixa_global,
             a.turma,
             COALESCE(a.observacao, '') AS observacao,
             a.status,
@@ -1604,14 +1696,7 @@ def listar_agendamentos(
     query += """
         ORDER BY
             a.data ASC,
-            CASE a.turno
-                WHEN 'MATUTINO' THEN 1
-                WHEN 'VESPERTINO' THEN 2
-                WHEN 'VESPERTINO_EM' THEN 3
-                WHEN 'INTEGRAL' THEN 4
-                ELSE 5
-            END ASC,
-            CAST(a.aula AS INTEGER) ASC,
+            CAST(a.faixa_global AS INTEGER) ASC,
             r.nome ASC
     """
 

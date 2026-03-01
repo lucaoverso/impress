@@ -27,7 +27,6 @@ class UsuarioOut(BaseModel):
 class AgendamentoIn(BaseModel):
     recurso_id: int
     data: str
-    turno: str
     aula: str
     turma: str
     observacao: str = ""
