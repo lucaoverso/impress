@@ -9,6 +9,11 @@ from contextlib import asynccontextmanager
 from math import ceil
 from datetime import datetime
 from services.pdf_service import contar_paginas_pdf
+from services.file_service import (
+    arquivo_suportado,
+    converter_para_pdf,
+    obter_extensao_arquivo,
+)
 
 from fastapi import (
     FastAPI,
@@ -19,7 +24,7 @@ from fastapi import (
     Depends,
     Request
 )
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
@@ -100,6 +105,7 @@ TEMPLATES_DIR = BASE_DIR / "templates"
 SPOOL_DIR = os.getenv("SPOOL_DIR", str(BASE_DIR / "spool"))
 DEFAULT_PRINTER_NAME = os.getenv("CUPS_PRINTER", "").strip()
 ENABLE_EMBEDDED_WORKER = os.getenv("ENABLE_EMBEDDED_WORKER", "").strip().lower() in {"1", "true", "yes"}
+FORMATOS_UPLOAD_DESCRICAO = "PDF, DOCX, DOC, PNG, JPG ou JPEG"
 
 # =========================================================
 # LIFESPAN (STARTUP / SHUTDOWN)
@@ -285,7 +291,7 @@ def contar_paginas_intervalo(intervalo: str, total_paginas: int) -> int:
             if inicio_num <= 0 or fim_num <= 0 or inicio_num > fim_num:
                 raise HTTPException(400, f'Intervalo inválido: "{parte}"')
             if fim_num > total_paginas:
-                raise HTTPException(400, f"Página {fim_num} não existe no PDF")
+                raise HTTPException(400, f"Página {fim_num} não existe no documento")
             for pagina in range(inicio_num, fim_num + 1):
                 paginas.add(pagina)
         else:
@@ -293,7 +299,7 @@ def contar_paginas_intervalo(intervalo: str, total_paginas: int) -> int:
                 raise HTTPException(400, f'Página inválida: "{parte}"')
             pagina = int(parte)
             if pagina <= 0 or pagina > total_paginas:
-                raise HTTPException(400, f"Página {pagina} não existe no PDF")
+                raise HTTPException(400, f"Página {pagina} não existe no documento")
             paginas.add(pagina)
 
     if not paginas:
@@ -370,12 +376,22 @@ def garantir_diretorio_spool() -> Path:
     caminho_spool.mkdir(parents=True, exist_ok=True)
     return caminho_spool
 
+def remover_arquivo_se_existir(caminho: Path):
+    try:
+        caminho.unlink()
+    except FileNotFoundError:
+        return
+    except OSError:
+        return
+
 def sanitizar_nome_arquivo(nome_arquivo: str) -> str:
     nome_base = os.path.basename(nome_arquivo or "").strip().replace(" ", "_")
     nome_limpo = re.sub(r"[^A-Za-z0-9._-]", "_", nome_base)
-    if not nome_limpo.lower().endswith(".pdf"):
-        nome_limpo += ".pdf"
-    return nome_limpo or "documento.pdf"
+    if not nome_limpo:
+        return "documento.pdf"
+    if "." not in nome_limpo:
+        return f"{nome_limpo}.pdf"
+    return nome_limpo
 
 def montar_opcoes_cups(
     paginas_por_folha: int,
@@ -388,11 +404,21 @@ def montar_opcoes_cups(
     else:
         sides = "one-sided"
 
+    orientacao_cups = 4 if orientacao == "paisagem" else 3
+
     opcoes = {
         "number-up": paginas_por_folha,
         "sides": sides,
-        "orientation-requested": 4 if orientacao == "paisagem" else 3,
+        "orientation-requested": orientacao_cups,
     }
+
+    if orientacao == "paisagem":
+        # Alguns drivers CUPS respeitam melhor a flag "landscape" do que só orientation-requested.
+        opcoes["landscape"] = True
+
+    if paginas_por_folha == 2:
+        # Garante disposição horizontal das duas páginas por folha.
+        opcoes["number-up-layout"] = "lrtb"
 
     intervalo = (intervalo_paginas or "").strip()
     if intervalo:
@@ -435,8 +461,10 @@ def imprimir(
     if not arquivo or not arquivo.filename:
         raise HTTPException(400, "Arquivo não enviado")
 
-    if not arquivo.filename.lower().endswith(".pdf"):
-        raise HTTPException(400, "Apenas PDF")
+    if not arquivo_suportado(arquivo.filename):
+        raise HTTPException(400, f"Formato não suportado. Envie {FORMATOS_UPLOAD_DESCRICAO}.")
+
+    extensao_arquivo = obter_extensao_arquivo(arquivo.filename)
 
     if paginas_por_folha not in (1, 2, 4):
         raise HTTPException(400, "Paginação por folha inválida")
@@ -449,28 +477,47 @@ def imprimir(
 
     caminho_spool = garantir_diretorio_spool()
     nome_arquivo_spool = f"{uuid.uuid4().hex}_{sanitizar_nome_arquivo(arquivo.filename)}"
-    caminho_arquivo = caminho_spool / nome_arquivo_spool
+    caminho_arquivo_original = caminho_spool / nome_arquivo_spool
 
     try:
-        with caminho_arquivo.open("wb") as destino:
+        with caminho_arquivo_original.open("wb") as destino:
             destino.write(conteudo_arquivo)
     except OSError as exc:
         raise HTTPException(500, "Falha ao armazenar o arquivo para impressão.") from exc
 
+    caminho_arquivo = caminho_arquivo_original
+    caminho_convertido = caminho_arquivo_original.with_suffix(".pdf")
     try:
-        # 🔢 Conta páginas reais do PDF
+        caminho_arquivo = converter_para_pdf(caminho_arquivo_original, extensao_arquivo)
+    except ValueError as exc:
+        remover_arquivo_se_existir(caminho_arquivo_original)
+        raise HTTPException(400, str(exc)) from exc
+    except RuntimeError as exc:
+        remover_arquivo_se_existir(caminho_arquivo_original)
+        if caminho_convertido != caminho_arquivo_original:
+            remover_arquivo_se_existir(caminho_convertido)
+        raise HTTPException(400, str(exc)) from exc
+    except Exception as exc:
+        remover_arquivo_se_existir(caminho_arquivo_original)
+        if caminho_convertido != caminho_arquivo_original:
+            remover_arquivo_se_existir(caminho_convertido)
+        raise HTTPException(500, "Falha ao preparar o arquivo para impressão.") from exc
+
+    if caminho_arquivo != caminho_arquivo_original:
+        remover_arquivo_se_existir(caminho_arquivo_original)
+
+    try:
+        # Conta páginas reais após padronizar o arquivo em PDF.
         paginas_pdf = contar_paginas_pdf(str(caminho_arquivo))
     except Exception:
-        if caminho_arquivo.exists():
-            caminho_arquivo.unlink()
+        remover_arquivo_se_existir(caminho_arquivo)
         raise
 
     intervalo_normalizado = (intervalo_paginas or "").strip()
     try:
         paginas_selecionadas = contar_paginas_intervalo(intervalo_normalizado, paginas_pdf)
     except Exception:
-        if caminho_arquivo.exists():
-            caminho_arquivo.unlink()
+        remover_arquivo_se_existir(caminho_arquivo)
         raise
 
     folhas_por_copia = ceil(paginas_selecionadas / paginas_por_folha)
@@ -484,13 +531,11 @@ def imprimir(
             paginas=paginas_totais
         )
     except Exception:
-        if caminho_arquivo.exists():
-            caminho_arquivo.unlink()
+        remover_arquivo_se_existir(caminho_arquivo)
         raise
 
     if not autorizado:
-        if caminho_arquivo.exists():
-            caminho_arquivo.unlink()
+        remover_arquivo_se_existir(caminho_arquivo)
         raise HTTPException(
             403,
             f"Cota insuficiente. Documento consome {paginas_totais} páginas. "
@@ -519,8 +564,7 @@ def imprimir(
             cups_options=json.dumps(opcoes_cups, ensure_ascii=True)
         )
     except Exception:
-        if caminho_arquivo.exists():
-            caminho_arquivo.unlink()
+        remover_arquivo_se_existir(caminho_arquivo)
         raise
 
     return {
@@ -531,6 +575,59 @@ def imprimir(
         "paginas_consumidas": paginas_totais,
         "paginas_restantes": restante
     }
+
+@app.post("/impressao/preview")
+def preview_impressao(
+    arquivo: UploadFile = File(...),
+    _usuario = Depends(get_usuario_logado)
+):
+    if not arquivo or not arquivo.filename:
+        raise HTTPException(400, "Arquivo não enviado")
+
+    if not arquivo_suportado(arquivo.filename):
+        raise HTTPException(400, f"Formato não suportado. Envie {FORMATOS_UPLOAD_DESCRICAO}.")
+
+    extensao_arquivo = obter_extensao_arquivo(arquivo.filename)
+    conteudo_arquivo = arquivo.file.read()
+    if not conteudo_arquivo:
+        raise HTTPException(400, "Arquivo vazio")
+
+    caminho_spool = garantir_diretorio_spool()
+    nome_arquivo_spool = f"preview_{uuid.uuid4().hex}_{sanitizar_nome_arquivo(arquivo.filename)}"
+    caminho_arquivo_original = caminho_spool / nome_arquivo_spool
+
+    try:
+        with caminho_arquivo_original.open("wb") as destino:
+            destino.write(conteudo_arquivo)
+    except OSError as exc:
+        raise HTTPException(500, "Falha ao armazenar arquivo para pré-visualização.") from exc
+
+    caminho_arquivo_pdf = caminho_arquivo_original
+    caminho_convertido = caminho_arquivo_original.with_suffix(".pdf")
+
+    try:
+        caminho_arquivo_pdf = converter_para_pdf(caminho_arquivo_original, extensao_arquivo)
+        conteudo_pdf = caminho_arquivo_pdf.read_bytes()
+        if not conteudo_pdf:
+            raise HTTPException(500, "Falha ao gerar PDF de pré-visualização.")
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except Exception as exc:
+        raise HTTPException(500, "Falha ao gerar pré-visualização do documento.") from exc
+    finally:
+        remover_arquivo_se_existir(caminho_arquivo_original)
+        if caminho_convertido != caminho_arquivo_original:
+            remover_arquivo_se_existir(caminho_convertido)
+
+    return Response(
+        content=conteudo_pdf,
+        media_type="application/pdf",
+        headers={"Cache-Control": "no-store"}
+    )
 
 
 

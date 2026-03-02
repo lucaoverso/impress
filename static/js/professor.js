@@ -23,17 +23,32 @@ async function fetchComAuth(url, options = {}) {
     return res;
 }
 
+async function extrairMensagemErroResposta(res, fallback = "Falha na requisição.") {
+    try {
+        const data = await res.json();
+        if (typeof data?.detail === "string" && data.detail.trim()) {
+            return data.detail.trim();
+        }
+    } catch (_err) {
+        // Sem payload JSON legível.
+    }
+    return fallback;
+}
+
 let pdfDoc = null;
 let folhaAtual = 1;
 let renderTokenAtual = 0;
 let resizeTimer = null;
 let previewScrollRaf = null;
+let previewAbortController = null;
+let previewLoadSeq = 0;
 const QUALIDADE_MAX_DPR = 1.4;
 const FOLHA_PADDING = 8;
 const FOLHA_GAP = 6;
 const LABEL_PREVIEW_RESERVA = 38;
 const RESERVA_BORDA_PREVIEW = 24;
 const BREAKPOINT_MOBILE_PREVIEW = 980;
+const EXTENSOES_SUPORTADAS = new Set(["pdf", "doc", "docx", "png", "jpg", "jpeg"]);
 
 const TAMANHO_FOLHA = {
     retrato: { largura: 794, altura: 1123 },
@@ -42,6 +57,34 @@ const TAMANHO_FOLHA = {
 
 function el(id) {
     return document.getElementById(id);
+}
+
+function obterExtensaoArquivo(nomeArquivo) {
+    if (!nomeArquivo || typeof nomeArquivo !== "string") {
+        return "";
+    }
+    const indicePonto = nomeArquivo.lastIndexOf(".");
+    if (indicePonto < 0) {
+        return "";
+    }
+    return nomeArquivo.slice(indicePonto + 1).toLowerCase();
+}
+
+function arquivoEhPdf(file) {
+    return obterExtensaoArquivo(file?.name || "") === "pdf";
+}
+
+function arquivoSuportado(file) {
+    const extensao = obterExtensaoArquivo(file?.name || "");
+    return EXTENSOES_SUPORTADAS.has(extensao);
+}
+
+function obterMensagemPreviewVazio() {
+    const arquivo = el("arquivo")?.files?.[0];
+    if (!arquivo) {
+        return "Selecione um arquivo para visualizar as páginas.";
+    }
+    return "Não foi possível carregar a pré-visualização do arquivo.";
 }
 
 function isPreviewMobile() {
@@ -114,7 +157,7 @@ function obterDimensoesMiniatura(tamanhoFolha, isMobile) {
     };
 }
 
-function mostrarPreviewVazio(texto = "Selecione um PDF para visualizar as páginas.") {
+function mostrarPreviewVazio(texto = obterMensagemPreviewVazio()) {
     const container = el("previewContainer");
     container.innerHTML = "";
     const isMobile = isPreviewMobile();
@@ -200,7 +243,7 @@ function obterPaginasSelecionadas() {
 
             for (let pagina = inicio; pagina <= fim; pagina++) {
                 if (pagina > totalPaginas) {
-                    throw new Error(`Página ${pagina} não existe no PDF`);
+                    throw new Error(`Página ${pagina} não existe no documento`);
                 }
                 paginas.add(pagina);
             }
@@ -212,7 +255,7 @@ function obterPaginasSelecionadas() {
             throw new Error(`Página inválida: "${parte}"`);
         }
         if (pagina > totalPaginas) {
-            throw new Error(`Página ${pagina} não existe no PDF`);
+            throw new Error(`Página ${pagina} não existe no documento`);
         }
         paginas.add(pagina);
     }
@@ -309,6 +352,10 @@ function alternarSelecaoPagina(numeroPagina) {
 
 function calcularConsumo() {
     if (!pdfDoc) {
+        const arquivo = el("arquivo")?.files?.[0];
+        if (arquivo && arquivoSuportado(arquivo) && !el("intervaloInfo").innerText.trim()) {
+            el("intervaloInfo").innerText = "Aguardando pré-visualização do documento.";
+        }
         el("consumo").innerText = "";
         return 0;
     }
@@ -345,11 +392,18 @@ async function enviarImpressao() {
         return;
     }
 
-    try {
-        obterPaginasSelecionadas();
-    } catch (err) {
-        el("msg").innerText = err.message;
+    if (!arquivoSuportado(arquivo)) {
+        el("msg").innerText = "Formato não suportado. Use PDF, DOCX, DOC, PNG, JPG ou JPEG.";
         return;
+    }
+
+    if (pdfDoc) {
+        try {
+            obterPaginasSelecionadas();
+        } catch (err) {
+            el("msg").innerText = err.message;
+            return;
+        }
     }
 
     const formData = new FormData();
@@ -401,10 +455,18 @@ async function carregarFila() {
 }
 
 async function carregarPreview(file) {
+    previewLoadSeq += 1;
+    const cargaAtual = previewLoadSeq;
+    if (previewAbortController) {
+        previewAbortController.abort();
+        previewAbortController = null;
+    }
+
     if (!file) {
         pdfDoc = null;
         folhaAtual = 1;
         el("intervaloPaginas").value = "";
+        el("intervaloInfo").innerText = "";
         renderTokenAtual += 1;
         mostrarPreviewVazio();
         calcularConsumo();
@@ -412,12 +474,88 @@ async function carregarPreview(file) {
         return;
     }
 
+    if (!arquivoSuportado(file)) {
+        pdfDoc = null;
+        folhaAtual = 1;
+        renderTokenAtual += 1;
+        el("msg").innerText = "Formato não suportado. Use PDF, DOCX, DOC, PNG, JPG ou JPEG.";
+        el("intervaloInfo").innerText = "";
+        mostrarPreviewVazio("Formato não suportado para pré-visualização.");
+        calcularConsumo();
+        atualizarContador();
+        return;
+    }
+
     // Novo upload deve iniciar com todas as páginas selecionadas.
-    el("intervaloPaginas").value = "";
-    const arrayBuffer = await file.arrayBuffer();
-    pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    pdfDoc = null;
     folhaAtual = 1;
-    atualizarPreview();
+    el("intervaloPaginas").value = "";
+    el("msg").innerText = "";
+    el("intervaloInfo").innerText = "Gerando pré-visualização...";
+    renderTokenAtual += 1;
+    mostrarPreviewVazio("Gerando pré-visualização do documento...");
+    calcularConsumo();
+    atualizarContador();
+
+    try {
+        let arrayBuffer;
+        if (arquivoEhPdf(file)) {
+            arrayBuffer = await file.arrayBuffer();
+        } else {
+            const formData = new FormData();
+            formData.append("arquivo", file);
+
+            previewAbortController = new AbortController();
+            const res = await fetchComAuth("/impressao/preview", {
+                method: "POST",
+                headers,
+                body: formData,
+                signal: previewAbortController.signal
+            });
+
+            if (!res.ok) {
+                const detalhe = await extrairMensagemErroResposta(
+                    res,
+                    "Falha ao gerar pré-visualização do documento."
+                );
+                throw new Error(detalhe);
+            }
+
+            arrayBuffer = await res.arrayBuffer();
+        }
+
+        if (cargaAtual !== previewLoadSeq) {
+            return;
+        }
+
+        pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        if (cargaAtual !== previewLoadSeq) {
+            return;
+        }
+        folhaAtual = 1;
+        el("intervaloInfo").innerText = "";
+        atualizarPreview();
+    } catch (err) {
+        if (err && err.name === "AbortError") {
+            return;
+        }
+        if (cargaAtual !== previewLoadSeq) {
+            return;
+        }
+
+        pdfDoc = null;
+        folhaAtual = 1;
+        renderTokenAtual += 1;
+        el("msg").innerText = err?.message || "Falha ao carregar a pré-visualização do documento.";
+        el("intervaloInfo").innerText = "";
+        mostrarPreviewVazio("Não foi possível carregar a pré-visualização do documento.");
+        calcularConsumo();
+        atualizarContador();
+    } finally {
+        if (cargaAtual === previewLoadSeq) {
+            previewAbortController = null;
+        }
+    }
 }
 
 function atualizarPreview() {
@@ -541,7 +679,7 @@ async function renderFolha() {
     atualizarModoNavegacaoPreview(isMobile);
 
     if (!pdfDoc) {
-        mostrarPreviewVazio();
+        mostrarPreviewVazio(obterMensagemPreviewVazio());
         return;
     }
 
@@ -704,7 +842,7 @@ function reagendarRenderAposResize() {
     resizeTimer = setTimeout(() => {
         ajustarPosicaoPainelMeta();
         if (!pdfDoc) {
-            mostrarPreviewVazio();
+            mostrarPreviewVazio(obterMensagemPreviewVazio());
             return;
         }
         renderFolha();
@@ -723,7 +861,13 @@ function registrarEventos() {
         folhaAtual = 1;
         atualizarPreview();
     });
-    el("intervaloPaginas").addEventListener("input", atualizarPreview);
+    el("intervaloPaginas").addEventListener("input", () => {
+        if (pdfDoc) {
+            atualizarPreview();
+            return;
+        }
+        calcularConsumo();
+    });
     el("btnEnviar").addEventListener("click", enviarImpressao);
     el("btnAnterior").addEventListener("click", folhaAnterior);
     el("btnProxima").addEventListener("click", proximaFolha);

@@ -10,7 +10,7 @@ Este guia prepara:
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip cups cups-client nginx
+sudo apt install -y python3 python3-venv python3-pip cups cups-client nginx libreoffice
 ```
 
 ## 2) Criar usuário de serviço

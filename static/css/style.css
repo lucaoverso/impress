@@ -457,6 +457,12 @@ footer {
     padding: 8px;
 }
 
+.print-file-hint {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #526174;
+}
+
 .ios-row {
     display: grid;
     grid-template-columns: minmax(130px, 1fr) minmax(150px, 1fr);

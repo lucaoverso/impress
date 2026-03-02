@@ -23,11 +23,19 @@ def _montar_opcoes_cups_legado(job):
     else:
         sides = "one-sided"
 
+    orientacao_cups = 4 if orientacao == "paisagem" else 3
+
     opcoes = {
         "number-up": paginas_por_folha,
         "sides": sides,
-        "orientation-requested": 4 if orientacao == "paisagem" else 3,
+        "orientation-requested": orientacao_cups,
     }
+
+    if orientacao == "paisagem":
+        opcoes["landscape"] = True
+
+    if paginas_por_folha == 2:
+        opcoes["number-up-layout"] = "lrtb"
 
     if intervalo_paginas:
         opcoes["page-ranges"] = intervalo_paginas
@@ -85,8 +93,13 @@ def imprimir_job(job):
 
     for chave in sorted(opcoes_cups.keys()):
         valor = opcoes_cups[chave]
-        if valor is None or valor == "":
+        if valor is None or valor == "" or valor is False:
             continue
+
+        if valor is True:
+            cmd.extend(["-o", str(chave)])
+            continue
+
         cmd.extend(["-o", f"{chave}={valor}"])
 
     cmd.append(str(caminho))
