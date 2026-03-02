@@ -34,6 +34,7 @@ from services.auth_service import hash_senha
 from models import (
     AgendamentoIn,
     ProfessorCreateIn,
+    ProfessorUpdateIn,
     ProfessorCargaIn,
     TurmaCreateIn,
     TurmaUpdateIn,
@@ -93,6 +94,7 @@ from database import (
     buscar_agendamento_por_id,
     cancelar_agendamento,
     criar_professor,
+    atualizar_professor,
     listar_professores_admin,
     salvar_carga_professor,
     obter_regras_cota,
@@ -244,34 +246,63 @@ def obter_opcoes_cadastro_professor():
         "disciplinas": obter_nomes_disciplinas_ativas(),
     }
 
-def validar_payload_cadastro_professor(payload: ProfessorCreateIn):
-    nome = payload.nome.strip()
-    email = payload.email.strip().lower()
-    senha = payload.senha.strip()
+def _validar_dados_professor_comuns(
+    nome: str,
+    email: str,
+    data_nascimento_txt: str,
+    aulas_semanais_bruto: int,
+    turmas_bruto: list[str],
+    disciplinas_bruto: list[str],
+):
+    nome_limpo = str(nome or "").strip()
+    email_limpo = str(email or "").strip().lower()
 
-    if not nome:
+    if not nome_limpo:
         raise HTTPException(400, "Nome é obrigatório.")
-    if not email:
+    if not email_limpo:
         raise HTTPException(400, "Email é obrigatório.")
-    if not senha:
-        raise HTTPException(400, "Senha é obrigatória.")
 
-    data_nascimento = validar_data_nascimento_professor(payload.data_nascimento)
-    aulas_semanais = validar_numero_nao_negativo(payload.aulas_semanais, "Aulas semanais")
-    turmas = validar_turmas_professor(payload.turmas)
-    disciplinas = validar_disciplinas_professor(payload.disciplinas)
-    validar_senha_forte(senha)
+    data_nascimento = validar_data_nascimento_professor(data_nascimento_txt)
+    aulas_semanais = validar_numero_nao_negativo(aulas_semanais_bruto, "Aulas semanais")
+    turmas = validar_turmas_professor(turmas_bruto)
+    disciplinas = validar_disciplinas_professor(disciplinas_bruto)
 
     return {
-        "nome": nome,
-        "email": email,
-        "senha": senha,
+        "nome": nome_limpo,
+        "email": email_limpo,
         "data_nascimento": data_nascimento,
         "aulas_semanais": aulas_semanais,
         "turmas": turmas,
         "turmas_quantidade": len(turmas),
         "disciplinas": disciplinas,
     }
+
+def validar_payload_cadastro_professor(payload: ProfessorCreateIn):
+    senha = payload.senha.strip()
+    if not senha:
+        raise HTTPException(400, "Senha é obrigatória.")
+    validar_senha_forte(senha)
+
+    dados = _validar_dados_professor_comuns(
+        nome=payload.nome,
+        email=payload.email,
+        data_nascimento_txt=payload.data_nascimento,
+        aulas_semanais_bruto=payload.aulas_semanais,
+        turmas_bruto=payload.turmas,
+        disciplinas_bruto=payload.disciplinas,
+    )
+    dados["senha"] = senha
+    return dados
+
+def validar_payload_atualizacao_professor(payload: ProfessorUpdateIn):
+    return _validar_dados_professor_comuns(
+        nome=payload.nome,
+        email=payload.email,
+        data_nascimento_txt=payload.data_nascimento,
+        aulas_semanais_bruto=payload.aulas_semanais,
+        turmas_bruto=payload.turmas,
+        disciplinas_bruto=payload.disciplinas,
+    )
 
 def contar_paginas_intervalo(intervalo: str, total_paginas: int) -> int:
     if not intervalo or not intervalo.strip():
@@ -1113,6 +1144,38 @@ def criar_professor_painel(
         raise HTTPException(409, "Já existe um usuário com este email.") from exc
 
     return {"mensagem": "Professor cadastrado com sucesso.", "professor_id": professor_id}
+
+@app.put("/admin/professores/{professor_id}")
+def atualizar_professor_painel(
+    professor_id: int,
+    payload: ProfessorUpdateIn,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    professor = buscar_usuario_por_id(professor_id)
+    if not professor or professor["perfil"] != "professor":
+        raise HTTPException(404, "Professor não encontrado.")
+
+    dados = validar_payload_atualizacao_professor(payload)
+
+    try:
+        alterado = atualizar_professor(
+            usuario_id=professor_id,
+            nome=dados["nome"],
+            email=dados["email"],
+            data_nascimento=dados["data_nascimento"],
+            aulas_semanais=dados["aulas_semanais"],
+            turmas_quantidade=dados["turmas_quantidade"],
+            turmas=dados["turmas"],
+            disciplinas=dados["disciplinas"]
+        )
+    except sqlite3.IntegrityError as exc:
+        raise HTTPException(409, "Já existe um usuário com este email.") from exc
+
+    if not alterado:
+        raise HTTPException(404, "Professor não encontrado.")
+
+    return {"mensagem": "Professor atualizado com sucesso."}
 
 @app.put("/admin/professores/{professor_id}/carga")
 def atualizar_carga_professor_painel(

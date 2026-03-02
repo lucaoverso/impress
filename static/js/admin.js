@@ -15,6 +15,7 @@ const headersJson = {
 
 const SENHA_FORTE_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 let opcoesProfessor = { turmas: [], disciplinas: [] };
+let professorEmEdicaoId = null;
 const TURNO_LABEL = {
     INTEGRAL: "Período integral",
     MATUTINO: "Matutino",
@@ -115,6 +116,13 @@ function listarSelecionados(containerId) {
         .map((input) => input.value);
 }
 
+function definirSelecionados(containerId, valores = []) {
+    const selecionados = new Set((valores || []).map((item) => String(item)));
+    Array.from(el(containerId).querySelectorAll("input[type='checkbox']")).forEach((input) => {
+        input.checked = selecionados.has(String(input.value));
+    });
+}
+
 function resumoLista(lista, limite = 3) {
     if (!Array.isArray(lista) || lista.length === 0) return "Não informado";
     if (lista.length <= limite) return lista.join(", ");
@@ -130,6 +138,57 @@ function formatarDataBr(dataIso) {
 
 function nomeTurno(turno) {
     return TURNO_LABEL[turno] || turno || "Não informado";
+}
+
+function aplicarModoFormularioProfessor(edicao = false) {
+    const titulo = el("tituloFormProfessor");
+    const btnSalvar = el("btnSalvarProfessor");
+    const btnCancelar = el("btnCancelarEdicaoProfessor");
+    const inputSenha = el("profSenha");
+    const hintSenha = el("profSenhaHint");
+
+    if (edicao) {
+        titulo.innerText = "Editar professor";
+        btnSalvar.innerText = "Salvar alterações";
+        btnCancelar.style.display = "inline-block";
+        inputSenha.value = "";
+        inputSenha.required = false;
+        inputSenha.disabled = true;
+        inputSenha.placeholder = "Senha não alterada nesta edição";
+        hintSenha.innerText = "Edição de cadastro: a senha não é alterada por este formulário.";
+        hintSenha.style.color = "#4b5563";
+        return;
+    }
+
+    titulo.innerText = "Cadastrar professor";
+    btnSalvar.innerText = "Cadastrar";
+    btnCancelar.style.display = "none";
+    inputSenha.required = true;
+    inputSenha.disabled = false;
+    inputSenha.placeholder = "Senha inicial";
+    hintSenha.innerText = "Mínimo 8 caracteres com maiúscula, minúscula, número e caractere especial.";
+    atualizarHintSenha();
+}
+
+function limparFormularioProfessor() {
+    el("formProfessor").reset();
+    el("profAulas").value = "0";
+    definirSelecionados("profTurmasLista", []);
+    definirSelecionados("profDisciplinasLista", []);
+    professorEmEdicaoId = null;
+    aplicarModoFormularioProfessor(false);
+}
+
+function iniciarEdicaoProfessor(professor) {
+    professorEmEdicaoId = Number(professor.id);
+    el("profNome").value = professor.nome || "";
+    el("profEmail").value = professor.email || "";
+    el("profDataNascimento").value = professor.data_nascimento || "";
+    el("profAulas").value = String(professor.aulas_semanais ?? 0);
+    definirSelecionados("profTurmasLista", professor.turmas || []);
+    definirSelecionados("profDisciplinasLista", professor.disciplinas || []);
+    aplicarModoFormularioProfessor(true);
+    window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 async function carregarOpcoesProfessor() {
@@ -513,9 +572,17 @@ async function carregarProfessores() {
             }
         });
 
+        const btnEditar = document.createElement("button");
+        btnEditar.type = "button";
+        btnEditar.innerText = "Editar cadastro";
+        btnEditar.addEventListener("click", () => {
+            iniciarEdicaoProfessor(prof);
+        });
+
         linha.appendChild(inputAulas);
         linha.appendChild(inputTurmas);
         linha.appendChild(btnSalvar);
+        linha.appendChild(btnEditar);
 
         li.appendChild(titulo);
         li.appendChild(cadastro);
@@ -527,12 +594,6 @@ async function carregarProfessores() {
 
 async function cadastrarProfessor(event) {
     event.preventDefault();
-    const senha = el("profSenha").value.trim();
-    if (!validarSenhaForte(senha)) {
-        setMensagem("msgProfessor", "Senha fora do padrão de segurança.", true);
-        return;
-    }
-
     const turmas = listarSelecionados("profTurmasLista");
     const disciplinas = listarSelecionados("profDisciplinasLista");
 
@@ -545,25 +606,42 @@ async function cadastrarProfessor(event) {
         return;
     }
 
-    try {
-        await fetchJson("/admin/professores", {
-            method: "POST",
-            headers: headersJson,
-            body: JSON.stringify({
-                nome: el("profNome").value.trim(),
-                email: el("profEmail").value.trim(),
-                senha,
-                data_nascimento: el("profDataNascimento").value,
-                aulas_semanais: Number(el("profAulas").value),
-                turmas,
-                disciplinas
-            })
-        });
+    const payloadBase = {
+        nome: el("profNome").value.trim(),
+        email: el("profEmail").value.trim(),
+        data_nascimento: el("profDataNascimento").value,
+        aulas_semanais: Number(el("profAulas").value),
+        turmas,
+        disciplinas
+    };
 
-        setMensagem("msgProfessor", "Professor cadastrado com sucesso.");
-        el("formProfessor").reset();
-        el("profAulas").value = "0";
-        atualizarHintSenha();
+    try {
+        if (professorEmEdicaoId) {
+            await fetchJson(`/admin/professores/${professorEmEdicaoId}`, {
+                method: "PUT",
+                headers: headersJson,
+                body: JSON.stringify(payloadBase)
+            });
+            setMensagem("msgProfessor", "Professor atualizado com sucesso.");
+        } else {
+            const senha = el("profSenha").value.trim();
+            if (!validarSenhaForte(senha)) {
+                setMensagem("msgProfessor", "Senha fora do padrão de segurança.", true);
+                return;
+            }
+
+            await fetchJson("/admin/professores", {
+                method: "POST",
+                headers: headersJson,
+                body: JSON.stringify({
+                    ...payloadBase,
+                    senha
+                })
+            });
+            setMensagem("msgProfessor", "Professor cadastrado com sucesso.");
+        }
+
+        limparFormularioProfessor();
         await carregarProfessores();
     } catch (err) {
         setMensagem("msgProfessor", err.message, true);
@@ -756,6 +834,7 @@ function registrarEventos() {
     el("formCotaRegras").addEventListener("submit", salvarRegrasCota);
     el("formRecurso").addEventListener("submit", cadastrarRecurso);
     el("profSenha").addEventListener("input", atualizarHintSenha);
+    el("btnCancelarEdicaoProfessor").addEventListener("click", limparFormularioProfessor);
 
     el("btnRecalcularCotas").addEventListener("click", recalcularCotasMes);
     el("btnGerarRelatorios").addEventListener("click", carregarRelatorios);
@@ -777,6 +856,7 @@ async function init() {
     try {
         el("mesReferenciaCota").value = mesAtualIso();
         await carregarOpcoesProfessor();
+        limparFormularioProfessor();
         registrarEventos();
         atualizarHintSenha();
         await Promise.all([

@@ -832,6 +832,60 @@ def criar_professor(
     conn.close()
     return usuario_id
 
+def atualizar_professor(
+    usuario_id: int,
+    nome: str,
+    email: str,
+    data_nascimento: str = "",
+    aulas_semanais: int = 0,
+    turmas_quantidade: int = 0,
+    turmas: list[str] = None,
+    disciplinas: list[str] = None,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id
+        FROM usuarios
+        WHERE id = ? AND perfil = 'professor'
+    """, (usuario_id,))
+    if not cursor.fetchone():
+        conn.close()
+        return False
+
+    turmas_json = _serializar_lista_texto(turmas)
+    disciplinas_json = _serializar_lista_texto(disciplinas)
+
+    cursor.execute("""
+        UPDATE usuarios
+        SET nome = ?, email = ?, data_nascimento = ?
+        WHERE id = ?
+    """, (nome, email, data_nascimento or None, usuario_id))
+
+    cursor.execute("""
+        INSERT INTO professores_carga (
+            usuario_id, aulas_semanais, turmas_quantidade, turmas, disciplinas, atualizado_em
+        )
+        VALUES (?, ?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(usuario_id) DO UPDATE SET
+            aulas_semanais = excluded.aulas_semanais,
+            turmas_quantidade = excluded.turmas_quantidade,
+            turmas = excluded.turmas,
+            disciplinas = excluded.disciplinas,
+            atualizado_em = datetime('now')
+    """, (
+        usuario_id,
+        aulas_semanais,
+        turmas_quantidade,
+        turmas_json,
+        disciplinas_json,
+    ))
+
+    conn.commit()
+    conn.close()
+    return True
+
 def salvar_carga_professor(usuario_id: int, aulas_semanais: int, turmas_quantidade: int):
     conn = get_connection()
     cursor = conn.cursor()

@@ -40,6 +40,14 @@ class ProfessorCreateIn(BaseModel):
     turmas: list[str] = Field(default_factory=list)
     disciplinas: list[str] = Field(default_factory=list)
 
+class ProfessorUpdateIn(BaseModel):
+    nome: str
+    email: str
+    data_nascimento: str
+    aulas_semanais: int = 0
+    turmas: list[str] = Field(default_factory=list)
+    disciplinas: list[str] = Field(default_factory=list)
+
 class ProfessorCargaIn(BaseModel):
     aulas_semanais: int
     turmas_quantidade: int

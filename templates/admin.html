@@ -21,7 +21,7 @@
 
         <section class="admin-grid">
             <article class="admin-card">
-                <h2>Cadastrar professor</h2>
+                <h2 id="tituloFormProfessor">Cadastrar professor</h2>
                 <form id="formProfessor" class="admin-form">
                     <input id="profNome" type="text" placeholder="Nome" required>
                     <input id="profEmail" type="email" placeholder="Email" required>
@@ -40,7 +40,10 @@
                         <div id="profDisciplinasLista" class="admin-checkbox-grid"></div>
                     </div>
 
-                    <button class="btn-destaque" type="submit">Cadastrar</button>
+                    <div class="admin-inline">
+                        <button id="btnSalvarProfessor" class="btn-destaque" type="submit">Cadastrar</button>
+                        <button id="btnCancelarEdicaoProfessor" type="button" style="display: none;">Cancelar edição</button>
+                    </div>
                 </form>
                 <p id="msgProfessor"></p>
             </article>
