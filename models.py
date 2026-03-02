@@ -64,6 +64,10 @@ class RecursoCreateIn(BaseModel):
     nome: str
     tipo: str
     descricao: str = ""
+    quantidade_itens: int = 1
+
+class RecursoUpdateIn(BaseModel):
+    quantidade_itens: int
 
 class RecursoStatusIn(BaseModel):
     ativo: bool

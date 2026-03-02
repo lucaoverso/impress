@@ -40,6 +40,7 @@ from models import (
     DisciplinaCreateIn,
     DisciplinaUpdateIn,
     RecursoCreateIn,
+    RecursoUpdateIn,
     RecursoStatusIn,
     RegrasCotaIn
 )
@@ -84,8 +85,9 @@ from database import (
     atualizar_disciplina_dados,
     atualizar_status_disciplina,
     buscar_recurso_por_id,
+    atualizar_recurso_quantidade_itens,
+    contar_agendamentos_ativos_faixa,
     buscar_usuario_por_id,
-    buscar_agendamento_conflito,
     criar_agendamento,
     listar_agendamentos,
     buscar_agendamento_por_id,
@@ -754,14 +756,21 @@ def criar_reserva_agendamento(
 
     aula = validar_aula(payload.aula, turno)
     faixa_global = calcular_faixa_global(turno, aula)
-
-    conflito = buscar_agendamento_conflito(
+    capacidade_recurso = max(int(recurso.get("quantidade_itens") or 1), 1)
+    reservas_ativas_faixa = contar_agendamentos_ativos_faixa(
         recurso_id=payload.recurso_id,
         data=data_reserva,
         faixa_global=faixa_global
     )
-    if conflito:
-        raise HTTPException(409, "Este recurso já está reservado nessa faixa de aula (aulas simultâneas).")
+
+    if reservas_ativas_faixa >= capacidade_recurso:
+        raise HTTPException(
+            409,
+            (
+                f"Capacidade máxima atingida para este recurso nesta faixa. "
+                f"Reservas ativas: {reservas_ativas_faixa}/{capacidade_recurso}."
+            )
+        )
 
     observacao = (payload.observacao or "").strip()
     agendamento_id = criar_agendamento(
@@ -1173,18 +1182,42 @@ def criar_recurso_admin(
     nome = payload.nome.strip()
     tipo = payload.tipo.strip()
     descricao = (payload.descricao or "").strip()
+    quantidade_itens = validar_numero_nao_negativo(payload.quantidade_itens, "Quantidade de itens")
 
     if not nome:
         raise HTTPException(400, "Nome do recurso é obrigatório.")
     if not tipo:
         raise HTTPException(400, "Tipo do recurso é obrigatório.")
+    if quantidade_itens < 1:
+        raise HTTPException(400, "Quantidade de itens deve ser no mínimo 1.")
 
     try:
-        recurso_id = criar_recurso(nome=nome, tipo=tipo, descricao=descricao)
+        recurso_id = criar_recurso(
+            nome=nome,
+            tipo=tipo,
+            descricao=descricao,
+            quantidade_itens=quantidade_itens
+        )
     except sqlite3.IntegrityError as exc:
         raise HTTPException(409, "Já existe um recurso com este nome.") from exc
 
     return {"mensagem": "Recurso criado com sucesso.", "recurso_id": recurso_id}
+
+@app.put("/admin/recursos/{recurso_id}")
+def atualizar_recurso_admin(
+    recurso_id: int,
+    payload: RecursoUpdateIn,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    quantidade_itens = validar_numero_nao_negativo(payload.quantidade_itens, "Quantidade de itens")
+    if quantidade_itens < 1:
+        raise HTTPException(400, "Quantidade de itens deve ser no mínimo 1.")
+
+    alterado = atualizar_recurso_quantidade_itens(recurso_id, quantidade_itens)
+    if not alterado:
+        raise HTTPException(404, "Recurso não encontrado.")
+    return {"mensagem": "Quantidade do recurso atualizada com sucesso."}
 
 @app.put("/admin/recursos/{recurso_id}/status")
 def atualizar_status_recurso_admin(

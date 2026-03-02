@@ -128,7 +128,9 @@ async function carregarRecursos() {
     recursos.forEach((recurso) => {
         const option = document.createElement("option");
         option.value = recurso.id;
-        option.innerText = `${recurso.nome} (${recurso.tipo})`;
+        const quantidade = Number(recurso.quantidade_itens || 1);
+        const sufixoQuantidade = quantidade === 1 ? "1 unidade" : `${quantidade} unidades`;
+        option.innerText = `${recurso.nome} (${recurso.tipo}) - ${sufixoQuantidade}`;
         select.appendChild(option);
     });
 }

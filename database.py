@@ -303,6 +303,7 @@ def criar_tabelas():
             nome TEXT UNIQUE NOT NULL,
             tipo TEXT NOT NULL,
             descricao TEXT,
+            quantidade_itens INTEGER NOT NULL DEFAULT 1,
             ativo INTEGER NOT NULL DEFAULT 1
         )
     """)
@@ -353,6 +354,7 @@ def criar_tabelas():
     _garantir_colunas_agendamentos(cursor)
     _garantir_colunas_professores_carga(cursor)
     _garantir_colunas_cota_regras(cursor)
+    _garantir_colunas_recursos(cursor)
     _garantir_colunas_turmas(cursor)
     _garantir_colunas_disciplinas(cursor)
     _seed_catalogos_academicos(cursor)
@@ -606,6 +608,21 @@ def _garantir_colunas_cota_regras(cursor):
         cursor.execute(
             "ALTER TABLE cota_regras ADD COLUMN cota_mensal_escola INTEGER NOT NULL DEFAULT 4000"
         )
+
+def _garantir_colunas_recursos(cursor):
+    cursor.execute("PRAGMA table_info(recursos)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+
+    if "quantidade_itens" not in colunas:
+        cursor.execute(
+            "ALTER TABLE recursos ADD COLUMN quantidade_itens INTEGER NOT NULL DEFAULT 1"
+        )
+
+    cursor.execute("""
+        UPDATE recursos
+        SET quantidade_itens = 1
+        WHERE COALESCE(quantidade_itens, 0) < 1
+    """)
 
 def _garantir_colunas_turmas(cursor):
     cursor.execute("PRAGMA table_info(turmas)")
@@ -1103,19 +1120,19 @@ def listar_professores_admin(mes: str = None):
 
 def seed_recursos_padrao():
     recursos = [
-        ("Notebook Carrinho 1", "Notebook", "Carrinho móvel com 30 notebooks."),
-        ("Projetor Sala Multiuso", "Projetor", "Projetor Epson da sala multiuso."),
-        ("Laboratório Maker", "Laboratório", "Laboratório com kits de robótica."),
-        ("Kit Tablets", "Tablet", "Conjunto de 25 tablets para aula interativa."),
-        ("Caixa de Som Bluetooth", "Áudio", "Caixa de som portátil para apresentações."),
+        ("Notebook Carrinho 1", "Notebook", "Carrinho móvel com 30 notebooks.", 1),
+        ("Projetor Sala Multiuso", "Projetor", "Projetor Epson da sala multiuso.", 1),
+        ("Laboratório Maker", "Laboratório", "Laboratório com kits de robótica.", 1),
+        ("Kit Tablets", "Tablet", "Conjunto de 25 tablets para aula interativa.", 1),
+        ("Caixa de Som Bluetooth", "Áudio", "Caixa de som portátil para apresentações.", 1),
     ]
 
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.executemany("""
-        INSERT OR IGNORE INTO recursos (nome, tipo, descricao, ativo)
-        VALUES (?, ?, ?, 1)
+        INSERT OR IGNORE INTO recursos (nome, tipo, descricao, quantidade_itens, ativo)
+        VALUES (?, ?, ?, ?, 1)
     """, recursos)
 
     conn.commit()
@@ -1639,7 +1656,13 @@ def listar_recursos(incluir_inativos: bool = False):
     cursor = conn.cursor()
 
     query = """
-        SELECT id, nome, tipo, COALESCE(descricao, '') AS descricao, ativo
+        SELECT
+            id,
+            nome,
+            tipo,
+            COALESCE(descricao, '') AS descricao,
+            CASE WHEN COALESCE(quantidade_itens, 1) < 1 THEN 1 ELSE quantidade_itens END AS quantidade_itens,
+            ativo
         FROM recursos
     """
     params = []
@@ -1653,19 +1676,36 @@ def listar_recursos(incluir_inativos: bool = False):
     conn.close()
     return [dict(row) for row in rows]
 
-def criar_recurso(nome: str, tipo: str, descricao: str = ""):
+def criar_recurso(nome: str, tipo: str, descricao: str = "", quantidade_itens: int = 1):
+    quantidade_itens_valor = max(int(quantidade_itens or 0), 1)
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute("""
-        INSERT INTO recursos (nome, tipo, descricao, ativo)
-        VALUES (?, ?, ?, 1)
-    """, (nome, tipo, descricao))
+        INSERT INTO recursos (nome, tipo, descricao, quantidade_itens, ativo)
+        VALUES (?, ?, ?, ?, 1)
+    """, (nome, tipo, descricao, quantidade_itens_valor))
 
     recurso_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return recurso_id
+
+def atualizar_recurso_quantidade_itens(recurso_id: int, quantidade_itens: int):
+    quantidade_itens_valor = max(int(quantidade_itens or 0), 1)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE recursos
+        SET quantidade_itens = ?
+        WHERE id = ?
+    """, (quantidade_itens_valor, recurso_id))
+
+    alterados = cursor.rowcount
+    conn.commit()
+    conn.close()
+    return alterados > 0
 
 def atualizar_status_recurso(recurso_id: int, ativo: bool):
     conn = get_connection()
@@ -1687,7 +1727,13 @@ def buscar_recurso_por_id(recurso_id: int):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT id, nome, tipo, COALESCE(descricao, '') AS descricao, ativo
+        SELECT
+            id,
+            nome,
+            tipo,
+            COALESCE(descricao, '') AS descricao,
+            CASE WHEN COALESCE(quantidade_itens, 1) < 1 THEN 1 ELSE quantidade_itens END AS quantidade_itens,
+            ativo
         FROM recursos
         WHERE id = ?
     """, (recurso_id,))
@@ -1695,6 +1741,23 @@ def buscar_recurso_por_id(recurso_id: int):
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
+
+def contar_agendamentos_ativos_faixa(recurso_id: int, data: str, faixa_global: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT COUNT(*) AS total
+        FROM agendamentos
+        WHERE recurso_id = ?
+          AND data = ?
+          AND faixa_global = ?
+          AND status = ?
+    """, (recurso_id, data, int(faixa_global), STATUS_AGENDAMENTO_ATIVO))
+
+    row = cursor.fetchone()
+    conn.close()
+    return int(row["total"] if row else 0)
 
 def buscar_agendamento_conflito(recurso_id: int, data: str, faixa_global: int):
     conn = get_connection()

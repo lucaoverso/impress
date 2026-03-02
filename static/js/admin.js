@@ -619,7 +619,35 @@ async function carregarRecursos() {
 
         const detalhe = document.createElement("p");
         detalhe.className = "booking-detail";
-        detalhe.innerText = `${recurso.descricao || "Sem descrição"} | Status: ${recurso.ativo ? "Ativo" : "Inativo"}`;
+        detalhe.innerText = `${recurso.descricao || "Sem descrição"} | Quantidade: ${recurso.quantidade_itens ?? 1} | Status: ${recurso.ativo ? "Ativo" : "Inativo"}`;
+
+        const linha = document.createElement("div");
+        linha.className = "admin-inline";
+
+        const inputQuantidadeItens = document.createElement("input");
+        inputQuantidadeItens.type = "number";
+        inputQuantidadeItens.min = "1";
+        inputQuantidadeItens.value = String(recurso.quantidade_itens ?? 1);
+        inputQuantidadeItens.title = "Quantidade de itens";
+
+        const btnSalvarQuantidade = document.createElement("button");
+        btnSalvarQuantidade.type = "button";
+        btnSalvarQuantidade.innerText = "Salvar quantidade";
+        btnSalvarQuantidade.addEventListener("click", async () => {
+            try {
+                await fetchJson(`/admin/recursos/${recurso.id}`, {
+                    method: "PUT",
+                    headers: headersJson,
+                    body: JSON.stringify({
+                        quantidade_itens: Number(inputQuantidadeItens.value)
+                    })
+                });
+                setMensagem("msgRecurso", `Quantidade atualizada para ${recurso.nome}.`);
+                await carregarRecursos();
+            } catch (err) {
+                setMensagem("msgRecurso", err.message, true);
+            }
+        });
 
         const btnStatus = document.createElement("button");
         btnStatus.type = "button";
@@ -637,8 +665,12 @@ async function carregarRecursos() {
             }
         });
 
+        linha.appendChild(inputQuantidadeItens);
+        linha.appendChild(btnSalvarQuantidade);
+
         li.appendChild(titulo);
         li.appendChild(detalhe);
+        li.appendChild(linha);
         li.appendChild(btnStatus);
         ul.appendChild(li);
     });
@@ -653,12 +685,14 @@ async function cadastrarRecurso(event) {
             body: JSON.stringify({
                 nome: el("recursoNome").value.trim(),
                 tipo: el("recursoTipo").value.trim(),
-                descricao: el("recursoDescricao").value.trim()
+                descricao: el("recursoDescricao").value.trim(),
+                quantidade_itens: Number(el("recursoQuantidadeItens").value)
             })
         });
 
         setMensagem("msgRecurso", "Recurso cadastrado com sucesso.");
         el("formRecurso").reset();
+        el("recursoQuantidadeItens").value = "1";
         await carregarRecursos();
     } catch (err) {
         setMensagem("msgRecurso", err.message, true);
