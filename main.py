@@ -96,7 +96,7 @@ from database import (
     obter_regras_cota,
     atualizar_regras_cota,
     recalcular_cotas_mes,
-    calcular_limite_cota_usuario
+    calcular_cotas_mensais_professores
 )
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -1064,9 +1064,16 @@ def listar_professores_painel(
     mes_referencia = validar_mes_referencia(mes) if mes else mes_atual_referencia()
     regras = obter_regras_cota()
     professores = listar_professores_admin(mes_referencia)
+    calculos = calcular_cotas_mensais_professores()
+    calculos_por_usuario = {
+        int(calculo["usuario_id"]): calculo
+        for calculo in calculos
+    }
 
     for professor in professores:
-        professor["cota_projetada"] = calcular_limite_cota_usuario(professor["id"])
+        calculo_professor = calculos_por_usuario.get(int(professor["id"]), {})
+        professor["peso_total_individual"] = calculo_professor.get("peso_total_individual", 0)
+        professor["cota_projetada"] = int(calculo_professor.get("cota_mensal_calculada", 0))
 
     return {
         "mes_referencia": mes_referencia,

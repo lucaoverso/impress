@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import shutil
+import unicodedata
 from pathlib import Path
 
 STATUS_CONCLUIDO = "CONCLUIDO"
@@ -14,6 +15,18 @@ COTA_BASE_PADRAO = 80
 COTA_POR_AULA_PADRAO = 6
 COTA_POR_TURMA_PADRAO = 12
 COTA_MENSAL_ESCOLA_PADRAO = 4000
+RESERVA_INSTITUCIONAL_PERCENTUAL = 10
+DISCIPLINAS_MULTIPLICADOR_ALTO = {
+    "lingua portuguesa",
+    "portugues",
+    "literatura",
+    "leitura e producao textual",
+}
+DISCIPLINAS_MULTIPLICADOR_BAIXO = {
+    "educacao fisica",
+    "apoio e orientacao de estudos",
+    "estudo orientado",
+}
 TOKEN_TTL_DIAS_PADRAO = 7
 TURMAS_PADRAO = [
     "6º ano A",
@@ -752,6 +765,23 @@ def _desserializar_lista_texto(valor):
             normalizados.append(texto)
     return normalizados
 
+def _normalizar_texto_chave(valor: str) -> str:
+    texto = str(valor or "").strip().lower()
+    sem_acentos = "".join(
+        caractere
+        for caractere in unicodedata.normalize("NFD", texto)
+        if unicodedata.category(caractere) != "Mn"
+    )
+    return " ".join(sem_acentos.split())
+
+def _obter_multiplicador_disciplina(nome_disciplina: str) -> float:
+    chave = _normalizar_texto_chave(nome_disciplina)
+    if chave in DISCIPLINAS_MULTIPLICADOR_ALTO:
+        return 1.2
+    if chave in DISCIPLINAS_MULTIPLICADOR_BAIXO:
+        return 0.8
+    return 1.0
+
 def criar_professor(
     nome: str,
     email: str,
@@ -848,21 +878,55 @@ def atualizar_regras_cota(
     conn.commit()
     conn.close()
 
-def _calcular_peso_professor(
-    regras: dict,
-    aulas_semanais: int,
-    turmas_quantidade: int,
-):
-    peso = (
-        int(regras["base_paginas"])
-        + int(aulas_semanais) * int(regras["paginas_por_aula"])
-        + int(turmas_quantidade) * int(regras["paginas_por_turma"])
-    )
-    return max(peso, 0)
+def _calcular_total_distribuivel(cota_mensal_escola: int) -> int:
+    cota_total = max(int(cota_mensal_escola or 0), 0)
+    percentual_disponivel = max(0, 100 - RESERVA_INSTITUCIONAL_PERCENTUAL)
+    return cota_total * percentual_disponivel // 100
 
-def calcular_limites_cota_professores():
+def _calcular_peso_professor(
+    professor: dict,
+    alunos_por_turma: dict,
+    aulas_por_disciplina: dict,
+) -> float:
+    turmas_professor = _desserializar_lista_texto(professor.get("turmas"))
+    disciplinas_professor = _desserializar_lista_texto(professor.get("disciplinas"))
+
+    if not turmas_professor or not disciplinas_professor:
+        return 0.0
+
+    cargas_disciplina = []
+    total_aulas_disciplinas = 0.0
+
+    for disciplina in disciplinas_professor:
+        chave_disciplina = _normalizar_texto_chave(disciplina)
+        aulas_disciplina = max(int(aulas_por_disciplina.get(chave_disciplina, 0)), 0)
+        cargas_disciplina.append((disciplina, float(aulas_disciplina)))
+        total_aulas_disciplinas += aulas_disciplina
+
+    aulas_semanais_professor = max(int(professor.get("aulas_semanais") or 0), 0)
+    if total_aulas_disciplinas <= 0 and aulas_semanais_professor > 0:
+        aulas_media = aulas_semanais_professor / len(cargas_disciplina)
+        cargas_disciplina = [(disciplina, aulas_media) for disciplina, _ in cargas_disciplina]
+
+    peso_total = 0.0
+
+    for turma in turmas_professor:
+        chave_turma = _normalizar_texto_chave(turma)
+        alunos_turma = max(int(alunos_por_turma.get(chave_turma, 0)), 0)
+        if alunos_turma <= 0:
+            continue
+
+        for disciplina, aulas_disciplina in cargas_disciplina:
+            if aulas_disciplina <= 0:
+                continue
+            multiplicador = _obter_multiplicador_disciplina(disciplina)
+            peso_total += aulas_disciplina * alunos_turma * multiplicador
+
+    return max(peso_total, 0.0)
+
+def calcular_cotas_mensais_professores():
     regras = obter_regras_cota()
-    cota_total = max(int(regras["cota_mensal_escola"]), 0)
+    cota_distribuivel = _calcular_total_distribuivel(regras["cota_mensal_escola"])
 
     conn = get_connection()
     cursor = conn.cursor()
@@ -870,57 +934,104 @@ def calcular_limites_cota_professores():
     cursor.execute("""
         SELECT
             u.id,
+            u.nome,
             COALESCE(pc.aulas_semanais, 0) AS aulas_semanais,
-            COALESCE(pc.turmas_quantidade, 0) AS turmas_quantidade
+            COALESCE(pc.turmas, '[]') AS turmas,
+            COALESCE(pc.disciplinas, '[]') AS disciplinas
         FROM usuarios u
         LEFT JOIN professores_carga pc ON pc.usuario_id = u.id
         WHERE u.perfil = 'professor'
-        ORDER BY u.id ASC
+        ORDER BY u.nome COLLATE NOCASE ASC, u.id ASC
     """)
-    rows = cursor.fetchall()
+    professores_rows = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT nome, quantidade_estudantes
+        FROM turmas
+        WHERE ativo = 1
+    """)
+    turmas_rows = cursor.fetchall()
+
+    cursor.execute("""
+        SELECT nome, aulas_semanais
+        FROM disciplinas
+        WHERE ativo = 1
+    """)
+    disciplinas_rows = cursor.fetchall()
+
     conn.close()
 
-    if not rows:
-        return {}
+    if not professores_rows:
+        return []
 
-    pesos = {}
-    total_pesos = 0
-    for row in rows:
-        peso = _calcular_peso_professor(
-            regras=regras,
-            aulas_semanais=row["aulas_semanais"],
-            turmas_quantidade=row["turmas_quantidade"]
+    alunos_por_turma = {}
+    for turma in turmas_rows:
+        chave_turma = _normalizar_texto_chave(turma["nome"])
+        alunos_por_turma[chave_turma] = max(int(turma["quantidade_estudantes"] or 0), 0)
+
+    aulas_por_disciplina = {}
+    for disciplina in disciplinas_rows:
+        chave_disciplina = _normalizar_texto_chave(disciplina["nome"])
+        aulas_por_disciplina[chave_disciplina] = max(int(disciplina["aulas_semanais"] or 0), 0)
+
+    calculos = []
+    total_pesos = 0.0
+
+    for row in professores_rows:
+        professor = dict(row)
+        peso_total_individual = _calcular_peso_professor(
+            professor=professor,
+            alunos_por_turma=alunos_por_turma,
+            aulas_por_disciplina=aulas_por_disciplina,
         )
-        pesos[int(row["id"])] = peso
-        total_pesos += peso
 
-    limites = {}
+        calculos.append({
+            "usuario_id": int(professor["id"]),
+            "professor": professor["nome"],
+            "peso_total_individual": peso_total_individual,
+            "cota_mensal_calculada": 0,
+        })
+        total_pesos += peso_total_individual
 
     if total_pesos <= 0:
-        limite_base = cota_total // len(rows)
-        sobra = cota_total % len(rows)
-        for indice, row in enumerate(rows):
-            limites[int(row["id"])] = limite_base + (1 if indice < sobra else 0)
-        return limites
+        cota_base = cota_distribuivel // len(calculos)
+        sobra = cota_distribuivel % len(calculos)
+
+        for indice, calculo in enumerate(calculos):
+            calculo["cota_mensal_calculada"] = cota_base + (1 if indice < sobra else 0)
+            calculo["peso_total_individual"] = round(calculo["peso_total_individual"], 2)
+        return calculos
 
     distribuicao = []
     acumulado = 0
-    for row in rows:
-        usuario_id = int(row["id"])
-        quota_bruta = cota_total * pesos[usuario_id] / total_pesos
-        quota_inteira = int(quota_bruta)
-        limites[usuario_id] = quota_inteira
-        acumulado += quota_inteira
-        distribuicao.append((quota_bruta - quota_inteira, usuario_id))
+    indice_por_usuario = {}
 
-    sobra = cota_total - acumulado
-    if sobra > 0:
+    for indice, calculo in enumerate(calculos):
+        quota_bruta = cota_distribuivel * calculo["peso_total_individual"] / total_pesos
+        quota_inteira = int(quota_bruta)
+        calculo["cota_mensal_calculada"] = quota_inteira
+        acumulado += quota_inteira
+        indice_por_usuario[calculo["usuario_id"]] = indice
+        distribuicao.append((quota_bruta - quota_inteira, calculo["usuario_id"]))
+
+    sobra = cota_distribuivel - acumulado
+    if sobra > 0 and distribuicao:
         distribuicao.sort(key=lambda item: (-item[0], item[1]))
         for indice in range(sobra):
             usuario_id = distribuicao[indice % len(distribuicao)][1]
-            limites[usuario_id] += 1
+            calculos[indice_por_usuario[usuario_id]]["cota_mensal_calculada"] += 1
 
-    return limites
+    for calculo in calculos:
+        calculo["peso_total_individual"] = round(calculo["peso_total_individual"], 2)
+
+    return calculos
+
+def calcular_limites_cota_professores():
+    calculos = calcular_cotas_mensais_professores()
+    return {
+        int(calculo["usuario_id"]): int(calculo["cota_mensal_calculada"])
+        for calculo in calculos
+    }
 
 def calcular_limite_cota_usuario(usuario_id: int):
     conn = get_connection()
