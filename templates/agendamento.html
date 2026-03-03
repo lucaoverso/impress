@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Agendamento de Equipamentos</title>
-    <link rel="stylesheet" href="{{ request.url_for('static', path='css/style.css') }}">
+    <link rel="stylesheet" href="{{ request.url_for('static', path='css/style.css') }}?v={{ asset_version | default('1') }}">
 </head>
 
 <body>
@@ -82,7 +82,7 @@
         </section>
     </main>
 
-    <script src="{{ request.url_for('static', path='js/agendamento.js') }}"></script>
+    <script src="{{ request.url_for('static', path='js/agendamento.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>
 
 </html>

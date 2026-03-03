@@ -112,6 +112,14 @@ DEFAULT_PRINTER_NAME = os.getenv("CUPS_PRINTER", "").strip()
 ENABLE_EMBEDDED_WORKER = os.getenv("ENABLE_EMBEDDED_WORKER", "").strip().lower() in {"1", "true", "yes"}
 FORMATOS_UPLOAD_DESCRICAO = "PDF, DOCX, DOC, PNG, JPG ou JPEG"
 
+def _resolver_asset_version() -> str:
+    valor = os.getenv("STATIC_ASSET_VERSION", "").strip()
+    if valor:
+        return valor
+    return str(int(datetime.now().timestamp()))
+
+ASSET_VERSION = _resolver_asset_version()
+
 def _resolver_janela_cancelamento() -> int:
     valor = os.getenv("PRINT_CANCEL_WINDOW_SECONDS", "15").strip()
     try:
@@ -918,7 +926,15 @@ def professor_redirect():
 
 @app.get("/agendamento")
 def agendamento_page(request: Request):
-    return templates.TemplateResponse("agendamento.html", {"request": request})
+    response = templates.TemplateResponse(
+        "agendamento.html",
+        {
+            "request": request,
+            "asset_version": ASSET_VERSION,
+        }
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/cadastro-professor")
