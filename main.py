@@ -87,7 +87,7 @@ from database import (
     atualizar_disciplina_dados,
     atualizar_status_disciplina,
     buscar_recurso_por_id,
-    atualizar_recurso_quantidade_itens,
+    atualizar_recurso_dados,
     contar_agendamentos_ativos_faixa,
     buscar_usuario_por_id,
     criar_agendamento,
@@ -1337,14 +1337,31 @@ def atualizar_recurso_admin(
     usuario = Depends(get_usuario_logado)
 ):
     exigir_admin(usuario)
+    nome = payload.nome.strip()
+    tipo = payload.tipo.strip()
+    descricao = (payload.descricao or "").strip()
     quantidade_itens = validar_numero_nao_negativo(payload.quantidade_itens, "Quantidade de itens")
+    if not nome:
+        raise HTTPException(400, "Nome do recurso é obrigatório.")
+    if not tipo:
+        raise HTTPException(400, "Tipo do recurso é obrigatório.")
     if quantidade_itens < 1:
         raise HTTPException(400, "Quantidade de itens deve ser no mínimo 1.")
 
-    alterado = atualizar_recurso_quantidade_itens(recurso_id, quantidade_itens)
+    try:
+        alterado = atualizar_recurso_dados(
+            recurso_id=recurso_id,
+            nome=nome,
+            tipo=tipo,
+            descricao=descricao,
+            quantidade_itens=quantidade_itens
+        )
+    except sqlite3.IntegrityError as exc:
+        raise HTTPException(409, "Já existe um recurso com este nome.") from exc
+
     if not alterado:
         raise HTTPException(404, "Recurso não encontrado.")
-    return {"mensagem": "Quantidade do recurso atualizada com sucesso."}
+    return {"mensagem": "Recurso atualizado com sucesso."}
 
 @app.put("/admin/recursos/{recurso_id}/status")
 def atualizar_status_recurso_admin(

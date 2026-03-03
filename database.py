@@ -1795,6 +1795,28 @@ def criar_recurso(nome: str, tipo: str, descricao: str = "", quantidade_itens: i
     conn.close()
     return recurso_id
 
+def atualizar_recurso_dados(
+    recurso_id: int,
+    nome: str,
+    tipo: str,
+    descricao: str = "",
+    quantidade_itens: int = 1
+):
+    quantidade_itens_valor = max(int(quantidade_itens or 0), 1)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE recursos
+        SET nome = ?, tipo = ?, descricao = ?, quantidade_itens = ?
+        WHERE id = ?
+    """, (nome, tipo, descricao, quantidade_itens_valor, recurso_id))
+
+    alterados = cursor.rowcount
+    conn.commit()
+    conn.close()
+    return alterados > 0
+
 def atualizar_recurso_quantidade_itens(recurso_id: int, quantidade_itens: int):
     quantidade_itens_valor = max(int(quantidade_itens or 0), 1)
     conn = get_connection()

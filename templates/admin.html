@@ -111,13 +111,16 @@
             </article>
 
             <article class="admin-card">
-                <h2>Cadastrar recurso</h2>
+                <h2 id="tituloFormRecurso">Cadastrar recurso</h2>
                 <form id="formRecurso" class="admin-form">
                     <input id="recursoNome" type="text" placeholder="Nome do recurso" required>
                     <input id="recursoTipo" type="text" placeholder="Tipo (Projetor, Notebook...)" required>
                     <input id="recursoDescricao" type="text" placeholder="Descrição (opcional)">
                     <input id="recursoQuantidadeItens" type="number" min="1" placeholder="Quantidade de itens" value="1" required>
-                    <button class="btn-destaque" type="submit">Cadastrar recurso</button>
+                    <div class="admin-inline">
+                        <button id="btnSalvarRecurso" class="btn-destaque" type="submit">Cadastrar recurso</button>
+                        <button id="btnCancelarEdicaoRecurso" type="button" style="display: none;">Cancelar edição</button>
+                    </div>
                 </form>
                 <p id="msgRecurso"></p>
             </article>

@@ -16,6 +16,7 @@ const headersJson = {
 const SENHA_FORTE_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 let opcoesProfessor = { turmas: [], disciplinas: [] };
 let professorEmEdicaoId = null;
+let recursoEmEdicaoId = null;
 const TURNO_LABEL = {
     INTEGRAL: "Período integral",
     MATUTINO: "Matutino",
@@ -189,6 +190,40 @@ function iniciarEdicaoProfessor(professor) {
     definirSelecionados("profDisciplinasLista", professor.disciplinas || []);
     aplicarModoFormularioProfessor(true);
     window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function aplicarModoFormularioRecurso(edicao = false) {
+    const titulo = el("tituloFormRecurso");
+    const btnSalvar = el("btnSalvarRecurso");
+    const btnCancelar = el("btnCancelarEdicaoRecurso");
+
+    if (edicao) {
+        titulo.innerText = "Editar recurso";
+        btnSalvar.innerText = "Salvar alterações";
+        btnCancelar.style.display = "inline-block";
+        return;
+    }
+
+    titulo.innerText = "Cadastrar recurso";
+    btnSalvar.innerText = "Cadastrar recurso";
+    btnCancelar.style.display = "none";
+}
+
+function limparFormularioRecurso() {
+    el("formRecurso").reset();
+    el("recursoQuantidadeItens").value = "1";
+    recursoEmEdicaoId = null;
+    aplicarModoFormularioRecurso(false);
+}
+
+function iniciarEdicaoRecurso(recurso) {
+    recursoEmEdicaoId = Number(recurso.id);
+    el("recursoNome").value = recurso.nome || "";
+    el("recursoTipo").value = recurso.tipo || "";
+    el("recursoDescricao").value = recurso.descricao || "";
+    el("recursoQuantidadeItens").value = String(recurso.quantidade_itens ?? 1);
+    aplicarModoFormularioRecurso(true);
+    el("formRecurso").scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 async function carregarOpcoesProfessor() {
@@ -717,6 +752,9 @@ async function carregarRecursos() {
                     method: "PUT",
                     headers: headersJson,
                     body: JSON.stringify({
+                        nome: recurso.nome,
+                        tipo: recurso.tipo,
+                        descricao: recurso.descricao || "",
                         quantidade_itens: Number(inputQuantidadeItens.value)
                     })
                 });
@@ -725,6 +763,13 @@ async function carregarRecursos() {
             } catch (err) {
                 setMensagem("msgRecurso", err.message, true);
             }
+        });
+
+        const btnEditar = document.createElement("button");
+        btnEditar.type = "button";
+        btnEditar.innerText = "Editar cadastro";
+        btnEditar.addEventListener("click", () => {
+            iniciarEdicaoRecurso(recurso);
         });
 
         const btnStatus = document.createElement("button");
@@ -745,6 +790,7 @@ async function carregarRecursos() {
 
         linha.appendChild(inputQuantidadeItens);
         linha.appendChild(btnSalvarQuantidade);
+        linha.appendChild(btnEditar);
 
         li.appendChild(titulo);
         li.appendChild(detalhe);
@@ -756,21 +802,31 @@ async function carregarRecursos() {
 
 async function cadastrarRecurso(event) {
     event.preventDefault();
-    try {
-        await fetchJson("/admin/recursos", {
-            method: "POST",
-            headers: headersJson,
-            body: JSON.stringify({
-                nome: el("recursoNome").value.trim(),
-                tipo: el("recursoTipo").value.trim(),
-                descricao: el("recursoDescricao").value.trim(),
-                quantidade_itens: Number(el("recursoQuantidadeItens").value)
-            })
-        });
+    const payload = {
+        nome: el("recursoNome").value.trim(),
+        tipo: el("recursoTipo").value.trim(),
+        descricao: el("recursoDescricao").value.trim(),
+        quantidade_itens: Number(el("recursoQuantidadeItens").value)
+    };
 
-        setMensagem("msgRecurso", "Recurso cadastrado com sucesso.");
-        el("formRecurso").reset();
-        el("recursoQuantidadeItens").value = "1";
+    try {
+        if (recursoEmEdicaoId) {
+            await fetchJson(`/admin/recursos/${recursoEmEdicaoId}`, {
+                method: "PUT",
+                headers: headersJson,
+                body: JSON.stringify(payload)
+            });
+            setMensagem("msgRecurso", "Recurso atualizado com sucesso.");
+        } else {
+            await fetchJson("/admin/recursos", {
+                method: "POST",
+                headers: headersJson,
+                body: JSON.stringify(payload)
+            });
+            setMensagem("msgRecurso", "Recurso cadastrado com sucesso.");
+        }
+
+        limparFormularioRecurso();
         await carregarRecursos();
     } catch (err) {
         setMensagem("msgRecurso", err.message, true);
@@ -835,6 +891,7 @@ function registrarEventos() {
     el("formRecurso").addEventListener("submit", cadastrarRecurso);
     el("profSenha").addEventListener("input", atualizarHintSenha);
     el("btnCancelarEdicaoProfessor").addEventListener("click", limparFormularioProfessor);
+    el("btnCancelarEdicaoRecurso").addEventListener("click", limparFormularioRecurso);
 
     el("btnRecalcularCotas").addEventListener("click", recalcularCotasMes);
     el("btnGerarRelatorios").addEventListener("click", carregarRelatorios);
@@ -857,6 +914,7 @@ async function init() {
         el("mesReferenciaCota").value = mesAtualIso();
         await carregarOpcoesProfessor();
         limparFormularioProfessor();
+        limparFormularioRecurso();
         registrarEventos();
         atualizarHintSenha();
         await Promise.all([
