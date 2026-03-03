@@ -11,6 +11,16 @@ from services.printer import imprimir_job
 INTERVALO = 2  # segundos
 MANTER_ARQUIVOS_SPOOL = os.getenv("KEEP_SPOOL_FILES", "").strip().lower() in {"1", "true", "yes"}
 
+def _resolver_janela_cancelamento() -> int:
+    valor = os.getenv("PRINT_CANCEL_WINDOW_SECONDS", "15").strip()
+    try:
+        segundos = int(valor)
+    except ValueError:
+        return 15
+    return max(segundos, 0)
+
+JANELA_CANCELAMENTO_SEGUNDOS = _resolver_janela_cancelamento()
+
 def limpar_arquivo_job(job):
     if MANTER_ARQUIVOS_SPOOL:
         return
@@ -27,10 +37,10 @@ def limpar_arquivo_job(job):
         print(f"⚠️ Não foi possível remover arquivo spool do job {job['id']}: {exc}")
 
 def worker_loop():
-    print("👷 Worker de impressão iniciado")
+    print(f"👷 Worker de impressão iniciado (janela de cancelamento: {JANELA_CANCELAMENTO_SEGUNDOS}s)")
 
     while True:
-        job = buscar_proximo_job()
+        job = buscar_proximo_job(atraso_minimo_segundos=JANELA_CANCELAMENTO_SEGUNDOS)
 
         if job:
             try:

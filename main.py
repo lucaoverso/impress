@@ -112,6 +112,16 @@ DEFAULT_PRINTER_NAME = os.getenv("CUPS_PRINTER", "").strip()
 ENABLE_EMBEDDED_WORKER = os.getenv("ENABLE_EMBEDDED_WORKER", "").strip().lower() in {"1", "true", "yes"}
 FORMATOS_UPLOAD_DESCRICAO = "PDF, DOCX, DOC, PNG, JPG ou JPEG"
 
+def _resolver_janela_cancelamento() -> int:
+    valor = os.getenv("PRINT_CANCEL_WINDOW_SECONDS", "15").strip()
+    try:
+        segundos = int(valor)
+    except ValueError:
+        return 15
+    return max(segundos, 0)
+
+PRINT_CANCEL_WINDOW_SECONDS = _resolver_janela_cancelamento()
+
 # =========================================================
 # LIFESPAN (STARTUP / SHUTDOWN)
 # =========================================================
@@ -881,7 +891,13 @@ def servicos_page(request: Request):
 
 @app.get("/impressao")
 def impressao_page(request: Request):
-    return templates.TemplateResponse("professor.html", {"request": request})
+    return templates.TemplateResponse(
+        "professor.html",
+        {
+            "request": request,
+            "cancel_window_seconds": PRINT_CANCEL_WINDOW_SECONDS,
+        }
+    )
 
 
 @app.get("/professor")

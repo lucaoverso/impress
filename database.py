@@ -1448,17 +1448,31 @@ def alterar_prioridade(job_id, urgente):
     conn.commit()
     conn.close()
 
-#para imprimir automáticamente, o sistema pode buscar o próximo job pendente
-def buscar_proximo_job():
+# Para impressão automática, busca o próximo job pendente já elegível para iniciar.
+def buscar_proximo_job(atraso_minimo_segundos: int = 0):
+    try:
+        atraso_minimo = max(int(atraso_minimo_segundos), 0)
+    except (TypeError, ValueError):
+        atraso_minimo = 0
+
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT * FROM jobs
-        WHERE status = 'PENDENTE'
-        ORDER BY prioridade DESC, criado_em ASC
-        LIMIT 1
-    """)
+    if atraso_minimo > 0:
+        cursor.execute("""
+            SELECT * FROM jobs
+            WHERE status = 'PENDENTE'
+              AND datetime(criado_em) <= datetime('now', ?)
+            ORDER BY prioridade DESC, criado_em ASC
+            LIMIT 1
+        """, (f"-{atraso_minimo} seconds",))
+    else:
+        cursor.execute("""
+            SELECT * FROM jobs
+            WHERE status = 'PENDENTE'
+            ORDER BY prioridade DESC, criado_em ASC
+            LIMIT 1
+        """)
 
     row = cursor.fetchone()
     conn.close()

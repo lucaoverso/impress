@@ -100,7 +100,10 @@
 
                 <article class="print-meta-card print-jobs-card">
                     <h2>Seus pedidos</h2>
-                    <p class="print-jobs-hint">Jobs pendentes podem ser cancelados antes de iniciar a impressão.</p>
+                    <p class="print-jobs-hint">
+                        A impressão inicia após {{ cancel_window_seconds | default(15) }}s.
+                        Nesse período você pode cancelar jobs pendentes.
+                    </p>
                     <ul id="lista-jobs"></ul>
                 </article>
             </div>
