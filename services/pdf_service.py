@@ -4,6 +4,8 @@ from pathlib import Path
 
 from pypdf import PdfReader, PdfWriter, Transformation
 
+A4_RETRATO_LARGURA_PT = 595.28
+A4_RETRATO_ALTURA_PT = 841.89
 A4_PAISAGEM_LARGURA_PT = 841.89
 A4_PAISAGEM_ALTURA_PT = 595.28
 
@@ -62,31 +64,77 @@ def _medidas_pagina(page) -> tuple[float, float]:
     return largura, altura
 
 
-def gerar_pdf_duas_por_folha_paisagem(caminho_origem: Path, intervalo_paginas: str = "") -> Path:
+def _normalizar_orientacao(orientacao: str) -> str:
+    orientacao_norm = str(orientacao or "").strip().lower()
+    return "paisagem" if orientacao_norm == "paisagem" else "retrato"
+
+
+def _obter_tamanho_folha(orientacao: str) -> tuple[float, float]:
+    if orientacao == "paisagem":
+        return A4_PAISAGEM_LARGURA_PT, A4_PAISAGEM_ALTURA_PT
+    return A4_RETRATO_LARGURA_PT, A4_RETRATO_ALTURA_PT
+
+
+def _obter_layout_nup(paginas_por_folha: int) -> tuple[int, int]:
+    if paginas_por_folha == 1:
+        return 1, 1
+    if paginas_por_folha == 2:
+        return 2, 1
+    if paginas_por_folha == 4:
+        return 2, 2
+    raise ValueError(f"Paginação por folha não suportada: {paginas_por_folha}")
+
+
+def gerar_pdf_n_por_folha(
+    caminho_origem: Path,
+    paginas_por_folha: int,
+    intervalo_paginas: str = "",
+    orientacao: str = "retrato"
+) -> Path:
+    if paginas_por_folha not in (1, 2, 4):
+        raise ValueError("Paginação por folha inválida para geração de layout.")
+
     reader = PdfReader(str(caminho_origem))
     total_paginas = len(reader.pages)
     paginas_selecionadas = _listar_paginas_intervalo(intervalo_paginas, total_paginas)
+    if not paginas_selecionadas:
+        raise ValueError("Nenhuma página disponível para geração do layout.")
+
+    # Se o documento possui uma única página selecionada e o usuário pede N-up,
+    # replica essa página para preencher toda a folha.
+    if len(paginas_selecionadas) == 1 and paginas_por_folha in (2, 4):
+        paginas_selecionadas = paginas_selecionadas * paginas_por_folha
+
+    orientacao_norm = _normalizar_orientacao(orientacao)
+    if paginas_por_folha == 2:
+        orientacao_norm = "paisagem"
 
     writer = PdfWriter()
-    largura_folha = A4_PAISAGEM_LARGURA_PT
-    altura_folha = A4_PAISAGEM_ALTURA_PT
-    largura_celula = largura_folha / 2.0
+    largura_folha, altura_folha = _obter_tamanho_folha(orientacao_norm)
+    colunas, linhas = _obter_layout_nup(paginas_por_folha)
+    largura_celula = largura_folha / colunas
+    altura_celula = altura_folha / linhas
 
-    for inicio in range(0, len(paginas_selecionadas), 2):
-        numeros_da_folha = paginas_selecionadas[inicio:inicio + 2]
+    for inicio in range(0, len(paginas_selecionadas), paginas_por_folha):
+        numeros_da_folha = paginas_selecionadas[inicio:inicio + paginas_por_folha]
         folha = writer.add_blank_page(width=largura_folha, height=altura_folha)
 
-        for coluna, numero_pagina in enumerate(numeros_da_folha):
+        for indice_slot, numero_pagina in enumerate(numeros_da_folha):
+            coluna = indice_slot % colunas
+            linha = indice_slot // colunas
             pagina = reader.pages[numero_pagina - 1]
             pagina.transfer_rotation_to_content()
 
             largura_pagina, altura_pagina = _medidas_pagina(pagina)
-            escala = min(largura_celula / largura_pagina, altura_folha / altura_pagina)
+            escala = min(largura_celula / largura_pagina, altura_celula / altura_pagina)
             largura_render = largura_pagina * escala
             altura_render = altura_pagina * escala
 
-            deslocamento_x = (coluna * largura_celula) + ((largura_celula - largura_render) / 2.0)
-            deslocamento_y = (altura_folha - altura_render) / 2.0
+            origem_x_celula = coluna * largura_celula
+            origem_y_celula = altura_folha - ((linha + 1) * altura_celula)
+
+            deslocamento_x = origem_x_celula + ((largura_celula - largura_render) / 2.0)
+            deslocamento_y = origem_y_celula + ((altura_celula - altura_render) / 2.0)
 
             transformacao = Transformation().scale(escala, escala).translate(
                 tx=deslocamento_x,
@@ -94,9 +142,18 @@ def gerar_pdf_duas_por_folha_paisagem(caminho_origem: Path, intervalo_paginas: s
             )
             folha.merge_transformed_page(pagina, transformacao, expand=False)
 
-    nome_temporario = f"{caminho_origem.stem}_2up_{uuid.uuid4().hex}.pdf"
+    nome_temporario = f"{caminho_origem.stem}_{paginas_por_folha}up_{uuid.uuid4().hex}.pdf"
     caminho_destino = caminho_origem.with_name(nome_temporario)
     with caminho_destino.open("wb") as destino:
         writer.write(destino)
 
     return caminho_destino
+
+
+def gerar_pdf_duas_por_folha_paisagem(caminho_origem: Path, intervalo_paginas: str = "") -> Path:
+    return gerar_pdf_n_por_folha(
+        caminho_origem=caminho_origem,
+        paginas_por_folha=2,
+        intervalo_paginas=intervalo_paginas,
+        orientacao="paisagem",
+    )

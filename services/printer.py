@@ -5,7 +5,7 @@ import shlex
 import subprocess
 from pathlib import Path
 
-from services.pdf_service import gerar_pdf_duas_por_folha_paisagem
+from services.pdf_service import gerar_pdf_n_por_folha
 
 LP_COMMAND = os.getenv("CUPS_LP_COMMAND", "lp")
 LP_TIMEOUT_SECONDS = int(os.getenv("CUPS_LP_TIMEOUT_SECONDS", "30"))
@@ -80,12 +80,22 @@ def _normalizar_int(valor, padrao: int) -> int:
     except (TypeError, ValueError):
         return padrao
 
-def _forcar_layout_duas_por_folha(caminho: Path, job, opcoes_cups):
+def _normalizar_orientacao_layout(job, opcoes_cups) -> str:
+    orientacao = str(job.get("orientacao") or "").strip().lower()
+    if orientacao in {"retrato", "paisagem"}:
+        return orientacao
+
+    orientacao_cups = str(opcoes_cups.get("orientation-requested") or "").strip()
+    if orientacao_cups == "4":
+        return "paisagem"
+    return "retrato"
+
+def _forcar_layout_n_por_folha(caminho: Path, job, opcoes_cups):
     paginas_por_folha = _normalizar_int(
         opcoes_cups.get("number-up", job.get("paginas_por_folha")),
         1
     )
-    if paginas_por_folha != 2:
+    if paginas_por_folha not in (2, 4):
         return caminho, opcoes_cups, None
 
     intervalo_paginas = str(
@@ -93,7 +103,15 @@ def _forcar_layout_duas_por_folha(caminho: Path, job, opcoes_cups):
         or opcoes_cups.get("page-ranges")
         or ""
     ).strip()
-    caminho_layout = gerar_pdf_duas_por_folha_paisagem(caminho, intervalo_paginas)
+    orientacao_layout = _normalizar_orientacao_layout(job, opcoes_cups)
+    if paginas_por_folha == 2:
+        orientacao_layout = "paisagem"
+    caminho_layout = gerar_pdf_n_por_folha(
+        caminho_origem=caminho,
+        paginas_por_folha=paginas_por_folha,
+        intervalo_paginas=intervalo_paginas,
+        orientacao=orientacao_layout,
+    )
 
     opcoes_ajustadas = dict(opcoes_cups)
     opcoes_ajustadas["number-up"] = 1
@@ -119,7 +137,7 @@ def imprimir_job(job):
     arquivo_temporario = None
 
     try:
-        caminho_envio, opcoes_cups, arquivo_temporario = _forcar_layout_duas_por_folha(
+        caminho_envio, opcoes_cups, arquivo_temporario = _forcar_layout_n_por_folha(
             caminho,
             job,
             opcoes_cups

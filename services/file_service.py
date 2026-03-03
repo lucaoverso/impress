@@ -7,6 +7,9 @@ SUPPORTED_UPLOAD_EXTENSIONS = {".pdf", ".docx", ".doc", ".png", ".jpg", ".jpeg"}
 OFFICE_EXTENSIONS = {".docx", ".doc"}
 IMAGE_EXTENSIONS = {".png", ".jpg", ".jpeg"}
 SOFFICE_TIMEOUT_SECONDS = 120
+PDF_RESOLUTION_DPI = 300
+A4_RETRATO_PIXELS_300_DPI = (2480, 3508)
+A4_PAISAGEM_PIXELS_300_DPI = (3508, 2480)
 SOFFICE_PATHS_COMUNS = (
     "/Applications/LibreOffice.app/Contents/MacOS/soffice",
     "/usr/bin/soffice",
@@ -133,16 +136,37 @@ def converter_imagem_para_pdf(caminho_origem: Path) -> Path:
             if imagem.mode in {"RGBA", "LA"}:
                 fundo = Image.new("RGB", imagem.size, (255, 255, 255))
                 fundo.paste(imagem, mask=imagem.split()[-1])
-                imagem_pdf = fundo
+                imagem_rgb = fundo
             elif imagem.mode == "P" and "transparency" in imagem.info:
                 rgba = imagem.convert("RGBA")
                 fundo = Image.new("RGB", rgba.size, (255, 255, 255))
                 fundo.paste(rgba, mask=rgba.split()[-1])
-                imagem_pdf = fundo
+                imagem_rgb = fundo
             else:
-                imagem_pdf = imagem.convert("RGB")
+                imagem_rgb = imagem.convert("RGB")
 
-            imagem_pdf.save(caminho_destino, "PDF", resolution=300.0)
+            # Normaliza imagem para folha A4: evita escala física incorreta
+            # causada por metadados/dpi inconsistentes na origem.
+            if imagem_rgb.width >= imagem_rgb.height:
+                tamanho_a4 = A4_PAISAGEM_PIXELS_300_DPI
+            else:
+                tamanho_a4 = A4_RETRATO_PIXELS_300_DPI
+
+            folha_a4 = Image.new("RGB", tamanho_a4, (255, 255, 255))
+            imagem_ajustada = ImageOps.contain(
+                imagem_rgb,
+                tamanho_a4,
+                method=Image.Resampling.LANCZOS,
+            )
+            offset_x = (tamanho_a4[0] - imagem_ajustada.width) // 2
+            offset_y = (tamanho_a4[1] - imagem_ajustada.height) // 2
+            folha_a4.paste(imagem_ajustada, (offset_x, offset_y))
+
+            folha_a4.save(
+                caminho_destino,
+                "PDF",
+                resolution=float(PDF_RESOLUTION_DPI),
+            )
     except Exception as exc:
         raise RuntimeError(
             "Falha ao converter imagem para PDF. Verifique se o arquivo está íntegro."

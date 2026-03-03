@@ -141,6 +141,16 @@ function obterConfigLayout(paginasPorFolha) {
     return { colunas: 2, linhas: 2 };
 }
 
+function expandirPaginasParaFolha(paginasDaFolha, paginasPorFolha) {
+    const paginas = Array.from(paginasDaFolha || []);
+    if (paginas.length === 1 && (paginasPorFolha === 2 || paginasPorFolha === 4)) {
+        while (paginas.length < paginasPorFolha) {
+            paginas.push(paginas[0]);
+        }
+    }
+    return paginas;
+}
+
 function obterDimensoesMiniatura(tamanhoFolha, isMobile) {
     const pane = document.querySelector(".print-preview-pane");
 
@@ -915,7 +925,10 @@ async function renderFolha() {
         }
 
         const inicio = (indiceFolha - 1) * paginasPorFolha;
-        const paginasDaFolha = paginasPreview.slice(inicio, inicio + paginasPorFolha);
+        const paginasDaFolha = expandirPaginasParaFolha(
+            paginasPreview.slice(inicio, inicio + paginasPorFolha),
+            paginasPorFolha
+        );
 
         const thumb = document.createElement("article");
         thumb.classList.add("print-sheet-thumb");
