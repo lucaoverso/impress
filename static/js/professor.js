@@ -42,13 +42,24 @@ let resizeTimer = null;
 let previewScrollRaf = null;
 let previewAbortController = null;
 let previewLoadSeq = 0;
+let envioEmAndamento = false;
+let filaPollingTimer = null;
 const QUALIDADE_MAX_DPR = 1.4;
 const FOLHA_PADDING = 8;
 const FOLHA_GAP = 6;
 const LABEL_PREVIEW_RESERVA = 38;
 const RESERVA_BORDA_PREVIEW = 24;
 const BREAKPOINT_MOBILE_PREVIEW = 980;
+const FILA_POLLING_MS = 6000;
 const EXTENSOES_SUPORTADAS = new Set(["pdf", "doc", "docx", "png", "jpg", "jpeg"]);
+const STATUS_JOB_LABEL = {
+    PENDENTE: "Na fila",
+    IMPRIMINDO: "Imprimindo",
+    CONCLUIDO: "Concluído",
+    FINALIZADO: "Concluído",
+    ERRO: "Erro",
+    CANCELADO: "Cancelado"
+};
 
 const TAMANHO_FOLHA = {
     retrato: { largura: 794, altura: 1123 },
@@ -379,7 +390,64 @@ function calcularConsumo() {
     }
 }
 
+function normalizarStatusJob(status) {
+    return String(status || "").trim().toUpperCase();
+}
+
+function obterRotuloStatusJob(status) {
+    const statusNormalizado = normalizarStatusJob(status);
+    return STATUS_JOB_LABEL[statusNormalizado] || statusNormalizado || "Desconhecido";
+}
+
+function obterClasseStatusJob(status) {
+    const statusNormalizado = normalizarStatusJob(status);
+    if (statusNormalizado === "PENDENTE") {
+        return "status-pendente";
+    }
+    if (statusNormalizado === "IMPRIMINDO") {
+        return "status-imprimindo";
+    }
+    if (statusNormalizado === "CONCLUIDO" || statusNormalizado === "FINALIZADO") {
+        return "status-concluido";
+    }
+    if (statusNormalizado === "CANCELADO") {
+        return "status-cancelado";
+    }
+    if (statusNormalizado === "ERRO") {
+        return "status-erro";
+    }
+    return "status-desconhecido";
+}
+
+function jobPodeSerCancelado(job) {
+    return normalizarStatusJob(job?.status) === "PENDENTE";
+}
+
+function atualizarEstadoEnvio(ativo, mensagem = "") {
+    const botao = el("btnEnviar");
+    const estado = el("estadoEnvio");
+    if (!botao || !estado) {
+        return;
+    }
+
+    if (!botao.dataset.labelPadrao) {
+        botao.dataset.labelPadrao = botao.innerText || "Imprimir";
+    }
+
+    botao.disabled = ativo;
+    botao.classList.toggle("is-loading", ativo);
+    botao.setAttribute("aria-busy", ativo ? "true" : "false");
+    botao.innerText = ativo ? "Enviando..." : botao.dataset.labelPadrao;
+
+    estado.classList.toggle("is-active", Boolean(mensagem));
+    estado.innerText = mensagem || "";
+}
+
 async function enviarImpressao() {
+    if (envioEmAndamento) {
+        return;
+    }
+
     const arquivo = el("arquivo").files[0];
     const copias = Number(el("copias").value);
     const paginasPorFolha = Number(el("paginasPorFolha").value);
@@ -388,7 +456,7 @@ async function enviarImpressao() {
     const intervaloPaginas = el("intervaloPaginas").value.trim();
 
     if (!arquivo || !copias || copias < 1) {
-        alert("Preencha todos os campos");
+        el("msg").innerText = "Selecione um arquivo e informe uma quantidade válida de cópias.";
         return;
     }
 
@@ -406,38 +474,147 @@ async function enviarImpressao() {
         }
     }
 
-    const formData = new FormData();
-    formData.append("arquivo", arquivo);
-    formData.append("copias", copias);
-    formData.append("paginas_por_folha", paginasPorFolha);
-    formData.append("duplex", duplex);
-    formData.append("orientacao", orientacao);
-    if (intervaloPaginas) {
-        formData.append("intervalo_paginas", intervaloPaginas);
+    envioEmAndamento = true;
+    atualizarEstadoEnvio(true, "Enviando para fila e validando consumo da cota...");
+    el("msg").innerText = "";
+
+    try {
+        const formData = new FormData();
+        formData.append("arquivo", arquivo);
+        formData.append("copias", copias);
+        formData.append("paginas_por_folha", paginasPorFolha);
+        formData.append("duplex", duplex);
+        formData.append("orientacao", orientacao);
+        if (intervaloPaginas) {
+            formData.append("intervalo_paginas", intervaloPaginas);
+        }
+
+        const res = await fetchComAuth("/imprimir", {
+            method: "POST",
+            headers,
+            body: formData
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            el("msg").innerText = data.detail || "Não foi possível enviar a impressão.";
+            return;
+        }
+
+        el("msg").innerText = `Enviado! Restam ${data.paginas_restantes} páginas`;
+        await carregarFila();
+        await carregarCota();
+        calcularConsumo();
+    } catch (err) {
+        el("msg").innerText = err?.message || "Falha ao enviar impressão.";
+    } finally {
+        envioEmAndamento = false;
+        atualizarEstadoEnvio(false, "");
     }
-
-    const res = await fetchComAuth("/imprimir", {
-        method: "POST",
-        headers,
-        body: formData
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-        el("msg").innerText = data.detail;
-        return;
-    }
-
-    el("msg").innerText = `Enviado! Restam ${data.paginas_restantes} páginas`;
-    carregarFila();
-    carregarCota();
-    calcularConsumo();
 }
 
 async function carregarCota() {
     const res = await fetchComAuth("/minha-cota", { headers });
     const data = await res.json();
     el("cota").innerText = `Restante: ${data.restante} páginas`;
+}
+
+async function cancelarJobProfessor(jobId, botaoCancelar) {
+    if (!jobId || !botaoCancelar) {
+        return;
+    }
+
+    const confirmar = window.confirm("Cancelar este job? A cota será estornada se ele ainda estiver pendente.");
+    if (!confirmar) {
+        return;
+    }
+
+    const textoOriginal = botaoCancelar.innerText;
+    botaoCancelar.disabled = true;
+    botaoCancelar.classList.add("is-loading");
+    botaoCancelar.innerText = "Cancelando...";
+
+    try {
+        const res = await fetchComAuth(`/jobs/${jobId}/cancelar`, {
+            method: "POST",
+            headers
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+            el("msg").innerText = data.detail || "Não foi possível cancelar este job.";
+            return;
+        }
+
+        const estornadas = Number(data.paginas_estornadas || 0);
+        el("msg").innerText = estornadas > 0
+            ? `Job cancelado. ${estornadas} página(s) estornada(s) na cota.`
+            : "Job cancelado com sucesso.";
+
+        if (typeof data.paginas_restantes === "number") {
+            el("cota").innerText = `Restante: ${data.paginas_restantes} páginas`;
+        } else {
+            await carregarCota();
+        }
+        await carregarFila();
+    } catch (err) {
+        el("msg").innerText = err?.message || "Falha ao cancelar job.";
+    } finally {
+        botaoCancelar.disabled = false;
+        botaoCancelar.classList.remove("is-loading");
+        botaoCancelar.innerText = textoOriginal;
+    }
+}
+
+function criarItemJob(job) {
+    const li = document.createElement("li");
+    li.classList.add("print-job-item");
+
+    const topo = document.createElement("div");
+    topo.classList.add("print-job-top");
+
+    const nomeArquivo = document.createElement("p");
+    nomeArquivo.classList.add("print-job-file");
+    nomeArquivo.innerText = String(job?.arquivo || "Arquivo sem nome");
+
+    const status = document.createElement("span");
+    status.classList.add("print-job-status", obterClasseStatusJob(job?.status));
+    status.innerText = obterRotuloStatusJob(job?.status);
+
+    topo.appendChild(nomeArquivo);
+    topo.appendChild(status);
+
+    const meta = document.createElement("p");
+    meta.classList.add("print-job-meta");
+    const copias = Number(job?.copias || 1);
+    const paginasTotais = Number(job?.paginas_totais || 0);
+    meta.innerText = `Job #${job?.id || "-"} • ${copias} cópia(s) • ${paginasTotais} página(s)`;
+
+    li.appendChild(topo);
+    li.appendChild(meta);
+
+    if (job?.erro_mensagem) {
+        const erro = document.createElement("p");
+        erro.classList.add("print-job-error");
+        erro.innerText = String(job.erro_mensagem);
+        li.appendChild(erro);
+    }
+
+    if (jobPodeSerCancelado(job)) {
+        const acoes = document.createElement("div");
+        acoes.classList.add("print-job-actions");
+
+        const btnCancelar = document.createElement("button");
+        btnCancelar.type = "button";
+        btnCancelar.classList.add("print-job-cancel-btn");
+        btnCancelar.innerText = "Cancelar";
+        btnCancelar.addEventListener("click", () => cancelarJobProfessor(job.id, btnCancelar));
+
+        acoes.appendChild(btnCancelar);
+        li.appendChild(acoes);
+    }
+
+    return li;
 }
 
 async function carregarFila() {
@@ -447,11 +624,29 @@ async function carregarFila() {
     const ul = el("lista-jobs");
     ul.innerHTML = "";
 
-    jobs.forEach((job) => {
+    if (!Array.isArray(jobs) || jobs.length === 0) {
         const li = document.createElement("li");
-        li.innerText = `${job.arquivo} — ${job.status}`;
+        li.classList.add("print-job-empty");
+        li.innerText = "Nenhum job enviado até o momento.";
         ul.appendChild(li);
+        return;
+    }
+
+    jobs.forEach((job) => {
+        ul.appendChild(criarItemJob(job));
     });
+}
+
+function iniciarPollingFila() {
+    if (filaPollingTimer) {
+        clearInterval(filaPollingTimer);
+    }
+
+    filaPollingTimer = window.setInterval(() => {
+        carregarFila().catch(() => {
+            // Evita poluir a UI com erros intermitentes durante polling.
+        });
+    }, FILA_POLLING_MS);
 }
 
 async function carregarPreview(file) {
@@ -908,4 +1103,12 @@ registrarEventos();
 atualizarComportamentoOrientacao();
 carregarCota();
 carregarFila();
+iniciarPollingFila();
 mostrarPreviewVazio();
+
+window.addEventListener("beforeunload", () => {
+    if (filaPollingTimer) {
+        clearInterval(filaPollingTimer);
+        filaPollingTimer = null;
+    }
+});

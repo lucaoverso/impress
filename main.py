@@ -62,6 +62,7 @@ from database import (
     criar_job,
     listar_fila,
     cancelar_job,
+    buscar_job,
     alterar_prioridade,
     listar_jobs_ativos,
     listar_historico,
@@ -678,11 +679,31 @@ def fila(usuario = Depends(get_usuario_logado)):
 
 @app.post("/jobs/{job_id}/cancelar")
 def cancelar(job_id: int, usuario = Depends(get_usuario_logado)):
-    if usuario["perfil"] != "admin":
-        raise HTTPException(403, "Acesso negado")
+    job = buscar_job(job_id)
+    if not job:
+        raise HTTPException(404, "Job não encontrado.")
 
-    cancelar_job(job_id)
-    return {"mensagem": "Job cancelado"}
+    usuario_job_raw = job.get("usuario_id")
+    usuario_job_id = int(usuario_job_raw) if usuario_job_raw is not None else None
+    eh_admin = usuario["perfil"] == "admin"
+    eh_dono = usuario_job_id is not None and usuario_job_id == int(usuario["id"])
+    if not eh_admin and not eh_dono:
+        raise HTTPException(403, "Você não pode cancelar este job.")
+
+    resultado = cancelar_job(job_id)
+    if not resultado.get("cancelado"):
+        raise HTTPException(409, "Este job não pode mais ser cancelado (já está em impressão ou finalizado).")
+
+    paginas_restantes = None
+    if usuario_job_id is not None:
+        cota = obter_cota_atual(usuario_job_id)
+        paginas_restantes = int(cota["restante"])
+
+    return {
+        "mensagem": "Job cancelado com sucesso.",
+        "paginas_estornadas": int(resultado.get("paginas_estornadas") or 0),
+        "paginas_restantes": paginas_restantes,
+    }
 
 
 @app.post("/jobs/{job_id}/prioridade")

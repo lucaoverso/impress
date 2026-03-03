@@ -1389,13 +1389,49 @@ def cancelar_job(job_id):
     cursor = conn.cursor()
 
     cursor.execute("""
+        SELECT usuario_id, paginas_totais, criado_em
+        FROM jobs
+        WHERE id = ?
+    """, (job_id,))
+    job = cursor.fetchone()
+
+    if not job:
+        conn.close()
+        return {
+            "encontrado": False,
+            "cancelado": False,
+            "paginas_estornadas": 0,
+        }
+
+    cursor.execute("""
         UPDATE jobs
         SET status = 'CANCELADO'
         WHERE id = ? AND status = 'PENDENTE'
     """, (job_id,))
+    cancelado = cursor.rowcount > 0
+
+    paginas_estornadas = 0
+    if cancelado:
+        usuario_id_raw = job["usuario_id"]
+        usuario_id = int(usuario_id_raw) if usuario_id_raw is not None else None
+        paginas = max(int(job["paginas_totais"] or 0), 0)
+        mes_referencia = str(job["criado_em"] or "")[:7]
+
+        if paginas > 0 and usuario_id is not None and len(mes_referencia) == 7:
+            cursor.execute("""
+                UPDATE cotas
+                SET usadas_paginas = MAX(usadas_paginas - ?, 0)
+                WHERE usuario_id = ? AND mes = ?
+            """, (paginas, usuario_id, mes_referencia))
+            paginas_estornadas = paginas
 
     conn.commit()
     conn.close()
+    return {
+        "encontrado": True,
+        "cancelado": cancelado,
+        "paginas_estornadas": paginas_estornadas,
+    }
 
 def alterar_prioridade(job_id, urgente):
     prioridade = 1 if urgente else 0
