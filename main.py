@@ -864,6 +864,17 @@ def cancelar_reserva_agendamento(
     if agendamento["status"] != "ATIVO":
         raise HTTPException(400, "Este agendamento já foi cancelado.")
 
+    try:
+        data_reserva = datetime.strptime(str(agendamento["data"]), "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise HTTPException(400, "Data do agendamento inválida.") from exc
+
+    if data_reserva < datetime.now().date():
+        raise HTTPException(
+            409,
+            "Não é possível cancelar agendamentos de datas passadas."
+        )
+
     dono_reserva = agendamento["usuario_id"] == usuario["id"]
     if not dono_reserva and usuario["perfil"] != "admin":
         raise HTTPException(403, "Você não pode cancelar este agendamento.")

@@ -41,6 +41,15 @@ let turmas = [];
 let reservasMes = [];
 let mesAtual = new Date();
 let dataSelecionada = paraIso(new Date());
+const PREFERENCIAS_ORDENACAO_STORAGE_KEY = "agendamento_sort_preferences_v1";
+const CAMPOS_ORDENACAO_VALIDOS = {
+    dia: new Set(["aula", "turno", "recurso"]),
+    minhas: new Set(["data", "aula", "turno", "recurso"])
+};
+const configuracaoOrdenacao = {
+    dia: { campo: "aula", direcao: "asc", agruparPorRecurso: false },
+    minhas: { campo: "data", direcao: "asc", agruparPorRecurso: false }
+};
 
 function el(id) {
     return document.getElementById(id);
@@ -103,6 +112,229 @@ function faixaGlobalReserva(reserva) {
     const turno = String(reserva.turno || "").trim().toUpperCase();
     const offset = TURNO_OFFSET_FAIXA[turno] ?? 0;
     return aula > 0 ? aula + offset : 0;
+}
+
+function obterHojeIso() {
+    return paraIso(new Date());
+}
+
+function dataReservaJaPassou(dataIso) {
+    return String(dataIso || "") < obterHojeIso();
+}
+
+function reservaPodeSerCancelada(reserva) {
+    if (!usuarioAtual || !reserva) {
+        return false;
+    }
+
+    if (dataReservaJaPassou(reserva.data)) {
+        return false;
+    }
+
+    return usuarioAtual.perfil === "admin" || reserva.usuario_id === usuarioAtual.id;
+}
+
+function salvarPreferenciasOrdenacao() {
+    try {
+        localStorage.setItem(
+            PREFERENCIAS_ORDENACAO_STORAGE_KEY,
+            JSON.stringify(configuracaoOrdenacao)
+        );
+    } catch (_err) {
+        // Persistência local indisponível (quota, privacidade, etc).
+    }
+}
+
+function carregarPreferenciasOrdenacao() {
+    let bruto = "";
+    try {
+        bruto = localStorage.getItem(PREFERENCIAS_ORDENACAO_STORAGE_KEY) || "";
+    } catch (_err) {
+        return;
+    }
+
+    if (!bruto) {
+        return;
+    }
+
+    try {
+        const preferencias = JSON.parse(bruto);
+        ["dia", "minhas"].forEach((alvo) => {
+            const atual = configuracaoOrdenacao[alvo];
+            const salvo = preferencias?.[alvo];
+            if (!atual || !salvo || typeof salvo !== "object") {
+                return;
+            }
+
+            const campoSalvo = String(salvo.campo || "").toLowerCase();
+            if (CAMPOS_ORDENACAO_VALIDOS[alvo]?.has(campoSalvo)) {
+                atual.campo = campoSalvo;
+            }
+
+            atual.direcao = salvo.direcao === "desc" ? "desc" : "asc";
+            atual.agruparPorRecurso = Boolean(salvo.agruparPorRecurso);
+        });
+    } catch (_err) {
+        // Se o payload estiver inválido, mantém padrão.
+    }
+}
+
+function ordemTurno(turnoId) {
+    const idTurno = String(turnoId || "").trim().toUpperCase();
+    if (!idTurno) {
+        return Number.MAX_SAFE_INTEGER;
+    }
+
+    const indice = turnos.findIndex((turno) => turno.id === idTurno);
+    return indice >= 0 ? indice : Number.MAX_SAFE_INTEGER;
+}
+
+function compararTextoPtBr(a, b) {
+    return String(a || "").localeCompare(String(b || ""), "pt-BR", { sensitivity: "base" });
+}
+
+function compararReservas(a, b, campoOrdenacao) {
+    let comparacao = 0;
+    const campo = String(campoOrdenacao || "aula").toLowerCase();
+
+    if (campo === "data") {
+        comparacao = String(a.data || "").localeCompare(String(b.data || ""));
+    } else if (campo === "turno") {
+        comparacao = ordemTurno(a.turno) - ordemTurno(b.turno);
+    } else if (campo === "recurso") {
+        comparacao = compararTextoPtBr(a.recurso_nome, b.recurso_nome);
+    } else {
+        comparacao = faixaGlobalReserva(a) - faixaGlobalReserva(b);
+    }
+
+    if (comparacao !== 0) {
+        return comparacao;
+    }
+
+    comparacao = String(a.data || "").localeCompare(String(b.data || ""));
+    if (comparacao !== 0) {
+        return comparacao;
+    }
+
+    comparacao = ordemTurno(a.turno) - ordemTurno(b.turno);
+    if (comparacao !== 0) {
+        return comparacao;
+    }
+
+    comparacao = faixaGlobalReserva(a) - faixaGlobalReserva(b);
+    if (comparacao !== 0) {
+        return comparacao;
+    }
+
+    comparacao = compararTextoPtBr(a.recurso_nome, b.recurso_nome);
+    if (comparacao !== 0) {
+        return comparacao;
+    }
+
+    return Number(a.id || 0) - Number(b.id || 0);
+}
+
+function ordenarReservas(listaReservas, configOrdenacao) {
+    const lista = Array.isArray(listaReservas) ? [...listaReservas] : [];
+    const config = configOrdenacao || {};
+    const campo = String(config.campo || "aula");
+    const direcao = config.direcao === "desc" ? -1 : 1;
+
+    lista.sort((a, b) => compararReservas(a, b, campo) * direcao);
+    return lista;
+}
+
+function agruparReservasPorRecurso(listaReservasOrdenada) {
+    const grupos = new Map();
+    (listaReservasOrdenada || []).forEach((reserva) => {
+        const nomeRecurso = String(reserva?.recurso_nome || "Recurso não informado");
+        if (!grupos.has(nomeRecurso)) {
+            grupos.set(nomeRecurso, []);
+        }
+        grupos.get(nomeRecurso).push(reserva);
+    });
+    return Array.from(grupos.entries());
+}
+
+function atualizarEstadoControlesOrdenacao(alvo) {
+    const config = configuracaoOrdenacao[alvo];
+    if (!config) {
+        return;
+    }
+
+    const campoAtivo = String(config.campo || "");
+    document
+        .querySelectorAll(`.booking-sort-field[data-sort-target="${alvo}"]`)
+        .forEach((btn) => {
+            btn.classList.toggle("is-active", btn.dataset.sortField === campoAtivo);
+        });
+
+    const btnOrdem = document.querySelector(`.booking-sort-order[data-sort-target="${alvo}"]`);
+    if (btnOrdem) {
+        btnOrdem.innerText = config.direcao === "desc" ? "Último → 1º" : "1º → último";
+    }
+
+    const btnGrupo = document.querySelector(`.booking-sort-group[data-sort-target="${alvo}"]`);
+    if (btnGrupo) {
+        btnGrupo.classList.toggle("is-active", Boolean(config.agruparPorRecurso));
+        btnGrupo.innerText = config.agruparPorRecurso ? "Agrupado por recurso" : "Agrupar por recurso";
+    }
+}
+
+function atualizarListaPorOrdenacao(alvo) {
+    if (alvo === "dia") {
+        renderReservasDia();
+        return;
+    }
+    if (alvo === "minhas") {
+        renderMinhasReservas();
+    }
+}
+
+function registrarControlesOrdenacao() {
+    document.querySelectorAll(".booking-sort-field").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const alvo = btn.dataset.sortTarget;
+            const campo = btn.dataset.sortField;
+            if (!configuracaoOrdenacao[alvo] || !campo) {
+                return;
+            }
+            configuracaoOrdenacao[alvo].campo = campo;
+            salvarPreferenciasOrdenacao();
+            atualizarEstadoControlesOrdenacao(alvo);
+            atualizarListaPorOrdenacao(alvo);
+        });
+    });
+
+    document.querySelectorAll(".booking-sort-order").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const alvo = btn.dataset.sortTarget;
+            if (!configuracaoOrdenacao[alvo]) {
+                return;
+            }
+            configuracaoOrdenacao[alvo].direcao =
+                configuracaoOrdenacao[alvo].direcao === "asc" ? "desc" : "asc";
+            salvarPreferenciasOrdenacao();
+            atualizarEstadoControlesOrdenacao(alvo);
+            atualizarListaPorOrdenacao(alvo);
+        });
+    });
+
+    document.querySelectorAll(".booking-sort-group").forEach((btn) => {
+        btn.addEventListener("click", () => {
+            const alvo = btn.dataset.sortTarget;
+            if (!configuracaoOrdenacao[alvo]) {
+                return;
+            }
+            configuracaoOrdenacao[alvo].agruparPorRecurso = !configuracaoOrdenacao[alvo].agruparPorRecurso;
+            salvarPreferenciasOrdenacao();
+            atualizarEstadoControlesOrdenacao(alvo);
+            atualizarListaPorOrdenacao(alvo);
+        });
+    });
+
+    atualizarEstadoControlesOrdenacao("dia");
+    atualizarEstadoControlesOrdenacao("minhas");
 }
 
 async function carregarUsuario() {
@@ -313,26 +545,41 @@ function renderCalendario() {
     }
 }
 
-function criarItemReserva(reserva, permitirCancelar) {
+function criarItemReserva(
+    reserva,
+    {
+        permitirCancelar = false,
+        exibirProfessor = true,
+        exibirData = false
+    } = {}
+) {
     const li = document.createElement("li");
     li.className = "booking-item";
 
-    const faixa = faixaGlobalReserva(reserva);
     const titulo = document.createElement("p");
     titulo.innerText = `${reserva.recurso_nome} | ${nomeTurno(reserva.turno)} | ${aulaLabel(reserva.aula)} `;
 
-    const detalhe = document.createElement("p");
-    detalhe.className = "booking-detail";
     const professor = document.createElement("p");
     professor.className = "booking-professor";
     professor.innerText = `Professor(a): ${reserva.professor_nome || "Não informado"}`;
+
+    const detalheTurma = document.createElement("p");
+    detalheTurma.className = "booking-detail";
     const turmaTexto = reserva.turma || "Não informada";
-    detalhe.innerText = `Turma: ${turmaTexto}`;
+    detalheTurma.innerText = `Turma: ${turmaTexto}`;
 
     li.appendChild(titulo);
-    li.appendChild(professor);
-    li.appendChild(detalhe);
-    
+    if (exibirProfessor) {
+        li.appendChild(professor);
+    }
+    li.appendChild(detalheTurma);
+
+    if (exibirData) {
+        const detalheData = document.createElement("p");
+        detalheData.className = "booking-detail";
+        detalheData.innerText = `Data: ${paraDataBr(reserva.data)}`;
+        li.appendChild(detalheData);
+    }
 
     if (permitirCancelar) {
         const btnCancelar = document.createElement("button");
@@ -345,73 +592,85 @@ function criarItemReserva(reserva, permitirCancelar) {
     return li;
 }
 
+function renderListaReservasComConfig(
+    listaEl,
+    reservasBase,
+    configOrdenacao,
+    opcoesItem,
+    textoVazio
+) {
+    listaEl.innerHTML = "";
+
+    if (!Array.isArray(reservasBase) || reservasBase.length === 0) {
+        const vazio = document.createElement("li");
+        vazio.className = "booking-empty";
+        vazio.innerText = textoVazio;
+        listaEl.appendChild(vazio);
+        return;
+    }
+
+    const reservasOrdenadas = ordenarReservas(reservasBase, configOrdenacao);
+    const agruparPorRecurso = Boolean(configOrdenacao?.agruparPorRecurso);
+
+    if (!agruparPorRecurso) {
+        reservasOrdenadas.forEach((reserva) => {
+            listaEl.appendChild(criarItemReserva(reserva, opcoesItem(reserva)));
+        });
+        return;
+    }
+
+    const grupos = agruparReservasPorRecurso(reservasOrdenadas);
+    grupos.forEach(([nomeRecurso, reservasGrupo]) => {
+        const tituloGrupo = document.createElement("li");
+        tituloGrupo.className = "booking-group-heading";
+        tituloGrupo.innerText = `${nomeRecurso} (${reservasGrupo.length})`;
+        listaEl.appendChild(tituloGrupo);
+
+        reservasGrupo.forEach((reserva) => {
+            listaEl.appendChild(criarItemReserva(reserva, opcoesItem(reserva)));
+        });
+    });
+}
+
 function renderReservasDia() {
     el("tituloDia").innerText = `Reservas de ${paraDataBr(dataSelecionada)}`;
 
     const lista = el("listaReservasDia");
-    lista.innerHTML = "";
-
     const reservasDia = reservasMes
-        .filter((item) => item.data === dataSelecionada)
-        .sort((a, b) => faixaGlobalReserva(a) - faixaGlobalReserva(b));
+        .filter((item) => item.data === dataSelecionada);
 
-    if (reservasDia.length === 0) {
-        const vazio = document.createElement("li");
-        vazio.className = "booking-empty";
-        vazio.innerText = "Sem reservas nessa data.";
-        lista.appendChild(vazio);
-        return;
-    }
-
-    reservasDia.forEach((reserva) => {
-        const permitirCancelar = usuarioAtual &&
-            (usuarioAtual.perfil === "admin" || reserva.usuario_id === usuarioAtual.id);
-        lista.appendChild(criarItemReserva(reserva, permitirCancelar));
-    });
+    renderListaReservasComConfig(
+        lista,
+        reservasDia,
+        configuracaoOrdenacao.dia,
+        (reserva) => {
+            return {
+                permitirCancelar: reservaPodeSerCancelada(reserva),
+                exibirProfessor: true,
+                exibirData: false
+            };
+        },
+        "Sem reservas nessa data."
+    );
 }
 
 function renderMinhasReservas() {
     const lista = el("listaMinhasReservas");
-    lista.innerHTML = "";
-
-    const hojeIso = paraIso(new Date());
+    const hojeIso = obterHojeIso();
     const minhas = reservasMes
-        .filter((item) => usuarioAtual && item.usuario_id === usuarioAtual.id && item.data >= hojeIso)
-        .sort((a, b) => {
-            if (a.data !== b.data) return a.data.localeCompare(b.data);
-            return faixaGlobalReserva(a) - faixaGlobalReserva(b);
-        });
+        .filter((item) => usuarioAtual && item.usuario_id === usuarioAtual.id && item.data >= hojeIso);
 
-    if (minhas.length === 0) {
-        const vazio = document.createElement("li");
-        vazio.className = "booking-empty";
-        vazio.innerText = "Você não tem reservas neste mês.";
-        lista.appendChild(vazio);
-        return;
-    }
-
-    minhas.forEach((reserva) => {
-        const li = document.createElement("li");
-        li.className = "booking-item";
-
-        const titulo = document.createElement("p");
-        titulo.innerText = `${reserva.recurso_nome} | ${nomeTurno(reserva.turno)} | ${aulaLabel(reserva.aula)} `;
-
-        const detalhe = document.createElement("p");
-        detalhe.className = "booking-detail";
-        detalhe.innerText = `Turma: ${reserva.turma || "Não informada"}`;
-
-        li.appendChild(titulo);
-        li.appendChild(detalhe);
-
-        const btnCancelar = document.createElement("button");
-        btnCancelar.type = "button";
-        btnCancelar.innerText = "Cancelar";
-        btnCancelar.addEventListener("click", () => cancelarReserva(reserva.id));
-        li.appendChild(btnCancelar);
-
-        lista.appendChild(li);
-    });
+    renderListaReservasComConfig(
+        lista,
+        minhas,
+        configuracaoOrdenacao.minhas,
+        (reserva) => ({
+            permitirCancelar: reservaPodeSerCancelada(reserva),
+            exibirProfessor: false,
+            exibirData: true
+        }),
+        "Você não tem reservas neste mês."
+    );
 }
 
 async function atualizarTelaAgendamento() {
@@ -544,6 +803,7 @@ function registrarEventos() {
         atualizarSelectAulasPorTurma(el("turmaReserva").value);
     });
 
+    registrarControlesOrdenacao();
     el("btnAgendar").addEventListener("click", agendarRecurso);
 }
 
@@ -552,6 +812,7 @@ async function init() {
         dataSelecionada = paraIso(new Date());
         el("dataReserva").value = dataSelecionada;
 
+        carregarPreferenciasOrdenacao();
         registrarEventos();
         await carregarUsuario();
         await carregarOpcoesAgendamento();

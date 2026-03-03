@@ -52,12 +52,31 @@
             </article>
 
             <article class="calendar-card">
-                <h3 id="tituloDia">Reservas do dia</h3>
+                <header class="booking-card-header">
+                    <h3 id="tituloDia">Reservas do dia</h3>
+                    <div class="booking-sort-controls" data-sort-target="dia">
+                        <button type="button" class="booking-sort-field" data-sort-target="dia" data-sort-field="aula">Aula</button>
+                        <button type="button" class="booking-sort-field" data-sort-target="dia" data-sort-field="turno">Turno</button>
+                        <button type="button" class="booking-sort-field" data-sort-target="dia" data-sort-field="recurso">Recurso</button>
+                        <button type="button" class="booking-sort-order" data-sort-target="dia">1º → último</button>
+                        <button type="button" class="booking-sort-group" data-sort-target="dia">Agrupar por recurso</button>
+                    </div>
+                </header>
                 <ul id="listaReservasDia"></ul>
             </article>
 
             <article class="calendar-card">
-                <h3>Meus agendamentos</h3>
+                <header class="booking-card-header">
+                    <h3>Meus agendamentos</h3>
+                    <div class="booking-sort-controls" data-sort-target="minhas">
+                        <button type="button" class="booking-sort-field" data-sort-target="minhas" data-sort-field="data">Data</button>
+                        <button type="button" class="booking-sort-field" data-sort-target="minhas" data-sort-field="aula">Aula</button>
+                        <button type="button" class="booking-sort-field" data-sort-target="minhas" data-sort-field="turno">Turno</button>
+                        <button type="button" class="booking-sort-field" data-sort-target="minhas" data-sort-field="recurso">Recurso</button>
+                        <button type="button" class="booking-sort-order" data-sort-target="minhas">1º → último</button>
+                        <button type="button" class="booking-sort-group" data-sort-target="minhas">Agrupar por recurso</button>
+                    </div>
+                </header>
                 <ul id="listaMinhasReservas"></ul>
             </article>
         </section>

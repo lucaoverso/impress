@@ -598,7 +598,7 @@ function criarItemJob(job) {
     meta.classList.add("print-job-meta");
     const copias = Number(job?.copias || 1);
     const paginasTotais = Number(job?.paginas_totais || 0);
-    meta.innerText = `Job #${job?.id || "-"} • ${copias} cópia(s) • ${paginasTotais} página(s)`;
+    meta.innerText = `#${job?.id || "-"} • ${copias} cópia(s) • ${paginasTotais} página(s)`;
 
     li.appendChild(topo);
     li.appendChild(meta);
@@ -637,7 +637,7 @@ async function carregarFila() {
     if (!Array.isArray(jobs) || jobs.length === 0) {
         const li = document.createElement("li");
         li.classList.add("print-job-empty");
-        li.innerText = "Nenhum job enviado até o momento.";
+        li.innerText = "Nenhuma impressão enviada até o momento.";
         ul.appendChild(li);
         return;
     }
