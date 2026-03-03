@@ -319,15 +319,20 @@ function criarItemReserva(reserva, permitirCancelar) {
 
     const faixa = faixaGlobalReserva(reserva);
     const titulo = document.createElement("p");
-    titulo.innerText = `Faixa ${faixa} | ${nomeTurno(reserva.turno)} | ${aulaLabel(reserva.aula)} | ${reserva.recurso_nome}`;
+    titulo.innerText = `${reserva.recurso_nome} | ${nomeTurno(reserva.turno)} | ${aulaLabel(reserva.aula)} `;
 
     const detalhe = document.createElement("p");
     detalhe.className = "booking-detail";
+    const professor = document.createElement("p");
+    professor.className = "booking-professor";
+    professor.innerText = `Professor(a): ${reserva.professor_nome || "Não informado"}`;
     const turmaTexto = reserva.turma || "Não informada";
-    detalhe.innerText = `Turma: ${turmaTexto} | Professor: ${reserva.professor_nome}${reserva.observacao ? ` | ${reserva.observacao}` : ""}`;
+    detalhe.innerText = `Turma: ${turmaTexto}`;
 
     li.appendChild(titulo);
+    li.appendChild(professor);
     li.appendChild(detalhe);
+    
 
     if (permitirCancelar) {
         const btnCancelar = document.createElement("button");
@@ -389,9 +394,8 @@ function renderMinhasReservas() {
         const li = document.createElement("li");
         li.className = "booking-item";
 
-        const faixa = faixaGlobalReserva(reserva);
         const titulo = document.createElement("p");
-        titulo.innerText = `${paraDataBr(reserva.data)} - Faixa ${faixa} - ${nomeTurno(reserva.turno)} - ${aulaLabel(reserva.aula)} - ${reserva.recurso_nome}`;
+        titulo.innerText = `${reserva.recurso_nome} | ${nomeTurno(reserva.turno)} | ${aulaLabel(reserva.aula)} `;
 
         const detalhe = document.createElement("p");
         detalhe.className = "booking-detail";

@@ -1349,6 +1349,16 @@ footer {
     gap: 6px;
 }
 
+.booking-professor {
+    font-size: 12px;
+    font-weight: 700;
+    border-radius: var(--radius-sm);
+    padding: 2px 4px;
+    max-width: fit-content;
+    background-color: #d6f2ef;
+    color: #0f766e;
+}
+
 .booking-item button {
     width: fit-content;
     height: 32px;
