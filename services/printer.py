@@ -5,6 +5,8 @@ import shlex
 import subprocess
 from pathlib import Path
 
+from services.pdf_service import gerar_pdf_duas_por_folha_paisagem
+
 LP_COMMAND = os.getenv("CUPS_LP_COMMAND", "lp")
 LP_TIMEOUT_SECONDS = int(os.getenv("CUPS_LP_TIMEOUT_SECONDS", "30"))
 DEFAULT_PRINTER_NAME = os.getenv("CUPS_PRINTER", "").strip()
@@ -72,6 +74,36 @@ def _extrair_cups_job_id(lp_output: str):
 
     return None
 
+def _normalizar_int(valor, padrao: int) -> int:
+    try:
+        return int(valor)
+    except (TypeError, ValueError):
+        return padrao
+
+def _forcar_layout_duas_por_folha(caminho: Path, job, opcoes_cups):
+    paginas_por_folha = _normalizar_int(
+        opcoes_cups.get("number-up", job.get("paginas_por_folha")),
+        1
+    )
+    if paginas_por_folha != 2:
+        return caminho, opcoes_cups, None
+
+    intervalo_paginas = str(
+        job.get("intervalo_paginas")
+        or opcoes_cups.get("page-ranges")
+        or ""
+    ).strip()
+    caminho_layout = gerar_pdf_duas_por_folha_paisagem(caminho, intervalo_paginas)
+
+    opcoes_ajustadas = dict(opcoes_cups)
+    opcoes_ajustadas["number-up"] = 1
+    opcoes_ajustadas.pop("number-up-layout", None)
+    opcoes_ajustadas.pop("orientation-requested", None)
+    opcoes_ajustadas.pop("landscape", None)
+    opcoes_ajustadas.pop("page-ranges", None)
+
+    return caminho_layout, opcoes_ajustadas, caminho_layout
+
 def imprimir_job(job):
     arquivo_path = job.get("arquivo_path")
     if not arquivo_path:
@@ -83,52 +115,67 @@ def imprimir_job(job):
 
     opcoes_cups = _carregar_opcoes_cups(job)
     impressora = (job.get("printer_name") or DEFAULT_PRINTER_NAME or "").strip()
-
-    cmd = [LP_COMMAND]
-    if impressora:
-        cmd.extend(["-d", impressora])
-
-    cmd.extend(["-n", str(job.get("copias") or 1)])
-    cmd.extend(["-t", str(job.get("arquivo") or caminho.name)])
-
-    for chave in sorted(opcoes_cups.keys()):
-        valor = opcoes_cups[chave]
-        if valor is None or valor == "" or valor is False:
-            continue
-
-        if valor is True:
-            cmd.extend(["-o", str(chave)])
-            continue
-
-        cmd.extend(["-o", f"{chave}={valor}"])
-
-    cmd.append(str(caminho))
-    print(f"🖨️ Enviando para CUPS: {shlex.join(cmd)}")
+    caminho_envio = caminho
+    arquivo_temporario = None
 
     try:
-        resultado = subprocess.run(
-            cmd,
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=LP_TIMEOUT_SECONDS,
+        caminho_envio, opcoes_cups, arquivo_temporario = _forcar_layout_duas_por_folha(
+            caminho,
+            job,
+            opcoes_cups
         )
-    except FileNotFoundError as exc:
-        raise RuntimeError("Comando 'lp' não encontrado. Instale e configure o CUPS no servidor.") from exc
-    except subprocess.TimeoutExpired as exc:
-        raise RuntimeError("Timeout ao enviar job para o CUPS.") from exc
 
-    output = "\n".join(
-        [parte for parte in [resultado.stdout.strip(), resultado.stderr.strip()] if parte]
-    ).strip()
+        cmd = [LP_COMMAND]
+        if impressora:
+            cmd.extend(["-d", impressora])
 
-    if resultado.returncode != 0:
-        raise RuntimeError(output or f"Falha ao enviar job para CUPS (exit {resultado.returncode})")
+        cmd.extend(["-n", str(job.get("copias") or 1)])
+        cmd.extend(["-t", str(job.get("arquivo") or caminho.name)])
 
-    cups_job_id = _extrair_cups_job_id(output)
-    print(f"✅ Job aceito pelo CUPS: {output or 'sem saída'}")
-    return {
-        "cups_job_id": cups_job_id,
-        "printer_name": impressora or None,
-        "cups_output": output,
-    }
+        for chave in sorted(opcoes_cups.keys()):
+            valor = opcoes_cups[chave]
+            if valor is None or valor == "" or valor is False:
+                continue
+
+            if valor is True:
+                cmd.extend(["-o", str(chave)])
+                continue
+
+            cmd.extend(["-o", f"{chave}={valor}"])
+
+        cmd.append(str(caminho_envio))
+        print(f"🖨️ Enviando para CUPS: {shlex.join(cmd)}")
+
+        try:
+            resultado = subprocess.run(
+                cmd,
+                check=False,
+                capture_output=True,
+                text=True,
+                timeout=LP_TIMEOUT_SECONDS,
+            )
+        except FileNotFoundError as exc:
+            raise RuntimeError("Comando 'lp' não encontrado. Instale e configure o CUPS no servidor.") from exc
+        except subprocess.TimeoutExpired as exc:
+            raise RuntimeError("Timeout ao enviar job para o CUPS.") from exc
+
+        output = "\n".join(
+            [parte for parte in [resultado.stdout.strip(), resultado.stderr.strip()] if parte]
+        ).strip()
+
+        if resultado.returncode != 0:
+            raise RuntimeError(output or f"Falha ao enviar job para CUPS (exit {resultado.returncode})")
+
+        cups_job_id = _extrair_cups_job_id(output)
+        print(f"✅ Job aceito pelo CUPS: {output or 'sem saída'}")
+        return {
+            "cups_job_id": cups_job_id,
+            "printer_name": impressora or None,
+            "cups_output": output,
+        }
+    finally:
+        if arquivo_temporario:
+            try:
+                arquivo_temporario.unlink()
+            except OSError:
+                pass
