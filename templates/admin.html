@@ -49,6 +49,21 @@
             </article>
 
             <article class="admin-card">
+                <h2>Fila de impressão atual</h2>
+                <ul id="fila-admin" class="admin-list"></ul>
+            </article>
+
+            <article class="admin-card">
+                <h2>Histórico de impressão</h2>
+                <div class="admin-inline">
+                    <input type="date" id="inicio">
+                    <input type="date" id="fim">
+                    <button id="btnBuscarHistorico" type="button">Filtrar</button>
+                </div>
+                <ul id="historico-admin" class="admin-list"></ul>
+            </article>
+
+            <article class="admin-card">
                 <h2>Cadastrar turma</h2>
                 <form id="formTurma" class="admin-form">
                     <input id="turmaNome" type="text" placeholder="Nome da turma (ex: 6º ano A)" required>
@@ -147,21 +162,6 @@
 
                 <h3>Uso de recursos por professor</h3>
                 <ul id="relatorioRecursosProfessorAdmin" class="admin-list"></ul>
-            </article>
-
-            <article class="admin-card">
-                <h2>Fila de impressão atual</h2>
-                <ul id="fila-admin" class="admin-list"></ul>
-            </article>
-
-            <article class="admin-card">
-                <h2>Histórico de impressão</h2>
-                <div class="admin-inline">
-                    <input type="date" id="inicio">
-                    <input type="date" id="fim">
-                    <button id="btnBuscarHistorico" type="button">Filtrar</button>
-                </div>
-                <ul id="historico-admin" class="admin-list"></ul>
             </article>
         </section>
     </main>
