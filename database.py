@@ -596,12 +596,21 @@ def _garantir_colunas_agendamentos(cursor):
         )
 
     # Faixa global padroniza simultaneidade entre turnos:
-    # MATUTINO/INTEGRAL iniciam na faixa 1; VESPERTINO/VESPERTINO_EM iniciam na faixa 6.
+    # MATUTINO inicia na faixa 1.
+    # INTEGRAL usa 1-5 e depois 7-9 (pulando a faixa 6).
+    # VESPERTINO/VESPERTINO_EM iniciam na faixa 6.
     cursor.execute("""
         UPDATE agendamentos
         SET faixa_global = (
             CASE
-                WHEN UPPER(COALESCE(turno, '')) IN ('MATUTINO', 'INTEGRAL') THEN CAST(COALESCE(NULLIF(TRIM(aula), ''), '0') AS INTEGER)
+                WHEN UPPER(COALESCE(turno, '')) = 'MATUTINO' THEN CAST(COALESCE(NULLIF(TRIM(aula), ''), '0') AS INTEGER)
+                WHEN UPPER(COALESCE(turno, '')) = 'INTEGRAL' THEN (
+                    CAST(COALESCE(NULLIF(TRIM(aula), ''), '0') AS INTEGER)
+                    + CASE
+                        WHEN CAST(COALESCE(NULLIF(TRIM(aula), ''), '0') AS INTEGER) > 5 THEN 1
+                        ELSE 0
+                      END
+                )
                 WHEN UPPER(COALESCE(turno, '')) IN ('VESPERTINO', 'VESPERTINO_EM') THEN CAST(COALESCE(NULLIF(TRIM(aula), ''), '0') AS INTEGER) + 5
                 ELSE CAST(COALESCE(NULLIF(TRIM(aula), ''), '0') AS INTEGER)
             END

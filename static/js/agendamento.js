@@ -110,7 +110,14 @@ function faixaGlobalPorTurnoEAula(turnoId, aulaTurno) {
         return 0;
     }
 
-    return aula + offset;
+    let faixaGlobal = aula + offset;
+
+    // No integral, a faixa 6 fica livre para não colidir com a 1ª do vespertino.
+    if (turno === "INTEGRAL" && aula > 5) {
+        faixaGlobal += 1;
+    }
+
+    return faixaGlobal;
 }
 
 function aulaTurnoPorFaixa(turnoId, faixaGlobal) {
@@ -119,6 +126,16 @@ function aulaTurnoPorFaixa(turnoId, faixaGlobal) {
     const offset = TURNO_OFFSET_FAIXA[turno] ?? 0;
 
     if (!Number.isFinite(faixa) || faixa <= 0) {
+        return 0;
+    }
+
+    if (turno === "INTEGRAL") {
+        if (faixa >= 1 && faixa <= 5) {
+            return faixa;
+        }
+        if (faixa >= 7) {
+            return faixa - 1;
+        }
         return 0;
     }
 

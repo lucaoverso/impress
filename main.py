@@ -432,7 +432,13 @@ def validar_aula(aula: str, turno: str) -> str:
 def calcular_faixa_global(turno: str, aula: str) -> int:
     turno_limpo = validar_turno(turno)
     numero_aula = int(validar_aula(aula, turno_limpo))
-    return numero_aula + FAIXA_GLOBAL_OFFSET_POR_TURNO[turno_limpo]
+    faixa_global = numero_aula + FAIXA_GLOBAL_OFFSET_POR_TURNO[turno_limpo]
+
+    # No integral, a faixa 6 fica livre para não colidir com a 1ª do vespertino.
+    if turno_limpo == "INTEGRAL" and numero_aula > 5:
+        faixa_global += 1
+
+    return faixa_global
 
 def validar_turma(turma: str) -> dict:
     turma_limpa = str(turma).strip()
