@@ -11,6 +11,9 @@ STATUS_CONCLUIDO = "CONCLUIDO"
 STATUS_FINALIZADO_LEGADO = "FINALIZADO"
 STATUS_AGENDAMENTO_ATIVO = "ATIVO"
 STATUS_AGENDAMENTO_CANCELADO = "CANCELADO"
+CARGO_ADMIN = "ADMIN"
+CARGO_PROFESSOR = "PROFESSOR"
+CARGO_COORDENADOR = "COORDENADOR"
 COTA_BASE_PADRAO = 80
 COTA_POR_AULA_PADRAO = 6
 COTA_POR_TURMA_PADRAO = 12
@@ -228,6 +231,7 @@ def criar_tabelas():
             email TEXT UNIQUE NOT NULL,
             senha_hash TEXT NOT NULL,
             perfil TEXT NOT NULL,
+            cargo TEXT NOT NULL DEFAULT 'PROFESSOR',
             data_nascimento TEXT
         )
     """)
@@ -418,6 +422,14 @@ def criar_tabelas():
 def _normalizar_nome_catalogo(nome: str) -> str:
     return str(nome or "").strip()
 
+def _cargo_padrao_por_perfil(perfil: str) -> str:
+    perfil_limpo = str(perfil or "").strip().lower()
+    if perfil_limpo == "admin":
+        return CARGO_ADMIN
+    if perfil_limpo == "coordenador":
+        return CARGO_COORDENADOR
+    return CARGO_PROFESSOR
+
 def _seed_catalogos_academicos(cursor):
     cursor.executemany("""
         INSERT OR IGNORE INTO turmas (nome, turno, quantidade_estudantes, ativo, criado_em)
@@ -468,8 +480,30 @@ def _garantir_colunas_usuarios(cursor):
     cursor.execute("PRAGMA table_info(usuarios)")
     colunas = {row["name"] for row in cursor.fetchall()}
 
+    if "cargo" not in colunas:
+        cursor.execute(
+            "ALTER TABLE usuarios ADD COLUMN cargo TEXT NOT NULL DEFAULT ''"
+        )
     if "data_nascimento" not in colunas:
         cursor.execute("ALTER TABLE usuarios ADD COLUMN data_nascimento TEXT")
+
+    # Backfill de cargo para bancos legados baseando-se no perfil existente.
+    cursor.execute("""
+        UPDATE usuarios
+        SET cargo = UPPER(TRIM(cargo))
+        WHERE TRIM(COALESCE(cargo, '')) <> ''
+    """)
+    cursor.execute("""
+        UPDATE usuarios
+        SET cargo = (
+            CASE
+                WHEN LOWER(TRIM(COALESCE(perfil, ''))) = 'admin' THEN ?
+                WHEN LOWER(TRIM(COALESCE(perfil, ''))) = 'coordenador' THEN ?
+                ELSE ?
+            END
+        )
+        WHERE TRIM(COALESCE(cargo, '')) = ''
+    """, (CARGO_ADMIN, CARGO_COORDENADOR, CARGO_PROFESSOR))
 
 def _garantir_colunas_tokens(cursor):
     cursor.execute("PRAGMA table_info(tokens)")
@@ -676,7 +710,7 @@ def buscar_usuario_por_token(token: str):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT u.id, u.nome, u.email, u.perfil
+        SELECT u.id, u.nome, u.email, u.perfil, u.cargo
         FROM usuarios u
         JOIN tokens t ON u.id = t.usuario_id
         WHERE t.token = ?
@@ -692,18 +726,20 @@ def buscar_usuario_por_token(token: str):
 def hash_senha(senha: str):
     return hashlib.sha256(senha.encode()).hexdigest()
 
-def criar_usuario(nome, email, senha, perfil):
+def criar_usuario(nome, email, senha, perfil, cargo: str = ""):
     conn = get_connection()
     cursor = conn.cursor()
+    cargo_norm = str(cargo or "").strip().upper() or _cargo_padrao_por_perfil(perfil)
 
     cursor.execute("""
-        INSERT INTO usuarios (nome, email, senha_hash, perfil)
-        VALUES (?, ?, ?, ?)
+        INSERT INTO usuarios (nome, email, senha_hash, perfil, cargo)
+        VALUES (?, ?, ?, ?, ?)
     """, (
         nome,
         email,
         hash_senha(senha),
-        perfil
+        perfil,
+        cargo_norm
     ))
 
     conn.commit()
@@ -728,7 +764,7 @@ def buscar_usuario_por_id(usuario_id: int):
     cursor = conn.cursor()
 
     cursor.execute("""
-        SELECT id, nome, email, perfil, data_nascimento
+        SELECT id, nome, email, perfil, cargo, data_nascimento
         FROM usuarios
         WHERE id = ?
     """, (usuario_id,))
@@ -738,18 +774,19 @@ def buscar_usuario_por_id(usuario_id: int):
 
     return dict(row) if row else None
 
-def criar_usuario_se_nao_existir(nome, email, senha_hash, perfil):
+def criar_usuario_se_nao_existir(nome, email, senha_hash, perfil, cargo: str = ""):
     usuario = buscar_usuario_por_email(email)
     if usuario:
         return
 
     conn = get_connection()
     cursor = conn.cursor()
+    cargo_norm = str(cargo or "").strip().upper() or _cargo_padrao_por_perfil(perfil)
 
     cursor.execute("""
-        INSERT INTO usuarios (nome, email, senha_hash, perfil)
-        VALUES (?, ?, ?, ?)
-    """, (nome, email, senha_hash, perfil))
+        INSERT INTO usuarios (nome, email, senha_hash, perfil, cargo)
+        VALUES (?, ?, ?, ?, ?)
+    """, (nome, email, senha_hash, perfil, cargo_norm))
 
     conn.commit()
     conn.close()
@@ -816,9 +853,9 @@ def criar_professor(
     disciplinas_json = _serializar_lista_texto(disciplinas)
 
     cursor.execute("""
-        INSERT INTO usuarios (nome, email, senha_hash, perfil, data_nascimento)
-        VALUES (?, ?, ?, 'professor', ?)
-    """, (nome, email, senha_hash, data_nascimento or None))
+        INSERT INTO usuarios (nome, email, senha_hash, perfil, cargo, data_nascimento)
+        VALUES (?, ?, ?, 'professor', ?, ?)
+    """, (nome, email, senha_hash, CARGO_PROFESSOR, data_nascimento or None))
 
     usuario_id = cursor.lastrowid
     cursor.execute("""
@@ -859,9 +896,9 @@ def atualizar_professor(
 
     cursor.execute("""
         UPDATE usuarios
-        SET nome = ?, email = ?, data_nascimento = ?
+        SET nome = ?, email = ?, cargo = ?, data_nascimento = ?
         WHERE id = ?
-    """, (nome, email, data_nascimento or None, usuario_id))
+    """, (nome, email, CARGO_PROFESSOR, data_nascimento or None, usuario_id))
 
     cursor.execute("""
         INSERT INTO professores_carga (
@@ -885,6 +922,40 @@ def atualizar_professor(
     conn.commit()
     conn.close()
     return True
+
+def criar_coordenador(
+    nome: str,
+    email: str,
+    senha_hash: str,
+    data_nascimento: str = "",
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO usuarios (nome, email, senha_hash, perfil, cargo, data_nascimento)
+        VALUES (?, ?, ?, 'coordenador', ?, ?)
+    """, (nome, email, senha_hash, CARGO_COORDENADOR, data_nascimento or None))
+
+    usuario_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return usuario_id
+
+def listar_coordenadores_admin():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, nome, email, data_nascimento
+        FROM usuarios
+        WHERE UPPER(COALESCE(cargo, '')) = ?
+        ORDER BY nome ASC
+    """, (CARGO_COORDENADOR,))
+
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
 
 def salvar_carga_professor(usuario_id: int, aulas_semanais: int, turmas_quantidade: int):
     conn = get_connection()

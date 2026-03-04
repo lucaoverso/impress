@@ -4,6 +4,18 @@ from services.auth_service import autenticar_usuario, validar_token, obter_ttl_t
 
 router = APIRouter()
 
+def normalizar_cargo(usuario: dict) -> str:
+    cargo = str(usuario.get("cargo") or "").strip().upper()
+    if cargo:
+        return cargo
+
+    perfil = str(usuario.get("perfil") or "").strip().lower()
+    if perfil == "admin":
+        return "ADMIN"
+    if perfil == "coordenador":
+        return "COORDENADOR"
+    return "PROFESSOR"
+
 @router.post("/login")
 def login(dados: LoginIn):
     resultado = autenticar_usuario(dados.email, dados.senha)
@@ -12,9 +24,11 @@ def login(dados: LoginIn):
         raise HTTPException(401, "Credenciais inválidas")
 
     token, usuario, expira_em = resultado
+    cargo = normalizar_cargo(usuario)
     return {
         "token": token,
         "perfil": usuario["perfil"],
+        "cargo": cargo,
         "expira_em": expira_em,
         "token_ttl_dias": obter_ttl_token_dias()
     }

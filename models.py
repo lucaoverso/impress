@@ -23,6 +23,7 @@ class UsuarioOut(BaseModel):
     nome: str
     email: str
     perfil: str
+    cargo: str = ""
 
 class AgendamentoIn(BaseModel):
     recurso_id: int
@@ -47,6 +48,12 @@ class ProfessorUpdateIn(BaseModel):
     aulas_semanais: int = 0
     turmas: list[str] = Field(default_factory=list)
     disciplinas: list[str] = Field(default_factory=list)
+
+class CoordenadorCreateIn(BaseModel):
+    nome: str
+    email: str
+    senha: str
+    data_nascimento: str
 
 class ProfessorCargaIn(BaseModel):
     aulas_semanais: int

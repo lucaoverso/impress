@@ -20,15 +20,20 @@
         </header>
 
         <section class="admin-grid">
-            <article class="admin-card">
-                <h2 id="tituloFormProfessor">Cadastrar professor</h2>
+            <article class="admin-card admin-only" data-admin-only="true">
+                <h2 id="tituloFormProfessor">Cadastrar usuário</h2>
                 <form id="formProfessor" class="admin-form">
                     <input id="profNome" type="text" placeholder="Nome" required>
                     <input id="profEmail" type="email" placeholder="Email" required>
+                    <select id="profCargo" required>
+                        <option value="PROFESSOR">Professor</option>
+                        <option value="COORDENADOR">Coordenador</option>
+                    </select>
                     <input id="profSenha" type="password" placeholder="Senha inicial" required>
                     <p id="profSenhaHint" class="booking-detail">Mínimo 8 caracteres com maiúscula, minúscula, número e caractere especial.</p>
                     <input id="profDataNascimento" type="date" required>
                     <input id="profAulas" type="number" min="0" placeholder="Quantidade de aulas semanais" value="" required>
+                    <p id="profCargoHint" class="booking-detail" style="display: none;">Para coordenador, os campos de docência são ignorados.</p>
 
                     <div class="admin-fieldset">
                         <p>Turmas atendidas</p>
@@ -46,6 +51,9 @@
                     </div>
                 </form>
                 <p id="msgProfessor"></p>
+
+                <h3>Coordenadores cadastrados</h3>
+                <ul id="listaCoordenadoresAdmin" class="admin-list"></ul>
             </article>
 
             <article class="admin-card">
@@ -99,7 +107,7 @@
                 <ul id="listaDisciplinasAdmin" class="admin-list"></ul>
             </article>
 
-            <article class="admin-card">
+            <article class="admin-card admin-only" data-admin-only="true">
                 <h2>Regras de cota proporcional</h2>
                 <form id="formCotaRegras" class="admin-form">
                     <label for="cotaMensalEscola">Cota Mensal Escola:</label>
@@ -120,7 +128,7 @@
                 <p id="msgCotas"></p>
             </article>
 
-            <article class="admin-card admin-card-wide">
+            <article class="admin-card admin-card-wide admin-only" data-admin-only="true">
                 <h2>Professores e cotas</h2>
                 <ul id="listaProfessoresAdmin" class="admin-list"></ul>
             </article>

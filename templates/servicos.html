@@ -22,18 +22,25 @@
         </header>
 
         <section class="services-grid">
-            <article class="service-card">
+            <article id="cardImpressao" class="service-card" data-modulo="impressao" hidden>
                 <img class="service-img" src="/static/img/impressao.png" alt="impressão">
                 <h2>Impressão de atividades</h2>
                 <p>Envie PDF, DOCX, DOC, PNG ou JPEG, configure cópias e acompanhe o consumo da cota.</p>
                 <button id="btnIrImpressao" class="btn-destaque" type="button">Ir para impressão</button>
             </article>
 
-            <article class="service-card">
+            <article id="cardAgendamento" class="service-card" data-modulo="agendamento" hidden>
                 <img class="service-img" src="/static/img/agendamento.png" alt="agendamento">
                 <h2>Agendamento de equipamentos</h2>
                 <p>Reserve recursos tecnológicos por data e aula com visão de calendário e disponibilidade.</p>
                 <button id="btnIrAgendamento" class="btn-destaque" type="button">Ir para agendamento</button>
+            </article>
+
+            <article id="cardGestao" class="service-card" data-modulo="gestao" hidden>
+                <img class="service-img" src="/static/img/agendamento.png" alt="gestão">
+                <h2>Módulos de gestão</h2>
+                <p>Acesse os recursos de coordenação para administrar operação, cadastros e relatórios.</p>
+                <button id="btnIrGestao" class="btn-destaque" type="button">Ir para gestão</button>
             </article>
         </section>
     </main>

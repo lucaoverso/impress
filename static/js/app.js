@@ -3,6 +3,18 @@ function limparSessaoLocal() {
     localStorage.removeItem("token_expira_em");
 }
 
+function normalizarCargoUsuario(dadosUsuario = {}) {
+    const cargo = String(dadosUsuario.cargo || "").trim().toUpperCase();
+    if (cargo) {
+        return cargo;
+    }
+
+    const perfil = String(dadosUsuario.perfil || "").trim().toLowerCase();
+    if (perfil === "admin") return "ADMIN";
+    if (perfil === "coordenador") return "COORDENADOR";
+    return "PROFESSOR";
+}
+
 function parseDataSqlUtc(valor) {
     if (!valor) return null;
     const isoBase = String(valor).trim().replace(" ", "T");
@@ -51,7 +63,8 @@ async function login() {
     localStorage.setItem("token", data.token);
     localStorage.setItem("token_expira_em", data.expira_em || "");
 
-    if (data.perfil === "admin") {
+    const cargo = normalizarCargoUsuario(data);
+    if (cargo === "ADMIN") {
         window.location.href = "/admin";
     } else {
         window.location.href = "/servicos";

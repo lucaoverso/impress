@@ -625,7 +625,7 @@ function criarItemReserva(
     const faixa = faixaGlobalReserva(reserva);
     const aulaExibicao = aulaExibicaoPorFaixa(faixa);
     const titulo = document.createElement("p");
-    titulo.innerText = `${reserva.recurso_nome} | ${nomeTurno(reserva.turno)} | ${aulaLabel(aulaExibicao || reserva.aula)} (faixa ${faixa || "?"})`;
+    titulo.innerText = `${reserva.recurso_nome} | ${aulaLabel(aulaExibicao || reserva.aula)}`;
 
     const professor = document.createElement("p");
     professor.className = "booking-professor";
@@ -635,6 +635,8 @@ function criarItemReserva(
     detalheTurma.className = "booking-detail";
     const turmaTexto = reserva.turma || "Não informada";
     detalheTurma.innerText = `Turma: ${turmaTexto}`;
+    const periodoTexto = nomeTurno(reserva.turno) || "Turno não informado"; 
+    detalheTurma.innerText += ` | ${periodoTexto}`;
 
     li.appendChild(titulo);
     if (exibirProfessor) {

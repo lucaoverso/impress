@@ -35,6 +35,7 @@ from models import (
     AgendamentoIn,
     ProfessorCreateIn,
     ProfessorUpdateIn,
+    CoordenadorCreateIn,
     ProfessorCargaIn,
     TurmaCreateIn,
     TurmaUpdateIn,
@@ -95,7 +96,9 @@ from database import (
     buscar_agendamento_por_id,
     cancelar_agendamento,
     criar_professor,
+    criar_coordenador,
     atualizar_professor,
+    listar_coordenadores_admin,
     listar_professores_admin,
     salvar_carga_professor,
     obter_regras_cota,
@@ -144,14 +147,16 @@ async def lifespan(app: FastAPI):
         nome="Administrador",
         email="admin@escola",
         senha_hash=hash_senha("admin123"),
-        perfil="admin"
+        perfil="admin",
+        cargo="ADMIN"
     )
 
     criar_usuario_se_nao_existir(
         nome="Professor Teste",
         email="professor@escola",
         senha_hash=hash_senha("prof123"),
-        perfil="professor"
+        perfil="professor",
+        cargo="PROFESSOR"
     )
 
     seed_recursos_padrao()
@@ -201,6 +206,14 @@ FAIXA_GLOBAL_OFFSET_POR_TURNO = {
     "VESPERTINO_EM": 5,
 }
 SENHA_FORTE_REGEX = re.compile(r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$")
+CARGO_ADMIN = "ADMIN"
+CARGO_PROFESSOR = "PROFESSOR"
+CARGO_COORDENADOR = "COORDENADOR"
+MODULOS_POR_CARGO = {
+    CARGO_ADMIN: ["impressao", "agendamento", "gestao"],
+    CARGO_PROFESSOR: ["impressao", "agendamento"],
+    CARGO_COORDENADOR: ["gestao"],
+}
 
 def obter_nomes_turmas_ativas() -> list[str]:
     return [turma["nome"] for turma in listar_turmas_ativas()]
@@ -265,13 +278,10 @@ def obter_opcoes_cadastro_professor():
         "disciplinas": obter_nomes_disciplinas_ativas(),
     }
 
-def _validar_dados_professor_comuns(
+def _validar_dados_usuario_basicos(
     nome: str,
     email: str,
     data_nascimento_txt: str,
-    aulas_semanais_bruto: int,
-    turmas_bruto: list[str],
-    disciplinas_bruto: list[str],
 ):
     nome_limpo = str(nome or "").strip()
     email_limpo = str(email or "").strip().lower()
@@ -282,14 +292,31 @@ def _validar_dados_professor_comuns(
         raise HTTPException(400, "Email é obrigatório.")
 
     data_nascimento = validar_data_nascimento_professor(data_nascimento_txt)
+    return {
+        "nome": nome_limpo,
+        "email": email_limpo,
+        "data_nascimento": data_nascimento,
+    }
+
+def _validar_dados_professor_comuns(
+    nome: str,
+    email: str,
+    data_nascimento_txt: str,
+    aulas_semanais_bruto: int,
+    turmas_bruto: list[str],
+    disciplinas_bruto: list[str],
+):
+    dados_basicos = _validar_dados_usuario_basicos(
+        nome=nome,
+        email=email,
+        data_nascimento_txt=data_nascimento_txt,
+    )
     aulas_semanais = validar_numero_nao_negativo(aulas_semanais_bruto, "Aulas semanais")
     turmas = validar_turmas_professor(turmas_bruto)
     disciplinas = validar_disciplinas_professor(disciplinas_bruto)
 
     return {
-        "nome": nome_limpo,
-        "email": email_limpo,
-        "data_nascimento": data_nascimento,
+        **dados_basicos,
         "aulas_semanais": aulas_semanais,
         "turmas": turmas,
         "turmas_quantidade": len(turmas),
@@ -322,6 +349,20 @@ def validar_payload_atualizacao_professor(payload: ProfessorUpdateIn):
         turmas_bruto=payload.turmas,
         disciplinas_bruto=payload.disciplinas,
     )
+
+def validar_payload_cadastro_coordenador(payload: CoordenadorCreateIn):
+    senha = payload.senha.strip()
+    if not senha:
+        raise HTTPException(400, "Senha é obrigatória.")
+    validar_senha_forte(senha)
+
+    dados = _validar_dados_usuario_basicos(
+        nome=payload.nome,
+        email=payload.email,
+        data_nascimento_txt=payload.data_nascimento,
+    )
+    dados["senha"] = senha
+    return dados
 
 def contar_paginas_intervalo(intervalo: str, total_paginas: int) -> int:
     if not intervalo or not intervalo.strip():
@@ -413,8 +454,34 @@ def validar_mes_referencia(mes: str) -> str:
 def mes_atual_referencia() -> str:
     return datetime.now().strftime("%Y-%m")
 
+def normalizar_cargo_usuario(usuario: dict) -> str:
+    cargo = str(usuario.get("cargo") or "").strip().upper()
+    if cargo in MODULOS_POR_CARGO:
+        return cargo
+
+    perfil = str(usuario.get("perfil") or "").strip().lower()
+    if perfil == "admin":
+        return CARGO_ADMIN
+    if perfil == "coordenador":
+        return CARGO_COORDENADOR
+    return CARGO_PROFESSOR
+
+def modulos_por_cargo(cargo: str) -> list[str]:
+    return list(MODULOS_POR_CARGO.get(cargo, MODULOS_POR_CARGO[CARGO_PROFESSOR]))
+
+def usuario_eh_admin(usuario: dict) -> bool:
+    return normalizar_cargo_usuario(usuario) == CARGO_ADMIN
+
+def usuario_eh_gestor(usuario: dict) -> bool:
+    return normalizar_cargo_usuario(usuario) in {CARGO_ADMIN, CARGO_COORDENADOR}
+
 def exigir_admin(usuario):
-    if usuario["perfil"] != "admin":
+    if not usuario_eh_admin(usuario):
+        raise HTTPException(403, "Acesso negado")
+    return usuario
+
+def exigir_gestor(usuario):
+    if not usuario_eh_gestor(usuario):
         raise HTTPException(403, "Acesso negado")
     return usuario
 
@@ -689,9 +756,7 @@ def preview_impressao(
 
 @app.get("/fila")
 def fila(usuario = Depends(get_usuario_logado)):
-    if usuario["perfil"] != "admin":
-        raise HTTPException(403, "Acesso negado")
-
+    exigir_gestor(usuario)
     return listar_fila()
 
 
@@ -703,9 +768,9 @@ def cancelar(job_id: int, usuario = Depends(get_usuario_logado)):
 
     usuario_job_raw = job.get("usuario_id")
     usuario_job_id = int(usuario_job_raw) if usuario_job_raw is not None else None
-    eh_admin = usuario["perfil"] == "admin"
+    eh_gestor = usuario_eh_gestor(usuario)
     eh_dono = usuario_job_id is not None and usuario_job_id == int(usuario["id"])
-    if not eh_admin and not eh_dono:
+    if not eh_gestor and not eh_dono:
         raise HTTPException(403, "Você não pode cancelar este job.")
 
     resultado = cancelar_job(job_id)
@@ -730,9 +795,7 @@ def prioridade(
     urgente: bool = True,
     usuario = Depends(get_usuario_logado)
 ):
-    if usuario["perfil"] != "admin":
-        raise HTTPException(403, "Acesso negado")
-
+    exigir_gestor(usuario)
     alterar_prioridade(job_id, urgente)
     return {"mensagem": "Prioridade atualizada"}
 
@@ -753,7 +816,13 @@ def minha_cota(usuario = Depends(get_usuario_logado)):
 
 @app.get("/me")
 def eu(usuario = Depends(get_usuario_logado)):
-    return usuario
+    cargo = normalizar_cargo_usuario(usuario)
+    dados = dict(usuario)
+    dados["cargo"] = cargo
+    dados["modulos"] = modulos_por_cargo(cargo)
+    dados["eh_gestor"] = usuario_eh_gestor(usuario)
+    dados["eh_admin"] = usuario_eh_admin(usuario)
+    return dados
 
 
 # =========================================================
@@ -884,7 +953,7 @@ def cancelar_reserva_agendamento(
         )
 
     dono_reserva = agendamento["usuario_id"] == usuario["id"]
-    if not dono_reserva and usuario["perfil"] != "admin":
+    if not dono_reserva and not usuario_eh_admin(usuario):
         raise HTTPException(403, "Você não pode cancelar este agendamento.")
 
     cancelado = cancelar_agendamento(agendamento_id)
@@ -960,7 +1029,7 @@ def admin_page(request: Request):
 
 @app.get("/admin/fila")
 def fila_admin(usuario = Depends(get_usuario_logado)):
-    exigir_admin(usuario)
+    exigir_gestor(usuario)
 
     return listar_jobs_ativos()
 
@@ -971,7 +1040,7 @@ def historico_admin(
     usuario_id: int = None,
     usuario = Depends(get_usuario_logado)
 ):
-    exigir_admin(usuario)
+    exigir_gestor(usuario)
 
     return listar_historico(data_inicio, data_fim, usuario_id)
 
@@ -981,7 +1050,7 @@ def relatorio_admin(
     data_fim: str = None,
     usuario = Depends(get_usuario_logado)
 ):
-    exigir_admin(usuario)
+    exigir_gestor(usuario)
     data_inicio_norm = validar_data_agendamento(data_inicio) if data_inicio else None
     data_fim_norm = validar_data_agendamento(data_fim) if data_fim else None
 
@@ -993,7 +1062,7 @@ def relatorio_impressao_admin(
     data_fim: str = None,
     usuario = Depends(get_usuario_logado)
 ):
-    exigir_admin(usuario)
+    exigir_gestor(usuario)
     data_inicio_norm = validar_data_agendamento(data_inicio) if data_inicio else None
     data_fim_norm = validar_data_agendamento(data_fim) if data_fim else None
 
@@ -1005,7 +1074,7 @@ def relatorio_recursos_admin(
     data_fim: str = None,
     usuario = Depends(get_usuario_logado)
 ):
-    exigir_admin(usuario)
+    exigir_gestor(usuario)
     data_inicio_norm = validar_data_agendamento(data_inicio) if data_inicio else None
     data_fim_norm = validar_data_agendamento(data_fim) if data_fim else None
 
@@ -1019,7 +1088,7 @@ def listar_turmas_admin_api(
     incluir_inativas: bool = True,
     usuario = Depends(get_usuario_logado)
 ):
-    exigir_admin(usuario)
+    exigir_gestor(usuario)
     return listar_turmas(incluir_inativas=incluir_inativas)
 
 @app.post("/admin/turmas")
@@ -1027,7 +1096,7 @@ def criar_turma_admin(
     payload: TurmaCreateIn,
     usuario = Depends(get_usuario_logado)
 ):
-    exigir_admin(usuario)
+    exigir_gestor(usuario)
     nome = payload.nome.strip()
     turno = validar_turno(payload.turno)
     quantidade_estudantes = validar_numero_nao_negativo(
@@ -1055,7 +1124,7 @@ def atualizar_turma_admin(
     payload: TurmaUpdateIn,
     usuario = Depends(get_usuario_logado)
 ):
-    exigir_admin(usuario)
+    exigir_gestor(usuario)
     turno = validar_turno(payload.turno)
     quantidade_estudantes = validar_numero_nao_negativo(
         payload.quantidade_estudantes,
@@ -1077,7 +1146,7 @@ def atualizar_status_turma_admin(
     payload: RecursoStatusIn,
     usuario = Depends(get_usuario_logado)
 ):
-    exigir_admin(usuario)
+    exigir_gestor(usuario)
     alterado = atualizar_status_turma(turma_id, payload.ativo)
     if not alterado:
         raise HTTPException(404, "Turma não encontrada.")
@@ -1088,7 +1157,7 @@ def listar_disciplinas_admin_api(
     incluir_inativas: bool = True,
     usuario = Depends(get_usuario_logado)
 ):
-    exigir_admin(usuario)
+    exigir_gestor(usuario)
     return listar_disciplinas(incluir_inativas=incluir_inativas)
 
 @app.post("/admin/disciplinas")
@@ -1096,7 +1165,7 @@ def criar_disciplina_admin(
     payload: DisciplinaCreateIn,
     usuario = Depends(get_usuario_logado)
 ):
-    exigir_admin(usuario)
+    exigir_gestor(usuario)
     nome = payload.nome.strip()
     aulas_semanais = validar_numero_nao_negativo(payload.aulas_semanais, "Aulas semanais")
 
@@ -1116,7 +1185,7 @@ def atualizar_disciplina_admin(
     payload: DisciplinaUpdateIn,
     usuario = Depends(get_usuario_logado)
 ):
-    exigir_admin(usuario)
+    exigir_gestor(usuario)
     aulas_semanais = validar_numero_nao_negativo(payload.aulas_semanais, "Aulas semanais")
     alterado = atualizar_disciplina_dados(
         disciplina_id=disciplina_id,
@@ -1132,7 +1201,7 @@ def atualizar_status_disciplina_admin(
     payload: RecursoStatusIn,
     usuario = Depends(get_usuario_logado)
 ):
-    exigir_admin(usuario)
+    exigir_gestor(usuario)
     alterado = atualizar_status_disciplina(disciplina_id, payload.ativo)
     if not alterado:
         raise HTTPException(404, "Disciplina não encontrada.")
@@ -1192,6 +1261,31 @@ def listar_professores_painel(
         "regras_cota": regras,
         "professores": professores
     }
+
+@app.get("/admin/coordenadores")
+def listar_coordenadores_painel(usuario = Depends(get_usuario_logado)):
+    exigir_admin(usuario)
+    return listar_coordenadores_admin()
+
+@app.post("/admin/coordenadores")
+def criar_coordenador_painel(
+    payload: CoordenadorCreateIn,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    dados = validar_payload_cadastro_coordenador(payload)
+
+    try:
+        coordenador_id = criar_coordenador(
+            nome=dados["nome"],
+            email=dados["email"],
+            senha_hash=hash_senha(dados["senha"]),
+            data_nascimento=dados["data_nascimento"],
+        )
+    except sqlite3.IntegrityError as exc:
+        raise HTTPException(409, "Já existe um usuário com este email.") from exc
+
+    return {"mensagem": "Coordenador cadastrado com sucesso.", "coordenador_id": coordenador_id}
 
 @app.post("/admin/professores")
 def criar_professor_painel(
@@ -1304,7 +1398,7 @@ def listar_recursos_admin_api(
     incluir_inativos: bool = True,
     usuario = Depends(get_usuario_logado)
 ):
-    exigir_admin(usuario)
+    exigir_gestor(usuario)
     return listar_recursos(incluir_inativos=incluir_inativos)
 
 @app.post("/admin/recursos")
@@ -1312,7 +1406,7 @@ def criar_recurso_admin(
     payload: RecursoCreateIn,
     usuario = Depends(get_usuario_logado)
 ):
-    exigir_admin(usuario)
+    exigir_gestor(usuario)
 
     nome = payload.nome.strip()
     tipo = payload.tipo.strip()
@@ -1344,7 +1438,7 @@ def atualizar_recurso_admin(
     payload: RecursoUpdateIn,
     usuario = Depends(get_usuario_logado)
 ):
-    exigir_admin(usuario)
+    exigir_gestor(usuario)
     nome = payload.nome.strip()
     tipo = payload.tipo.strip()
     descricao = (payload.descricao or "").strip()
@@ -1377,7 +1471,7 @@ def atualizar_status_recurso_admin(
     payload: RecursoStatusIn,
     usuario = Depends(get_usuario_logado)
 ):
-    exigir_admin(usuario)
+    exigir_gestor(usuario)
     alterado = atualizar_status_recurso(recurso_id, payload.ativo)
     if not alterado:
         raise HTTPException(404, "Recurso não encontrado.")
