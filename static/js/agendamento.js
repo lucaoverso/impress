@@ -21,10 +21,10 @@ const nomesMeses = [
 const nomesDiasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 const OPCAO_TURNOS_FALLBACK = [
-    { id: "INTEGRAL", nome: "Período integral", aulas: 8 },
+    { id: "INTEGRAL", nome: "Integral", aulas: 8 },
     { id: "MATUTINO", nome: "Matutino", aulas: 5 },
     { id: "VESPERTINO", nome: "Vespertino", aulas: 5 },
-    { id: "VESPERTINO_EM", nome: "Vespertino E.M.", aulas: 6 }
+    { id: "VESPERTINO_EM", nome: "Vespertino", aulas: 6 }
 ];
 const MAX_AULAS_EXIBICAO = 5;
 
