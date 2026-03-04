@@ -1243,6 +1243,25 @@ def listar_professores_admin(mes: str = None):
     conn.close()
     return professores
 
+def listar_professores_agendamento():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, nome, email
+        FROM usuarios
+        WHERE UPPER(COALESCE(cargo, '')) = ?
+           OR (
+                TRIM(COALESCE(cargo, '')) = ''
+                AND LOWER(COALESCE(perfil, '')) = 'professor'
+           )
+        ORDER BY nome COLLATE NOCASE ASC
+    """, (CARGO_PROFESSOR,))
+
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
 def seed_recursos_padrao():
     recursos = [
         ("Notebook Carrinho 1", "Notebook", "Carrinho móvel com 30 notebooks.", 1),

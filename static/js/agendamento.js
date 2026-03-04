@@ -40,6 +40,7 @@ let recursos = [];
 let turnos = [];
 let turmas = [];
 let reservasMes = [];
+let professoresAgendamento = [];
 let mesAtual = new Date();
 let dataSelecionada = paraIso(new Date());
 const PREFERENCIAS_ORDENACAO_STORAGE_KEY = "agendamento_sort_preferences_v1";
@@ -138,6 +139,31 @@ function setMensagem(texto, tipo = "info") {
 function obterTurmaPorNome(nomeTurma) {
     const nome = String(nomeTurma || "").trim();
     return turmas.find((turma) => turma.nome === nome) || null;
+}
+
+function usuarioEhAdmin() {
+    if (!usuarioAtual) {
+        return false;
+    }
+
+    if (Boolean(usuarioAtual.eh_admin)) {
+        return true;
+    }
+
+    const cargo = String(usuarioAtual.cargo || "").trim().toUpperCase();
+    if (cargo === "ADMIN") {
+        return true;
+    }
+
+    return String(usuarioAtual.perfil || "").trim().toLowerCase() === "admin";
+}
+
+function atualizarVisibilidadeProfessorReserva() {
+    const grupo = el("grupoProfessorReserva");
+    if (!grupo) {
+        return;
+    }
+    grupo.style.display = usuarioEhAdmin() ? "block" : "none";
 }
 
 function faixaGlobalReserva(reserva) {
@@ -382,6 +408,49 @@ async function carregarUsuario() {
 
     usuarioAtual = await res.json();
     el("agendamentoUsuario").innerText = `${usuarioAtual.nome} (${usuarioAtual.perfil})`;
+    atualizarVisibilidadeProfessorReserva();
+}
+
+async function carregarProfessoresAgendamentoAdmin() {
+    const grupo = el("grupoProfessorReserva");
+    const select = el("professorReserva");
+
+    if (!grupo || !select) {
+        return;
+    }
+
+    if (!usuarioEhAdmin()) {
+        grupo.style.display = "none";
+        professoresAgendamento = [];
+        select.innerHTML = "";
+        return;
+    }
+
+    const res = await fetchComAuth("/agendamento/professores", { headers });
+    if (!res.ok) {
+        throw new Error("Não foi possível carregar os professores para agendamento.");
+    }
+
+    professoresAgendamento = await res.json();
+    select.innerHTML = "";
+
+    if (!Array.isArray(professoresAgendamento) || professoresAgendamento.length === 0) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.innerText = "Nenhum professor disponível";
+        option.selected = true;
+        select.appendChild(option);
+        select.disabled = true;
+        return;
+    }
+
+    professoresAgendamento.forEach((professor) => {
+        const option = document.createElement("option");
+        option.value = String(professor.id);
+        option.innerText = `${professor.nome} (${professor.email})`;
+        select.appendChild(option);
+    });
+    select.disabled = false;
 }
 
 async function carregarRecursos() {
@@ -776,6 +845,7 @@ async function agendarRecurso() {
     const data = el("dataReserva").value;
     const turmaNome = el("turmaReserva").value;
     const faixaSelecionada = Number(el("aulaReserva").value);
+    const professorIdSelecionado = Number(el("professorReserva")?.value || 0);
     const observacao = el("observacaoReserva").value.trim();
 
     const turma = obterTurmaPorNome(turmaNome);
@@ -789,22 +859,32 @@ async function agendarRecurso() {
         return;
     }
 
+    if (usuarioEhAdmin() && !professorIdSelecionado) {
+        setMensagem("Selecione o professor solicitante do agendamento.", "erro");
+        return;
+    }
+
     const aulaTurno = aulaTurnoPorFaixa(turma.turno, faixaSelecionada);
     if (!Number.isInteger(aulaTurno) || aulaTurno < 1 || aulaTurno > Number(turma.aulas)) {
         setMensagem("A faixa escolhida é inválida para o turno da turma.", "erro");
         return;
     }
 
+    const payload = {
+        recurso_id: recursoId,
+        data,
+        aula: String(aulaTurno),
+        turma: turmaNome,
+        observacao
+    };
+    if (usuarioEhAdmin()) {
+        payload.professor_id = professorIdSelecionado;
+    }
+
     const res = await fetchComAuth("/agendamento/reservas", {
         method: "POST",
         headers: headersJson,
-        body: JSON.stringify({
-            recurso_id: recursoId,
-            data,
-            aula: String(aulaTurno),
-            turma: turmaNome,
-            observacao
-        })
+        body: JSON.stringify(payload)
     });
 
     const body = await res.json();
@@ -891,6 +971,7 @@ async function init() {
         carregarPreferenciasOrdenacao();
         registrarEventos();
         await carregarUsuario();
+        await carregarProfessoresAgendamentoAdmin();
         await carregarOpcoesAgendamento();
         await carregarRecursos();
 

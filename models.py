@@ -30,6 +30,7 @@ class AgendamentoIn(BaseModel):
     data: str
     aula: str
     turma: str
+    professor_id: int | None = None
     observacao: str = ""
 
 class ProfessorCreateIn(BaseModel):

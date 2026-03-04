@@ -100,6 +100,7 @@ from database import (
     atualizar_professor,
     listar_coordenadores_admin,
     listar_professores_admin,
+    listar_professores_agendamento,
     salvar_carga_professor,
     obter_regras_cota,
     atualizar_regras_cota,
@@ -858,6 +859,12 @@ def opcoes_agendamento(usuario = Depends(get_usuario_logado)):
     }
 
 
+@app.get("/agendamento/professores")
+def professores_agendamento(usuario = Depends(get_usuario_logado)):
+    exigir_admin(usuario)
+    return listar_professores_agendamento()
+
+
 @app.get("/agendamento/reservas")
 def listar_reservas_agendamento(
     data_inicio: str = None,
@@ -895,6 +902,22 @@ def criar_reserva_agendamento(
 
     aula = validar_aula(payload.aula, turno)
     faixa_global = calcular_faixa_global(turno, aula)
+    usuario_reserva_id = int(usuario["id"])
+    professor_id_payload = payload.professor_id
+    if professor_id_payload is not None:
+        if not usuario_eh_admin(usuario):
+            raise HTTPException(403, "Apenas administrador pode escolher o professor no agendamento.")
+
+        professor = buscar_usuario_por_id(int(professor_id_payload))
+        if not professor:
+            raise HTTPException(404, "Professor não encontrado.")
+
+        cargo_professor = normalizar_cargo_usuario(professor)
+        if cargo_professor != CARGO_PROFESSOR:
+            raise HTTPException(400, "O usuário selecionado não é professor.")
+
+        usuario_reserva_id = int(professor["id"])
+
     capacidade_recurso = max(int(recurso.get("quantidade_itens") or 1), 1)
     reservas_ativas_faixa = contar_agendamentos_ativos_faixa(
         recurso_id=payload.recurso_id,
@@ -914,7 +937,7 @@ def criar_reserva_agendamento(
     observacao = (payload.observacao or "").strip()
     agendamento_id = criar_agendamento(
         recurso_id=payload.recurso_id,
-        usuario_id=usuario["id"],
+        usuario_id=usuario_reserva_id,
         data=data_reserva,
         turno=turno,
         aula=aula,
