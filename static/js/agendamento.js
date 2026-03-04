@@ -26,6 +26,7 @@ const OPCAO_TURNOS_FALLBACK = [
     { id: "VESPERTINO", nome: "Vespertino", aulas: 5 },
     { id: "VESPERTINO_EM", nome: "Vespertino E.M.", aulas: 6 }
 ];
+const MAX_AULAS_EXIBICAO = 5;
 
 const TURNO_OFFSET_FAIXA = {
     MATUTINO: 0,
@@ -86,6 +87,43 @@ function aulaLabel(aula) {
     return `${aula}ª aula`;
 }
 
+function aulaExibicaoPorFaixa(faixaGlobal) {
+    const faixa = Number(faixaGlobal || 0);
+    if (!Number.isFinite(faixa) || faixa <= 0) {
+        return 0;
+    }
+
+    if (faixa <= MAX_AULAS_EXIBICAO) {
+        return faixa;
+    }
+
+    return Math.min(faixa - MAX_AULAS_EXIBICAO, MAX_AULAS_EXIBICAO);
+}
+
+function faixaGlobalPorTurnoEAula(turnoId, aulaTurno) {
+    const turno = String(turnoId || "").trim().toUpperCase();
+    const aula = Number(aulaTurno || 0);
+    const offset = TURNO_OFFSET_FAIXA[turno] ?? 0;
+
+    if (!Number.isFinite(aula) || aula <= 0) {
+        return 0;
+    }
+
+    return aula + offset;
+}
+
+function aulaTurnoPorFaixa(turnoId, faixaGlobal) {
+    const turno = String(turnoId || "").trim().toUpperCase();
+    const faixa = Number(faixaGlobal || 0);
+    const offset = TURNO_OFFSET_FAIXA[turno] ?? 0;
+
+    if (!Number.isFinite(faixa) || faixa <= 0) {
+        return 0;
+    }
+
+    return faixa - offset;
+}
+
 function nomeTurno(turnoId) {
     const turno = turnos.find((item) => item.id === turnoId);
     return turno ? turno.nome : (turnoId || "Turno não informado");
@@ -110,8 +148,7 @@ function faixaGlobalReserva(reserva) {
 
     const aula = Number(reserva.aula || 0);
     const turno = String(reserva.turno || "").trim().toUpperCase();
-    const offset = TURNO_OFFSET_FAIXA[turno] ?? 0;
-    return aula > 0 ? aula + offset : 0;
+    return faixaGlobalPorTurnoEAula(turno, aula);
 }
 
 function obterHojeIso() {
@@ -360,9 +397,7 @@ async function carregarRecursos() {
     recursos.forEach((recurso) => {
         const option = document.createElement("option");
         option.value = recurso.id;
-        const quantidade = Number(recurso.quantidade_itens || 1);
-        const sufixoQuantidade = quantidade === 1 ? "1 unidade" : `${quantidade} unidades`;
-        option.innerText = `${recurso.nome} (${recurso.tipo}) - ${sufixoQuantidade}`;
+        option.innerText = `${recurso.nome} (${recurso.tipo})`;
         select.appendChild(option);
     });
 }
@@ -383,12 +418,12 @@ function preencherSelectTurmas() {
     turmas.forEach((turma) => {
         const option = document.createElement("option");
         option.value = turma.nome;
-        option.innerText = `${turma.nome} (${turma.turno_nome})`;
+        option.innerText = `${turma.nome}`;
         select.appendChild(option);
     });
 }
 
-function atualizarSelectAulasPorTurma(nomeTurma, aulaSelecionada = null) {
+function atualizarSelectAulasPorTurma(nomeTurma, faixaSelecionada = null) {
     const select = el("aulaReserva");
     const turma = obterTurmaPorNome(nomeTurma);
 
@@ -403,19 +438,50 @@ function atualizarSelectAulasPorTurma(nomeTurma, aulaSelecionada = null) {
         return;
     }
 
+    const turnoTurma = String(turma.turno || "").trim().toUpperCase();
     const maxAulas = Number(turma.aulas);
+    const faixasDisponiveis = [];
     for (let aula = 1; aula <= maxAulas; aula++) {
+        const faixa = faixaGlobalPorTurnoEAula(turnoTurma, aula);
+        if (faixa > 0) {
+            faixasDisponiveis.push(faixa);
+        }
+    }
+
+    const faixasMatutino = faixasDisponiveis.filter((faixa) => faixa <= MAX_AULAS_EXIBICAO);
+    const faixasVespertino = faixasDisponiveis.filter((faixa) => faixa > MAX_AULAS_EXIBICAO);
+
+    const adicionarSeparadorTurno = (rotulo) => {
         const option = document.createElement("option");
-        option.value = String(aula);
-        option.innerText = `${aula}ª aula`;
+        option.value = "";
+        option.innerText = `----- ${rotulo} -----`;
+        option.disabled = true;
         select.appendChild(option);
+    };
+
+    const adicionarOpcaoFaixa = (faixa) => {
+        const option = document.createElement("option");
+        option.value = String(faixa);
+        option.innerText = `${aulaLabel(aulaExibicaoPorFaixa(faixa))}`;
+        select.appendChild(option);
+    };
+
+    if (faixasMatutino.length > 0) {
+        adicionarSeparadorTurno("Matutino");
+        faixasMatutino.forEach(adicionarOpcaoFaixa);
+    }
+
+    if (faixasVespertino.length > 0) {
+        adicionarSeparadorTurno("Vespertino");
+        faixasVespertino.forEach(adicionarOpcaoFaixa);
     }
 
     select.disabled = false;
-    if (aulaSelecionada && Number(aulaSelecionada) >= 1 && Number(aulaSelecionada) <= maxAulas) {
-        select.value = String(aulaSelecionada);
+    const faixaEscolhida = Number(faixaSelecionada || 0);
+    if (faixaEscolhida > 0 && faixasDisponiveis.includes(faixaEscolhida)) {
+        select.value = String(faixaEscolhida);
     } else {
-        select.value = "1";
+        select.value = faixasDisponiveis.length > 0 ? String(faixasDisponiveis[0]) : "";
     }
 }
 
@@ -556,8 +622,10 @@ function criarItemReserva(
     const li = document.createElement("li");
     li.className = "booking-item";
 
+    const faixa = faixaGlobalReserva(reserva);
+    const aulaExibicao = aulaExibicaoPorFaixa(faixa);
     const titulo = document.createElement("p");
-    titulo.innerText = `${reserva.recurso_nome} | ${nomeTurno(reserva.turno)} | ${aulaLabel(reserva.aula)} `;
+    titulo.innerText = `${reserva.recurso_nome} | ${nomeTurno(reserva.turno)} | ${aulaLabel(aulaExibicao || reserva.aula)} (faixa ${faixa || "?"})`;
 
     const professor = document.createElement("p");
     professor.className = "booking-professor";
@@ -705,7 +773,7 @@ async function agendarRecurso() {
     const recursoId = Number(el("recursoSelect").value);
     const data = el("dataReserva").value;
     const turmaNome = el("turmaReserva").value;
-    const aula = el("aulaReserva").value;
+    const faixaSelecionada = Number(el("aulaReserva").value);
     const observacao = el("observacaoReserva").value.trim();
 
     const turma = obterTurmaPorNome(turmaNome);
@@ -714,8 +782,14 @@ async function agendarRecurso() {
         return;
     }
 
-    if (!recursoId || !data || !aula || !turmaNome) {
+    if (!recursoId || !data || !faixaSelecionada || !turmaNome) {
         setMensagem("Preencha recurso, data, turma e aula.", "erro");
+        return;
+    }
+
+    const aulaTurno = aulaTurnoPorFaixa(turma.turno, faixaSelecionada);
+    if (!Number.isInteger(aulaTurno) || aulaTurno < 1 || aulaTurno > Number(turma.aulas)) {
+        setMensagem("A faixa escolhida é inválida para o turno da turma.", "erro");
         return;
     }
 
@@ -725,7 +799,7 @@ async function agendarRecurso() {
         body: JSON.stringify({
             recurso_id: recursoId,
             data,
-            aula,
+            aula: String(aulaTurno),
             turma: turmaNome,
             observacao
         })
