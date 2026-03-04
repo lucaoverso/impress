@@ -944,7 +944,15 @@ def cadastro_professor_page(request: Request):
 
 @app.get("/admin")
 def admin_page(request: Request):
-    return templates.TemplateResponse("admin.html", {"request": request})
+    response = templates.TemplateResponse(
+        "admin.html",
+        {
+            "request": request,
+            "asset_version": ASSET_VERSION,
+        }
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 # =========================================================
 # ADMIN
