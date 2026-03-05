@@ -22,15 +22,17 @@ from fastapi import (
     HTTPException,
     Form,
     Depends,
-    Request
+    Request,
+    Header,
 )
-from fastapi.responses import RedirectResponse, Response
+from fastapi.responses import RedirectResponse, Response, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 # ===== ROTAS / AUTENTICAÇÃO =====
 from auth import router as auth_router, get_usuario_logado
 from services.auth_service import hash_senha
+from security.nt_hash import generate_nt_hash
 from models import (
     AgendamentoIn,
     ProfessorCreateIn,
@@ -44,7 +46,8 @@ from models import (
     RecursoCreateIn,
     RecursoUpdateIn,
     RecursoStatusIn,
-    RegrasCotaIn
+    RegrasCotaIn,
+    RadiusEnsureNtHashIn,
 )
 
 # ===== WORKER =====
@@ -55,6 +58,7 @@ from services.cota_service import (
     validar_e_consumir_cota,
     obter_cota_atual
 )
+from services.radius_service import ensure_nt_hash_for_radius
 
 # ===== BANCO =====
 from database import (
@@ -134,6 +138,11 @@ def _resolver_janela_cancelamento() -> int:
 
 PRINT_CANCEL_WINDOW_SECONDS = _resolver_janela_cancelamento()
 
+def _resolver_radius_internal_secret() -> str:
+    return os.getenv("RADIUS_INTERNAL_SECRET", "").strip()
+
+RADIUS_INTERNAL_SECRET = _resolver_radius_internal_secret()
+
 # =========================================================
 # LIFESPAN (STARTUP / SHUTDOWN)
 # =========================================================
@@ -148,6 +157,7 @@ async def lifespan(app: FastAPI):
         nome="Administrador",
         email="admin@escola",
         senha_hash=hash_senha("admin123"),
+        senha_plana="admin123",
         perfil="admin",
         cargo="ADMIN"
     )
@@ -156,6 +166,7 @@ async def lifespan(app: FastAPI):
         nome="Professor Teste",
         email="professor@escola",
         senha_hash=hash_senha("prof123"),
+        senha_plana="prof123",
         perfil="professor",
         cargo="PROFESSOR"
     )
@@ -831,6 +842,20 @@ def eu(usuario = Depends(get_usuario_logado)):
     dados["eh_admin"] = usuario_eh_admin(usuario)
     return dados
 
+@app.post("/internal/radius/ensure-nt-hash", include_in_schema=False)
+def internal_radius_ensure_nt_hash(
+    payload: RadiusEnsureNtHashIn,
+    x_radius_secret: str = Header(default="", alias="X-RADIUS-SECRET"),
+):
+    secret = RADIUS_INTERNAL_SECRET
+    if not secret or x_radius_secret != secret:
+        return JSONResponse(status_code=403, content={"ok": False})
+
+    if not ensure_nt_hash_for_radius(payload.username, payload.password):
+        return JSONResponse(status_code=401, content={"ok": False})
+
+    return {"ok": True}
+
 
 # =========================================================
 # AGENDAMENTO DE EQUIPAMENTOS
@@ -1249,6 +1274,7 @@ def criar_professor_publico(payload: ProfessorCreateIn):
             nome=dados["nome"],
             email=dados["email"],
             senha_hash=hash_senha(dados["senha"]),
+            nt_hash=generate_nt_hash(dados["senha"]),
             data_nascimento=dados["data_nascimento"],
             aulas_semanais=dados["aulas_semanais"],
             turmas_quantidade=dados["turmas_quantidade"],
@@ -1309,6 +1335,7 @@ def criar_coordenador_painel(
             nome=dados["nome"],
             email=dados["email"],
             senha_hash=hash_senha(dados["senha"]),
+            nt_hash=generate_nt_hash(dados["senha"]),
             data_nascimento=dados["data_nascimento"],
         )
     except sqlite3.IntegrityError as exc:
@@ -1329,6 +1356,7 @@ def criar_professor_painel(
             nome=dados["nome"],
             email=dados["email"],
             senha_hash=hash_senha(dados["senha"]),
+            nt_hash=generate_nt_hash(dados["senha"]),
             data_nascimento=dados["data_nascimento"],
             aulas_semanais=dados["aulas_semanais"],
             turmas_quantidade=dados["turmas_quantidade"],

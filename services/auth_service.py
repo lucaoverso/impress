@@ -6,6 +6,7 @@ from database import (
     salvar_token,
     buscar_usuario_por_token,
     limpar_tokens_expirados,
+    preencher_nt_hash_se_ausente,
     TOKEN_TTL_DIAS
 )
 
@@ -20,6 +21,8 @@ def autenticar_usuario(email: str, senha: str):
 
     if hash_senha(senha) != usuario["senha_hash"]:
         return None
+
+    preencher_nt_hash_se_ausente(usuario["id"], senha)
 
     limpar_tokens_expirados()
     token = str(uuid.uuid4())

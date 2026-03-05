@@ -6,6 +6,7 @@ import os
 import shutil
 import unicodedata
 from pathlib import Path
+from security.nt_hash import generate_nt_hash
 
 STATUS_CONCLUIDO = "CONCLUIDO"
 STATUS_FINALIZADO_LEGADO = "FINALIZADO"
@@ -230,6 +231,7 @@ def criar_tabelas():
             nome TEXT NOT NULL,
             email TEXT UNIQUE NOT NULL,
             senha_hash TEXT NOT NULL,
+            nt_hash CHAR(32),
             perfil TEXT NOT NULL,
             cargo TEXT NOT NULL DEFAULT 'PROFESSOR',
             data_nascimento TEXT
@@ -361,6 +363,7 @@ def criar_tabelas():
     _garantir_colunas_recursos(cursor)
     _garantir_colunas_turmas(cursor)
     _garantir_colunas_disciplinas(cursor)
+    _garantir_view_radcheck(cursor)
     _seed_catalogos_academicos(cursor)
     _migrar_catalogos_academicos(cursor)
 
@@ -382,6 +385,11 @@ def criar_tabelas():
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_tokens_expira_em
         ON tokens(expira_em)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS ix_usuarios_nt_hash
+        ON usuarios(nt_hash)
     """)
 
     cursor.execute("""
@@ -486,6 +494,8 @@ def _garantir_colunas_usuarios(cursor):
         )
     if "data_nascimento" not in colunas:
         cursor.execute("ALTER TABLE usuarios ADD COLUMN data_nascimento TEXT")
+    if "nt_hash" not in colunas:
+        cursor.execute("ALTER TABLE usuarios ADD COLUMN nt_hash CHAR(32)")
 
     # Backfill de cargo para bancos legados baseando-se no perfil existente.
     cursor.execute("""
@@ -504,6 +514,12 @@ def _garantir_colunas_usuarios(cursor):
         )
         WHERE TRIM(COALESCE(cargo, '')) = ''
     """, (CARGO_ADMIN, CARGO_COORDENADOR, CARGO_PROFESSOR))
+
+    cursor.execute("""
+        UPDATE usuarios
+        SET nt_hash = LOWER(TRIM(nt_hash))
+        WHERE TRIM(COALESCE(nt_hash, '')) <> ''
+    """)
 
 def _garantir_colunas_tokens(cursor):
     cursor.execute("PRAGMA table_info(tokens)")
@@ -689,6 +705,29 @@ def _garantir_colunas_disciplinas(cursor):
             "ALTER TABLE disciplinas ADD COLUMN aulas_semanais INTEGER NOT NULL DEFAULT 0"
         )
 
+def _garantir_view_radcheck(cursor):
+    # O sistema usa email como identificador de login para autenticação.
+    # Se existir coluna `ativo`, a VIEW inclui apenas usuários ativos.
+    cursor.execute("DROP VIEW IF EXISTS radcheck")
+    cursor.execute("PRAGMA table_info(usuarios)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+    filtro_ativo = ""
+    if "ativo" in colunas:
+        filtro_ativo = " AND (ativo = 1 OR LOWER(CAST(ativo AS TEXT)) = 'true')"
+
+    cursor.execute(f"""
+        CREATE VIEW radcheck AS
+        SELECT
+            email AS username,
+            'NT-Password' AS attribute,
+            ':=' AS op,
+            nt_hash AS value
+        FROM usuarios
+        WHERE TRIM(COALESCE(email, '')) <> ''
+          AND TRIM(COALESCE(nt_hash, '')) <> ''
+          {filtro_ativo}
+    """)
+
 def salvar_token(token: str, usuario_id: int, expira_em: str):
     conn = get_connection()
     cursor = conn.cursor()
@@ -735,18 +774,30 @@ def buscar_usuario_por_token(token: str):
 def hash_senha(senha: str):
     return hashlib.sha256(senha.encode()).hexdigest()
 
+def _normalizar_nt_hash(nt_hash: str | None) -> str | None:
+    if nt_hash is None:
+        return None
+    valor = str(nt_hash).strip().lower()
+    if len(valor) != 32:
+        return None
+    if any(char not in "0123456789abcdef" for char in valor):
+        return None
+    return valor
+
 def criar_usuario(nome, email, senha, perfil, cargo: str = ""):
     conn = get_connection()
     cursor = conn.cursor()
     cargo_norm = str(cargo or "").strip().upper() or _cargo_padrao_por_perfil(perfil)
+    nt_hash = generate_nt_hash(senha)
 
     cursor.execute("""
-        INSERT INTO usuarios (nome, email, senha_hash, perfil, cargo)
-        VALUES (?, ?, ?, ?, ?)
+        INSERT INTO usuarios (nome, email, senha_hash, nt_hash, perfil, cargo)
+        VALUES (?, ?, ?, ?, ?, ?)
     """, (
         nome,
         email,
         hash_senha(senha),
+        nt_hash,
         perfil,
         cargo_norm
     ))
@@ -783,7 +834,15 @@ def buscar_usuario_por_id(usuario_id: int):
 
     return dict(row) if row else None
 
-def criar_usuario_se_nao_existir(nome, email, senha_hash, perfil, cargo: str = ""):
+def criar_usuario_se_nao_existir(
+    nome,
+    email,
+    senha_hash,
+    perfil,
+    cargo: str = "",
+    senha_plana: str | None = None,
+    nt_hash: str | None = None,
+):
     usuario = buscar_usuario_por_email(email)
     if usuario:
         return
@@ -791,11 +850,14 @@ def criar_usuario_se_nao_existir(nome, email, senha_hash, perfil, cargo: str = "
     conn = get_connection()
     cursor = conn.cursor()
     cargo_norm = str(cargo or "").strip().upper() or _cargo_padrao_por_perfil(perfil)
+    nt_hash_final = _normalizar_nt_hash(nt_hash)
+    if nt_hash_final is None and senha_plana is not None:
+        nt_hash_final = generate_nt_hash(senha_plana)
 
     cursor.execute("""
-        INSERT INTO usuarios (nome, email, senha_hash, perfil, cargo)
-        VALUES (?, ?, ?, ?, ?)
-    """, (nome, email, senha_hash, perfil, cargo_norm))
+        INSERT INTO usuarios (nome, email, senha_hash, nt_hash, perfil, cargo)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (nome, email, senha_hash, nt_hash_final, perfil, cargo_norm))
 
     conn.commit()
     conn.close()
@@ -849,6 +911,7 @@ def criar_professor(
     nome: str,
     email: str,
     senha_hash: str,
+    nt_hash: str | None = None,
     data_nascimento: str = "",
     aulas_semanais: int = 0,
     turmas_quantidade: int = 0,
@@ -860,11 +923,12 @@ def criar_professor(
 
     turmas_json = _serializar_lista_texto(turmas)
     disciplinas_json = _serializar_lista_texto(disciplinas)
+    nt_hash_final = _normalizar_nt_hash(nt_hash)
 
     cursor.execute("""
-        INSERT INTO usuarios (nome, email, senha_hash, perfil, cargo, data_nascimento)
-        VALUES (?, ?, ?, 'professor', ?, ?)
-    """, (nome, email, senha_hash, CARGO_PROFESSOR, data_nascimento or None))
+        INSERT INTO usuarios (nome, email, senha_hash, nt_hash, perfil, cargo, data_nascimento)
+        VALUES (?, ?, ?, ?, 'professor', ?, ?)
+    """, (nome, email, senha_hash, nt_hash_final, CARGO_PROFESSOR, data_nascimento or None))
 
     usuario_id = cursor.lastrowid
     cursor.execute("""
@@ -936,15 +1000,17 @@ def criar_coordenador(
     nome: str,
     email: str,
     senha_hash: str,
+    nt_hash: str | None = None,
     data_nascimento: str = "",
 ):
     conn = get_connection()
     cursor = conn.cursor()
+    nt_hash_final = _normalizar_nt_hash(nt_hash)
 
     cursor.execute("""
-        INSERT INTO usuarios (nome, email, senha_hash, perfil, cargo, data_nascimento)
-        VALUES (?, ?, ?, 'coordenador', ?, ?)
-    """, (nome, email, senha_hash, CARGO_COORDENADOR, data_nascimento or None))
+        INSERT INTO usuarios (nome, email, senha_hash, nt_hash, perfil, cargo, data_nascimento)
+        VALUES (?, ?, ?, ?, 'coordenador', ?, ?)
+    """, (nome, email, senha_hash, nt_hash_final, CARGO_COORDENADOR, data_nascimento or None))
 
     usuario_id = cursor.lastrowid
     conn.commit()
@@ -965,6 +1031,55 @@ def listar_coordenadores_admin():
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+def atualizar_nt_hash_usuario(usuario_id: int, nt_hash: str):
+    nt_hash_final = _normalizar_nt_hash(nt_hash)
+    if not nt_hash_final:
+        return False
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE usuarios
+        SET nt_hash = ?
+        WHERE id = ?
+    """, (nt_hash_final, usuario_id))
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+def preencher_nt_hash_se_ausente(usuario_id: int, senha_em_texto: str):
+    nt_hash = generate_nt_hash(senha_em_texto)
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE usuarios
+        SET nt_hash = ?
+        WHERE id = ?
+          AND TRIM(COALESCE(nt_hash, '')) = ''
+    """, (nt_hash, usuario_id))
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+def atualizar_senha_usuario(usuario_id: int, senha_em_texto: str):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE usuarios
+        SET senha_hash = ?, nt_hash = ?
+        WHERE id = ?
+    """, (
+        hash_senha(senha_em_texto),
+        generate_nt_hash(senha_em_texto),
+        usuario_id
+    ))
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
 
 def salvar_carga_professor(usuario_id: int, aulas_semanais: int, turmas_quantidade: int):
     conn = get_connection()

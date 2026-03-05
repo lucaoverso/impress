@@ -18,6 +18,10 @@ class LoginIn(BaseModel):
     email: str
     senha: str
 
+class RadiusEnsureNtHashIn(BaseModel):
+    username: str
+    password: str
+
 class UsuarioOut(BaseModel):
     id: int
     nome: str

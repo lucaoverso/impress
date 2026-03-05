@@ -1,0 +1,21 @@
+-- Criação de usuário somente leitura para FreeRADIUS.
+-- Ajuste nomes de banco/schema/tabela conforme seu ambiente.
+
+-- =========================================================
+-- PostgreSQL
+-- =========================================================
+-- CREATE ROLE radius_ro LOGIN PASSWORD 'troque-esta-senha';
+-- GRANT CONNECT ON DATABASE sistema_impress TO radius_ro;
+-- GRANT USAGE ON SCHEMA public TO radius_ro;
+-- GRANT SELECT ON public.radcheck TO radius_ro;
+-- Opcional (dependendo da política de permissões da sua instalação):
+-- GRANT SELECT ON public.usuarios TO radius_ro;
+
+-- =========================================================
+-- MySQL / MariaDB
+-- =========================================================
+-- CREATE USER 'radius_ro'@'%' IDENTIFIED BY 'troque-esta-senha';
+-- GRANT SELECT ON sistema_impress.radcheck TO 'radius_ro'@'%';
+-- Opcional (dependendo da política de permissões da sua instalação):
+-- GRANT SELECT ON sistema_impress.usuarios TO 'radius_ro'@'%';
+-- FLUSH PRIVILEGES;

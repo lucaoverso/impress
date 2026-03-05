@@ -53,6 +53,9 @@ Ajuste obrigatório em `.env`:
 Ajuste recomendado em `.env` para o banco fora da pasta do código:
 - `DB_PATH=/opt/sistema-impress-data/impressao.db`
 
+Ajuste recomendado para integração FreeRADIUS:
+- `RADIUS_INTERNAL_SECRET=<segredo-forte-aleatorio>` (usado no endpoint interno de migração silenciosa de `nt_hash`)
+
 ## 6) Diretórios e permissões
 
 ```bash
@@ -127,3 +130,13 @@ Resultado esperado:
 
 Para acesso externo seguro, use VPN (Tailscale/WireGuard) e exponha apenas o Nginx.
 Não exponha porta 631 (CUPS) na internet.
+
+## Integração FreeRADIUS
+
+Os arquivos de apoio ficam em:
+- `infra/freeradius/clients.conf.snippet`
+- `infra/freeradius/sql-setup.md`
+- `infra/freeradius/create-radius-db-user.sql`
+- `infra/freeradius/inner-tunnel.snippet`
+- `infra/freeradius/troubleshooting.md`
+- `infra/freeradius/internal-endpoint.md`

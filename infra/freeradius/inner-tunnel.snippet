@@ -1,0 +1,16 @@
+# Arquivo alvo: /etc/freeradius/3.0/sites-enabled/inner-tunnel
+#
+# Em `authorize { ... }`, inclua `sql` para buscar `NT-Password` na view `radcheck`.
+# Em `authenticate { ... }`, mantenha `mschap` para PEAP/MSCHAPv2.
+
+authorize {
+    # ...
+    sql
+    # ...
+}
+
+authenticate {
+    # ...
+    mschap
+    # ...
+}
