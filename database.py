@@ -345,6 +345,7 @@ def criar_tabelas():
             aula TEXT NOT NULL,
             faixa_global INTEGER NOT NULL DEFAULT 0,
             turma TEXT NOT NULL DEFAULT '',
+            tema_aula TEXT NOT NULL DEFAULT '',
             observacao TEXT,
             status TEXT NOT NULL DEFAULT 'ATIVO',
             criado_em TEXT NOT NULL,
@@ -609,6 +610,10 @@ def _garantir_colunas_agendamentos(cursor):
     if "faixa_global" not in colunas:
         cursor.execute(
             "ALTER TABLE agendamentos ADD COLUMN faixa_global INTEGER NOT NULL DEFAULT 0"
+        )
+    if "tema_aula" not in colunas:
+        cursor.execute(
+            "ALTER TABLE agendamentos ADD COLUMN tema_aula TEXT NOT NULL DEFAULT ''"
         )
 
     # Faixa global padroniza simultaneidade entre turnos:
@@ -2125,6 +2130,7 @@ def criar_agendamento(
     aula: str,
     faixa_global: int,
     turma: str,
+    tema_aula: str,
     observacao: str = "",
 ):
     conn = get_connection()
@@ -2132,9 +2138,9 @@ def criar_agendamento(
 
     cursor.execute("""
         INSERT INTO agendamentos (
-            recurso_id, usuario_id, data, turno, aula, faixa_global, turma, observacao, status, criado_em
+            recurso_id, usuario_id, data, turno, aula, faixa_global, turma, tema_aula, observacao, status, criado_em
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
     """, (
         recurso_id,
         usuario_id,
@@ -2143,6 +2149,7 @@ def criar_agendamento(
         aula,
         int(faixa_global),
         turma,
+        tema_aula,
         observacao,
         STATUS_AGENDAMENTO_ATIVO,
     ))
@@ -2175,6 +2182,7 @@ def listar_agendamentos(
             a.aula,
             a.faixa_global,
             a.turma,
+            COALESCE(a.tema_aula, '') AS tema_aula,
             COALESCE(a.observacao, '') AS observacao,
             a.status,
             a.criado_em,

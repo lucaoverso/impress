@@ -1245,7 +1245,7 @@ footer {
 
 .scheduler-content {
     display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1.7fr) minmax(340px, 1fr);
     gap: 16px;
     align-content: start;
 }
@@ -1256,6 +1256,26 @@ footer {
     border-radius: var(--radius-lg);
     padding: 14px;
     box-shadow: var(--shadow-card);
+}
+
+.calendar-main-card {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.weekly-lessons-card {
+    grid-column: 1;
+    grid-row: 2;
+}
+
+.day-bookings-card {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.my-bookings-card {
+    grid-column: 2;
+    grid-row: 2;
 }
 
 .booking-card-header {
@@ -1399,6 +1419,13 @@ footer {
     color: #4b5563;
 }
 
+.booking-theme {
+    font-size: 13px;
+    color: #1f2937;
+    border-left: 3px solid #99d5ce;
+    padding-left: 8px;
+}
+
 .booking-empty {
     color: #64748b;
 }
@@ -1413,6 +1440,183 @@ footer {
     border: 1px solid #cbd5e1;
     border-radius: var(--radius-sm);
     padding: 6px 8px;
+}
+
+.weekly-lessons-card {
+    overflow: hidden;
+}
+
+.weekly-lessons-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.weekly-lessons-header p {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.agenda-day-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    width: 100%;
+}
+
+.agenda-day-filter-controls {
+    justify-content: flex-end;
+    width: 100%;
+}
+
+.agenda-day-filter-controls button {
+    max-width: 190px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.agenda-day-group-btn {
+    height: 30px;
+    border-radius: 999px;
+    padding: 0 10px;
+    font-size: 12px;
+    border: 1px solid var(--line);
+    background: #ffffff;
+}
+
+.agenda-day-group-btn.is-active {
+    border-color: #0f766e;
+    background: #d6f2ef;
+    color: #0f766e;
+}
+
+.weekly-lessons-table-wrap {
+    border: 1px solid #d9e2ef;
+    border-radius: var(--radius-md);
+    overflow: auto;
+    max-height: 540px;
+    background: #f8fbff;
+}
+
+.weekly-lessons-table {
+    width: 100%;
+    min-width: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.weekly-lessons-table th,
+.weekly-lessons-table td {
+    border-right: 1px solid #d9e2ef;
+    border-bottom: 1px solid #d9e2ef;
+    padding: 8px;
+    vertical-align: top;
+}
+
+.weekly-lessons-table thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: #e6eef9;
+    font-size: 12px;
+    font-weight: 800;
+    color: #30445d;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.weekly-lessons-table thead th:first-child {
+    width: 112px;
+}
+
+.weekly-turno-row th {
+    background: #d5e2f4;
+    color: #29486d;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    padding: 7px 8px;
+}
+
+.weekly-aula-label {
+    width: 112px;
+    min-width: 102px;
+    background: #f0f5fc;
+    font-size: 12px;
+    font-weight: 800;
+    color: #29486d;
+}
+
+.weekly-aula-slot {
+    background: #ffffff;
+    min-width: 106px;
+}
+
+.weekly-cell-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.weekly-cell-group {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.weekly-cell-group-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #334155;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+}
+
+.weekly-booking-chip {
+    border: 1px solid #c9d9ef;
+    border-radius: var(--radius-sm);
+    background: #edf4ff;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.weekly-chip-resource {
+    font-size: 12px;
+    font-weight: 800;
+    color: #1e3a5f;
+}
+
+.weekly-chip-meta {
+    font-size: 11px;
+    color: #374151;
+}
+
+.weekly-chip-theme {
+    font-size: 11px;
+    color: #1f2937;
+    font-style: italic;
+}
+
+.weekly-cell-empty {
+    display: inline-block;
+    font-size: 11px;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+.weekly-table-empty {
+    text-align: center;
+    font-size: 13px;
+    color: #64748b;
+    background: #f8fbff;
 }
 
 @media (max-width: 980px) {
@@ -1432,8 +1636,32 @@ footer {
         grid-template-columns: 1fr;
     }
 
+    .calendar-main-card,
+    .weekly-lessons-card,
+    .day-bookings-card,
+    .my-bookings-card {
+        grid-column: auto;
+        grid-row: auto;
+    }
+
     .booking-sort-controls button {
         flex: 1 1 calc(50% - 6px);
+    }
+
+    .agenda-day-controls {
+        align-items: stretch;
+    }
+
+    .agenda-day-filter-controls {
+        justify-content: flex-start;
+    }
+
+    .agenda-day-filter-controls button {
+        max-width: none;
+    }
+
+    .agenda-day-group-btn {
+        width: 100%;
     }
 }
 

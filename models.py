@@ -34,6 +34,7 @@ class AgendamentoIn(BaseModel):
     data: str
     aula: str
     turma: str
+    tema_aula: str
     professor_id: int | None = None
     observacao: str = ""
 

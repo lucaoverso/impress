@@ -35,18 +35,21 @@
                 <select id="professorReserva"></select>
             </div>
 
-            <label for="aulaReserva">Aula (1ª a 5ª)</label>
+            <label for="aulaReserva">Aula</label>
             <select id="aulaReserva"></select>
 
+            <label for="temaAulaReserva">Tema da aula</label>
+            <input id="temaAulaReserva" type="text" maxlength="160" required placeholder="Ex.: Revisão de frações e lista de exercícios">
+
             <label for="observacaoReserva">Observação</label>
-            <textarea id="observacaoReserva" rows="3" placeholder="Se precisar que o PCPI deixe algum site abert nos computadores, use este campo para descrever."></textarea>
+            <textarea id="observacaoReserva" rows="3" placeholder="Se precisar que o PCPI deixe algum site aberto nos computadores, use este campo para descrever."></textarea>
 
             <button id="btnAgendar" class="btn-destaque" type="button">Agendar recurso</button>
             <p id="msgAgendamento"></p>
         </section>
 
         <section class="scheduler-content">
-            <article class="calendar-card">
+            <article class="calendar-card calendar-main-card">
                 <header class="calendar-header">
                     <button id="btnMesAnterior" type="button">◀</button>
                     <h3 id="mesAtual"></h3>
@@ -56,7 +59,23 @@
                 <div id="calendarioGrid" class="calendar-grid"></div>
             </article>
 
-            <article class="calendar-card">
+            <article class="calendar-card weekly-lessons-card">
+                <header class="weekly-lessons-header">
+                    <div>
+                        <h3>Agenda do dia por aula</h3>
+                        <p id="subtituloAgendaDia"></p>
+                    </div>
+                    <div class="agenda-day-controls">
+                        <div id="agendaDiaFiltroRecursos" class="booking-sort-controls agenda-day-filter-controls"></div>
+                        <button id="btnAgendaDiaAgruparRecurso" type="button" class="agenda-day-group-btn">Agrupar por recurso</button>
+                    </div>
+                </header>
+                <div class="weekly-lessons-table-wrap">
+                    <table id="tabelaAgendaDia" class="weekly-lessons-table"></table>
+                </div>
+            </article>
+
+            <article class="calendar-card day-bookings-card">
                 <header class="booking-card-header">
                     <h3 id="tituloDia">Reservas do dia</h3>
                     <div class="booking-sort-controls" data-sort-target="dia">
@@ -70,7 +89,7 @@
                 <ul id="listaReservasDia"></ul>
             </article>
 
-            <article class="calendar-card">
+            <article class="calendar-card my-bookings-card">
                 <header class="booking-card-header">
                     <h3>Meus agendamentos</h3>
                     <div class="booking-sort-controls" data-sort-target="minhas">

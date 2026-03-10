@@ -463,6 +463,12 @@ def validar_turma(turma: str) -> dict:
 
     raise HTTPException(400, "Turma inválida.")
 
+def validar_tema_aula(tema_aula: str) -> str:
+    tema_limpo = str(tema_aula or "").strip()
+    if not tema_limpo:
+        raise HTTPException(400, "Tema da aula é obrigatório.")
+    return tema_limpo
+
 def validar_mes_referencia(mes: str) -> str:
     try:
         return datetime.strptime(mes, "%Y-%m").strftime("%Y-%m")
@@ -927,6 +933,7 @@ def criar_reserva_agendamento(
 
     data_reserva = validar_data_agendamento(payload.data)
     turma = validar_turma(payload.turma)
+    tema_aula = validar_tema_aula(payload.tema_aula)
     turno = str(turma.get("turno") or "").strip().upper()
     if turno not in TURNOS_CONFIG:
         raise HTTPException(400, "Turma sem turno configurado. Atualize o cadastro da turma no painel admin.")
@@ -974,6 +981,7 @@ def criar_reserva_agendamento(
         aula=aula,
         faixa_global=faixa_global,
         turma=turma["nome"],
+        tema_aula=tema_aula,
         observacao=observacao
     )
 

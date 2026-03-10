@@ -34,6 +34,10 @@ const TURNO_OFFSET_FAIXA = {
     VESPERTINO: 5,
     VESPERTINO_EM: 5
 };
+const TURNOS_GRADE_HORARIO = [
+    { id: "MATUTINO", nome: "Matutino", aulas: 5, faixaInicial: 1 },
+    { id: "VESPERTINO", nome: "Vespertino", aulas: 6, faixaInicial: 6 }
+];
 
 let usuarioAtual = null;
 let recursos = [];
@@ -51,6 +55,10 @@ const CAMPOS_ORDENACAO_VALIDOS = {
 const configuracaoOrdenacao = {
     dia: { campo: "aula", direcao: "asc", agruparPorRecurso: false },
     minhas: { campo: "data", direcao: "asc", agruparPorRecurso: false }
+};
+const configuracaoAgendaDia = {
+    filtroRecursoId: 0,
+    agruparPorRecurso: false
 };
 
 function el(id) {
@@ -84,6 +92,10 @@ function paraDataBr(dataIso) {
     return `${dia}/${mes}/${ano}`;
 }
 
+function normalizarTurnoId(turnoId) {
+    return String(turnoId || "").trim().toUpperCase();
+}
+
 function aulaLabel(aula) {
     return `${aula}ª aula`;
 }
@@ -98,7 +110,7 @@ function aulaExibicaoPorFaixa(faixaGlobal) {
         return faixa;
     }
 
-    return Math.min(faixa - MAX_AULAS_EXIBICAO, MAX_AULAS_EXIBICAO);
+    return faixa - MAX_AULAS_EXIBICAO;
 }
 
 function faixaGlobalPorTurnoEAula(turnoId, aulaTurno) {
@@ -121,7 +133,7 @@ function faixaGlobalPorTurnoEAula(turnoId, aulaTurno) {
 }
 
 function aulaTurnoPorFaixa(turnoId, faixaGlobal) {
-    const turno = String(turnoId || "").trim().toUpperCase();
+    const turno = normalizarTurnoId(turnoId);
     const faixa = Number(faixaGlobal || 0);
     const offset = TURNO_OFFSET_FAIXA[turno] ?? 0;
 
@@ -142,9 +154,31 @@ function aulaTurnoPorFaixa(turnoId, faixaGlobal) {
     return faixa - offset;
 }
 
+function aulaExibicaoPorTurnoEFaixa(turnoId, faixaGlobal) {
+    const aulaTurno = aulaTurnoPorFaixa(turnoId, faixaGlobal);
+    if (aulaTurno > 0) {
+        return aulaTurno;
+    }
+    return aulaExibicaoPorFaixa(faixaGlobal);
+}
+
+function numeroAulaReserva(reserva) {
+    const aulaDireta = Number(reserva?.aula || 0);
+    if (Number.isInteger(aulaDireta) && aulaDireta > 0) {
+        return aulaDireta;
+    }
+
+    const faixa = faixaGlobalReserva(reserva);
+    return aulaExibicaoPorTurnoEFaixa(reserva?.turno, faixa);
+}
+
 function nomeTurno(turnoId) {
-    const turno = turnos.find((item) => item.id === turnoId);
-    return turno ? turno.nome : (turnoId || "Turno não informado");
+    const turnoNormalizado = normalizarTurnoId(turnoId);
+    const turno = turnos.find((item) => normalizarTurnoId(item.id) === turnoNormalizado);
+    if (turno) {
+        return nomeTurnoExibicao(turno.id, turno.nome);
+    }
+    return nomeTurnoExibicao(turnoId);
 }
 
 function setMensagem(texto, tipo = "info") {
@@ -260,12 +294,12 @@ function carregarPreferenciasOrdenacao() {
 }
 
 function ordemTurno(turnoId) {
-    const idTurno = String(turnoId || "").trim().toUpperCase();
+    const idTurno = normalizarTurnoId(turnoId);
     if (!idTurno) {
         return Number.MAX_SAFE_INTEGER;
     }
 
-    const indice = turnos.findIndex((turno) => turno.id === idTurno);
+    const indice = turnos.findIndex((turno) => normalizarTurnoId(turno.id) === idTurno);
     return indice >= 0 ? indice : Number.MAX_SAFE_INTEGER;
 }
 
@@ -334,6 +368,79 @@ function agruparReservasPorRecurso(listaReservasOrdenada) {
         grupos.get(nomeRecurso).push(reserva);
     });
     return Array.from(grupos.entries());
+}
+
+function renderBotoesFiltroAgendaDia() {
+    const container = el("agendaDiaFiltroRecursos");
+    if (!container) {
+        return;
+    }
+
+    const recursoSelecionadoExiste = recursos.some(
+        (recurso) => Number(recurso.id) === Number(configuracaoAgendaDia.filtroRecursoId)
+    );
+    if (!recursoSelecionadoExiste) {
+        configuracaoAgendaDia.filtroRecursoId = 0;
+    }
+
+    const criarBotaoFiltro = (label, recursoId, ativo = false) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.innerText = label;
+        btn.title = label;
+        btn.classList.toggle("is-active", ativo);
+        btn.addEventListener("click", () => {
+            configuracaoAgendaDia.filtroRecursoId = Number(recursoId || 0);
+            renderBotoesFiltroAgendaDia();
+            renderAgendaDiaAulas();
+        });
+        return btn;
+    };
+
+    container.innerHTML = "";
+    container.appendChild(
+        criarBotaoFiltro(
+            "Todos recursos",
+            0,
+            Number(configuracaoAgendaDia.filtroRecursoId) === 0
+        )
+    );
+
+    const recursosOrdenados = [...recursos].sort((a, b) => compararTextoPtBr(a.nome, b.nome));
+    recursosOrdenados.forEach((recurso) => {
+        container.appendChild(
+            criarBotaoFiltro(
+                String(recurso.nome || "Recurso"),
+                Number(recurso.id),
+                Number(configuracaoAgendaDia.filtroRecursoId) === Number(recurso.id)
+            )
+        );
+    });
+}
+
+function atualizarEstadoBotaoAgruparAgendaDia() {
+    const btn = el("btnAgendaDiaAgruparRecurso");
+    if (!btn) {
+        return;
+    }
+
+    btn.classList.toggle("is-active", Boolean(configuracaoAgendaDia.agruparPorRecurso));
+    btn.innerText = configuracaoAgendaDia.agruparPorRecurso
+        ? "Agrupado por recurso"
+        : "Agrupar por recurso";
+}
+
+function registrarControlesAgendaDia() {
+    const btnAgrupar = el("btnAgendaDiaAgruparRecurso");
+    if (btnAgrupar) {
+        btnAgrupar.addEventListener("click", () => {
+            configuracaoAgendaDia.agruparPorRecurso = !configuracaoAgendaDia.agruparPorRecurso;
+            atualizarEstadoBotaoAgruparAgendaDia();
+            renderAgendaDiaAulas();
+        });
+    }
+
+    atualizarEstadoBotaoAgruparAgendaDia();
 }
 
 function atualizarEstadoControlesOrdenacao(alvo) {
@@ -486,6 +593,8 @@ async function carregarRecursos() {
         option.innerText = `${recurso.nome} (${recurso.tipo})`;
         select.appendChild(option);
     });
+
+    renderBotoesFiltroAgendaDia();
 }
 
 function preencherSelectTurmas() {
@@ -548,7 +657,7 @@ function atualizarSelectAulasPorTurma(nomeTurma, faixaSelecionada = null) {
     const adicionarOpcaoFaixa = (faixa) => {
         const option = document.createElement("option");
         option.value = String(faixa);
-        option.innerText = `${aulaLabel(aulaExibicaoPorFaixa(faixa))}`;
+        option.innerText = `${aulaLabel(aulaExibicaoPorTurnoEFaixa(turnoTurma, faixa))}`;
         select.appendChild(option);
     };
 
@@ -638,6 +747,280 @@ async function carregarReservasMes() {
     reservasMes = await res.json();
 }
 
+function nomeTurnoExibicao(turnoId, nomeTurnoBase = "") {
+    const turno = normalizarTurnoId(turnoId);
+    const nomeBase = String(nomeTurnoBase || "").trim();
+
+    if (turno === "VESPERTINO_EM") {
+        return nomeBase ? `${nomeBase} E.M.` : "Vespertino E.M.";
+    }
+
+    if (nomeBase) {
+        return nomeBase;
+    }
+
+    if (turno === "MATUTINO") {
+        return "Matutino";
+    }
+    if (turno === "VESPERTINO") {
+        return "Vespertino";
+    }
+    if (turno === "INTEGRAL") {
+        return "Integral";
+    }
+
+    return turno || "Turno não informado";
+}
+
+function obterLinhasAulasGradeSemanal() {
+    const linhas = [];
+
+    TURNOS_GRADE_HORARIO.forEach((turno) => {
+        for (let aula = 1; aula <= turno.aulas; aula++) {
+            linhas.push({
+                turnoId: turno.id,
+                turnoNome: turno.nome,
+                aula
+            });
+        }
+    });
+
+    return linhas;
+}
+
+function chaveCelulaAgendaDia(turnoId, aula) {
+    return `${normalizarTurnoId(turnoId)}|${Number(aula || 0)}`;
+}
+
+function obterTurnoAulaPorFaixaGrade(faixaGlobal) {
+    const faixa = Number(faixaGlobal || 0);
+    if (!Number.isInteger(faixa) || faixa <= 0) {
+        return null;
+    }
+
+    for (const turno of TURNOS_GRADE_HORARIO) {
+        const faixaInicial = Number(turno.faixaInicial || 0);
+        const faixaFinal = faixaInicial + Number(turno.aulas || 0) - 1;
+        if (faixa >= faixaInicial && faixa <= faixaFinal) {
+            return {
+                turnoId: turno.id,
+                aula: faixa - faixaInicial + 1
+            };
+        }
+    }
+
+    return null;
+}
+
+function obterTurnoAulaGradeReserva(reserva) {
+    const porFaixa = obterTurnoAulaPorFaixaGrade(faixaGlobalReserva(reserva));
+    if (porFaixa) {
+        return porFaixa;
+    }
+
+    const turno = normalizarTurnoId(reserva?.turno);
+    const aula = Number(reserva?.aula || 0);
+    if (!Number.isInteger(aula) || aula <= 0) {
+        return null;
+    }
+
+    if (turno === "MATUTINO" && aula <= 5) {
+        return { turnoId: "MATUTINO", aula };
+    }
+    if ((turno === "VESPERTINO" || turno === "VESPERTINO_EM") && aula <= 6) {
+        return { turnoId: "VESPERTINO", aula };
+    }
+    if (turno === "INTEGRAL") {
+        if (aula <= 5) {
+            return { turnoId: "MATUTINO", aula };
+        }
+        const aulaVespertino = aula - 4;
+        if (aulaVespertino >= 1 && aulaVespertino <= 6) {
+            return { turnoId: "VESPERTINO", aula: aulaVespertino };
+        }
+    }
+
+    return null;
+}
+
+function mapearReservasDiaPorCelula() {
+    const mapa = new Map();
+    const filtroRecursoId = Number(configuracaoAgendaDia.filtroRecursoId || 0);
+    const reservasDia = (reservasMes || []).filter((item) => {
+        if (item.data !== dataSelecionada) {
+            return false;
+        }
+        if (filtroRecursoId > 0 && Number(item.recurso_id) !== filtroRecursoId) {
+            return false;
+        }
+        return true;
+    });
+
+    reservasDia.forEach((reserva) => {
+        const posicaoGrade = obterTurnoAulaGradeReserva(reserva);
+        if (!posicaoGrade) {
+            return;
+        }
+
+        const chave = chaveCelulaAgendaDia(posicaoGrade.turnoId, posicaoGrade.aula);
+        if (!mapa.has(chave)) {
+            mapa.set(chave, []);
+        }
+        mapa.get(chave).push(reserva);
+    });
+
+    mapa.forEach((listaReservas) => {
+        listaReservas.sort((a, b) => compararReservas(a, b, "recurso"));
+    });
+
+    return mapa;
+}
+
+function criarChipReservaSemanal(reserva) {
+    const card = document.createElement("article");
+    card.className = "weekly-booking-chip";
+
+    const recurso = document.createElement("p");
+    recurso.className = "weekly-chip-resource";
+    recurso.innerText = reserva.recurso_nome || "Recurso não informado";
+    card.appendChild(recurso);
+
+    const turma = document.createElement("p");
+    turma.className = "weekly-chip-meta";
+    turma.innerText = reserva.turma || "Turma não informada";
+    card.appendChild(turma);
+
+    const tema = String(reserva.tema_aula || "").trim();
+    if (tema) {
+        const temaEl = document.createElement("p");
+        temaEl.className = "weekly-chip-theme";
+        temaEl.innerText = tema;
+        card.appendChild(temaEl);
+    }
+
+    return card;
+}
+
+function renderAgendaDiaAulas() {
+    const tabela = el("tabelaAgendaDia");
+    const subtitulo = el("subtituloAgendaDia");
+
+    if (!tabela || !subtitulo) {
+        return;
+    }
+
+    const filtroRecursoId = Number(configuracaoAgendaDia.filtroRecursoId || 0);
+    const recursoFiltro = recursos.find((item) => Number(item.id) === filtroRecursoId);
+    const filtroTexto = recursoFiltro
+        ? `Recurso: ${recursoFiltro.nome}`
+        : "Todos os recursos";
+    subtitulo.innerText = `Data selecionada: ${paraDataBr(dataSelecionada)} | ${filtroTexto}`;
+
+    tabela.innerHTML = "";
+
+    const thead = document.createElement("thead");
+    const trCabecalho = document.createElement("tr");
+
+    const thAula = document.createElement("th");
+    thAula.innerText = "Aula";
+    trCabecalho.appendChild(thAula);
+
+    const thAgendamentos = document.createElement("th");
+    thAgendamentos.innerText = "Agendamentos";
+    trCabecalho.appendChild(thAgendamentos);
+
+    thead.appendChild(trCabecalho);
+    tabela.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    const linhasAulas = obterLinhasAulasGradeSemanal();
+    const reservasPorCelula = mapearReservasDiaPorCelula();
+
+    if (linhasAulas.length === 0) {
+        const trVazio = document.createElement("tr");
+        const tdVazio = document.createElement("td");
+        tdVazio.colSpan = 2;
+        tdVazio.className = "weekly-table-empty";
+        tdVazio.innerText = "Sem turnos configurados para montar a grade.";
+        trVazio.appendChild(tdVazio);
+        tbody.appendChild(trVazio);
+        tabela.appendChild(tbody);
+        return;
+    }
+
+    let turnoAtual = "";
+    linhasAulas.forEach((linha) => {
+        if (linha.turnoId !== turnoAtual) {
+            const trTurno = document.createElement("tr");
+            trTurno.className = "weekly-turno-row";
+            const thTurno = document.createElement("th");
+            thTurno.colSpan = 2;
+            thTurno.innerText = linha.turnoNome;
+            trTurno.appendChild(thTurno);
+            tbody.appendChild(trTurno);
+            turnoAtual = linha.turnoId;
+        }
+
+        const trAula = document.createElement("tr");
+        trAula.className = "weekly-aula-row";
+
+        const thAulaLinha = document.createElement("th");
+        thAulaLinha.className = "weekly-aula-label";
+        thAulaLinha.innerText = aulaLabel(linha.aula);
+        trAula.appendChild(thAulaLinha);
+
+        const td = document.createElement("td");
+        td.className = "weekly-aula-slot";
+
+        const chaveCelula = chaveCelulaAgendaDia(linha.turnoId, linha.aula);
+        const reservasCelula = reservasPorCelula.get(chaveCelula) || [];
+
+        if (reservasCelula.length === 0) {
+            const vazio = document.createElement("span");
+            vazio.className = "weekly-cell-empty";
+            vazio.innerText = "Livre";
+            td.appendChild(vazio);
+        } else {
+            const reservasOrdenadas = ordenarReservas(reservasCelula, {
+                campo: "recurso",
+                direcao: "asc"
+            });
+            const pilha = document.createElement("div");
+            pilha.className = "weekly-cell-stack";
+
+            if (!configuracaoAgendaDia.agruparPorRecurso) {
+                reservasOrdenadas.forEach((reserva) => {
+                    pilha.appendChild(criarChipReservaSemanal(reserva));
+                });
+            } else {
+                const gruposPorRecurso = agruparReservasPorRecurso(reservasOrdenadas);
+                gruposPorRecurso.forEach(([nomeRecurso, reservasGrupo]) => {
+                    const grupo = document.createElement("div");
+                    grupo.className = "weekly-cell-group";
+
+                    const tituloGrupo = document.createElement("p");
+                    tituloGrupo.className = "weekly-cell-group-title";
+                    tituloGrupo.innerText = `${nomeRecurso} (${reservasGrupo.length})`;
+                    grupo.appendChild(tituloGrupo);
+
+                    reservasGrupo.forEach((reserva) => {
+                        grupo.appendChild(criarChipReservaSemanal(reserva));
+                    });
+
+                    pilha.appendChild(grupo);
+                });
+            }
+            td.appendChild(pilha);
+        }
+
+        trAula.appendChild(td);
+
+        tbody.appendChild(trAula);
+    });
+
+    tabela.appendChild(tbody);
+}
+
 function renderCalendario() {
     const ano = mesAtual.getFullYear();
     const mes = mesAtual.getMonth();
@@ -686,11 +1069,12 @@ function renderCalendario() {
 
         btnDia.appendChild(numero);
         btnDia.appendChild(resumo);
-        btnDia.addEventListener("click", () => {
+        btnDia.addEventListener("click", async () => {
             dataSelecionada = dataIso;
             el("dataReserva").value = dataIso;
             renderCalendario();
             renderReservasDia();
+            renderAgendaDiaAulas();
         });
 
         grid.appendChild(btnDia);
@@ -708,8 +1092,7 @@ function criarItemReserva(
     const li = document.createElement("li");
     li.className = "booking-item";
 
-    const faixa = faixaGlobalReserva(reserva);
-    const aulaExibicao = aulaExibicaoPorFaixa(faixa);
+    const aulaExibicao = numeroAulaReserva(reserva);
     const titulo = document.createElement("p");
     titulo.innerText = `${reserva.recurso_nome} | ${aulaLabel(aulaExibicao || reserva.aula)}`;
 
@@ -729,6 +1112,14 @@ function criarItemReserva(
         li.appendChild(professor);
     }
     li.appendChild(detalheTurma);
+
+    const temaAula = String(reserva.tema_aula || "").trim();
+    if (temaAula) {
+        const detalheTema = document.createElement("p");
+        detalheTema.className = "booking-theme";
+        detalheTema.innerText = `Tema: ${temaAula}`;
+        li.appendChild(detalheTema);
+    }
 
     if (exibirData) {
         const detalheData = document.createElement("p");
@@ -833,6 +1224,7 @@ async function atualizarTelaAgendamento() {
     await carregarReservasMes();
     renderCalendario();
     renderReservasDia();
+    renderAgendaDiaAulas();
     renderMinhasReservas();
 }
 
@@ -862,6 +1254,7 @@ async function agendarRecurso() {
     const data = el("dataReserva").value;
     const turmaNome = el("turmaReserva").value;
     const faixaSelecionada = Number(el("aulaReserva").value);
+    const temaAula = el("temaAulaReserva").value.trim();
     const professorIdSelecionado = Number(el("professorReserva")?.value || 0);
     const observacao = el("observacaoReserva").value.trim();
 
@@ -871,8 +1264,8 @@ async function agendarRecurso() {
         return;
     }
 
-    if (!recursoId || !data || !faixaSelecionada || !turmaNome) {
-        setMensagem("Preencha recurso, data, turma e aula.", "erro");
+    if (!recursoId || !data || !faixaSelecionada || !turmaNome || !temaAula) {
+        setMensagem("Preencha recurso, data, turma, aula e tema da aula.", "erro");
         return;
     }
 
@@ -892,6 +1285,7 @@ async function agendarRecurso() {
         data,
         aula: String(aulaTurno),
         turma: turmaNome,
+        tema_aula: temaAula,
         observacao
     };
     if (usuarioEhAdmin()) {
@@ -912,6 +1306,7 @@ async function agendarRecurso() {
 
     setMensagem("Recurso agendado com sucesso.");
     dataSelecionada = data;
+    el("temaAulaReserva").value = "";
     el("observacaoReserva").value = "";
 
     if (
@@ -965,11 +1360,25 @@ function registrarEventos() {
         await atualizarTelaAgendamento();
     });
 
-    el("dataReserva").addEventListener("change", () => {
+    el("dataReserva").addEventListener("change", async () => {
         if (!el("dataReserva").value) return;
         dataSelecionada = el("dataReserva").value;
+
+        const anoDataSelecionada = Number(dataSelecionada.slice(0, 4));
+        const mesDataSelecionada = Number(dataSelecionada.slice(5, 7)) - 1;
+        const mudouMes =
+            mesAtual.getFullYear() !== anoDataSelecionada ||
+            mesAtual.getMonth() !== mesDataSelecionada;
+
+        if (mudouMes) {
+            mesAtual = new Date(anoDataSelecionada, mesDataSelecionada, 1);
+            await atualizarTelaAgendamento();
+            return;
+        }
+
         renderCalendario();
         renderReservasDia();
+        renderAgendaDiaAulas();
     });
 
     el("turmaReserva").addEventListener("change", () => {
@@ -977,6 +1386,7 @@ function registrarEventos() {
     });
 
     registrarControlesOrdenacao();
+    registrarControlesAgendaDia();
     el("btnAgendar").addEventListener("click", agendarRecurso);
 }
 
