@@ -1064,7 +1064,7 @@ function renderCalendario() {
         const resumo = document.createElement("small");
         resumo.className = "calendar-count";
         resumo.innerText = reservasDia.length > 0
-            ? `${reservasDia.length} reserva(s)`
+            ? `.`
             : "Livre";
 
         btnDia.appendChild(numero);

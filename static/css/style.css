@@ -1259,18 +1259,17 @@ footer {
 }
 
 .calendar-main-card {
-    grid-column: 1;
+    grid-column: 2;
     grid-row: 1;
 }
 
 .weekly-lessons-card {
     grid-column: 1;
-    grid-row: 2;
+    grid-row: 1;
 }
 
 .day-bookings-card {
-    grid-column: 2;
-    grid-row: 1;
+    display: none;
 }
 
 .my-bookings-card {
@@ -1322,7 +1321,7 @@ footer {
 }
 
 .calendar-day {
-    min-height: 76px;
+    min-height: 50px;
     border-radius: 10px;
     border: 1px solid var(--line-soft);
     background: var(--surface-1);
@@ -1330,7 +1329,7 @@ footer {
     flex-direction: column;
     align-items: flex-start;
     justify-content: space-between;
-    padding: 8px;
+    padding: 4px;
     cursor: pointer;
     transition: border-color 0.15s ease, transform 0.1s ease;
 }
@@ -1349,7 +1348,8 @@ footer {
 }
 
 .calendar-number {
-    font-size: 16px;
+    font-size: 14px;
+    text-align: center;
     font-weight: 700;
 }
 
@@ -1463,13 +1463,13 @@ footer {
 .agenda-day-controls {
     display: flex;
     flex-direction: column;
-    align-items: flex-end;
+    align-items: flex-start;
     gap: 8px;
     width: 100%;
 }
 
 .agenda-day-filter-controls {
-    justify-content: flex-end;
+    justify-content: flex-start;
     width: 100%;
 }
 
@@ -1499,7 +1499,6 @@ footer {
     border: 1px solid #d9e2ef;
     border-radius: var(--radius-md);
     overflow: auto;
-    max-height: 540px;
     background: #f8fbff;
 }
 
