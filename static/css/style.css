@@ -1218,6 +1218,7 @@ footer {
 .scheduler-toolbar textarea,
 .scheduler-toolbar button {
     border-radius: var(--radius-md);
+    width: 100%;
 }
 
 .scheduler-toolbar select,
@@ -1665,14 +1666,24 @@ footer {
 }
 
 .admin-page {
-    width: 100%;
-    max-width: 1400px;
+    width: min(1480px, 100%);
     margin: 0 auto;
-    padding: 18px;
+    padding: 22px 18px 30px;
 }
 
 .admin-header {
     margin-bottom: 16px;
+}
+
+.admin-header-shell {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.admin-header-main {
+    max-width: 860px;
 }
 
 .admin-header h1 {
@@ -1685,6 +1696,61 @@ footer {
     margin-bottom: 10px;
 }
 
+.admin-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 6px;
+    border: 1px solid #dbe4f0;
+    border-radius: 14px;
+    background: rgba(247, 251, 255, 0.78);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.admin-tab-btn {
+    min-height: 40px;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #4b5f78;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 0 14px;
+}
+
+.admin-tab-btn:hover {
+    border-color: #c9d7e7;
+    background: rgba(232, 241, 251, 0.88);
+}
+
+.admin-tab-btn.is-active {
+    border-color: #95bfb7;
+    background: linear-gradient(145deg, #ffffff, #f3fbf9);
+    color: #0f766e;
+    box-shadow: 0 5px 14px rgba(15, 118, 110, 0.12);
+}
+
+.admin-tab-panel {
+    animation: admin-tab-fade 0.2s ease;
+}
+
+.admin-tab-panel[hidden] {
+    display: none !important;
+}
+
+@keyframes admin-tab-fade {
+    from {
+        opacity: 0;
+        transform: translateY(2px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
 .admin-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1693,8 +1759,8 @@ footer {
 }
 
 .admin-card {
-    background: var(--surface-0);
-    border: 1px solid var(--line-soft);
+    background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
+    border: 1px solid #dfe8f3;
     border-radius: var(--radius-lg);
     box-shadow: var(--shadow-card);
     padding: 14px;
@@ -1719,6 +1785,12 @@ footer {
     gap: 8px;
 }
 
+.admin-form label {
+    font-size: 13px;
+    color: #405165;
+    font-weight: 700;
+}
+
 .admin-fieldset {
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-md);
@@ -1737,7 +1809,7 @@ footer {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: 6px;
-    max-height: 160px;
+    max-height: 180px;
     overflow: auto;
     padding-right: 2px;
 }
@@ -1814,6 +1886,23 @@ footer {
     padding: 0 10px;
 }
 
+#msgProfessor,
+#msgTurma,
+#msgDisciplina,
+#msgCotas,
+#msgRecurso,
+#msgRelatorios {
+    min-height: 20px;
+    font-size: 14px;
+}
+
+@media (max-width: 1200px) {
+    .admin-header-shell {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
 @media (max-width: 1100px) {
     .admin-grid {
         grid-template-columns: 1fr;
@@ -1821,5 +1910,21 @@ footer {
 
     .admin-card-wide {
         grid-column: span 1;
+    }
+}
+
+@media (max-width: 760px) {
+    .admin-page {
+        padding: 14px 10px 20px;
+    }
+
+    .admin-tabs {
+        overflow-x: auto;
+        flex-wrap: nowrap;
+        scrollbar-width: thin;
+    }
+
+    .admin-tab-btn {
+        white-space: nowrap;
     }
 }

@@ -10,167 +10,207 @@
 
 <body>
     <main class="admin-page">
-        <header class="admin-header">
-            <h1>Painel da Coordenação</h1>
-            <p>Gestão de professores, cotas, recursos e relatórios.</p>
+        <header class="admin-header admin-header-shell">
+            <div class="admin-header-main">
+                <h1>Painel da Coordenação</h1>
+                <p>Gestão organizada por módulos: pessoas, estrutura escolar, recursos, impressão e relatórios.</p>
+            </div>
             <div class="scheduler-actions">
                 <button id="btnVoltarServicos" type="button">Voltar aos serviços</button>
                 <button id="btnSair" type="button">Sair</button>
             </div>
         </header>
 
-        <section class="admin-grid">
-            <article class="admin-card admin-only" data-admin-only="true">
-                <h2 id="tituloFormProfessor">Cadastrar usuário</h2>
-                <form id="formProfessor" class="admin-form">
-                    <input id="profNome" type="text" placeholder="Nome" required>
-                    <input id="profEmail" type="email" placeholder="Email" required>
-                    <select id="profCargo" required>
-                        <option value="PROFESSOR">Professor</option>
-                        <option value="COORDENADOR">Coordenador</option>
-                    </select>
-                    <input id="profSenha" type="password" placeholder="Senha inicial" required>
-                    <p id="profSenhaHint" class="booking-detail">Mínimo 8 caracteres com maiúscula, minúscula, número e caractere especial.</p>
-                    <input id="profDataNascimento" type="date" required>
-                    <input id="profAulas" type="number" min="0" placeholder="Quantidade de aulas semanais" value="" required>
-                    <p id="profCargoHint" class="booking-detail" style="display: none;">Para coordenador, os campos de docência são ignorados.</p>
+        <nav class="admin-tabs" aria-label="Módulos do painel">
+            <button class="admin-tab-btn is-active admin-only" data-admin-only="true" data-admin-tab-trigger="professores" aria-controls="tab-professores" aria-selected="true" type="button">
+                Professores
+            </button>
+            <button class="admin-tab-btn" data-admin-tab-trigger="turmas" aria-controls="tab-turmas" aria-selected="false" type="button">
+                Turmas e disciplinas
+            </button>
+            <button class="admin-tab-btn" data-admin-tab-trigger="recursos" aria-controls="tab-recursos" aria-selected="false" type="button">
+                Recursos
+            </button>
+            <button class="admin-tab-btn" data-admin-tab-trigger="impressao" aria-controls="tab-impressao" aria-selected="false" type="button">
+                Impressão
+            </button>
+            <button class="admin-tab-btn" data-admin-tab-trigger="relatorios" aria-controls="tab-relatorios" aria-selected="false" type="button">
+                Relatórios
+            </button>
+        </nav>
 
-                    <div class="admin-fieldset">
-                        <p>Turmas atendidas</p>
-                        <div id="profTurmasLista" class="admin-checkbox-grid"></div>
-                    </div>
+        <section class="admin-tab-panels">
+            <section id="tab-professores" class="admin-tab-panel is-active" data-admin-tab-panel="professores">
+                <div class="admin-grid">
+                    <article class="admin-card admin-only" data-admin-only="true">
+                        <h2 id="tituloFormProfessor">Cadastrar usuário</h2>
+                        <form id="formProfessor" class="admin-form">
+                            <input id="profNome" type="text" placeholder="Nome" required>
+                            <input id="profEmail" type="email" placeholder="Email" required>
+                            <select id="profCargo" required>
+                                <option value="PROFESSOR">Professor</option>
+                                <option value="COORDENADOR">Coordenador</option>
+                            </select>
+                            <input id="profSenha" type="password" placeholder="Senha inicial" required>
+                            <p id="profSenhaHint" class="booking-detail">Mínimo 8 caracteres com maiúscula, minúscula, número e caractere especial.</p>
+                            <input id="profDataNascimento" type="date" required>
+                            <input id="profAulas" type="number" min="0" placeholder="Quantidade de aulas semanais" value="" required>
+                            <p id="profCargoHint" class="booking-detail" style="display: none;">Para coordenador, os campos de docência são ignorados.</p>
 
-                    <div class="admin-fieldset">
-                        <p>Disciplinas</p>
-                        <div id="profDisciplinasLista" class="admin-checkbox-grid"></div>
-                    </div>
+                            <div class="admin-fieldset">
+                                <p>Turmas atendidas</p>
+                                <div id="profTurmasLista" class="admin-checkbox-grid"></div>
+                            </div>
 
-                    <div class="admin-inline">
-                        <button id="btnSalvarProfessor" class="btn-destaque" type="submit">Cadastrar</button>
-                        <button id="btnCancelarEdicaoProfessor" type="button" style="display: none;">Cancelar edição</button>
-                    </div>
-                </form>
-                <p id="msgProfessor"></p>
+                            <div class="admin-fieldset">
+                                <p>Disciplinas</p>
+                                <div id="profDisciplinasLista" class="admin-checkbox-grid"></div>
+                            </div>
 
-                <h3>Coordenadores cadastrados</h3>
-                <ul id="listaCoordenadoresAdmin" class="admin-list"></ul>
-            </article>
+                            <div class="admin-inline">
+                                <button id="btnSalvarProfessor" class="btn-destaque" type="submit">Cadastrar</button>
+                                <button id="btnCancelarEdicaoProfessor" type="button" style="display: none;">Cancelar edição</button>
+                            </div>
+                        </form>
+                        <p id="msgProfessor"></p>
 
-            <article class="admin-card">
-                <h2>Fila de impressão atual</h2>
-                <ul id="fila-admin" class="admin-list"></ul>
-            </article>
+                        <h3>Coordenadores cadastrados</h3>
+                        <ul id="listaCoordenadoresAdmin" class="admin-list"></ul>
+                    </article>
 
-            <article class="admin-card">
-                <h2>Histórico de impressão</h2>
-                <div class="admin-inline">
-                    <input type="date" id="inicio">
-                    <input type="date" id="fim">
-                    <button id="btnBuscarHistorico" type="button">Filtrar</button>
+                    <article class="admin-card admin-only" data-admin-only="true">
+                        <h2>Regras de cota proporcional</h2>
+                        <form id="formCotaRegras" class="admin-form">
+                            <label for="cotaMensalEscola">Cota Mensal Escola:</label>
+                            <input id="cotaMensalEscola" type="number" min="0" placeholder="Cota mensal da escola" required>
+                            <label for="cotaBase">Cota Base:</label>
+                            <input id="cotaBase" type="number" min="0" placeholder="Base de páginas" required>
+                            <label for="cotaPorAula">Páginas por aula:</label>
+                            <input id="cotaPorAula" type="number" min="0" placeholder="Páginas por aula" required>
+                            <label for="cotaPorTurma">Páginas por turma:</label>
+                            <input id="cotaPorTurma" type="number" min="0" placeholder="Páginas por turma" required>
+                            <button class="btn-destaque" type="submit">Salvar regras</button>
+                        </form>
+
+                        <div class="admin-inline">
+                            <input id="mesReferenciaCota" type="month">
+                            <button id="btnRecalcularCotas" type="button">Recalcular cotas do mês</button>
+                        </div>
+                        <p id="msgCotas"></p>
+                    </article>
+
+                    <article class="admin-card admin-card-wide admin-only" data-admin-only="true">
+                        <h2>Professores e cotas</h2>
+                        <ul id="listaProfessoresAdmin" class="admin-list"></ul>
+                    </article>
                 </div>
-                <ul id="historico-admin" class="admin-list"></ul>
-            </article>
+            </section>
 
-            <article class="admin-card">
-                <h2>Cadastrar turma</h2>
-                <form id="formTurma" class="admin-form">
-                    <input id="turmaNome" type="text" placeholder="Nome da turma (ex: 6º ano A)" required>
-                    <select id="turmaTurno" required>
-                        <option value="MATUTINO">Matutino</option>
-                        <option value="VESPERTINO">Vespertino</option>
-                        <option value="VESPERTINO_EM">Vespertino E.M.</option>
-                        <option value="INTEGRAL">Período integral</option>
-                    </select>
-                    <input id="turmaQuantidadeEstudantes" type="number" min="0" placeholder="Quantidade de estudantes" value="0" required>
-                    <button class="btn-destaque" type="submit">Cadastrar turma</button>
-                </form>
-                <p id="msgTurma"></p>
-            </article>
+            <section id="tab-turmas" class="admin-tab-panel" data-admin-tab-panel="turmas" hidden>
+                <div class="admin-grid">
+                    <article class="admin-card">
+                        <h2>Cadastrar turma</h2>
+                        <form id="formTurma" class="admin-form">
+                            <input id="turmaNome" type="text" placeholder="Nome da turma (ex: 6º ano A)" required>
+                            <select id="turmaTurno" required>
+                                <option value="MATUTINO">Matutino</option>
+                                <option value="VESPERTINO">Vespertino</option>
+                                <option value="VESPERTINO_EM">Vespertino E.M.</option>
+                                <option value="INTEGRAL">Período integral</option>
+                            </select>
+                            <input id="turmaQuantidadeEstudantes" type="number" min="0" placeholder="Quantidade de estudantes" value="0" required>
+                            <button class="btn-destaque" type="submit">Cadastrar turma</button>
+                        </form>
+                        <p id="msgTurma"></p>
+                    </article>
 
-            <article class="admin-card">
-                <h2>Turmas cadastradas</h2>
-                <ul id="listaTurmasAdmin" class="admin-list"></ul>
-            </article>
+                    <article class="admin-card">
+                        <h2>Turmas cadastradas</h2>
+                        <ul id="listaTurmasAdmin" class="admin-list"></ul>
+                    </article>
 
-            <article class="admin-card">
-                <h2>Cadastrar disciplina</h2>
-                <form id="formDisciplina" class="admin-form">
-                    <input id="disciplinaNome" type="text" placeholder="Nome da disciplina" required>
-                    <input id="disciplinaAulasSemanais" type="number" min="0" placeholder="Aulas semanais" value="" required>
-                    <button class="btn-destaque" type="submit">Cadastrar disciplina</button>
-                </form>
-                <p id="msgDisciplina"></p>
-            </article>
+                    <article class="admin-card">
+                        <h2>Cadastrar disciplina</h2>
+                        <form id="formDisciplina" class="admin-form">
+                            <input id="disciplinaNome" type="text" placeholder="Nome da disciplina" required>
+                            <input id="disciplinaAulasSemanais" type="number" min="0" placeholder="Aulas semanais" value="" required>
+                            <button class="btn-destaque" type="submit">Cadastrar disciplina</button>
+                        </form>
+                        <p id="msgDisciplina"></p>
+                    </article>
 
-            <article class="admin-card">
-                <h2>Disciplinas cadastradas</h2>
-                <ul id="listaDisciplinasAdmin" class="admin-list"></ul>
-            </article>
-
-            <article class="admin-card admin-only" data-admin-only="true">
-                <h2>Regras de cota proporcional</h2>
-                <form id="formCotaRegras" class="admin-form">
-                    <label for="cotaMensalEscola">Cota Mensal Escola:</label>
-                    <input id="cotaMensalEscola" type="number" min="0" placeholder="Cota mensal da escola" required>
-                    <label for="cotaBase">Cota Base:</label>
-                    <input id="cotaBase" type="number" min="0" placeholder="Base de páginas" required>
-                    <label for="cotaPorAula">Páginas por aula:</label>
-                    <input id="cotaPorAula" type="number" min="0" placeholder="Páginas por aula" required>
-                    <label for="cotaPorTurma">Páginas por turma:</label>
-                    <input id="cotaPorTurma" type="number" min="0" placeholder="Páginas por turma" required>
-                    <button class="btn-destaque" type="submit">Salvar regras</button>
-                </form>
-
-                <div class="admin-inline">
-                    <input id="mesReferenciaCota" type="month">
-                    <button id="btnRecalcularCotas" type="button">Recalcular cotas do mês</button>
+                    <article class="admin-card">
+                        <h2>Disciplinas cadastradas</h2>
+                        <ul id="listaDisciplinasAdmin" class="admin-list"></ul>
+                    </article>
                 </div>
-                <p id="msgCotas"></p>
-            </article>
+            </section>
 
-            <article class="admin-card admin-card-wide admin-only" data-admin-only="true">
-                <h2>Professores e cotas</h2>
-                <ul id="listaProfessoresAdmin" class="admin-list"></ul>
-            </article>
+            <section id="tab-recursos" class="admin-tab-panel" data-admin-tab-panel="recursos" hidden>
+                <div class="admin-grid">
+                    <article class="admin-card">
+                        <h2 id="tituloFormRecurso">Cadastrar recurso</h2>
+                        <form id="formRecurso" class="admin-form">
+                            <input id="recursoNome" type="text" placeholder="Nome do recurso" required>
+                            <input id="recursoTipo" type="text" placeholder="Tipo (Projetor, Notebook...)" required>
+                            <input id="recursoDescricao" type="text" placeholder="Descrição (opcional)">
+                            <input id="recursoQuantidadeItens" type="number" min="1" placeholder="Quantidade de itens" value="1" required>
+                            <div class="admin-inline">
+                                <button id="btnSalvarRecurso" class="btn-destaque" type="submit">Cadastrar recurso</button>
+                                <button id="btnCancelarEdicaoRecurso" type="button" style="display: none;">Cancelar edição</button>
+                            </div>
+                        </form>
+                        <p id="msgRecurso"></p>
+                    </article>
 
-            <article class="admin-card">
-                <h2 id="tituloFormRecurso">Cadastrar recurso</h2>
-                <form id="formRecurso" class="admin-form">
-                    <input id="recursoNome" type="text" placeholder="Nome do recurso" required>
-                    <input id="recursoTipo" type="text" placeholder="Tipo (Projetor, Notebook...)" required>
-                    <input id="recursoDescricao" type="text" placeholder="Descrição (opcional)">
-                    <input id="recursoQuantidadeItens" type="number" min="1" placeholder="Quantidade de itens" value="1" required>
-                    <div class="admin-inline">
-                        <button id="btnSalvarRecurso" class="btn-destaque" type="submit">Cadastrar recurso</button>
-                        <button id="btnCancelarEdicaoRecurso" type="button" style="display: none;">Cancelar edição</button>
-                    </div>
-                </form>
-                <p id="msgRecurso"></p>
-            </article>
-
-            <article class="admin-card">
-                <h2>Recursos cadastrados</h2>
-                <ul id="listaRecursosAdmin" class="admin-list"></ul>
-            </article>
-
-            <article class="admin-card admin-card-wide">
-                <h2>Relatórios</h2>
-                <div class="admin-inline">
-                    <input id="relDataInicio" type="date">
-                    <input id="relDataFim" type="date">
-                    <button id="btnGerarRelatorios" type="button">Gerar relatórios</button>
+                    <article class="admin-card">
+                        <h2>Recursos cadastrados</h2>
+                        <ul id="listaRecursosAdmin" class="admin-list"></ul>
+                    </article>
                 </div>
-                <p id="msgRelatorios"></p>
+            </section>
 
-                <h3>Impressão por professor</h3>
-                <ul id="relatorioImpressaoAdmin" class="admin-list"></ul>
+            <section id="tab-impressao" class="admin-tab-panel" data-admin-tab-panel="impressao" hidden>
+                <div class="admin-grid">
+                    <article class="admin-card">
+                        <h2>Fila de impressão atual</h2>
+                        <ul id="fila-admin" class="admin-list"></ul>
+                    </article>
 
-                <h3>Uso de recursos por equipamento</h3>
-                <ul id="relatorioRecursosAdmin" class="admin-list"></ul>
+                    <article class="admin-card">
+                        <h2>Histórico de impressão</h2>
+                        <div class="admin-inline">
+                            <input type="date" id="inicio">
+                            <input type="date" id="fim">
+                            <button id="btnBuscarHistorico" type="button">Filtrar</button>
+                        </div>
+                        <ul id="historico-admin" class="admin-list"></ul>
+                    </article>
+                </div>
+            </section>
 
-                <h3>Uso de recursos por professor</h3>
-                <ul id="relatorioRecursosProfessorAdmin" class="admin-list"></ul>
-            </article>
+            <section id="tab-relatorios" class="admin-tab-panel" data-admin-tab-panel="relatorios" hidden>
+                <div class="admin-grid">
+                    <article class="admin-card admin-card-wide">
+                        <h2>Relatórios</h2>
+                        <div class="admin-inline">
+                            <input id="relDataInicio" type="date">
+                            <input id="relDataFim" type="date">
+                            <button id="btnGerarRelatorios" type="button">Gerar relatórios</button>
+                        </div>
+                        <p id="msgRelatorios"></p>
+
+                        <h3>Impressão por professor</h3>
+                        <ul id="relatorioImpressaoAdmin" class="admin-list"></ul>
+
+                        <h3>Uso de recursos por equipamento</h3>
+                        <ul id="relatorioRecursosAdmin" class="admin-list"></ul>
+
+                        <h3>Uso de recursos por professor</h3>
+                        <ul id="relatorioRecursosProfessorAdmin" class="admin-list"></ul>
+                    </article>
+                </div>
+            </section>
         </section>
     </main>
 

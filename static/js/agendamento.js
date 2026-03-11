@@ -885,10 +885,10 @@ function criarChipReservaSemanal(reserva) {
     recurso.innerText = reserva.recurso_nome || "Recurso não informado";
     card.appendChild(recurso);
 
-    const turma = document.createElement("p");
-    turma.className = "weekly-chip-meta";
-    turma.innerText = reserva.turma || "Turma não informada";
-    card.appendChild(turma);
+    const informacoes = document.createElement("p");
+    informacoes.className = "weekly-chip-meta";
+    informacoes.innerText = reserva.turma + " | " + reserva.professor_nome.split(" ")[0];
+    card.appendChild(informacoes);
 
     const tema = String(reserva.tema_aula || "").trim();
     if (tema) {

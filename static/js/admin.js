@@ -29,6 +29,7 @@ const CARGO_COORDENADOR = "COORDENADOR";
 let usuarioAtual = null;
 let usuarioEhAdmin = false;
 let usuarioEhGestor = false;
+let abaAdminAtiva = "professores";
 
 function el(id) {
     return document.getElementById(id);
@@ -85,10 +86,82 @@ function normalizarCargoUsuario(usuario = {}) {
     return CARGO_PROFESSOR;
 }
 
+function listarBotoesAbasAdmin() {
+    return Array.from(document.querySelectorAll("[data-admin-tab-trigger]"));
+}
+
+function listarPaineisAbasAdmin() {
+    return Array.from(document.querySelectorAll("[data-admin-tab-panel]"));
+}
+
+function botaoAbaDisponivel(botao) {
+    return Boolean(botao) && botao.style.display !== "none";
+}
+
+function primeiraAbaDisponivel() {
+    return listarBotoesAbasAdmin().find((botao) => botaoAbaDisponivel(botao)) || null;
+}
+
+function ativarAbaAdmin(abaId) {
+    const botoes = listarBotoesAbasAdmin();
+    const paineis = listarPaineisAbasAdmin();
+    if (botoes.length === 0 || paineis.length === 0) {
+        return;
+    }
+
+    let abaAlvo = abaId;
+    const botaoAlvo = botoes.find((botao) => (
+        botao.dataset.adminTabTrigger === abaAlvo && botaoAbaDisponivel(botao)
+    ));
+    if (!botaoAlvo) {
+        const fallback = primeiraAbaDisponivel();
+        if (!fallback) {
+            return;
+        }
+        abaAlvo = fallback.dataset.adminTabTrigger;
+    }
+
+    abaAdminAtiva = abaAlvo;
+    botoes.forEach((botao) => {
+        const ativa = botao.dataset.adminTabTrigger === abaAlvo && botaoAbaDisponivel(botao);
+        botao.classList.toggle("is-active", ativa);
+        botao.setAttribute("aria-selected", ativa ? "true" : "false");
+    });
+    paineis.forEach((painel) => {
+        const ativo = painel.dataset.adminTabPanel === abaAlvo;
+        painel.hidden = !ativo;
+        painel.classList.toggle("is-active", ativo);
+    });
+}
+
+function ajustarAbasAdminPorPermissao() {
+    const ativaDisponivel = listarBotoesAbasAdmin().some((botao) => (
+        botao.dataset.adminTabTrigger === abaAdminAtiva && botaoAbaDisponivel(botao)
+    ));
+    if (ativaDisponivel) {
+        ativarAbaAdmin(abaAdminAtiva);
+        return;
+    }
+
+    const fallback = primeiraAbaDisponivel();
+    if (fallback) {
+        ativarAbaAdmin(fallback.dataset.adminTabTrigger);
+    }
+}
+
+function registrarEventosAbasAdmin() {
+    listarBotoesAbasAdmin().forEach((botao) => {
+        botao.addEventListener("click", () => {
+            ativarAbaAdmin(botao.dataset.adminTabTrigger);
+        });
+    });
+}
+
 function aplicarPermissoesTela() {
     document.querySelectorAll("[data-admin-only='true']").forEach((secao) => {
         secao.style.display = usuarioEhAdmin ? "" : "none";
     });
+    ajustarAbasAdminPorPermissao();
 }
 
 function atualizarVisibilidadeCamposCargo() {
@@ -256,7 +329,8 @@ function iniciarEdicaoProfessor(professor) {
     definirSelecionados("profTurmasLista", professor.turmas || []);
     definirSelecionados("profDisciplinasLista", professor.disciplinas || []);
     aplicarModoFormularioProfessor(true);
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    ativarAbaAdmin("professores");
+    el("formProfessor").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function aplicarModoFormularioRecurso(edicao = false) {
@@ -290,6 +364,7 @@ function iniciarEdicaoRecurso(recurso) {
     el("recursoDescricao").value = recurso.descricao || "";
     el("recursoQuantidadeItens").value = String(recurso.quantidade_itens ?? 1);
     aplicarModoFormularioRecurso(true);
+    ativarAbaAdmin("recursos");
     el("formRecurso").scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
@@ -1005,6 +1080,7 @@ async function carregarRelatorios() {
 }
 
 function registrarEventos() {
+    registrarEventosAbasAdmin();
     el("formTurma").addEventListener("submit", cadastrarTurma);
     el("formDisciplina").addEventListener("submit", cadastrarDisciplina);
     el("formRecurso").addEventListener("submit", cadastrarRecurso);
