@@ -19,6 +19,14 @@ class LoginIn(BaseModel):
     email: str
     senha: str
 
+class ProfessorRecuperarSenhaIn(BaseModel):
+    email: str
+    data_nascimento: str
+    nova_senha: str
+
+class ProfessorRedefinirSenhaAdminIn(BaseModel):
+    nova_senha: str
+
 class RadiusEnsureNtHashIn(BaseModel):
     username: str
     password: str

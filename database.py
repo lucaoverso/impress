@@ -966,6 +966,18 @@ def limpar_tokens_expirados():
     conn.commit()
     conn.close()
 
+def revogar_tokens_usuario(usuario_id: int) -> int:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        DELETE FROM tokens
+        WHERE usuario_id = ?
+    """, (usuario_id,))
+    removidos = cursor.rowcount
+    conn.commit()
+    conn.close()
+    return removidos
+
 def buscar_usuario_por_token(token: str):
     conn = get_connection()
     cursor = conn.cursor()

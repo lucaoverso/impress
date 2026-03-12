@@ -38,6 +38,8 @@ from models import (
     AgendamentoIn,
     ProfessorCreateIn,
     ProfessorUpdateIn,
+    ProfessorRecuperarSenhaIn,
+    ProfessorRedefinirSenhaAdminIn,
     CoordenadorCreateIn,
     ProfessorCargaIn,
     TurmaCreateIn,
@@ -95,7 +97,10 @@ from database import (
     buscar_recurso_por_id,
     atualizar_recurso_dados,
     contar_agendamentos_ativos_faixa,
+    buscar_usuario_por_email,
     buscar_usuario_por_id,
+    atualizar_senha_usuario,
+    revogar_tokens_usuario,
     criar_agendamento,
     listar_agendamentos,
     buscar_agendamento_por_id,
@@ -1309,6 +1314,40 @@ def criar_professor_publico(payload: ProfessorCreateIn):
 
     return {"mensagem": "Cadastro realizado com sucesso.", "professor_id": professor_id}
 
+@app.post("/professores/recuperar-senha")
+def recuperar_senha_professor(payload: ProfessorRecuperarSenhaIn):
+    email = str(payload.email or "").strip().lower()
+    if not email:
+        raise HTTPException(400, "Email e obrigatorio.")
+
+    nova_senha = str(payload.nova_senha or "").strip()
+    if not nova_senha:
+        raise HTTPException(400, "Nova senha e obrigatoria.")
+    validar_senha_forte(nova_senha)
+
+    data_nascimento = validar_data_nascimento_professor(payload.data_nascimento)
+    professor = buscar_usuario_por_email(email)
+
+    if not professor or normalizar_cargo_usuario(professor) != CARGO_PROFESSOR:
+        raise HTTPException(404, "Professor nao encontrado para os dados informados.")
+
+    data_cadastrada = str(professor.get("data_nascimento") or "").strip()
+    if not data_cadastrada:
+        raise HTTPException(
+            400,
+            "Professor sem data de nascimento cadastrada. Solicite a redefinicao pelo painel."
+        )
+
+    if data_cadastrada != data_nascimento:
+        raise HTTPException(400, "Dados de recuperacao invalidos.")
+
+    alterado = atualizar_senha_usuario(int(professor["id"]), nova_senha)
+    if not alterado:
+        raise HTTPException(404, "Professor nao encontrado.")
+
+    revogar_tokens_usuario(int(professor["id"]))
+    return {"mensagem": "Senha redefinida com sucesso. Faca login com a nova senha."}
+
 @app.get("/admin/professores/opcoes")
 def opcoes_professores_admin(usuario = Depends(get_usuario_logado)):
     exigir_admin(usuario)
@@ -1422,6 +1461,29 @@ def atualizar_professor_painel(
         raise HTTPException(404, "Professor não encontrado.")
 
     return {"mensagem": "Professor atualizado com sucesso."}
+
+@app.put("/admin/professores/{professor_id}/senha")
+def redefinir_senha_professor_painel(
+    professor_id: int,
+    payload: ProfessorRedefinirSenhaAdminIn,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    professor = buscar_usuario_por_id(professor_id)
+    if not professor or professor["perfil"] != "professor":
+        raise HTTPException(404, "Professor nao encontrado.")
+
+    nova_senha = str(payload.nova_senha or "").strip()
+    if not nova_senha:
+        raise HTTPException(400, "Nova senha e obrigatoria.")
+    validar_senha_forte(nova_senha)
+
+    alterado = atualizar_senha_usuario(professor_id, nova_senha)
+    if not alterado:
+        raise HTTPException(404, "Professor nao encontrado.")
+
+    revogar_tokens_usuario(professor_id)
+    return {"mensagem": "Senha redefinida com sucesso."}
 
 @app.put("/admin/professores/{professor_id}/carga")
 def atualizar_carga_professor_painel(

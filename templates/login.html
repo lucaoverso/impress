@@ -22,8 +22,19 @@
                 <input id="email" type="email" autocomplete="email" placeholder="Email" required>
                 <input id="senha" type="password" autocomplete="current-password" placeholder="Senha" required>
                 <button type="submit" class="btn-destaque">Entrar</button>
+                <button id="btnMostrarRecuperacao" type="button" class="register-secondary-btn">Esqueci minha senha</button>
                 <button id="btnCadastroProfessor" type="button" class="register-secondary-btn">Criar conta de professor</button>
                 <p id="erro" role="alert" aria-live="polite"></p>
+
+                <section id="painelRecuperacao" class="auth-recovery" hidden>
+                    <h3>Recuperar senha de professor</h3>
+                    <input id="recEmail" type="email" autocomplete="email" placeholder="Email do professor">
+                    <input id="recDataNascimento" type="date" placeholder="Data de nascimento">
+                    <input id="recNovaSenha" type="password" autocomplete="new-password" placeholder="Nova senha">
+                    <input id="recConfirmacaoSenha" type="password" autocomplete="new-password" placeholder="Confirmar nova senha">
+                    <button id="btnRecuperarSenha" type="button" class="btn-destaque">Redefinir senha</button>
+                    <p id="msgRecuperacao" role="alert" aria-live="polite"></p>
+                </section>
             </form>
         </section>
     </main>

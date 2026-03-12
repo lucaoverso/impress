@@ -215,6 +215,27 @@ hr {
     margin-top: 4px;
 }
 
+.auth-recovery {
+    margin-top: 4px;
+    padding: 12px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-md);
+    background: var(--surface-1);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.auth-recovery h3 {
+    font-size: 16px;
+}
+
+#msgRecuperacao {
+    min-height: 20px;
+    font-size: 14px;
+    text-align: center;
+}
+
 .register-page {
     flex: 1;
     display: grid;
