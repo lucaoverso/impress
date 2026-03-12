@@ -20,17 +20,23 @@ let ocorrenciasCache = [];
 let estudantesCache = [];
 let opcoesOcorrencias = {
     turmas: [],
+    professores: [],
     status: [],
     acoes_aplicadas: [],
     status_padrao: "registrado"
+};
+const MAX_AULAS_EXIBICAO = 5;
+const TURNO_OFFSET_FAIXA = {
+    MATUTINO: 0,
+    INTEGRAL: 0,
+    VESPERTINO: 5,
+    VESPERTINO_EM: 5
 };
 
 const rotulosAcao = new Map();
 const rotulosStatus = new Map();
 const mapaBuscaEstudantes = new Map();
-const mapaBuscaProfessores = new Map();
 let timerBuscaEstudantes = null;
-let timerBuscaProfessores = null;
 
 function el(id) {
     return document.getElementById(id);
@@ -144,7 +150,8 @@ function ativarAbaCoordenacao(abaId) {
 function preencherSelect(selectId, opcoes, {
     incluirTodos = false,
     placeholder = "",
-    valorPadrao = ""
+    valorPadrao = "",
+    obterRotulo = null
 } = {}) {
     const select = el(selectId);
     if (!select) return;
@@ -168,7 +175,9 @@ function preencherSelect(selectId, opcoes, {
     (opcoes || []).forEach((item) => {
         const option = document.createElement("option");
         option.value = String(item.id);
-        option.innerText = item.nome || item.id;
+        option.innerText = typeof obterRotulo === "function"
+            ? obterRotulo(item)
+            : (item.nome || item.id);
         select.appendChild(option);
     });
 
@@ -194,11 +203,181 @@ function preencherDatalist(datalistId, mapa, itens) {
     });
 }
 
+function normalizarTurnoId(turnoId) {
+    return String(turnoId || "").trim().toUpperCase();
+}
+
+function aulaLabel(aula) {
+    return `${aula}ª aula`;
+}
+
+function faixaGlobalPorTurnoEAula(turnoId, aulaTurno) {
+    const turno = normalizarTurnoId(turnoId);
+    const aula = Number(aulaTurno || 0);
+    const offset = TURNO_OFFSET_FAIXA[turno] ?? 0;
+    if (!Number.isFinite(aula) || aula <= 0) return 0;
+
+    let faixaGlobal = aula + offset;
+    if (turno === "INTEGRAL" && aula > 5) {
+        faixaGlobal += 1;
+    }
+    return faixaGlobal;
+}
+
+function aulaTurnoPorFaixa(turnoId, faixaGlobal) {
+    const turno = normalizarTurnoId(turnoId);
+    const faixa = Number(faixaGlobal || 0);
+    const offset = TURNO_OFFSET_FAIXA[turno] ?? 0;
+    if (!Number.isFinite(faixa) || faixa <= 0) return 0;
+
+    if (turno === "INTEGRAL") {
+        if (faixa >= 1 && faixa <= 5) return faixa;
+        if (faixa >= 7) return faixa - 1;
+        return 0;
+    }
+
+    return faixa - offset;
+}
+
+function obterTurmaOpcaoPorId(turmaId) {
+    const turmaIdNumero = Number(turmaId || 0);
+    return (opcoesOcorrencias.turmas || []).find((item) => Number(item.id) === turmaIdNumero) || null;
+}
+
+function obterProfessorOpcaoPorId(professorId) {
+    const professorIdNumero = Number(professorId || 0);
+    return (opcoesOcorrencias.professores || []).find((item) => Number(item.id) === professorIdNumero) || null;
+}
+
+function faixasDisponiveisTurma(turma) {
+    if (!turma || !turma.turno_valido) return [];
+
+    const faixasApi = Array.isArray(turma.faixas_disponiveis)
+        ? turma.faixas_disponiveis.map((valor) => Number(valor)).filter((valor) => Number.isInteger(valor) && valor > 0)
+        : [];
+    if (faixasApi.length > 0) {
+        return faixasApi;
+    }
+
+    const totalAulas = Number(turma.aulas || 0);
+    const faixasCalculadas = [];
+    for (let aula = 1; aula <= totalAulas; aula++) {
+        const faixa = faixaGlobalPorTurnoEAula(turma.turno, aula);
+        if (faixa > 0) {
+            faixasCalculadas.push(faixa);
+        }
+    }
+    return faixasCalculadas;
+}
+
+function resolverFaixaOcorrenciaParaTurma(turma, aulaValor) {
+    const texto = String(aulaValor || "").trim();
+    if (!texto) return 0;
+
+    const numero = Number.parseInt(texto, 10);
+    if (!Number.isInteger(numero) || numero <= 0) return 0;
+
+    const faixasTurma = faixasDisponiveisTurma(turma);
+    if (faixasTurma.includes(numero)) {
+        return numero;
+    }
+
+    const totalAulas = Number(turma?.aulas || 0);
+    if (Number.isInteger(totalAulas) && numero <= totalAulas) {
+        const faixaCalculada = faixaGlobalPorTurnoEAula(turma.turno, numero);
+        if (faixaCalculada > 0 && faixasTurma.includes(faixaCalculada)) {
+            return faixaCalculada;
+        }
+    }
+
+    return 0;
+}
+
+function formatarAulaOcorrencia(ocorrencia) {
+    const turma = obterTurmaOpcaoPorId(ocorrencia?.turma_id);
+    const faixa = resolverFaixaOcorrenciaParaTurma(turma, ocorrencia?.aula);
+    if (faixa <= 0 || !turma) {
+        return ocorrencia?.aula || "Nao informada";
+    }
+
+    const aulaTurno = aulaTurnoPorFaixa(turma.turno, faixa);
+    if (aulaTurno <= 0) {
+        return `Faixa ${faixa}`;
+    }
+    return `${aulaLabel(aulaTurno)} (faixa ${faixa})`;
+}
+
+function atualizarSelectAulasPorTurma(turmaId, faixaSelecionada = null) {
+    const select = el("ocorrenciaAula");
+    const turma = obterTurmaOpcaoPorId(turmaId);
+
+    select.innerHTML = "";
+    if (!turma || !turma.turno_valido || Number(turma.aulas || 0) <= 0) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.innerText = "Configure o turno da turma no painel admin";
+        option.disabled = true;
+        option.selected = true;
+        select.appendChild(option);
+        select.disabled = true;
+        return;
+    }
+
+    const faixasTurma = faixasDisponiveisTurma(turma);
+    const faixasManha = faixasTurma.filter((faixa) => faixa <= MAX_AULAS_EXIBICAO);
+    const faixasTarde = faixasTurma.filter((faixa) => faixa > MAX_AULAS_EXIBICAO);
+
+    const adicionarSeparadorTurno = (rotulo) => {
+        const option = document.createElement("option");
+        option.value = "";
+        option.innerText = `----- ${rotulo} -----`;
+        option.disabled = true;
+        select.appendChild(option);
+    };
+
+    const adicionarOpcaoFaixa = (faixa) => {
+        const aulaTurno = aulaTurnoPorFaixa(turma.turno, faixa);
+        const option = document.createElement("option");
+        option.value = String(faixa);
+        option.innerText = aulaTurno > 0
+            ? `${aulaLabel(aulaTurno)} - Faixa ${faixa}`
+            : `Faixa ${faixa}`;
+        select.appendChild(option);
+    };
+
+    if (faixasManha.length > 0) {
+        adicionarSeparadorTurno("Matutino");
+        faixasManha.forEach(adicionarOpcaoFaixa);
+    }
+    if (faixasTarde.length > 0) {
+        adicionarSeparadorTurno("Vespertino");
+        faixasTarde.forEach(adicionarOpcaoFaixa);
+    }
+
+    select.disabled = false;
+    const faixaPreferida = Number(faixaSelecionada || 0);
+    if (faixaPreferida > 0 && faixasTurma.includes(faixaPreferida)) {
+        select.value = String(faixaPreferida);
+    } else {
+        select.value = faixasTurma.length > 0 ? String(faixasTurma[0]) : "";
+    }
+}
+
 function limparFormularioOcorrencia() {
     el("formOcorrencia").reset();
     ocorrenciaEmEdicaoId = null;
     el("ocorrenciaEstudanteId").value = "";
-    el("ocorrenciaProfessorRequerenteId").value = "";
+
+    const turmaSelect = el("ocorrenciaTurmaId");
+    const professorSelect = el("ocorrenciaProfessorRequerenteId");
+    if (opcoesOcorrencias.turmas.length > 0) {
+        turmaSelect.value = String(opcoesOcorrencias.turmas[0].id);
+    }
+    if (opcoesOcorrencias.professores.length > 0) {
+        professorSelect.value = String(opcoesOcorrencias.professores[0].id);
+    }
+    atualizarSelectAulasPorTurma(turmaSelect.value);
+
     const hoje = new Date();
     el("ocorrenciaData").value = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
     if (opcoesOcorrencias.status_padrao) {
@@ -212,12 +391,26 @@ function preencherFormularioOcorrencia(ocorrencia) {
     ocorrenciaEmEdicaoId = Number(ocorrencia.id);
     el("ocorrenciaBuscaEstudante").value = ocorrencia.nome_estudante || "";
     el("ocorrenciaEstudanteId").value = ocorrencia.estudante_id || "";
-    el("ocorrenciaTurmaId").value = String(ocorrencia.turma_id || "");
-    el("ocorrenciaBuscaProfessor").value = ocorrencia.professor_requerente || "";
-    el("ocorrenciaProfessorRequerenteId").value = ocorrencia.professor_requerente_id || "";
+
+    const turmaId = String(ocorrencia.turma_id || "");
+    el("ocorrenciaTurmaId").value = turmaId;
+
+    const turmaAtual = obterTurmaOpcaoPorId(turmaId);
+    const faixaAula = resolverFaixaOcorrenciaParaTurma(turmaAtual, ocorrencia.aula);
+    atualizarSelectAulasPorTurma(turmaId, faixaAula);
+
+    const professorPorId = obterProfessorOpcaoPorId(ocorrencia.professor_requerente_id);
+    if (professorPorId) {
+        el("ocorrenciaProfessorRequerenteId").value = String(professorPorId.id);
+    } else {
+        const professorPorNome = (opcoesOcorrencias.professores || []).find(
+            (professor) => String(professor.nome || "").trim().toLowerCase() === String(ocorrencia.professor_requerente || "").trim().toLowerCase()
+        );
+        el("ocorrenciaProfessorRequerenteId").value = professorPorNome ? String(professorPorNome.id) : "";
+    }
+
     el("ocorrenciaDisciplina").value = ocorrencia.disciplina || "";
     el("ocorrenciaData").value = ocorrencia.data_ocorrencia || "";
-    el("ocorrenciaAula").value = ocorrencia.aula || "";
     el("ocorrenciaHorario").value = ocorrencia.horario_ocorrencia || "";
     el("ocorrenciaDescricao").value = ocorrencia.descricao || "";
     el("ocorrenciaAcaoAplicada").value = ocorrencia.acao_aplicada || "";
@@ -243,7 +436,7 @@ function renderDetalhesOcorrencia(ocorrencia) {
         ["Professor requerente", ocorrencia.professor_requerente],
         ["Disciplina", ocorrencia.disciplina],
         ["Data", formatarDataBr(ocorrencia.data_ocorrencia)],
-        ["Aula", ocorrencia.aula],
+        ["Aula", formatarAulaOcorrencia(ocorrencia)],
         ["Horario", ocorrencia.horario_ocorrencia],
         ["Acao aplicada", rotuloAcao(ocorrencia.acao_aplicada)],
         ["Status", rotuloStatus(ocorrencia.status)],
@@ -266,7 +459,14 @@ function renderDetalhesOcorrencia(ocorrencia) {
 }
 
 async function carregarOpcoesOcorrencias() {
-    opcoesOcorrencias = await fetchJson("/ocorrencias/opcoes", { headers });
+    const opcoesApi = await fetchJson("/ocorrencias/opcoes", { headers });
+    opcoesOcorrencias = {
+        turmas: Array.isArray(opcoesApi.turmas) ? opcoesApi.turmas : [],
+        professores: Array.isArray(opcoesApi.professores) ? opcoesApi.professores : [],
+        status: Array.isArray(opcoesApi.status) ? opcoesApi.status : [],
+        acoes_aplicadas: Array.isArray(opcoesApi.acoes_aplicadas) ? opcoesApi.acoes_aplicadas : [],
+        status_padrao: opcoesApi.status_padrao || "registrado"
+    };
 
     rotulosAcao.clear();
     rotulosStatus.clear();
@@ -279,6 +479,14 @@ async function carregarOpcoesOcorrencias() {
 
     preencherSelect("ocorrenciaTurmaId", opcoesOcorrencias.turmas, { placeholder: "Selecione a turma" });
     preencherSelect("filtroTurmaId", opcoesOcorrencias.turmas, { incluirTodos: true });
+    preencherSelect("ocorrenciaProfessorRequerenteId", opcoesOcorrencias.professores, {
+        placeholder: "Selecione o professor requerente",
+        obterRotulo: (item) => {
+            const nome = String(item.nome || "").trim();
+            const email = String(item.email || "").trim();
+            return email ? `${nome} (${email})` : nome;
+        }
+    });
     preencherSelect("ocorrenciaAcaoAplicada", opcoesOcorrencias.acoes_aplicadas, { placeholder: "Selecione a acao aplicada" });
     preencherSelect("ocorrenciaStatus", opcoesOcorrencias.status, {
         placeholder: "Selecione o status",
@@ -288,6 +496,9 @@ async function carregarOpcoesOcorrencias() {
 
     preencherSelect("estudanteTurmaId", opcoesOcorrencias.turmas, { placeholder: "Selecione a turma" });
     preencherSelect("filtroEstudanteTurmaId", opcoesOcorrencias.turmas, { incluirTodos: true });
+
+    const turmaInicial = opcoesOcorrencias.turmas[0];
+    atualizarSelectAulasPorTurma(turmaInicial ? turmaInicial.id : "");
 }
 
 function queryFiltrosOcorrencias() {
@@ -510,19 +721,7 @@ function aplicarSelecaoEstudantePorTexto() {
 
     hidden.value = String(item.id);
     el("ocorrenciaTurmaId").value = String(item.turma_id);
-}
-
-function aplicarSelecaoProfessorPorTexto() {
-    const input = el("ocorrenciaBuscaProfessor");
-    const hidden = el("ocorrenciaProfessorRequerenteId");
-    const texto = input.value.trim();
-    if (!texto) {
-        hidden.value = "";
-        return;
-    }
-
-    const item = mapaBuscaProfessores.get(texto);
-    hidden.value = item ? String(item.id) : "";
+    atualizarSelectAulasPorTurma(item.turma_id);
 }
 
 async function atualizarSugestoesEstudantesBusca(forcar = false) {
@@ -542,21 +741,6 @@ async function atualizarSugestoesEstudantesBusca(forcar = false) {
     preencherDatalist("listaEstudantesBusca", mapaBuscaEstudantes, itens);
 }
 
-async function atualizarSugestoesProfessoresBusca(forcar = false) {
-    const input = el("ocorrenciaBuscaProfessor");
-    const termo = input.value.trim();
-    if (!forcar && termo.length < 2) {
-        preencherDatalist("listaProfessoresBusca", mapaBuscaProfessores, []);
-        return;
-    }
-
-    const params = new URLSearchParams();
-    params.set("q", termo);
-    params.set("limite", "20");
-    const itens = await fetchJson(`/ocorrencias/busca/professores?${params.toString()}`, { headers });
-    preencherDatalist("listaProfessoresBusca", mapaBuscaProfessores, itens);
-}
-
 function agendarBuscaEstudantes() {
     if (timerBuscaEstudantes) clearTimeout(timerBuscaEstudantes);
     timerBuscaEstudantes = setTimeout(() => {
@@ -564,37 +748,26 @@ function agendarBuscaEstudantes() {
     }, 250);
 }
 
-function agendarBuscaProfessores() {
-    if (timerBuscaProfessores) clearTimeout(timerBuscaProfessores);
-    timerBuscaProfessores = setTimeout(() => {
-        atualizarSugestoesProfessoresBusca().catch((err) => setMensagemOcorrencias(err.message, true));
-    }, 250);
-}
-
 function montarPayloadOcorrencia() {
     const textoEstudante = el("ocorrenciaBuscaEstudante").value.trim();
-    const textoProfessor = el("ocorrenciaBuscaProfessor").value.trim();
     const itemEstudante = mapaBuscaEstudantes.get(textoEstudante);
-    const itemProfessor = mapaBuscaProfessores.get(textoProfessor);
 
     const estudanteIdHidden = Number(el("ocorrenciaEstudanteId").value || 0);
-    const professorIdHidden = Number(el("ocorrenciaProfessorRequerenteId").value || 0);
+    const professorIdSelecionado = Number(el("ocorrenciaProfessorRequerenteId").value || 0);
+    const professorSelecionado = obterProfessorOpcaoPorId(professorIdSelecionado);
 
     const estudanteId = estudanteIdHidden || (itemEstudante ? Number(itemEstudante.id) : 0);
-    const professorId = professorIdHidden || (itemProfessor ? Number(itemProfessor.id) : 0);
-
     const nomeEstudante = itemEstudante ? itemEstudante.nome : textoEstudante;
-    const nomeProfessor = itemProfessor ? itemProfessor.nome : textoProfessor;
 
     return {
         nome_estudante: nomeEstudante || null,
         estudante_id: estudanteId > 0 ? estudanteId : null,
         turma_id: Number(el("ocorrenciaTurmaId").value),
-        professor_requerente: nomeProfessor || null,
-        professor_requerente_id: professorId > 0 ? professorId : null,
+        professor_requerente: professorSelecionado ? professorSelecionado.nome : null,
+        professor_requerente_id: professorSelecionado ? Number(professorSelecionado.id) : null,
         disciplina: el("ocorrenciaDisciplina").value.trim(),
         data_ocorrencia: el("ocorrenciaData").value,
-        aula: el("ocorrenciaAula").value.trim(),
+        aula: String(el("ocorrenciaAula").value || "").trim(),
         horario_ocorrencia: el("ocorrenciaHorario").value.trim(),
         descricao: el("ocorrenciaDescricao").value.trim(),
         acao_aplicada: el("ocorrenciaAcaoAplicada").value,
@@ -741,15 +914,9 @@ function registrarEventosOcorrencias() {
     el("ocorrenciaBuscaEstudante").addEventListener("change", aplicarSelecaoEstudantePorTexto);
     el("ocorrenciaBuscaEstudante").addEventListener("blur", aplicarSelecaoEstudantePorTexto);
 
-    el("ocorrenciaBuscaProfessor").addEventListener("input", () => {
-        el("ocorrenciaProfessorRequerenteId").value = "";
-        agendarBuscaProfessores();
-    });
-    el("ocorrenciaBuscaProfessor").addEventListener("change", aplicarSelecaoProfessorPorTexto);
-    el("ocorrenciaBuscaProfessor").addEventListener("blur", aplicarSelecaoProfessorPorTexto);
-
     el("ocorrenciaTurmaId").addEventListener("change", () => {
         el("ocorrenciaEstudanteId").value = "";
+        atualizarSelectAulasPorTurma(el("ocorrenciaTurmaId").value);
         agendarBuscaEstudantes();
     });
 }

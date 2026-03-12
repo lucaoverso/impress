@@ -82,14 +82,12 @@
 
                             <select id="ocorrenciaTurmaId" required></select>
 
-                            <input id="ocorrenciaBuscaProfessor" type="text" list="listaProfessoresBusca" placeholder="Buscar professor requerente ou digitar nome" required>
-                            <datalist id="listaProfessoresBusca"></datalist>
-                            <input id="ocorrenciaProfessorRequerenteId" type="hidden">
+                            <select id="ocorrenciaProfessorRequerenteId" required></select>
 
                             <input id="ocorrenciaDisciplina" type="text" placeholder="Disciplina" required>
                             <div class="coordenacao-inline">
                                 <input id="ocorrenciaData" type="date" required>
-                                <input id="ocorrenciaAula" type="text" placeholder="Aula (ex: 2a aula)" maxlength="40" required>
+                                <select id="ocorrenciaAula" required></select>
                             </div>
                             <input id="ocorrenciaHorario" type="text" placeholder="Horario (ex: 07:30)" maxlength="30" required>
                             <textarea id="ocorrenciaDescricao" rows="5" placeholder="Descricao da ocorrencia" required></textarea>

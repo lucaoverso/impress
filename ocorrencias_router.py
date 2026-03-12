@@ -21,6 +21,7 @@ from database import (
     criar_ocorrencia,
     listar_estudantes,
     listar_ocorrencias,
+    listar_professores_agendamento,
     listar_turmas_ativas,
 )
 from models import (
@@ -48,6 +49,18 @@ _STATUS_ROTULOS = {
     "em_acompanhamento": "Em acompanhamento",
     "aguardando_responsavel": "Aguardando responsavel",
     "resolvido": "Resolvido",
+}
+_TURNOS_CONFIG = {
+    "INTEGRAL": {"nome": "Periodo integral", "aulas": 8},
+    "MATUTINO": {"nome": "Matutino", "aulas": 5},
+    "VESPERTINO": {"nome": "Vespertino", "aulas": 5},
+    "VESPERTINO_EM": {"nome": "Vespertino E.M.", "aulas": 6},
+}
+_FAIXA_GLOBAL_OFFSET_POR_TURNO = {
+    "MATUTINO": 0,
+    "INTEGRAL": 0,
+    "VESPERTINO": 5,
+    "VESPERTINO_EM": 5,
 }
 
 
@@ -151,6 +164,56 @@ def _validar_turma_id(turma_id: int) -> int:
     return turma_id_valor
 
 
+def _normalizar_turno_turma(valor: str | None) -> str:
+    return str(valor or "").strip().upper()
+
+
+def _faixa_global_por_turno_e_aula(turno: str, aula_turno: int) -> int:
+    faixa_global = int(aula_turno) + _FAIXA_GLOBAL_OFFSET_POR_TURNO[turno]
+    # No integral, a faixa 6 fica livre para não colidir com a 1ª do vespertino.
+    if turno == "INTEGRAL" and int(aula_turno) > 5:
+        faixa_global += 1
+    return faixa_global
+
+
+def _faixas_disponiveis_turno(turno: str) -> list[int]:
+    turno_normalizado = _normalizar_turno_turma(turno)
+    config_turno = _TURNOS_CONFIG.get(turno_normalizado)
+    if not config_turno:
+        return []
+
+    faixas = []
+    total_aulas = int(config_turno["aulas"])
+    for aula_turno in range(1, total_aulas + 1):
+        faixas.append(_faixa_global_por_turno_e_aula(turno_normalizado, aula_turno))
+    return faixas
+
+
+def _validar_faixa_aula_por_turma(aula: str | None, turma_id: int) -> str:
+    texto_aula = _texto_obrigatorio(aula, "Aula", max_len=20)
+    if not texto_aula.isdigit():
+        raise HTTPException(400, "Aula invalida. Selecione uma faixa valida.")
+
+    faixa_global = int(texto_aula)
+    if faixa_global <= 0:
+        raise HTTPException(400, "Aula invalida. Selecione uma faixa valida.")
+
+    turma = buscar_turma_por_id(turma_id)
+    if not turma:
+        raise HTTPException(400, "Turma invalida.")
+
+    turno_turma = _normalizar_turno_turma(turma.get("turno"))
+    config_turno = _TURNOS_CONFIG.get(turno_turma)
+    if not config_turno:
+        raise HTTPException(400, "Turma sem turno configurado. Atualize o cadastro da turma.")
+
+    faixas_disponiveis = set(_faixas_disponiveis_turno(turno_turma))
+    if faixa_global not in faixas_disponiveis:
+        raise HTTPException(400, "Faixa de aula invalida para o turno da turma selecionada.")
+
+    return str(faixa_global)
+
+
 def _validar_estudante_id(estudante_id: int | None) -> int | None:
     if estudante_id is None:
         return None
@@ -239,6 +302,24 @@ def _montar_resposta_estudante(estudante_id: int) -> dict:
 def listar_opcoes_ocorrencias(usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
     turmas = listar_turmas_ativas()
+    professores = listar_professores_agendamento()
+
+    turmas_formatadas = []
+    for turma in turmas:
+        turno_turma = _normalizar_turno_turma(turma.get("turno"))
+        config_turno = _TURNOS_CONFIG.get(turno_turma)
+        turmas_formatadas.append(
+            {
+                "id": turma["id"],
+                "nome": turma["nome"],
+                "turno": turno_turma,
+                "turno_nome": config_turno["nome"] if config_turno else "Turno nao configurado",
+                "aulas": int(config_turno["aulas"]) if config_turno else 0,
+                "turno_valido": bool(config_turno),
+                "faixas_disponiveis": _faixas_disponiveis_turno(turno_turma),
+            }
+        )
+
     return {
         "status_padrao": STATUS_OCORRENCIA_REGISTRADO,
         "acoes_aplicadas": [
@@ -249,7 +330,20 @@ def listar_opcoes_ocorrencias(usuario=Depends(get_usuario_logado)):
             {"id": status, "nome": _STATUS_ROTULOS.get(status, status)}
             for status in STATUS_OCORRENCIA_VALIDOS
         ],
-        "turmas": [{"id": turma["id"], "nome": turma["nome"]} for turma in turmas],
+        "turmas": turmas_formatadas,
+        "professores": [
+            {
+                "id": professor["id"],
+                "nome": professor["nome"],
+                "email": professor.get("email", ""),
+                "label": (
+                    f'{professor["nome"]} ({professor.get("email", "")})'
+                    if str(professor.get("email", "")).strip()
+                    else str(professor["nome"])
+                ),
+            }
+            for professor in professores
+        ],
     }
 
 
@@ -266,7 +360,11 @@ def buscar_professores_ocorrencia_api(
             "id": professor["id"],
             "nome": professor["nome"],
             "email": professor.get("email", ""),
-            "label": f'{professor["nome"]} ({professor.get("email", "")})'.strip(),
+            "label": (
+                f'{professor["nome"]} ({professor.get("email", "")})'
+                if str(professor.get("email", "")).strip()
+                else str(professor["nome"])
+            ),
         }
         for professor in professores
     ]
@@ -306,6 +404,7 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
     _exigir_gestor(usuario)
 
     turma_id = _validar_turma_id(payload.turma_id)
+    faixa_aula = _validar_faixa_aula_por_turma(payload.aula, turma_id)
     status = _validar_status(payload.status or STATUS_OCORRENCIA_REGISTRADO)
     acao_aplicada = _validar_acao_aplicada(payload.acao_aplicada)
 
@@ -328,7 +427,7 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
             professor_requerente_id=professor_requerente_id,
             disciplina=_texto_obrigatorio(payload.disciplina, "Disciplina"),
             data_ocorrencia=_validar_data_iso(payload.data_ocorrencia, "Data da ocorrencia"),
-            aula=_texto_obrigatorio(payload.aula, "Aula", max_len=40),
+            aula=faixa_aula,
             horario_ocorrencia=_validar_horario_ocorrencia(payload.horario_ocorrencia),
             descricao=_texto_obrigatorio(payload.descricao, "Descricao", max_len=5000),
             acao_aplicada=acao_aplicada,
@@ -433,7 +532,17 @@ def atualizar_ocorrencia_parcial_api(
             "Data da ocorrencia",
         )
     if "aula" in dados_brutos:
-        dados_validados["aula"] = _texto_obrigatorio(dados_brutos["aula"], "Aula", max_len=40)
+        turma_id_para_aula = int(dados_validados.get("turma_id", atual["turma_id"]))
+        dados_validados["aula"] = _validar_faixa_aula_por_turma(
+            dados_brutos["aula"],
+            turma_id_para_aula,
+        )
+    elif "turma_id" in dados_validados:
+        # Ao trocar turma, garante que a aula atual também pertença à faixa válida do novo turno.
+        dados_validados["aula"] = _validar_faixa_aula_por_turma(
+            atual.get("aula"),
+            int(dados_validados["turma_id"]),
+        )
     if "horario_ocorrencia" in dados_brutos:
         dados_validados["horario_ocorrencia"] = _validar_horario_ocorrencia(
             dados_brutos["horario_ocorrencia"]
