@@ -245,7 +245,7 @@ function reservaPodeSerCancelada(reserva) {
         return false;
     }
 
-    return usuarioAtual.perfil === "admin" || reserva.usuario_id === usuarioAtual.id;
+    return usuarioEhAdmin() || reserva.usuario_id === usuarioAtual.id;
 }
 
 function salvarPreferenciasOrdenacao() {
@@ -876,14 +876,33 @@ function mapearReservasDiaPorCelula() {
     return mapa;
 }
 
-function criarChipReservaSemanal(reserva) {
+function criarChipReservaSemanal(
+    reserva,
+    {
+        permitirCancelar = false
+    } = {}
+) {
     const card = document.createElement("article");
     card.className = "weekly-booking-chip";
+
+    const topo = document.createElement("div");
+    topo.className = "weekly-chip-top";
 
     const recurso = document.createElement("p");
     recurso.className = "weekly-chip-resource";
     recurso.innerText = reserva.recurso_nome || "Recurso não informado";
-    card.appendChild(recurso);
+    topo.appendChild(recurso);
+
+    if (permitirCancelar) {
+        const btnCancelar = document.createElement("button");
+        btnCancelar.type = "button";
+        btnCancelar.className = "weekly-chip-cancel-btn";
+        btnCancelar.innerText = "Cancelar";
+        btnCancelar.addEventListener("click", () => cancelarReserva(reserva.id));
+        topo.appendChild(btnCancelar);
+    }
+
+    card.appendChild(topo);
 
     const informacoes = document.createElement("p");
     informacoes.className = "weekly-chip-meta";
@@ -990,7 +1009,9 @@ function renderAgendaDiaAulas() {
 
             if (!configuracaoAgendaDia.agruparPorRecurso) {
                 reservasOrdenadas.forEach((reserva) => {
-                    pilha.appendChild(criarChipReservaSemanal(reserva));
+                    pilha.appendChild(criarChipReservaSemanal(reserva, {
+                        permitirCancelar: reservaPodeSerCancelada(reserva)
+                    }));
                 });
             } else {
                 const gruposPorRecurso = agruparReservasPorRecurso(reservasOrdenadas);
@@ -1004,7 +1025,9 @@ function renderAgendaDiaAulas() {
                     grupo.appendChild(tituloGrupo);
 
                     reservasGrupo.forEach((reserva) => {
-                        grupo.appendChild(criarChipReservaSemanal(reserva));
+                        grupo.appendChild(criarChipReservaSemanal(reserva, {
+                            permitirCancelar: reservaPodeSerCancelada(reserva)
+                        }));
                     });
 
                     pilha.appendChild(grupo);
