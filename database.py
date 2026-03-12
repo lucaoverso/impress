@@ -12,6 +12,28 @@ STATUS_CONCLUIDO = "CONCLUIDO"
 STATUS_FINALIZADO_LEGADO = "FINALIZADO"
 STATUS_AGENDAMENTO_ATIVO = "ATIVO"
 STATUS_AGENDAMENTO_CANCELADO = "CANCELADO"
+STATUS_OCORRENCIA_REGISTRADO = "registrado"
+STATUS_OCORRENCIA_EM_ACOMPANHAMENTO = "em_acompanhamento"
+STATUS_OCORRENCIA_AGUARDANDO_RESPONSAVEL = "aguardando_responsavel"
+STATUS_OCORRENCIA_RESOLVIDO = "resolvido"
+STATUS_OCORRENCIA_VALIDOS = (
+    STATUS_OCORRENCIA_REGISTRADO,
+    STATUS_OCORRENCIA_EM_ACOMPANHAMENTO,
+    STATUS_OCORRENCIA_AGUARDANDO_RESPONSAVEL,
+    STATUS_OCORRENCIA_RESOLVIDO,
+)
+ACAO_OCORRENCIA_ORIENTACAO_VERBAL = "orientacao_verbal"
+ACAO_OCORRENCIA_ADVERTENCIA = "advertencia"
+ACAO_OCORRENCIA_CHAMADA_RESPONSAVEL = "chamada_responsavel"
+ACAO_OCORRENCIA_ENCAMINHAMENTO_DIRECAO = "encaminhamento_direcao"
+ACAO_OCORRENCIA_REGISTRO_INFORMATIVO = "registro_informativo"
+ACAO_OCORRENCIA_VALIDAS = (
+    ACAO_OCORRENCIA_ORIENTACAO_VERBAL,
+    ACAO_OCORRENCIA_ADVERTENCIA,
+    ACAO_OCORRENCIA_CHAMADA_RESPONSAVEL,
+    ACAO_OCORRENCIA_ENCAMINHAMENTO_DIRECAO,
+    ACAO_OCORRENCIA_REGISTRO_INFORMATIVO,
+)
 CARGO_ADMIN = "ADMIN"
 CARGO_PROFESSOR = "PROFESSOR"
 CARGO_COORDENADOR = "COORDENADOR"
@@ -336,6 +358,18 @@ def criar_tabelas():
     """)
 
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS estudantes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            turma_id INTEGER NOT NULL,
+            ativo INTEGER NOT NULL DEFAULT 1,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(turma_id) REFERENCES turmas(id)
+        )
+    """)
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS agendamentos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             recurso_id INTEGER NOT NULL,
@@ -355,6 +389,29 @@ def criar_tabelas():
         )
     """)
 
+    cursor.execute(f"""
+        CREATE TABLE IF NOT EXISTS ocorrencias (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome_estudante TEXT NOT NULL,
+            estudante_id INTEGER,
+            turma_id INTEGER NOT NULL,
+            professor_requerente TEXT NOT NULL,
+            professor_requerente_id INTEGER,
+            disciplina TEXT NOT NULL,
+            data_ocorrencia TEXT NOT NULL,
+            aula TEXT NOT NULL,
+            horario_ocorrencia TEXT NOT NULL,
+            descricao TEXT NOT NULL,
+            acao_aplicada TEXT NOT NULL CHECK (acao_aplicada IN {ACAO_OCORRENCIA_VALIDAS}),
+            status TEXT NOT NULL DEFAULT '{STATUS_OCORRENCIA_REGISTRADO}' CHECK (status IN {STATUS_OCORRENCIA_VALIDOS}),
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(estudante_id) REFERENCES estudantes(id),
+            FOREIGN KEY(turma_id) REFERENCES turmas(id),
+            FOREIGN KEY(professor_requerente_id) REFERENCES usuarios(id)
+        )
+    """)
+
     _garantir_colunas_usuarios(cursor)
     _garantir_colunas_tokens(cursor)
     _garantir_colunas_jobs(cursor)
@@ -364,6 +421,8 @@ def criar_tabelas():
     _garantir_colunas_recursos(cursor)
     _garantir_colunas_turmas(cursor)
     _garantir_colunas_disciplinas(cursor)
+    _garantir_colunas_estudantes(cursor)
+    _garantir_colunas_ocorrencias(cursor)
     _garantir_view_radcheck(cursor)
     _seed_catalogos_academicos(cursor)
     _migrar_catalogos_academicos(cursor)
@@ -411,6 +470,56 @@ def criar_tabelas():
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_agendamentos_usuario_data
         ON agendamentos(usuario_id, data)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ocorrencias_status
+        ON ocorrencias(status)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ocorrencias_turma_id
+        ON ocorrencias(turma_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ocorrencias_estudante_id
+        ON ocorrencias(estudante_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ocorrencias_professor_requerente_id
+        ON ocorrencias(professor_requerente_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ocorrencias_data_ocorrencia
+        ON ocorrencias(data_ocorrencia)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ocorrencias_nome_estudante
+        ON ocorrencias(nome_estudante)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ocorrencias_data_criado
+        ON ocorrencias(data_ocorrencia DESC, criado_em DESC)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_estudantes_nome
+        ON estudantes(nome)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_estudantes_turma_id
+        ON estudantes(turma_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_estudantes_ativo
+        ON estudantes(ativo)
     """)
 
     cursor.execute("""
@@ -709,6 +818,105 @@ def _garantir_colunas_disciplinas(cursor):
         cursor.execute(
             "ALTER TABLE disciplinas ADD COLUMN aulas_semanais INTEGER NOT NULL DEFAULT 0"
         )
+
+def _garantir_colunas_estudantes(cursor):
+    cursor.execute("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'estudantes'
+    """)
+    if not cursor.fetchone():
+        return
+
+    cursor.execute("PRAGMA table_info(estudantes)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+
+    if "nome" not in colunas:
+        cursor.execute("ALTER TABLE estudantes ADD COLUMN nome TEXT NOT NULL DEFAULT ''")
+    if "turma_id" not in colunas:
+        cursor.execute("ALTER TABLE estudantes ADD COLUMN turma_id INTEGER NOT NULL DEFAULT 0")
+    if "ativo" not in colunas:
+        cursor.execute("ALTER TABLE estudantes ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1")
+    if "criado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE estudantes ADD COLUMN criado_em TEXT NOT NULL DEFAULT (datetime('now'))"
+        )
+    if "atualizado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE estudantes ADD COLUMN atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))"
+        )
+
+    cursor.execute("""
+        UPDATE estudantes
+        SET atualizado_em = datetime('now')
+        WHERE TRIM(COALESCE(atualizado_em, '')) = ''
+    """)
+    cursor.execute("""
+        UPDATE estudantes
+        SET ativo = 1
+        WHERE ativo IS NULL
+    """)
+
+def _garantir_colunas_ocorrencias(cursor):
+    cursor.execute("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'ocorrencias'
+    """)
+    if not cursor.fetchone():
+        return
+
+    cursor.execute("PRAGMA table_info(ocorrencias)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+
+    if "nome_estudante" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN nome_estudante TEXT NOT NULL DEFAULT ''")
+    if "estudante_id" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN estudante_id INTEGER")
+    if "turma_id" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN turma_id INTEGER NOT NULL DEFAULT 0")
+    if "professor_requerente" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN professor_requerente TEXT NOT NULL DEFAULT ''")
+    if "professor_requerente_id" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN professor_requerente_id INTEGER")
+    if "disciplina" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN disciplina TEXT NOT NULL DEFAULT ''")
+    if "data_ocorrencia" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN data_ocorrencia TEXT NOT NULL DEFAULT ''")
+    if "aula" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN aula TEXT NOT NULL DEFAULT ''")
+    if "horario_ocorrencia" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN horario_ocorrencia TEXT NOT NULL DEFAULT ''")
+    if "descricao" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN descricao TEXT NOT NULL DEFAULT ''")
+    if "acao_aplicada" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN acao_aplicada TEXT NOT NULL DEFAULT ''")
+    if "status" not in colunas:
+        cursor.execute(
+            "ALTER TABLE ocorrencias ADD COLUMN status TEXT NOT NULL DEFAULT 'registrado'"
+        )
+    if "criado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE ocorrencias ADD COLUMN criado_em TEXT NOT NULL DEFAULT (datetime('now'))"
+        )
+    if "atualizado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE ocorrencias ADD COLUMN atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))"
+        )
+
+    cursor.execute("""
+        UPDATE ocorrencias
+        SET status = ?
+        WHERE TRIM(COALESCE(status, '')) = ''
+    """, (STATUS_OCORRENCIA_REGISTRADO,))
+
+    cursor.execute("""
+        UPDATE ocorrencias
+        SET atualizado_em = datetime('now')
+        WHERE TRIM(COALESCE(atualizado_em, '')) = ''
+    """)
 
 def _garantir_view_radcheck(cursor):
     # O sistema usa email como identificador de login para autenticação.
@@ -1391,6 +1599,204 @@ def listar_professores_agendamento():
     conn.close()
     return [dict(row) for row in rows]
 
+def buscar_professor_por_id_ocorrencia(usuario_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, nome, email
+        FROM usuarios
+        WHERE id = ?
+          AND (
+              UPPER(COALESCE(cargo, '')) = ?
+              OR (
+                   TRIM(COALESCE(cargo, '')) = ''
+                   AND LOWER(COALESCE(perfil, '')) = 'professor'
+              )
+          )
+    """, (int(usuario_id), CARGO_PROFESSOR))
+
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def buscar_professores_ocorrencia(termo: str = "", limite: int = 20):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    termo_limpo = _normalizar_nome_catalogo(termo).lower()
+    limite_final = max(int(limite or 20), 1)
+
+    query = """
+        SELECT id, nome, email
+        FROM usuarios
+        WHERE (
+            UPPER(COALESCE(cargo, '')) = ?
+            OR (
+                TRIM(COALESCE(cargo, '')) = ''
+                AND LOWER(COALESCE(perfil, '')) = 'professor'
+            )
+        )
+    """
+    params = [CARGO_PROFESSOR]
+
+    if termo_limpo:
+        query += """
+            AND (
+                LOWER(COALESCE(nome, '')) LIKE ?
+                OR LOWER(COALESCE(email, '')) LIKE ?
+            )
+        """
+        like = f"%{termo_limpo}%"
+        params.extend([like, like])
+
+    query += """
+        ORDER BY nome COLLATE NOCASE ASC, id ASC
+        LIMIT ?
+    """
+    params.append(limite_final)
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+def listar_estudantes(
+    incluir_inativos: bool = False,
+    nome: str = None,
+    turma_id: int = None,
+    limite: int = None,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT
+            e.id,
+            e.nome,
+            e.turma_id,
+            COALESCE(t.nome, '') AS turma_nome,
+            e.ativo,
+            e.criado_em,
+            e.atualizado_em
+        FROM estudantes e
+        LEFT JOIN turmas t ON t.id = e.turma_id
+        WHERE 1 = 1
+    """
+    params = []
+
+    if not incluir_inativos:
+        query += " AND e.ativo = 1"
+
+    nome_limpo = _normalizar_nome_catalogo(nome).lower()
+    if nome_limpo:
+        query += " AND LOWER(COALESCE(e.nome, '')) LIKE ?"
+        params.append(f"%{nome_limpo}%")
+
+    if turma_id is not None:
+        turma_id_valor = int(turma_id)
+        if turma_id_valor > 0:
+            query += " AND e.turma_id = ?"
+            params.append(turma_id_valor)
+
+    query += " ORDER BY e.nome COLLATE NOCASE ASC, e.id ASC"
+
+    if limite is not None:
+        limite_valor = max(int(limite or 0), 1)
+        query += " LIMIT ?"
+        params.append(limite_valor)
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+def buscar_estudante_por_id(estudante_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            e.id,
+            e.nome,
+            e.turma_id,
+            COALESCE(t.nome, '') AS turma_nome,
+            e.ativo,
+            e.criado_em,
+            e.atualizado_em
+        FROM estudantes e
+        LEFT JOIN turmas t ON t.id = e.turma_id
+        WHERE e.id = ?
+    """, (int(estudante_id),))
+
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def criar_estudante(nome: str, turma_id: int, ativo: bool = True):
+    nome_limpo = _normalizar_nome_catalogo(nome)
+    turma_id_valor = int(turma_id or 0)
+    if not nome_limpo:
+        raise ValueError("Nome do estudante é obrigatório.")
+    if turma_id_valor <= 0:
+        raise ValueError("Turma inválida.")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO estudantes (nome, turma_id, ativo, criado_em, atualizado_em)
+        VALUES (?, ?, ?, datetime('now'), datetime('now'))
+    """, (nome_limpo, turma_id_valor, 1 if ativo else 0))
+
+    estudante_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return estudante_id
+
+def atualizar_estudante(estudante_id: int, nome: str, turma_id: int, ativo: bool):
+    nome_limpo = _normalizar_nome_catalogo(nome)
+    turma_id_valor = int(turma_id or 0)
+    if not nome_limpo:
+        raise ValueError("Nome do estudante é obrigatório.")
+    if turma_id_valor <= 0:
+        raise ValueError("Turma inválida.")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE estudantes
+        SET nome = ?, turma_id = ?, ativo = ?, atualizado_em = datetime('now')
+        WHERE id = ?
+    """, (nome_limpo, turma_id_valor, 1 if ativo else 0, int(estudante_id)))
+
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+def atualizar_status_estudante(estudante_id: int, ativo: bool):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE estudantes
+        SET ativo = ?, atualizado_em = datetime('now')
+        WHERE id = ?
+    """, (1 if ativo else 0, int(estudante_id)))
+
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+def buscar_estudantes_ocorrencia(termo: str = "", turma_id: int = None, limite: int = 20):
+    return listar_estudantes(
+        incluir_inativos=False,
+        nome=termo,
+        turma_id=turma_id,
+        limite=limite,
+    )
+
 def seed_recursos_padrao():
     recursos = [
         ("Notebook Carrinho 1", "Notebook", "Carrinho móvel com 30 notebooks.", 1),
@@ -1434,6 +1840,20 @@ def listar_turmas(incluir_inativas: bool = False):
 
 def listar_turmas_ativas():
     return listar_turmas(incluir_inativas=False)
+
+def buscar_turma_por_id(turma_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, nome, turno, quantidade_estudantes, ativo, criado_em
+        FROM turmas
+        WHERE id = ?
+    """, (int(turma_id),))
+
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
 
 def criar_turma(nome: str, turno: str = "", quantidade_estudantes: int = 0):
     nome_limpo = _normalizar_nome_catalogo(nome)
@@ -2086,6 +2506,301 @@ def buscar_recurso_por_id(recurso_id: int):
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
+
+def criar_ocorrencia(
+    nome_estudante: str,
+    estudante_id: int | None,
+    turma_id: int,
+    professor_requerente: str,
+    professor_requerente_id: int | None,
+    disciplina: str,
+    data_ocorrencia: str,
+    aula: str,
+    horario_ocorrencia: str,
+    descricao: str,
+    acao_aplicada: str,
+    status: str = STATUS_OCORRENCIA_REGISTRADO,
+):
+    nome_estudante_limpo = _normalizar_nome_catalogo(nome_estudante)
+    professor_requerente_limpo = _normalizar_nome_catalogo(professor_requerente)
+    disciplina_limpa = _normalizar_nome_catalogo(disciplina)
+    data_ocorrencia_limpa = _normalizar_nome_catalogo(data_ocorrencia)
+    aula_limpa = _normalizar_nome_catalogo(aula)
+    horario_ocorrencia_limpo = _normalizar_nome_catalogo(horario_ocorrencia)
+    descricao_limpa = str(descricao or "").strip()
+    acao_aplicada_limpa = _normalizar_nome_catalogo(acao_aplicada)
+    status_limpo = _normalizar_nome_catalogo(status) or STATUS_OCORRENCIA_REGISTRADO
+    turma_id_valor = int(turma_id or 0)
+    estudante_id_valor = int(estudante_id) if estudante_id is not None else None
+    professor_requerente_id_valor = (
+        int(professor_requerente_id) if professor_requerente_id is not None else None
+    )
+
+    if turma_id_valor <= 0:
+        raise ValueError("Turma inválida.")
+    if estudante_id_valor is not None and estudante_id_valor <= 0:
+        raise ValueError("Estudante inválido.")
+    if professor_requerente_id_valor is not None and professor_requerente_id_valor <= 0:
+        raise ValueError("Professor requerente inválido.")
+    if not nome_estudante_limpo:
+        raise ValueError("Nome do estudante é obrigatório.")
+    if not professor_requerente_limpo:
+        raise ValueError("Professor requerente é obrigatório.")
+    if not disciplina_limpa:
+        raise ValueError("Disciplina é obrigatória.")
+    if not data_ocorrencia_limpa:
+        raise ValueError("Data da ocorrência é obrigatória.")
+    if not aula_limpa:
+        raise ValueError("Aula é obrigatória.")
+    if not horario_ocorrencia_limpo:
+        raise ValueError("Horário da ocorrência é obrigatório.")
+    if not descricao_limpa:
+        raise ValueError("Descrição é obrigatória.")
+    if acao_aplicada_limpa not in ACAO_OCORRENCIA_VALIDAS:
+        raise ValueError("Ação aplicada inválida.")
+    if status_limpo not in STATUS_OCORRENCIA_VALIDOS:
+        raise ValueError("Status inválido.")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO ocorrencias (
+            nome_estudante,
+            estudante_id,
+            turma_id,
+            professor_requerente,
+            professor_requerente_id,
+            disciplina,
+            data_ocorrencia,
+            aula,
+            horario_ocorrencia,
+            descricao,
+            acao_aplicada,
+            status,
+            criado_em,
+            atualizado_em
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    """, (
+        nome_estudante_limpo,
+        estudante_id_valor,
+        turma_id_valor,
+        professor_requerente_limpo,
+        professor_requerente_id_valor,
+        disciplina_limpa,
+        data_ocorrencia_limpa,
+        aula_limpa,
+        horario_ocorrencia_limpo,
+        descricao_limpa,
+        acao_aplicada_limpa,
+        status_limpo,
+    ))
+
+    ocorrencia_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return ocorrencia_id
+
+def listar_ocorrencias(
+    status: str = None,
+    turma_id: int = None,
+    nome_estudante: str = None,
+    data_inicial: str = None,
+    data_final: str = None,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT
+            o.id,
+            o.nome_estudante,
+            o.estudante_id,
+            o.turma_id,
+            COALESCE(t.nome, '') AS turma_nome,
+            o.professor_requerente,
+            o.professor_requerente_id,
+            o.disciplina,
+            o.data_ocorrencia,
+            o.aula,
+            o.horario_ocorrencia,
+            o.descricao,
+            o.acao_aplicada,
+            o.status,
+            o.criado_em,
+            o.atualizado_em
+        FROM ocorrencias o
+        LEFT JOIN turmas t ON t.id = o.turma_id
+        WHERE 1 = 1
+    """
+    params = []
+
+    status_limpo = _normalizar_nome_catalogo(status)
+    if status_limpo:
+        query += " AND o.status = ?"
+        params.append(status_limpo)
+
+    if turma_id is not None:
+        turma_id_valor = int(turma_id)
+        if turma_id_valor > 0:
+            query += " AND o.turma_id = ?"
+            params.append(turma_id_valor)
+
+    nome_estudante_limpo = _normalizar_nome_catalogo(nome_estudante)
+    if nome_estudante_limpo:
+        query += " AND LOWER(o.nome_estudante) LIKE ?"
+        params.append(f"%{nome_estudante_limpo.lower()}%")
+
+    data_inicial_limpa = _normalizar_nome_catalogo(data_inicial)
+    if data_inicial_limpa:
+        query += " AND o.data_ocorrencia >= ?"
+        params.append(data_inicial_limpa)
+
+    data_final_limpa = _normalizar_nome_catalogo(data_final)
+    if data_final_limpa:
+        query += " AND o.data_ocorrencia <= ?"
+        params.append(data_final_limpa)
+
+    query += """
+        ORDER BY
+            o.data_ocorrencia DESC,
+            o.criado_em DESC
+    """
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+def buscar_ocorrencia_por_id(ocorrencia_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            o.id,
+            o.nome_estudante,
+            o.estudante_id,
+            o.turma_id,
+            COALESCE(t.nome, '') AS turma_nome,
+            o.professor_requerente,
+            o.professor_requerente_id,
+            o.disciplina,
+            o.data_ocorrencia,
+            o.aula,
+            o.horario_ocorrencia,
+            o.descricao,
+            o.acao_aplicada,
+            o.status,
+            o.criado_em,
+            o.atualizado_em
+        FROM ocorrencias o
+        LEFT JOIN turmas t ON t.id = o.turma_id
+        WHERE o.id = ?
+    """, (int(ocorrencia_id),))
+
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
+    campos_permitidos = {
+        "nome_estudante",
+        "estudante_id",
+        "turma_id",
+        "professor_requerente",
+        "professor_requerente_id",
+        "disciplina",
+        "data_ocorrencia",
+        "aula",
+        "horario_ocorrencia",
+        "descricao",
+        "acao_aplicada",
+        "status",
+    }
+    if not isinstance(dados, dict):
+        return False
+
+    atualizacoes = []
+    parametros = []
+
+    for campo, valor in dados.items():
+        if campo not in campos_permitidos:
+            continue
+
+        if campo == "turma_id":
+            valor_turma = int(valor or 0)
+            if valor_turma <= 0:
+                raise ValueError("Turma inválida.")
+            atualizacoes.append("turma_id = ?")
+            parametros.append(valor_turma)
+            continue
+
+        if campo == "estudante_id":
+            valor_estudante = int(valor) if valor is not None else None
+            if valor_estudante is not None and valor_estudante <= 0:
+                raise ValueError("Estudante inválido.")
+            atualizacoes.append("estudante_id = ?")
+            parametros.append(valor_estudante)
+            continue
+
+        if campo == "professor_requerente_id":
+            valor_professor = int(valor) if valor is not None else None
+            if valor_professor is not None and valor_professor <= 0:
+                raise ValueError("Professor requerente inválido.")
+            atualizacoes.append("professor_requerente_id = ?")
+            parametros.append(valor_professor)
+            continue
+
+        if campo == "acao_aplicada":
+            valor_acao = _normalizar_nome_catalogo(valor)
+            if valor_acao not in ACAO_OCORRENCIA_VALIDAS:
+                raise ValueError("Ação aplicada inválida.")
+            atualizacoes.append("acao_aplicada = ?")
+            parametros.append(valor_acao)
+            continue
+
+        if campo == "status":
+            valor_status = _normalizar_nome_catalogo(valor)
+            if valor_status not in STATUS_OCORRENCIA_VALIDOS:
+                raise ValueError("Status inválido.")
+            atualizacoes.append("status = ?")
+            parametros.append(valor_status)
+            continue
+
+        if campo == "descricao":
+            valor_descricao = str(valor or "").strip()
+            if not valor_descricao:
+                raise ValueError("Descrição é obrigatória.")
+            atualizacoes.append("descricao = ?")
+            parametros.append(valor_descricao)
+            continue
+
+        valor_texto = _normalizar_nome_catalogo(valor)
+        if not valor_texto:
+            raise ValueError("Campos obrigatórios não podem ficar vazios.")
+        atualizacoes.append(f"{campo} = ?")
+        parametros.append(valor_texto)
+
+    if not atualizacoes:
+        return False
+
+    atualizacoes.append("atualizado_em = datetime('now')")
+    parametros.append(int(ocorrencia_id))
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(f"""
+        UPDATE ocorrencias
+        SET {", ".join(atualizacoes)}
+        WHERE id = ?
+    """, parametros)
+
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
 
 def contar_agendamentos_ativos_faixa(recurso_id: int, data: str, faixa_global: int):
     conn = get_connection()

@@ -31,6 +31,7 @@ from fastapi.templating import Jinja2Templates
 
 # ===== ROTAS / AUTENTICAÇÃO =====
 from auth import router as auth_router, get_usuario_logado
+from ocorrencias_router import router as ocorrencias_router
 from services.auth_service import hash_senha
 from security.nt_hash import generate_nt_hash
 from models import (
@@ -200,6 +201,7 @@ app = FastAPI(
 
 # Rotas
 app.include_router(auth_router)
+app.include_router(ocorrencias_router)
 
 # Static / Templates
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -1077,6 +1079,19 @@ def cadastro_professor_page(request: Request):
 def admin_page(request: Request):
     response = templates.TemplateResponse(
         "admin.html",
+        {
+            "request": request,
+            "asset_version": ASSET_VERSION,
+        }
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.get("/coordenacao")
+def coordenacao_page(request: Request):
+    response = templates.TemplateResponse(
+        "coordenacao.html",
         {
             "request": request,
             "asset_version": ASSET_VERSION,

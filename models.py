@@ -1,3 +1,4 @@
+from typing import Literal
 from pydantic import BaseModel, Field
 
 class JobCreate(BaseModel):
@@ -101,3 +102,85 @@ class RegrasCotaIn(BaseModel):
     paginas_por_aula: int
     paginas_por_turma: int
     cota_mensal_escola: int
+
+AcaoAplicadaOcorrencia = Literal[
+    "orientacao_verbal",
+    "advertencia",
+    "chamada_responsavel",
+    "encaminhamento_direcao",
+    "registro_informativo",
+]
+
+StatusOcorrencia = Literal[
+    "registrado",
+    "em_acompanhamento",
+    "aguardando_responsavel",
+    "resolvido",
+]
+
+class OcorrenciaCreateIn(BaseModel):
+    nome_estudante: str | None = None
+    estudante_id: int | None = None
+    turma_id: int
+    professor_requerente: str | None = None
+    professor_requerente_id: int | None = None
+    disciplina: str
+    data_ocorrencia: str
+    aula: str
+    horario_ocorrencia: str
+    descricao: str
+    acao_aplicada: AcaoAplicadaOcorrencia
+    status: StatusOcorrencia | None = None
+
+class OcorrenciaUpdateIn(BaseModel):
+    nome_estudante: str | None = None
+    estudante_id: int | None = None
+    turma_id: int | None = None
+    professor_requerente: str | None = None
+    professor_requerente_id: int | None = None
+    disciplina: str | None = None
+    data_ocorrencia: str | None = None
+    aula: str | None = None
+    horario_ocorrencia: str | None = None
+    descricao: str | None = None
+    acao_aplicada: AcaoAplicadaOcorrencia | None = None
+    status: StatusOcorrencia | None = None
+
+class OcorrenciaOut(BaseModel):
+    id: int
+    nome_estudante: str
+    estudante_id: int | None = None
+    turma_id: int
+    turma_nome: str = ""
+    professor_requerente: str
+    professor_requerente_id: int | None = None
+    disciplina: str
+    data_ocorrencia: str
+    aula: str
+    horario_ocorrencia: str
+    descricao: str
+    acao_aplicada: str
+    status: str
+    criado_em: str
+    atualizado_em: str
+
+class EstudanteCreateIn(BaseModel):
+    nome: str
+    turma_id: int
+
+class EstudanteUpdateIn(BaseModel):
+    nome: str
+    turma_id: int
+    ativo: bool = True
+
+class EstudanteStatusIn(BaseModel):
+    ativo: bool
+
+class EstudanteOut(BaseModel):
+    id: int
+    nome: str
+    turma_id: int
+    turma_nome: str = ""
+    ativo: int | bool
+    criado_em: str
+    atualizado_em: str

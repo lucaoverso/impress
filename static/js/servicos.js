@@ -72,6 +72,13 @@ function registrarEventos() {
         window.location.href = "/admin";
     });
 
+    const btnIrCoordenacao = document.getElementById("btnIrCoordenacao");
+    if (btnIrCoordenacao) {
+        btnIrCoordenacao.addEventListener("click", () => {
+            window.location.href = "/coordenacao";
+        });
+    }
+
     document.getElementById("btnSair").addEventListener("click", () => {
         localStorage.removeItem("token");
         localStorage.removeItem("token_expira_em");

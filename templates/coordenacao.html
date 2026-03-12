@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coordenacao - Registro de Ocorrencias</title>
+    <link rel="stylesheet" href="{{ request.url_for('static', path='css/style.css') }}?v={{ asset_version | default('1') }}">
+</head>
+
+<body>
+    <main class="coordenacao-page">
+        <header class="admin-header admin-header-shell">
+            <div class="admin-header-main">
+                <h1>Registro de Ocorrencias da Coordenacao</h1>
+                <p>Modulo para registrar ocorrencias e manter o cadastro de estudantes com busca rapida.</p>
+            </div>
+            <div class="scheduler-actions">
+                <button id="btnIrAdmin" type="button">Painel de gestao</button>
+                <button id="btnVoltarServicos" type="button">Voltar aos servicos</button>
+                <button id="btnSair" type="button">Sair</button>
+            </div>
+        </header>
+
+        <nav class="admin-tabs coordenacao-tabs" aria-label="Abas do modulo de coordenacao">
+            <button class="admin-tab-btn is-active" data-coord-tab-trigger="ocorrencias" aria-controls="coord-tab-ocorrencias" aria-selected="true" type="button">
+                Ocorrencias
+            </button>
+            <button class="admin-tab-btn" data-coord-tab-trigger="estudantes" aria-controls="coord-tab-estudantes" aria-selected="false" type="button">
+                Cadastro de estudantes
+            </button>
+        </nav>
+
+        <section class="coordenacao-tab-panels">
+            <section id="coord-tab-ocorrencias" class="coordenacao-tab-panel is-active" data-coord-tab-panel="ocorrencias">
+                <section class="coordenacao-grid">
+                    <article class="coordenacao-card">
+                        <h2>Filtros</h2>
+                        <form id="formFiltrosOcorrencias" class="coordenacao-form">
+                            <input id="filtroNomeEstudante" type="text" placeholder="Nome do estudante">
+                            <select id="filtroTurmaId"></select>
+                            <select id="filtroStatus"></select>
+                            <div class="coordenacao-inline">
+                                <input id="filtroDataInicial" type="date">
+                                <input id="filtroDataFinal" type="date">
+                            </div>
+                            <div class="coordenacao-inline">
+                                <button class="btn-destaque" type="submit">Filtrar</button>
+                                <button id="btnLimparFiltros" type="button">Limpar</button>
+                                <button id="btnNovaOcorrencia" type="button">Nova ocorrencia</button>
+                            </div>
+                        </form>
+                        <p id="msgOcorrencias"></p>
+                    </article>
+
+                    <article class="coordenacao-card coordenacao-card-wide">
+                        <h2>Ocorrencias registradas</h2>
+                        <div class="coordenacao-table-wrap">
+                            <table class="coordenacao-table">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Estudante</th>
+                                        <th>Turma</th>
+                                        <th>Professor requerente</th>
+                                        <th>Acao aplicada</th>
+                                        <th>Status</th>
+                                        <th>Acoes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyOcorrencias"></tbody>
+                            </table>
+                        </div>
+                    </article>
+
+                    <article class="coordenacao-card">
+                        <h2 id="tituloFormOcorrencia">Nova ocorrencia</h2>
+                        <form id="formOcorrencia" class="coordenacao-form">
+                            <input id="ocorrenciaBuscaEstudante" type="text" list="listaEstudantesBusca" placeholder="Buscar estudante cadastrado ou digitar nome" required>
+                            <datalist id="listaEstudantesBusca"></datalist>
+                            <input id="ocorrenciaEstudanteId" type="hidden">
+
+                            <select id="ocorrenciaTurmaId" required></select>
+
+                            <input id="ocorrenciaBuscaProfessor" type="text" list="listaProfessoresBusca" placeholder="Buscar professor requerente ou digitar nome" required>
+                            <datalist id="listaProfessoresBusca"></datalist>
+                            <input id="ocorrenciaProfessorRequerenteId" type="hidden">
+
+                            <input id="ocorrenciaDisciplina" type="text" placeholder="Disciplina" required>
+                            <div class="coordenacao-inline">
+                                <input id="ocorrenciaData" type="date" required>
+                                <input id="ocorrenciaAula" type="text" placeholder="Aula (ex: 2a aula)" maxlength="40" required>
+                            </div>
+                            <input id="ocorrenciaHorario" type="text" placeholder="Horario (ex: 07:30)" maxlength="30" required>
+                            <textarea id="ocorrenciaDescricao" rows="5" placeholder="Descricao da ocorrencia" required></textarea>
+                            <select id="ocorrenciaAcaoAplicada" required></select>
+                            <select id="ocorrenciaStatus" required></select>
+                            <div class="coordenacao-inline">
+                                <button class="btn-destaque" type="submit">Salvar ocorrencia</button>
+                                <button id="btnCancelarEdicaoOcorrencia" type="button" style="display: none;">Cancelar edicao</button>
+                            </div>
+                        </form>
+                    </article>
+
+                    <article class="coordenacao-card">
+                        <h2>Detalhes da ocorrencia</h2>
+                        <div id="detalhesOcorrencia" class="coordenacao-details">
+                            Selecione uma ocorrencia para visualizar os detalhes.
+                        </div>
+                    </article>
+                </section>
+            </section>
+
+            <section id="coord-tab-estudantes" class="coordenacao-tab-panel" data-coord-tab-panel="estudantes" hidden>
+                <section class="coordenacao-grid">
+                    <article class="coordenacao-card">
+                        <h2 id="tituloFormEstudante">Cadastrar estudante</h2>
+                        <form id="formEstudante" class="coordenacao-form">
+                            <input id="estudanteNome" type="text" placeholder="Nome completo do estudante" required>
+                            <select id="estudanteTurmaId" required></select>
+                            <div class="coordenacao-inline">
+                                <button class="btn-destaque" type="submit">Salvar estudante</button>
+                                <button id="btnCancelarEdicaoEstudante" type="button" style="display: none;">Cancelar edicao</button>
+                            </div>
+                        </form>
+                        <p id="msgEstudantes"></p>
+                    </article>
+
+                    <article class="coordenacao-card coordenacao-card-wide">
+                        <h2>Estudantes cadastrados</h2>
+                        <form id="formFiltrosEstudantes" class="coordenacao-form coordenacao-filter-inline">
+                            <input id="filtroEstudanteNome" type="text" placeholder="Buscar por nome">
+                            <select id="filtroEstudanteTurmaId"></select>
+                            <select id="filtroEstudanteStatus">
+                                <option value="">Todos status</option>
+                                <option value="ativos">Ativos</option>
+                                <option value="inativos">Inativos</option>
+                            </select>
+                            <div class="coordenacao-inline">
+                                <button class="btn-destaque" type="submit">Filtrar</button>
+                                <button id="btnLimparFiltrosEstudantes" type="button">Limpar</button>
+                            </div>
+                        </form>
+
+                        <div class="coordenacao-table-wrap">
+                            <table class="coordenacao-table">
+                                <thead>
+                                    <tr>
+                                        <th>Nome</th>
+                                        <th>Turma</th>
+                                        <th>Status</th>
+                                        <th>Atualizado em</th>
+                                        <th>Acoes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyEstudantes"></tbody>
+                            </table>
+                        </div>
+                    </article>
+                </section>
+            </section>
+        </section>
+    </main>
+
+    <script src="{{ request.url_for('static', path='js/coordenacao.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+
+</html>
