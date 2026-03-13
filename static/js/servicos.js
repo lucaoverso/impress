@@ -26,8 +26,8 @@ function modulosPermitidos(usuario = {}) {
     }
 
     const cargo = normalizarCargoUsuario(usuario);
-    if (cargo === "ADMIN") return new Set(["impressao", "agendamento", "gestao"]);
-    if (cargo === "COORDENADOR") return new Set(["gestao"]);
+    if (cargo === "ADMIN") return new Set(["impressao", "agendamento", "gestao", "coordenacao"]);
+    if (cargo === "COORDENADOR") return new Set(["coordenacao"]);
     return new Set(["impressao", "agendamento"]);
 }
 

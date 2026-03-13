@@ -229,9 +229,9 @@ CARGO_ADMIN = "ADMIN"
 CARGO_PROFESSOR = "PROFESSOR"
 CARGO_COORDENADOR = "COORDENADOR"
 MODULOS_POR_CARGO = {
-    CARGO_ADMIN: ["impressao", "agendamento", "gestao"],
+    CARGO_ADMIN: ["impressao", "agendamento", "gestao", "coordenacao"],
     CARGO_PROFESSOR: ["impressao", "agendamento"],
-    CARGO_COORDENADOR: ["gestao"],
+    CARGO_COORDENADOR: ["coordenacao"],
 }
 
 def obter_nomes_turmas_ativas() -> list[str]:
