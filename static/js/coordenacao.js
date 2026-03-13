@@ -15,9 +15,12 @@ const headersJson = {
 
 let abaCoordAtiva = "ocorrencias";
 let ocorrenciaEmEdicaoId = null;
+let ocorrenciaSelecionadaId = null;
 let estudanteEmEdicao = null;
 let ocorrenciasCache = [];
 let estudantesCache = [];
+let relatorioOcorrenciasCache = [];
+let relatorioOcorrenciasCarregado = false;
 let opcoesOcorrencias = {
     turmas: [],
     professores: [],
@@ -66,6 +69,13 @@ function setMensagemEstudantes(texto, erro = false) {
     target.style.color = erro ? "#b42318" : "#0f766e";
 }
 
+function setMensagemRelatorios(texto, erro = false) {
+    const target = el("msgRelatorios");
+    if (!target) return;
+    target.innerText = texto || "";
+    target.style.color = erro ? "#b42318" : "#0f766e";
+}
+
 function normalizarErro(res, body) {
     if (body && body.detail) return body.detail;
     return `Erro ${res.status}`;
@@ -88,9 +98,29 @@ async function fetchJson(url, options = {}) {
     }
 
     if (!res.ok) {
-        throw new Error(normalizarErro(res, body));
+        const erro = new Error(normalizarErro(res, body));
+        erro.status = res.status;
+        throw erro;
     }
     return body;
+}
+
+async function requisitarExclusao(urlDelete, urlFallback) {
+    try {
+        return await fetchJson(urlDelete, {
+            method: "DELETE",
+            headers
+        });
+    } catch (err) {
+        if (err?.status !== 405) {
+            throw err;
+        }
+
+        return fetchJson(urlFallback, {
+            method: "POST",
+            headers
+        });
+    }
 }
 
 function formatarDataBr(dataIso) {
@@ -145,6 +175,49 @@ function ativarAbaCoordenacao(abaId) {
         painel.hidden = !ativo;
         painel.classList.toggle("is-active", ativo);
     });
+    if (abaId === "relatorios" && !relatorioOcorrenciasCarregado) {
+        carregarRelatorioOcorrencias().catch((err) => {
+            setMensagemRelatorios(err.message, true);
+        });
+    }
+}
+
+function painelFormularioOcorrenciaAberto() {
+    const painel = el("painelFormOcorrencia");
+    return Boolean(painel) && !painel.hidden;
+}
+
+function atualizarBotaoNovaOcorrencia() {
+    const botao = el("btnNovaOcorrencia");
+    if (!botao) return;
+
+    const painelAberto = painelFormularioOcorrenciaAberto();
+    if (!painelAberto) {
+        botao.innerText = "Registrar ocorrencia";
+    } else if (ocorrenciaEmEdicaoId) {
+        botao.innerText = "Nova ocorrencia";
+    } else {
+        botao.innerText = "Ocultar formulario";
+    }
+
+    botao.setAttribute("aria-expanded", painelAberto ? "true" : "false");
+}
+
+function mostrarPainelFormularioOcorrencia({ scroll = false } = {}) {
+    const painel = el("painelFormOcorrencia");
+    if (!painel) return;
+    painel.hidden = false;
+    atualizarBotaoNovaOcorrencia();
+    if (scroll) {
+        painel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+}
+
+function ocultarPainelFormularioOcorrencia() {
+    const painel = el("painelFormOcorrencia");
+    if (!painel) return;
+    painel.hidden = true;
+    atualizarBotaoNovaOcorrencia();
 }
 
 function preencherSelect(selectId, opcoes, {
@@ -340,7 +413,7 @@ function atualizarSelectAulasPorTurma(turmaId, faixaSelecionada = null) {
         const option = document.createElement("option");
         option.value = String(faixa);
         option.innerText = aulaTurno > 0
-            ? `${aulaLabel(aulaTurno)} - Faixa ${faixa}`
+            ? `${aulaLabel(aulaTurno)}`
             : `Faixa ${faixa}`;
         select.appendChild(option);
     };
@@ -363,7 +436,7 @@ function atualizarSelectAulasPorTurma(turmaId, faixaSelecionada = null) {
     }
 }
 
-function limparFormularioOcorrencia() {
+function limparFormularioOcorrencia({ manterAberto = false } = {}) {
     el("formOcorrencia").reset();
     ocorrenciaEmEdicaoId = null;
     el("ocorrenciaEstudanteId").value = "";
@@ -385,6 +458,11 @@ function limparFormularioOcorrencia() {
     }
     el("tituloFormOcorrencia").innerText = "Nova ocorrencia";
     el("btnCancelarEdicaoOcorrencia").style.display = "none";
+    if (manterAberto) {
+        mostrarPainelFormularioOcorrencia();
+    } else {
+        ocultarPainelFormularioOcorrencia();
+    }
 }
 
 function preencherFormularioOcorrencia(ocorrencia) {
@@ -418,7 +496,13 @@ function preencherFormularioOcorrencia(ocorrencia) {
     el("tituloFormOcorrencia").innerText = "Editar ocorrencia";
     el("btnCancelarEdicaoOcorrencia").style.display = "inline-block";
     ativarAbaCoordenacao("ocorrencias");
-    el("formOcorrencia").scrollIntoView({ behavior: "smooth", block: "start" });
+    mostrarPainelFormularioOcorrencia({ scroll: true });
+}
+
+function selecionarOcorrencia(ocorrencia) {
+    ocorrenciaSelecionadaId = ocorrencia ? Number(ocorrencia.id || 0) || null : null;
+    renderDetalhesOcorrencia(ocorrencia || null);
+    renderTabelaOcorrencias();
 }
 
 function renderDetalhesOcorrencia(ocorrencia) {
@@ -458,6 +542,263 @@ function renderDetalhesOcorrencia(ocorrencia) {
     });
 }
 
+function valorCampo(id) {
+    return String(el(id)?.value || "").trim();
+}
+
+function montarQueryOcorrencias({
+    nomeEstudanteId,
+    turmaIdId,
+    statusId,
+    dataInicialId,
+    dataFinalId
+}) {
+    const params = new URLSearchParams();
+    const nomeEstudante = valorCampo(nomeEstudanteId);
+    const turmaId = valorCampo(turmaIdId);
+    const status = valorCampo(statusId);
+    const dataInicial = valorCampo(dataInicialId);
+    const dataFinal = valorCampo(dataFinalId);
+
+    if (nomeEstudante) params.set("nome_estudante", nomeEstudante);
+    if (turmaId) params.set("turma_id", turmaId);
+    if (status) params.set("status", status);
+    if (dataInicial) params.set("data_inicial", dataInicial);
+    if (dataFinal) params.set("data_final", dataFinal);
+
+    return params.toString() ? `?${params.toString()}` : "";
+}
+
+function descreverFiltrosOcorrencias(configuracao) {
+    const partes = [];
+    const nomeEstudante = valorCampo(configuracao.nomeEstudanteId);
+    const turmaId = valorCampo(configuracao.turmaIdId);
+    const status = valorCampo(configuracao.statusId);
+    const dataInicial = valorCampo(configuracao.dataInicialId);
+    const dataFinal = valorCampo(configuracao.dataFinalId);
+
+    if (nomeEstudante) {
+        partes.push(`Estudante: ${nomeEstudante}`);
+    }
+    if (turmaId) {
+        const turma = obterTurmaOpcaoPorId(turmaId);
+        partes.push(`Turma: ${turma?.nome || `ID ${turmaId}`}`);
+    }
+    if (status) {
+        partes.push(`Status: ${rotuloStatus(status)}`);
+    }
+    if (dataInicial && dataFinal) {
+        partes.push(`Periodo: ${formatarDataBr(dataInicial)} ate ${formatarDataBr(dataFinal)}`);
+    } else if (dataInicial) {
+        partes.push(`A partir de: ${formatarDataBr(dataInicial)}`);
+    } else if (dataFinal) {
+        partes.push(`Ate: ${formatarDataBr(dataFinal)}`);
+    }
+
+    return partes.length > 0 ? partes.join(" | ") : "Sem filtro aplicado.";
+}
+
+function totalOcorrenciasPorStatus(lista, status) {
+    return (lista || []).filter((ocorrencia) => String(ocorrencia.status || "").trim() === status).length;
+}
+
+function atualizarResumoOcorrencias() {
+    const total = ocorrenciasCache.length;
+    const acompanhamento = totalOcorrenciasPorStatus(ocorrenciasCache, "em_acompanhamento");
+    const aguardando = totalOcorrenciasPorStatus(ocorrenciasCache, "aguardando_responsavel");
+    const resolvido = totalOcorrenciasPorStatus(ocorrenciasCache, "resolvido");
+
+    if (el("resumoOcorrenciasTotal")) {
+        el("resumoOcorrenciasTotal").innerText = String(total);
+    }
+    if (el("resumoOcorrenciasAcompanhamento")) {
+        el("resumoOcorrenciasAcompanhamento").innerText = String(acompanhamento);
+    }
+    if (el("resumoOcorrenciasAguardando")) {
+        el("resumoOcorrenciasAguardando").innerText = String(aguardando);
+    }
+    if (el("resumoOcorrenciasResolvido")) {
+        el("resumoOcorrenciasResolvido").innerText = String(resolvido);
+    }
+    if (el("resumoOcorrenciasPeriodo")) {
+        el("resumoOcorrenciasPeriodo").innerText = descreverFiltrosOcorrencias({
+            nomeEstudanteId: "filtroNomeEstudante",
+            turmaIdId: "filtroTurmaId",
+            statusId: "filtroStatus",
+            dataInicialId: "filtroDataInicial",
+            dataFinalId: "filtroDataFinal"
+        });
+    }
+}
+
+function agruparOcorrencias(lista, obterChave, obterRotulo) {
+    const mapa = new Map();
+
+    (lista || []).forEach((ocorrencia) => {
+        const chaveBruta = obterChave(ocorrencia);
+        const rotuloBruto = obterRotulo(ocorrencia);
+        const chave = String(chaveBruta || rotuloBruto || "nao_informado").trim();
+        const rotulo = String(rotuloBruto || chaveBruta || "Nao informado").trim() || "Nao informado";
+        const atual = mapa.get(chave) || { label: rotulo, total: 0 };
+        atual.total += 1;
+        mapa.set(chave, atual);
+    });
+
+    return Array.from(mapa.values()).sort((a, b) => {
+        if (b.total !== a.total) {
+            return b.total - a.total;
+        }
+        return a.label.localeCompare(b.label, "pt-BR");
+    });
+}
+
+function renderRankingLista(idLista, itens, vazio, totalBase = 0) {
+    const lista = el(idLista);
+    if (!lista) return;
+    lista.innerHTML = "";
+
+    if (!Array.isArray(itens) || itens.length === 0) {
+        const itemVazio = document.createElement("li");
+        itemVazio.className = "coordenacao-empty-state";
+        itemVazio.innerText = vazio;
+        lista.appendChild(itemVazio);
+        return;
+    }
+
+    itens.slice(0, 5).forEach((item) => {
+        const li = document.createElement("li");
+        li.className = "coordenacao-ranking-item";
+
+        const label = document.createElement("span");
+        label.className = "coordenacao-ranking-label";
+        label.innerText = item.label;
+
+        const total = document.createElement("strong");
+        total.innerText = String(item.total);
+
+        const meta = document.createElement("span");
+        meta.className = "coordenacao-ranking-meta";
+        if (totalBase > 0) {
+            const percentual = Math.round((item.total / totalBase) * 100);
+            meta.innerText = `${percentual}% do relatorio`;
+        } else {
+            meta.innerText = `${item.total} registro(s)`;
+        }
+
+        li.appendChild(label);
+        li.appendChild(total);
+        li.appendChild(meta);
+        lista.appendChild(li);
+    });
+}
+
+function atualizarResumoRelatorioOcorrencias() {
+    const total = relatorioOcorrenciasCache.length;
+    const resolvidas = totalOcorrenciasPorStatus(relatorioOcorrenciasCache, "resolvido");
+    const abertas = total - resolvidas;
+    const turmasImpactadas = new Set(
+        relatorioOcorrenciasCache
+            .map((ocorrencia) => String(ocorrencia.turma_nome || ocorrencia.turma_id || "").trim())
+            .filter(Boolean)
+    ).size;
+
+    if (el("relatorioMetricasTotal")) {
+        el("relatorioMetricasTotal").innerText = String(total);
+    }
+    if (el("relatorioMetricasAbertas")) {
+        el("relatorioMetricasAbertas").innerText = String(abertas);
+    }
+    if (el("relatorioMetricasResolvidas")) {
+        el("relatorioMetricasResolvidas").innerText = String(resolvidas);
+    }
+    if (el("relatorioMetricasTurmas")) {
+        el("relatorioMetricasTurmas").innerText = String(turmasImpactadas);
+    }
+
+    const descricaoFiltros = descreverFiltrosOcorrencias({
+        nomeEstudanteId: "relatorioNomeEstudante",
+        turmaIdId: "relatorioTurmaId",
+        statusId: "relatorioStatus",
+        dataInicialId: "relatorioDataInicial",
+        dataFinalId: "relatorioDataFinal"
+    });
+    if (el("relatorioPeriodo")) {
+        el("relatorioPeriodo").innerText = total > 0
+            ? `Recorte atual: ${descricaoFiltros}`
+            : `Nenhuma ocorrencia encontrada. ${descricaoFiltros}`;
+    }
+
+    renderRankingLista(
+        "relatorioResumoStatus",
+        agruparOcorrencias(
+            relatorioOcorrenciasCache,
+            (ocorrencia) => ocorrencia.status,
+            (ocorrencia) => rotuloStatus(ocorrencia.status)
+        ),
+        "Nenhum status encontrado para o recorte selecionado.",
+        total
+    );
+    renderRankingLista(
+        "relatorioResumoTurmas",
+        agruparOcorrencias(
+            relatorioOcorrenciasCache,
+            (ocorrencia) => ocorrencia.turma_id,
+            (ocorrencia) => ocorrencia.turma_nome || `ID ${ocorrencia.turma_id}`
+        ),
+        "Nenhuma turma encontrada para o recorte selecionado.",
+        total
+    );
+    renderRankingLista(
+        "relatorioResumoProfessores",
+        agruparOcorrencias(
+            relatorioOcorrenciasCache,
+            (ocorrencia) => ocorrencia.professor_requerente_id || ocorrencia.professor_requerente,
+            (ocorrencia) => ocorrencia.professor_requerente || "Nao informado"
+        ),
+        "Nenhum professor encontrado para o recorte selecionado.",
+        total
+    );
+}
+
+function renderTabelaRelatorioOcorrencias() {
+    const tbody = el("tbodyRelatorioOcorrencias");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    if (!Array.isArray(relatorioOcorrenciasCache) || relatorioOcorrenciasCache.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 6;
+        td.className = "booking-empty";
+        td.innerText = "Nenhuma ocorrencia encontrada para o relatorio.";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+    }
+
+    relatorioOcorrenciasCache.forEach((ocorrencia) => {
+        const tr = document.createElement("tr");
+        tr.appendChild(criarCelulaTabela("Data", formatarDataBr(ocorrencia.data_ocorrencia)));
+        tr.appendChild(criarCelulaTabela("Estudante", ocorrencia.nome_estudante || ""));
+        tr.appendChild(criarCelulaTabela("Turma", ocorrencia.turma_nome || ""));
+        tr.appendChild(criarCelulaTabela("Professor requerente", ocorrencia.professor_requerente || ""));
+        tr.appendChild(criarCelulaTabela("Acao aplicada", rotuloAcao(ocorrencia.acao_aplicada)));
+        tr.appendChild(criarCelulaTabela("Status", rotuloStatus(ocorrencia.status)));
+        tbody.appendChild(tr);
+    });
+}
+
+function renderRelatorioOcorrencias() {
+    atualizarResumoRelatorioOcorrencias();
+    renderTabelaRelatorioOcorrencias();
+}
+
+function invalidarRelatorioOcorrencias() {
+    if (!relatorioOcorrenciasCarregado) return;
+    relatorioOcorrenciasCarregado = false;
+    setMensagemRelatorios("Dados atualizados. Gere o relatorio novamente para refletir as alteracoes.");
+}
+
 async function carregarOpcoesOcorrencias() {
     const opcoesApi = await fetchJson("/ocorrencias/opcoes", { headers });
     opcoesOcorrencias = {
@@ -479,6 +820,7 @@ async function carregarOpcoesOcorrencias() {
 
     preencherSelect("ocorrenciaTurmaId", opcoesOcorrencias.turmas, { placeholder: "Selecione a turma" });
     preencherSelect("filtroTurmaId", opcoesOcorrencias.turmas, { incluirTodos: true });
+    preencherSelect("relatorioTurmaId", opcoesOcorrencias.turmas, { incluirTodos: true });
     preencherSelect("ocorrenciaProfessorRequerenteId", opcoesOcorrencias.professores, {
         placeholder: "Selecione o professor requerente",
         obterRotulo: (item) => {
@@ -493,6 +835,7 @@ async function carregarOpcoesOcorrencias() {
         valorPadrao: opcoesOcorrencias.status_padrao || "registrado"
     });
     preencherSelect("filtroStatus", opcoesOcorrencias.status, { incluirTodos: true });
+    preencherSelect("relatorioStatus", opcoesOcorrencias.status, { incluirTodos: true });
 
     preencherSelect("estudanteTurmaId", opcoesOcorrencias.turmas, { placeholder: "Selecione a turma" });
     preencherSelect("filtroEstudanteTurmaId", opcoesOcorrencias.turmas, { incluirTodos: true });
@@ -502,20 +845,23 @@ async function carregarOpcoesOcorrencias() {
 }
 
 function queryFiltrosOcorrencias() {
-    const params = new URLSearchParams();
-    const nomeEstudante = el("filtroNomeEstudante").value.trim();
-    const turmaId = el("filtroTurmaId").value;
-    const status = el("filtroStatus").value;
-    const dataInicial = el("filtroDataInicial").value;
-    const dataFinal = el("filtroDataFinal").value;
+    return montarQueryOcorrencias({
+        nomeEstudanteId: "filtroNomeEstudante",
+        turmaIdId: "filtroTurmaId",
+        statusId: "filtroStatus",
+        dataInicialId: "filtroDataInicial",
+        dataFinalId: "filtroDataFinal"
+    });
+}
 
-    if (nomeEstudante) params.set("nome_estudante", nomeEstudante);
-    if (turmaId) params.set("turma_id", turmaId);
-    if (status) params.set("status", status);
-    if (dataInicial) params.set("data_inicial", dataInicial);
-    if (dataFinal) params.set("data_final", dataFinal);
-
-    return params.toString() ? `?${params.toString()}` : "";
+function queryFiltrosRelatorioOcorrencias() {
+    return montarQueryOcorrencias({
+        nomeEstudanteId: "relatorioNomeEstudante",
+        turmaIdId: "relatorioTurmaId",
+        statusId: "relatorioStatus",
+        dataInicialId: "relatorioDataInicial",
+        dataFinalId: "relatorioDataFinal"
+    });
 }
 
 function queryFiltrosEstudantes() {
@@ -528,8 +874,20 @@ function queryFiltrosEstudantes() {
     return `?${params.toString()}`;
 }
 
+function criarCelulaTabela(rotulo, conteudo = "") {
+    const td = document.createElement("td");
+    td.dataset.label = rotulo;
+    if (typeof Node !== "undefined" && conteudo instanceof Node) {
+        td.appendChild(conteudo);
+    } else {
+        td.innerText = conteudo ?? "";
+    }
+    return td;
+}
+
 function renderTabelaOcorrencias() {
     const tbody = el("tbodyOcorrencias");
+    atualizarResumoOcorrencias();
     tbody.innerHTML = "";
 
     if (!Array.isArray(ocorrenciasCache) || ocorrenciasCache.length === 0) {
@@ -545,55 +903,56 @@ function renderTabelaOcorrencias() {
 
     ocorrenciasCache.forEach((ocorrencia) => {
         const tr = document.createElement("tr");
+        const selecionada = Number(ocorrencia.id) === Number(ocorrenciaSelecionadaId);
+        tr.classList.toggle("is-selected", selecionada);
+        tr.addEventListener("click", () => {
+            selecionarOcorrencia(ocorrencia);
+        });
 
-        const tdData = document.createElement("td");
-        tdData.innerText = formatarDataBr(ocorrencia.data_ocorrencia);
-        tr.appendChild(tdData);
+        tr.appendChild(criarCelulaTabela("Data", formatarDataBr(ocorrencia.data_ocorrencia)));
+        tr.appendChild(criarCelulaTabela("Estudante", ocorrencia.nome_estudante || ""));
+        tr.appendChild(criarCelulaTabela("Turma", ocorrencia.turma_nome || ""));
+        tr.appendChild(criarCelulaTabela("Professor requerente", ocorrencia.professor_requerente || ""));
+        tr.appendChild(criarCelulaTabela("Acao aplicada", rotuloAcao(ocorrencia.acao_aplicada)));
 
-        const tdEstudante = document.createElement("td");
-        tdEstudante.innerText = ocorrencia.nome_estudante || "";
-        tr.appendChild(tdEstudante);
-
-        const tdTurma = document.createElement("td");
-        tdTurma.innerText = ocorrencia.turma_nome || "";
-        tr.appendChild(tdTurma);
-
-        const tdProfessor = document.createElement("td");
-        tdProfessor.innerText = ocorrencia.professor_requerente || "";
-        tr.appendChild(tdProfessor);
-
-        const tdAcao = document.createElement("td");
-        tdAcao.innerText = rotuloAcao(ocorrencia.acao_aplicada);
-        tr.appendChild(tdAcao);
-
-        const tdStatus = document.createElement("td");
         const statusBadge = document.createElement("span");
         statusBadge.className = `status-chip ${classeStatus(ocorrencia.status)}`;
         statusBadge.innerText = rotuloStatus(ocorrencia.status);
-        tdStatus.appendChild(statusBadge);
-        tr.appendChild(tdStatus);
+        tr.appendChild(criarCelulaTabela("Status", statusBadge));
 
-        const tdAcoes = document.createElement("td");
         const linhaAcoes = document.createElement("div");
         linhaAcoes.className = "coordenacao-inline";
 
         const btnVer = document.createElement("button");
         btnVer.type = "button";
         btnVer.innerText = "Ver";
-        btnVer.addEventListener("click", async () => {
-            const detalhe = await fetchJson(`/ocorrencias/${ocorrencia.id}`, { headers });
-            renderDetalhesOcorrencia(detalhe);
+        btnVer.addEventListener("click", (event) => {
+            event.stopPropagation();
+            selecionarOcorrencia(ocorrencia);
         });
 
         const btnEditar = document.createElement("button");
         btnEditar.type = "button";
         btnEditar.innerText = "Editar";
-        btnEditar.addEventListener("click", () => preencherFormularioOcorrencia(ocorrencia));
+        btnEditar.addEventListener("click", (event) => {
+            event.stopPropagation();
+            selecionarOcorrencia(ocorrencia);
+            preencherFormularioOcorrencia(ocorrencia);
+        });
+
+        const btnExcluir = document.createElement("button");
+        btnExcluir.type = "button";
+        btnExcluir.className = "coordenacao-btn-danger";
+        btnExcluir.innerText = "Excluir";
+        btnExcluir.addEventListener("click", (event) => {
+            event.stopPropagation();
+            excluirOcorrencia(ocorrencia);
+        });
 
         linhaAcoes.appendChild(btnVer);
         linhaAcoes.appendChild(btnEditar);
-        tdAcoes.appendChild(linhaAcoes);
-        tr.appendChild(tdAcoes);
+        linhaAcoes.appendChild(btnExcluir);
+        tr.appendChild(criarCelulaTabela("Acoes", linhaAcoes));
 
         tbody.appendChild(tr);
     });
@@ -623,27 +982,15 @@ function renderTabelaEstudantes() {
 
     estudantesFiltrados.forEach((estudante) => {
         const tr = document.createElement("tr");
+        tr.appendChild(criarCelulaTabela("Nome", estudante.nome || ""));
+        tr.appendChild(criarCelulaTabela("Turma", estudante.turma_nome || ""));
 
-        const tdNome = document.createElement("td");
-        tdNome.innerText = estudante.nome || "";
-        tr.appendChild(tdNome);
-
-        const tdTurma = document.createElement("td");
-        tdTurma.innerText = estudante.turma_nome || "";
-        tr.appendChild(tdTurma);
-
-        const tdStatus = document.createElement("td");
         const badge = document.createElement("span");
         badge.className = `status-chip ${classeStatusEstudante(Boolean(estudante.ativo))}`;
         badge.innerText = estudante.ativo ? "Ativo" : "Inativo";
-        tdStatus.appendChild(badge);
-        tr.appendChild(tdStatus);
+        tr.appendChild(criarCelulaTabela("Status", badge));
+        tr.appendChild(criarCelulaTabela("Atualizado em", formatarDataHora(estudante.atualizado_em)));
 
-        const tdAtualizado = document.createElement("td");
-        tdAtualizado.innerText = formatarDataHora(estudante.atualizado_em);
-        tr.appendChild(tdAtualizado);
-
-        const tdAcoes = document.createElement("td");
         const linhaAcoes = document.createElement("div");
         linhaAcoes.className = "coordenacao-inline";
 
@@ -669,10 +1016,18 @@ function renderTabelaEstudantes() {
             }
         });
 
+        const btnExcluir = document.createElement("button");
+        btnExcluir.type = "button";
+        btnExcluir.className = "coordenacao-btn-danger";
+        btnExcluir.innerText = "Excluir";
+        btnExcluir.addEventListener("click", () => {
+            excluirEstudante(estudante);
+        });
+
         linhaAcoes.appendChild(btnEditar);
         linhaAcoes.appendChild(btnStatus);
-        tdAcoes.appendChild(linhaAcoes);
-        tr.appendChild(tdAcoes);
+        linhaAcoes.appendChild(btnExcluir);
+        tr.appendChild(criarCelulaTabela("Acoes", linhaAcoes));
 
         tbody.appendChild(tr);
     });
@@ -680,7 +1035,25 @@ function renderTabelaEstudantes() {
 
 async function carregarOcorrencias() {
     ocorrenciasCache = await fetchJson(`/ocorrencias${queryFiltrosOcorrencias()}`, { headers });
+    const ocorrenciaSelecionada = ocorrenciasCache.find(
+        (ocorrencia) => Number(ocorrencia.id) === Number(ocorrenciaSelecionadaId)
+    ) || null;
+
+    if (ocorrenciaSelecionada) {
+        renderDetalhesOcorrencia(ocorrenciaSelecionada);
+    } else if (ocorrenciaSelecionadaId) {
+        ocorrenciaSelecionadaId = null;
+        renderDetalhesOcorrencia(null);
+    }
+
     renderTabelaOcorrencias();
+}
+
+async function carregarRelatorioOcorrencias() {
+    setMensagemRelatorios("");
+    relatorioOcorrenciasCache = await fetchJson(`/ocorrencias${queryFiltrosRelatorioOcorrencias()}`, { headers });
+    relatorioOcorrenciasCarregado = true;
+    renderRelatorioOcorrencias();
 }
 
 async function carregarEstudantes() {
@@ -798,8 +1171,9 @@ async function salvarOcorrencia(event) {
         }
 
         limparFormularioOcorrencia();
+        invalidarRelatorioOcorrencias();
         await carregarOcorrencias();
-        renderDetalhesOcorrencia(ocorrencia);
+        selecionarOcorrencia(ocorrencia);
     } catch (err) {
         setMensagemOcorrencias(err.message, true);
     }
@@ -820,6 +1194,87 @@ async function limparFiltrosOcorrencias() {
         await carregarOcorrencias();
     } catch (err) {
         setMensagemOcorrencias(err.message, true);
+    }
+}
+
+async function filtrarRelatorioOcorrencias(event) {
+    event.preventDefault();
+    try {
+        await carregarRelatorioOcorrencias();
+    } catch (err) {
+        setMensagemRelatorios(err.message, true);
+    }
+}
+
+async function limparFiltrosRelatorioOcorrencias() {
+    el("formRelatorioOcorrencias").reset();
+    try {
+        await carregarRelatorioOcorrencias();
+    } catch (err) {
+        setMensagemRelatorios(err.message, true);
+    }
+}
+
+async function excluirOcorrencia(ocorrencia) {
+    const nomeEstudante = String(ocorrencia?.nome_estudante || "este registro").trim();
+    const confirmou = window.confirm(`Excluir a ocorrencia de ${nomeEstudante}? Esta acao nao pode ser desfeita.`);
+    if (!confirmou) return;
+
+    try {
+        const resposta = await requisitarExclusao(
+            `/ocorrencias/${ocorrencia.id}`,
+            `/ocorrencias/${ocorrencia.id}/excluir`
+        );
+
+        if (Number(ocorrenciaEmEdicaoId) === Number(ocorrencia.id)) {
+            limparFormularioOcorrencia();
+        }
+        if (Number(ocorrenciaSelecionadaId) === Number(ocorrencia.id)) {
+            selecionarOcorrencia(null);
+        }
+
+        invalidarRelatorioOcorrencias();
+        await carregarOcorrencias();
+        setMensagemOcorrencias(resposta?.mensagem || "Ocorrencia excluida com sucesso.");
+    } catch (err) {
+        setMensagemOcorrencias(err.message, true);
+    }
+}
+
+async function excluirEstudante(estudante) {
+    const nomeEstudante = String(estudante?.nome || "este estudante").trim();
+    const confirmou = window.confirm(
+        `Excluir o cadastro de ${nomeEstudante}? As ocorrencias ja registradas serao preservadas no historico.`
+    );
+    if (!confirmou) return;
+
+    try {
+        const resposta = await requisitarExclusao(
+            `/estudantes/${estudante.id}`,
+            `/estudantes/${estudante.id}/excluir`
+        );
+
+        if (Number(estudanteEmEdicao?.id) === Number(estudante.id)) {
+            limparFormularioEstudante();
+        }
+        if (Number(el("ocorrenciaEstudanteId")?.value || 0) === Number(estudante.id)) {
+            el("ocorrenciaEstudanteId").value = "";
+        }
+
+        invalidarRelatorioOcorrencias();
+        await Promise.all([
+            carregarEstudantes(),
+            carregarOcorrencias(),
+            atualizarSugestoesEstudantesBusca(true)
+        ]);
+
+        const totalDesvinculado = Number(resposta?.ocorrencias_desvinculadas || 0);
+        const sufixo = totalDesvinculado > 0
+            ? ` ${totalDesvinculado} ocorrencia(s) ficaram apenas com o nome do estudante no historico.`
+            : "";
+        setMensagemEstudantes((resposta?.mensagem || "Estudante excluido com sucesso.") + sufixo);
+    } catch (err) {
+        setMensagemEstudantes(err.message, true);
     }
 }
 
@@ -899,12 +1354,21 @@ function registrarEventosOcorrencias() {
     el("formOcorrencia").addEventListener("submit", salvarOcorrencia);
     el("btnLimparFiltros").addEventListener("click", limparFiltrosOcorrencias);
     el("btnNovaOcorrencia").addEventListener("click", () => {
+        const painelAberto = painelFormularioOcorrenciaAberto();
+        if (painelAberto && !ocorrenciaEmEdicaoId) {
+            limparFormularioOcorrencia();
+            return;
+        }
+
+        limparFormularioOcorrencia({ manterAberto: true });
+        mostrarPainelFormularioOcorrencia({ scroll: true });
+        el("ocorrenciaBuscaEstudante").focus();
+    });
+    el("btnFecharPainelOcorrencia").addEventListener("click", () => {
         limparFormularioOcorrencia();
-        renderDetalhesOcorrencia(null);
     });
     el("btnCancelarEdicaoOcorrencia").addEventListener("click", () => {
         limparFormularioOcorrencia();
-        renderDetalhesOcorrencia(null);
     });
 
     el("ocorrenciaBuscaEstudante").addEventListener("input", () => {
@@ -919,6 +1383,11 @@ function registrarEventosOcorrencias() {
         atualizarSelectAulasPorTurma(el("ocorrenciaTurmaId").value);
         agendarBuscaEstudantes();
     });
+}
+
+function registrarEventosRelatorios() {
+    el("formRelatorioOcorrencias").addEventListener("submit", filtrarRelatorioOcorrencias);
+    el("btnLimparRelatorioOcorrencias").addEventListener("click", limparFiltrosRelatorioOcorrencias);
 }
 
 function registrarEventosEstudantes() {
@@ -950,6 +1419,7 @@ async function init() {
 
         registrarEventosAbas();
         registrarEventosOcorrencias();
+        registrarEventosRelatorios();
         registrarEventosEstudantes();
         registrarEventosGerais();
 
@@ -957,6 +1427,7 @@ async function init() {
         limparFormularioOcorrencia();
         limparFormularioEstudante();
         renderDetalhesOcorrencia(null);
+        renderRelatorioOcorrencias();
         ativarAbaCoordenacao(abaCoordAtiva);
 
         await Promise.all([

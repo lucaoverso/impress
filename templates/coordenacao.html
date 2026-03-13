@@ -26,6 +26,9 @@
             <button class="admin-tab-btn is-active" data-coord-tab-trigger="ocorrencias" aria-controls="coord-tab-ocorrencias" aria-selected="true" type="button">
                 Ocorrencias
             </button>
+            <button class="admin-tab-btn" data-coord-tab-trigger="relatorios" aria-controls="coord-tab-relatorios" aria-selected="false" type="button">
+                Relatorios
+            </button>
             <button class="admin-tab-btn" data-coord-tab-trigger="estudantes" aria-controls="coord-tab-estudantes" aria-selected="false" type="button">
                 Cadastro de estudantes
             </button>
@@ -33,28 +36,292 @@
 
         <section class="coordenacao-tab-panels">
             <section id="coord-tab-ocorrencias" class="coordenacao-tab-panel is-active" data-coord-tab-panel="ocorrencias">
-                <section class="coordenacao-grid">
-                    <article class="coordenacao-card">
-                        <h2>Filtros</h2>
-                        <form id="formFiltrosOcorrencias" class="coordenacao-form">
-                            <input id="filtroNomeEstudante" type="text" placeholder="Nome do estudante">
-                            <select id="filtroTurmaId"></select>
-                            <select id="filtroStatus"></select>
-                            <div class="coordenacao-inline">
-                                <input id="filtroDataInicial" type="date">
-                                <input id="filtroDataFinal" type="date">
+                <section class="coordenacao-stack">
+                    <article class="coordenacao-card coordenacao-hero">
+                        <div class="coordenacao-hero-top">
+                            <div>
+                                <p class="coordenacao-eyebrow">Painel principal</p>
+                                <h2>Acompanhe todas as ocorrencias</h2>
+                                <p>Centralize a consulta dos registros e abra o formulario somente quando precisar cadastrar ou editar uma ocorrencia.</p>
                             </div>
-                            <div class="coordenacao-inline">
-                                <button class="btn-destaque" type="submit">Filtrar</button>
-                                <button id="btnLimparFiltros" type="button">Limpar</button>
-                                <button id="btnNovaOcorrencia" type="button">Nova ocorrencia</button>
-                            </div>
-                        </form>
-                        <p id="msgOcorrencias"></p>
+                            <button id="btnNovaOcorrencia" class="btn-destaque" type="button" aria-controls="painelFormOcorrencia" aria-expanded="false">
+                                Registrar ocorrencia
+                            </button>
+                        </div>
+
+                        <div class="coordenacao-stat-grid">
+                            <article class="coordenacao-stat-card">
+                                <span class="coordenacao-stat-label">Total no painel</span>
+                                <strong id="resumoOcorrenciasTotal" class="coordenacao-stat-value">0</strong>
+                                <span id="resumoOcorrenciasPeriodo" class="coordenacao-stat-meta">Sem filtro aplicado.</span>
+                            </article>
+                            <article class="coordenacao-stat-card">
+                                <span class="coordenacao-stat-label">Em acompanhamento</span>
+                                <strong id="resumoOcorrenciasAcompanhamento" class="coordenacao-stat-value">0</strong>
+                                <span class="coordenacao-stat-meta">Ocorrencias que seguem em tratativa.</span>
+                            </article>
+                            <article class="coordenacao-stat-card">
+                                <span class="coordenacao-stat-label">Aguardando responsavel</span>
+                                <strong id="resumoOcorrenciasAguardando" class="coordenacao-stat-value">0</strong>
+                                <span class="coordenacao-stat-meta">Casos que dependem de retorno externo.</span>
+                            </article>
+                            <article class="coordenacao-stat-card">
+                                <span class="coordenacao-stat-label">Resolvidas</span>
+                                <strong id="resumoOcorrenciasResolvido" class="coordenacao-stat-value">0</strong>
+                                <span class="coordenacao-stat-meta">Registros finalizados no recorte atual.</span>
+                            </article>
+                        </div>
                     </article>
 
-                    <article class="coordenacao-card coordenacao-card-wide">
-                        <h2>Ocorrencias registradas</h2>
+                    <section class="coordenacao-main-layout">
+                        <article class="coordenacao-card">
+                            <div class="coordenacao-section-header">
+                                <div>
+                                    <h2>Lista de ocorrencias</h2>
+                                    <p>Filtre por estudante, turma, status ou periodo para localizar rapidamente os registros.</p>
+                                </div>
+                                <p id="msgOcorrencias"></p>
+                            </div>
+
+                            <form id="formFiltrosOcorrencias" class="coordenacao-filter-grid">
+                                <label class="coordenacao-field" for="filtroNomeEstudante">
+                                    <span>Estudante</span>
+                                    <input id="filtroNomeEstudante" type="text" placeholder="Nome do estudante">
+                                </label>
+                                <label class="coordenacao-field" for="filtroTurmaId">
+                                    <span>Turma</span>
+                                    <select id="filtroTurmaId"></select>
+                                </label>
+                                <label class="coordenacao-field" for="filtroStatus">
+                                    <span>Status</span>
+                                    <select id="filtroStatus"></select>
+                                </label>
+                                <label class="coordenacao-field" for="filtroDataInicial">
+                                    <span>Data inicial</span>
+                                    <input id="filtroDataInicial" type="date">
+                                </label>
+                                <label class="coordenacao-field" for="filtroDataFinal">
+                                    <span>Data final</span>
+                                    <input id="filtroDataFinal" type="date">
+                                </label>
+                                <div class="coordenacao-filter-actions">
+                                    <button class="btn-destaque" type="submit">Filtrar</button>
+                                    <button id="btnLimparFiltros" type="button">Limpar</button>
+                                </div>
+                            </form>
+
+                            <div class="coordenacao-table-wrap">
+                                <table class="coordenacao-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Data</th>
+                                            <th>Estudante</th>
+                                            <th>Turma</th>
+                                            <th>Professor requerente</th>
+                                            <th>Acao aplicada</th>
+                                            <th>Status</th>
+                                            <th>Acoes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodyOcorrencias"></tbody>
+                                </table>
+                            </div>
+                        </article>
+
+                        <article class="coordenacao-card">
+                            <div class="coordenacao-section-header">
+                                <div>
+                                    <h2>Detalhes da ocorrencia</h2>
+                                    <p>Selecione um registro na tabela para visualizar todos os dados e acompanhar o historico.</p>
+                                </div>
+                            </div>
+                            <div id="detalhesOcorrencia" class="coordenacao-details">
+                                Selecione uma ocorrencia para visualizar os detalhes.
+                            </div>
+                        </article>
+                    </section>
+
+                    <article id="painelFormOcorrencia" class="coordenacao-card coordenacao-form-shell" hidden>
+                        <div class="coordenacao-section-header">
+                            <div>
+                                <p class="coordenacao-eyebrow">Registro</p>
+                                <h2 id="tituloFormOcorrencia">Nova ocorrencia</h2>
+                                <p>Preencha os campos abaixo para registrar ou ajustar uma ocorrencia sem sair da listagem principal.</p>
+                            </div>
+                            <button id="btnFecharPainelOcorrencia" type="button">Fechar formulario</button>
+                        </div>
+
+                        <form id="formOcorrencia" class="coordenacao-form coordenacao-form-grid">
+                            <label class="coordenacao-field coordenacao-field-wide" for="ocorrenciaBuscaEstudante">
+                                <span>Estudante</span>
+                                <input id="ocorrenciaBuscaEstudante" type="text" list="listaEstudantesBusca" placeholder="Buscar estudante cadastrado ou digitar nome" required>
+                            </label>
+                            <datalist id="listaEstudantesBusca"></datalist>
+                            <input id="ocorrenciaEstudanteId" type="hidden">
+
+                            <label class="coordenacao-field" for="ocorrenciaTurmaId">
+                                <span>Turma</span>
+                                <select id="ocorrenciaTurmaId" required></select>
+                            </label>
+
+                            <label class="coordenacao-field" for="ocorrenciaProfessorRequerenteId">
+                                <span>Professor requerente</span>
+                                <select id="ocorrenciaProfessorRequerenteId" required></select>
+                            </label>
+
+                            <label class="coordenacao-field" for="ocorrenciaDisciplina">
+                                <span>Disciplina</span>
+                                <input id="ocorrenciaDisciplina" type="text" placeholder="Disciplina" required>
+                            </label>
+
+                            <label class="coordenacao-field" for="ocorrenciaData">
+                                <span>Data da ocorrencia</span>
+                                <input id="ocorrenciaData" type="date" required>
+                            </label>
+
+                            <label class="coordenacao-field" for="ocorrenciaAula">
+                                <span>Aula</span>
+                                <select id="ocorrenciaAula" required></select>
+                            </label>
+
+                            <label class="coordenacao-field" for="ocorrenciaHorario">
+                                <span>Horario</span>
+                                <input id="ocorrenciaHorario" type="text" placeholder="Horario (ex: 07:30)" maxlength="30" required>
+                            </label>
+
+                            <label class="coordenacao-field coordenacao-field-wide" for="ocorrenciaDescricao">
+                                <span>Descricao</span>
+                                <textarea id="ocorrenciaDescricao" rows="5" placeholder="Descricao da ocorrencia" required></textarea>
+                            </label>
+
+                            <label class="coordenacao-field" for="ocorrenciaAcaoAplicada">
+                                <span>Acao aplicada</span>
+                                <select id="ocorrenciaAcaoAplicada" required></select>
+                            </label>
+
+                            <label class="coordenacao-field" for="ocorrenciaStatus">
+                                <span>Status</span>
+                                <select id="ocorrenciaStatus" required></select>
+                            </label>
+
+                            <div class="coordenacao-inline coordenacao-form-actions coordenacao-field-wide">
+                                <button class="btn-destaque" type="submit">Salvar ocorrencia</button>
+                                <button id="btnCancelarEdicaoOcorrencia" type="button" style="display: none;">Cancelar edicao</button>
+                            </div>
+                        </form>
+                    </article>
+                </section>
+            </section>
+
+            <section id="coord-tab-relatorios" class="coordenacao-tab-panel" data-coord-tab-panel="relatorios" hidden>
+                <section class="coordenacao-report-layout">
+                    <article class="coordenacao-card">
+                        <div class="coordenacao-section-header">
+                            <div>
+                                <p class="coordenacao-eyebrow">Relatorios</p>
+                                <h2>Gere relatorios de ocorrencias</h2>
+                                <p>Monte um recorte por periodo, turma, estudante ou status para ter uma visao consolidada sem poluir a tela principal.</p>
+                            </div>
+                            <p id="msgRelatorios"></p>
+                        </div>
+
+                        <form id="formRelatorioOcorrencias" class="coordenacao-filter-grid">
+                            <label class="coordenacao-field" for="relatorioNomeEstudante">
+                                <span>Estudante</span>
+                                <input id="relatorioNomeEstudante" type="text" placeholder="Nome do estudante">
+                            </label>
+                            <label class="coordenacao-field" for="relatorioTurmaId">
+                                <span>Turma</span>
+                                <select id="relatorioTurmaId"></select>
+                            </label>
+                            <label class="coordenacao-field" for="relatorioStatus">
+                                <span>Status</span>
+                                <select id="relatorioStatus"></select>
+                            </label>
+                            <label class="coordenacao-field" for="relatorioDataInicial">
+                                <span>Data inicial</span>
+                                <input id="relatorioDataInicial" type="date">
+                            </label>
+                            <label class="coordenacao-field" for="relatorioDataFinal">
+                                <span>Data final</span>
+                                <input id="relatorioDataFinal" type="date">
+                            </label>
+                            <div class="coordenacao-filter-actions">
+                                <button class="btn-destaque" type="submit">Gerar relatorio</button>
+                                <button id="btnLimparRelatorioOcorrencias" type="button">Limpar</button>
+                            </div>
+                        </form>
+                    </article>
+
+                    <section class="coordenacao-stat-grid">
+                        <article class="coordenacao-card coordenacao-stat-card">
+                            <span class="coordenacao-stat-label">Total de ocorrencias</span>
+                            <strong id="relatorioMetricasTotal" class="coordenacao-stat-value">0</strong>
+                            <span class="coordenacao-stat-meta">Registros encontrados para o relatorio.</span>
+                        </article>
+                        <article class="coordenacao-card coordenacao-stat-card">
+                            <span class="coordenacao-stat-label">Pendencias abertas</span>
+                            <strong id="relatorioMetricasAbertas" class="coordenacao-stat-value">0</strong>
+                            <span class="coordenacao-stat-meta">Ocorrencias ainda nao resolvidas.</span>
+                        </article>
+                        <article class="coordenacao-card coordenacao-stat-card">
+                            <span class="coordenacao-stat-label">Resolvidas</span>
+                            <strong id="relatorioMetricasResolvidas" class="coordenacao-stat-value">0</strong>
+                            <span class="coordenacao-stat-meta">Casos encerrados no recorte atual.</span>
+                        </article>
+                        <article class="coordenacao-card coordenacao-stat-card">
+                            <span class="coordenacao-stat-label">Turmas impactadas</span>
+                            <strong id="relatorioMetricasTurmas" class="coordenacao-stat-value">0</strong>
+                            <span class="coordenacao-stat-meta">Quantidade de turmas com registros.</span>
+                        </article>
+                    </section>
+
+                    <section class="coordenacao-report-insights">
+                        <article class="coordenacao-card">
+                            <div class="coordenacao-section-header">
+                                <div>
+                                    <h2>Status do periodo</h2>
+                                    <p>Distribuicao dos registros filtrados.</p>
+                                </div>
+                            </div>
+                            <ul id="relatorioResumoStatus" class="coordenacao-ranking-list">
+                                <li class="coordenacao-empty-state">Gere um relatorio para visualizar os status.</li>
+                            </ul>
+                        </article>
+
+                        <article class="coordenacao-card">
+                            <div class="coordenacao-section-header">
+                                <div>
+                                    <h2>Turmas com mais registros</h2>
+                                    <p>Ajuda a identificar onde concentrar o acompanhamento.</p>
+                                </div>
+                            </div>
+                            <ul id="relatorioResumoTurmas" class="coordenacao-ranking-list">
+                                <li class="coordenacao-empty-state">Nenhum dado consolidado ainda.</li>
+                            </ul>
+                        </article>
+
+                        <article class="coordenacao-card">
+                            <div class="coordenacao-section-header">
+                                <div>
+                                    <h2>Professores requerentes</h2>
+                                    <p>Visao dos encaminhamentos por professor.</p>
+                                </div>
+                            </div>
+                            <ul id="relatorioResumoProfessores" class="coordenacao-ranking-list">
+                                <li class="coordenacao-empty-state">Nenhum dado consolidado ainda.</li>
+                            </ul>
+                        </article>
+                    </section>
+
+                    <article class="coordenacao-card">
+                        <div class="coordenacao-section-header">
+                            <div>
+                                <h2>Ocorrencias do relatorio</h2>
+                                <p id="relatorioPeriodo">Use os filtros acima para gerar um recorte consolidado.</p>
+                            </div>
+                        </div>
+
                         <div class="coordenacao-table-wrap">
                             <table class="coordenacao-table">
                                 <thead>
@@ -65,45 +332,10 @@
                                         <th>Professor requerente</th>
                                         <th>Acao aplicada</th>
                                         <th>Status</th>
-                                        <th>Acoes</th>
                                     </tr>
                                 </thead>
-                                <tbody id="tbodyOcorrencias"></tbody>
+                                <tbody id="tbodyRelatorioOcorrencias"></tbody>
                             </table>
-                        </div>
-                    </article>
-
-                    <article class="coordenacao-card">
-                        <h2 id="tituloFormOcorrencia">Nova ocorrencia</h2>
-                        <form id="formOcorrencia" class="coordenacao-form">
-                            <input id="ocorrenciaBuscaEstudante" type="text" list="listaEstudantesBusca" placeholder="Buscar estudante cadastrado ou digitar nome" required>
-                            <datalist id="listaEstudantesBusca"></datalist>
-                            <input id="ocorrenciaEstudanteId" type="hidden">
-
-                            <select id="ocorrenciaTurmaId" required></select>
-
-                            <select id="ocorrenciaProfessorRequerenteId" required></select>
-
-                            <input id="ocorrenciaDisciplina" type="text" placeholder="Disciplina" required>
-                            <div class="coordenacao-inline">
-                                <input id="ocorrenciaData" type="date" required>
-                                <select id="ocorrenciaAula" required></select>
-                            </div>
-                            <input id="ocorrenciaHorario" type="text" placeholder="Horario (ex: 07:30)" maxlength="30" required>
-                            <textarea id="ocorrenciaDescricao" rows="5" placeholder="Descricao da ocorrencia" required></textarea>
-                            <select id="ocorrenciaAcaoAplicada" required></select>
-                            <select id="ocorrenciaStatus" required></select>
-                            <div class="coordenacao-inline">
-                                <button class="btn-destaque" type="submit">Salvar ocorrencia</button>
-                                <button id="btnCancelarEdicaoOcorrencia" type="button" style="display: none;">Cancelar edicao</button>
-                            </div>
-                        </form>
-                    </article>
-
-                    <article class="coordenacao-card">
-                        <h2>Detalhes da ocorrencia</h2>
-                        <div id="detalhesOcorrencia" class="coordenacao-details">
-                            Selecione uma ocorrencia para visualizar os detalhes.
                         </div>
                     </article>
                 </section>
@@ -112,29 +344,55 @@
             <section id="coord-tab-estudantes" class="coordenacao-tab-panel" data-coord-tab-panel="estudantes" hidden>
                 <section class="coordenacao-grid">
                     <article class="coordenacao-card">
-                        <h2 id="tituloFormEstudante">Cadastrar estudante</h2>
+                        <div class="coordenacao-section-header">
+                            <div>
+                                <p class="coordenacao-eyebrow">Cadastro</p>
+                                <h2 id="tituloFormEstudante">Cadastrar estudante</h2>
+                                <p>Mantenha a base de estudantes atualizada para agilizar a abertura de novas ocorrencias.</p>
+                            </div>
+                            <p id="msgEstudantes"></p>
+                        </div>
                         <form id="formEstudante" class="coordenacao-form">
-                            <input id="estudanteNome" type="text" placeholder="Nome completo do estudante" required>
-                            <select id="estudanteTurmaId" required></select>
-                            <div class="coordenacao-inline">
+                            <label class="coordenacao-field" for="estudanteNome">
+                                <span>Nome completo do estudante</span>
+                                <input id="estudanteNome" type="text" placeholder="Nome completo do estudante" required>
+                            </label>
+                            <label class="coordenacao-field" for="estudanteTurmaId">
+                                <span>Turma</span>
+                                <select id="estudanteTurmaId" required></select>
+                            </label>
+                            <div class="coordenacao-inline coordenacao-form-actions">
                                 <button class="btn-destaque" type="submit">Salvar estudante</button>
                                 <button id="btnCancelarEdicaoEstudante" type="button" style="display: none;">Cancelar edicao</button>
                             </div>
                         </form>
-                        <p id="msgEstudantes"></p>
                     </article>
 
                     <article class="coordenacao-card coordenacao-card-wide">
-                        <h2>Estudantes cadastrados</h2>
-                        <form id="formFiltrosEstudantes" class="coordenacao-form coordenacao-filter-inline">
-                            <input id="filtroEstudanteNome" type="text" placeholder="Buscar por nome">
-                            <select id="filtroEstudanteTurmaId"></select>
-                            <select id="filtroEstudanteStatus">
-                                <option value="">Todos status</option>
-                                <option value="ativos">Ativos</option>
-                                <option value="inativos">Inativos</option>
-                            </select>
-                            <div class="coordenacao-inline">
+                        <div class="coordenacao-section-header">
+                            <div>
+                                <h2>Estudantes cadastrados</h2>
+                                <p>Consulte, filtre e atualize o cadastro sem sair do modulo de coordenacao.</p>
+                            </div>
+                        </div>
+                        <form id="formFiltrosEstudantes" class="coordenacao-filter-grid coordenacao-filter-inline">
+                            <label class="coordenacao-field" for="filtroEstudanteNome">
+                                <span>Buscar por nome</span>
+                                <input id="filtroEstudanteNome" type="text" placeholder="Buscar por nome">
+                            </label>
+                            <label class="coordenacao-field" for="filtroEstudanteTurmaId">
+                                <span>Turma</span>
+                                <select id="filtroEstudanteTurmaId"></select>
+                            </label>
+                            <label class="coordenacao-field" for="filtroEstudanteStatus">
+                                <span>Status</span>
+                                <select id="filtroEstudanteStatus">
+                                    <option value="">Todos status</option>
+                                    <option value="ativos">Ativos</option>
+                                    <option value="inativos">Inativos</option>
+                                </select>
+                            </label>
+                            <div class="coordenacao-filter-actions">
                                 <button class="btn-destaque" type="submit">Filtrar</button>
                                 <button id="btnLimparFiltrosEstudantes" type="button">Limpar</button>
                             </div>

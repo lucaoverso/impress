@@ -23,6 +23,8 @@ from database import (
     listar_ocorrencias,
     listar_professores_agendamento,
     listar_turmas_ativas,
+    remover_estudante,
+    remover_ocorrencia,
 )
 from models import (
     EstudanteCreateIn,
@@ -53,7 +55,7 @@ _STATUS_ROTULOS = {
 _TURNOS_CONFIG = {
     "INTEGRAL": {"nome": "Periodo integral", "aulas": 8},
     "MATUTINO": {"nome": "Matutino", "aulas": 5},
-    "VESPERTINO": {"nome": "Vespertino", "aulas": 5},
+    "VESPERTINO": {"nome": "Vespertino", "aulas": 6},
     "VESPERTINO_EM": {"nome": "Vespertino E.M.", "aulas": 6},
 }
 _FAIXA_GLOBAL_OFFSET_POR_TURNO = {
@@ -580,6 +582,20 @@ def atualizar_ocorrencia_api(
     return atualizar_ocorrencia_parcial_api(ocorrencia_id, payload, usuario)
 
 
+@router.delete("/ocorrencias/{ocorrencia_id}")
+def remover_ocorrencia_api(ocorrencia_id: int, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    removido = remover_ocorrencia(ocorrencia_id)
+    if not removido:
+        raise HTTPException(404, "Ocorrencia nao encontrada.")
+    return {"mensagem": "Ocorrencia excluida com sucesso."}
+
+
+@router.post("/ocorrencias/{ocorrencia_id}/excluir")
+def remover_ocorrencia_fallback_api(ocorrencia_id: int, usuario=Depends(get_usuario_logado)):
+    return remover_ocorrencia_api(ocorrencia_id, usuario)
+
+
 @router.get("/estudantes", response_model=list[EstudanteOut])
 def listar_estudantes_api(
     nome: str | None = Query(default=None),
@@ -657,3 +673,20 @@ def atualizar_status_estudante_api(
     if not alterado:
         raise HTTPException(404, "Estudante nao encontrado.")
     return {"mensagem": "Status do estudante atualizado com sucesso."}
+
+
+@router.delete("/estudantes/{estudante_id}")
+def remover_estudante_api(estudante_id: int, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    removido, ocorrencias_desvinculadas = remover_estudante(estudante_id)
+    if not removido:
+        raise HTTPException(404, "Estudante nao encontrado.")
+    return {
+        "mensagem": "Estudante excluido com sucesso.",
+        "ocorrencias_desvinculadas": ocorrencias_desvinculadas,
+    }
+
+
+@router.post("/estudantes/{estudante_id}/excluir")
+def remover_estudante_fallback_api(estudante_id: int, usuario=Depends(get_usuario_logado)):
+    return remover_estudante_api(estudante_id, usuario)

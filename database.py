@@ -1801,6 +1801,30 @@ def atualizar_status_estudante(estudante_id: int, ativo: bool):
     conn.close()
     return alterado
 
+def remover_estudante(estudante_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    estudante_id_valor = int(estudante_id)
+
+    cursor.execute("SELECT 1 FROM estudantes WHERE id = ?", (estudante_id_valor,))
+    if not cursor.fetchone():
+        conn.close()
+        return False, 0
+
+    cursor.execute("""
+        UPDATE ocorrencias
+        SET estudante_id = NULL, atualizado_em = datetime('now')
+        WHERE estudante_id = ?
+    """, (estudante_id_valor,))
+    ocorrencias_desvinculadas = cursor.rowcount
+
+    cursor.execute("DELETE FROM estudantes WHERE id = ?", (estudante_id_valor,))
+    removido = cursor.rowcount > 0
+
+    conn.commit()
+    conn.close()
+    return removido, ocorrencias_desvinculadas
+
 def buscar_estudantes_ocorrencia(termo: str = "", turma_id: int = None, limite: int = 20):
     return listar_estudantes(
         incluir_inativos=False,
@@ -2813,6 +2837,15 @@ def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
     conn.commit()
     conn.close()
     return alterado
+
+def remover_ocorrencia(ocorrencia_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM ocorrencias WHERE id = ?", (int(ocorrencia_id),))
+    removido = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return removido
 
 def contar_agendamentos_ativos_faixa(recurso_id: int, data: str, faixa_global: int):
     conn = get_connection()
