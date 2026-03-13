@@ -1179,6 +1179,10 @@ footer {
     gap: 12px;
 }
 
+.service-card[hidden] {
+    display: none;
+}
+
 .service-card img {
     width: 40%;
     margin: auto;
