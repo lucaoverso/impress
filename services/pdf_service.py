@@ -75,10 +75,12 @@ def _obter_tamanho_folha(orientacao: str) -> tuple[float, float]:
     return A4_RETRATO_LARGURA_PT, A4_RETRATO_ALTURA_PT
 
 
-def _obter_layout_nup(paginas_por_folha: int) -> tuple[int, int]:
+def _obter_layout_nup(paginas_por_folha: int, orientacao: str = "retrato") -> tuple[int, int]:
     if paginas_por_folha == 1:
         return 1, 1
     if paginas_por_folha == 2:
+        if orientacao == "retrato":
+            return 1, 2
         return 2, 1
     if paginas_por_folha == 4:
         return 2, 2
@@ -106,12 +108,10 @@ def gerar_pdf_n_por_folha(
         paginas_selecionadas = paginas_selecionadas * paginas_por_folha
 
     orientacao_norm = _normalizar_orientacao(orientacao)
-    if paginas_por_folha == 2:
-        orientacao_norm = "paisagem"
 
     writer = PdfWriter()
     largura_folha, altura_folha = _obter_tamanho_folha(orientacao_norm)
-    colunas, linhas = _obter_layout_nup(paginas_por_folha)
+    colunas, linhas = _obter_layout_nup(paginas_por_folha, orientacao_norm)
     largura_celula = largura_folha / colunas
     altura_celula = altura_folha / linhas
 

@@ -543,6 +543,11 @@ def sanitizar_nome_arquivo(nome_arquivo: str) -> str:
         return f"{nome_limpo}.pdf"
     return nome_limpo
 
+def obter_layout_duas_por_folha(orientacao: str) -> str:
+    if orientacao == "retrato":
+        return "tblr"
+    return "lrtb"
+
 def montar_opcoes_cups(
     paginas_por_folha: int,
     duplex: bool,
@@ -568,7 +573,7 @@ def montar_opcoes_cups(
 
     if paginas_por_folha == 2:
         # Garante disposição horizontal das duas páginas por folha.
-        opcoes["number-up-layout"] = "lrtb"
+        opcoes["number-up-layout"] = obter_layout_duas_por_folha(orientacao)
 
     intervalo = (intervalo_paginas or "").strip()
     if intervalo:

@@ -131,11 +131,14 @@ function ajustarPosicaoPainelMeta() {
     }
 }
 
-function obterConfigLayout(paginasPorFolha) {
+function obterConfigLayout(paginasPorFolha, orientacao = "retrato") {
     if (paginasPorFolha === 1) {
         return { colunas: 1, linhas: 1 };
     }
     if (paginasPorFolha === 2) {
+        if (orientacao === "retrato") {
+            return { colunas: 1, linhas: 2 };
+        }
         return { colunas: 2, linhas: 1 };
     }
     return { colunas: 2, linhas: 2 };
@@ -214,25 +217,13 @@ function centralizarFolhaAtiva(suave = true) {
 }
 
 function obterOrientacaoPreview() {
-    const paginasPorFolha = Number(el("paginasPorFolha").value);
-    if (paginasPorFolha === 2) {
-        return "paisagem";
-    }
     return el("orientacao").value;
 }
 
 function atualizarComportamentoOrientacao() {
     const orientacaoEl = el("orientacao");
-    const paginasPorFolha = Number(el("paginasPorFolha").value);
-
-    if (paginasPorFolha === 2) {
-        orientacaoEl.value = "paisagem";
-        orientacaoEl.disabled = true;
-        orientacaoEl.title = "Com 2 páginas por folha, a visualização usa modo paisagem.";
-    } else {
-        orientacaoEl.disabled = false;
-        orientacaoEl.title = "";
-    }
+    orientacaoEl.disabled = false;
+    orientacaoEl.title = "";
 }
 
 function obterPaginasSelecionadas() {
@@ -899,7 +890,7 @@ async function renderFolha() {
 
     const paginasPorFolha = Number(el("paginasPorFolha").value);
     const orientacao = obterOrientacaoPreview();
-    const configLayout = obterConfigLayout(paginasPorFolha);
+    const configLayout = obterConfigLayout(paginasPorFolha, orientacao);
     const tamanhoFolha = TAMANHO_FOLHA[orientacao];
     const paginasPreview = Array.from({ length: pdfDoc.numPages }, (_, i) => i + 1);
     const paginasSelecionadasSet = new Set(paginasSelecionadas);

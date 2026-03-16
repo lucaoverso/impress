@@ -14,6 +14,11 @@ DEFAULT_PRINTER_NAME = os.getenv("CUPS_PRINTER", "").strip()
 REQUEST_ID_REGEX = re.compile(r"request id is\s+([^\s]+)-(\d+)", re.IGNORECASE)
 GENERIC_JOB_ID_REGEX = re.compile(r"([A-Za-z0-9_.-]+)-(\d+)")
 
+def _obter_layout_duas_por_folha(orientacao: str) -> str:
+    if orientacao == "retrato":
+        return "tblr"
+    return "lrtb"
+
 def _montar_opcoes_cups_legado(job):
     paginas_por_folha = int(job.get("paginas_por_folha") or 1)
     orientacao = str(job.get("orientacao") or "retrato").strip().lower()
@@ -37,7 +42,7 @@ def _montar_opcoes_cups_legado(job):
         opcoes["landscape"] = True
 
     if paginas_por_folha == 2:
-        opcoes["number-up-layout"] = "lrtb"
+        opcoes["number-up-layout"] = _obter_layout_duas_por_folha(orientacao)
 
     if intervalo_paginas:
         opcoes["page-ranges"] = intervalo_paginas
@@ -104,8 +109,6 @@ def _forcar_layout_n_por_folha(caminho: Path, job, opcoes_cups):
         or ""
     ).strip()
     orientacao_layout = _normalizar_orientacao_layout(job, opcoes_cups)
-    if paginas_por_folha == 2:
-        orientacao_layout = "paisagem"
     caminho_layout = gerar_pdf_n_por_folha(
         caminho_origem=caminho,
         paginas_por_folha=paginas_por_folha,
