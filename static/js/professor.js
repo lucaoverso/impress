@@ -44,6 +44,8 @@ let previewAbortController = null;
 let previewLoadSeq = 0;
 let envioEmAndamento = false;
 let filaPollingTimer = null;
+let usuarioAtual = null;
+let professoresImpressao = [];
 const QUALIDADE_MAX_DPR = 1.4;
 const FOLHA_PADDING = 8;
 const FOLHA_GAP = 6;
@@ -68,6 +70,147 @@ const TAMANHO_FOLHA = {
 
 function el(id) {
     return document.getElementById(id);
+}
+
+function usuarioEhAdmin() {
+    if (!usuarioAtual) {
+        return false;
+    }
+
+    if (Boolean(usuarioAtual.eh_admin)) {
+        return true;
+    }
+
+    const cargo = String(usuarioAtual.cargo || "").trim().toUpperCase();
+    if (cargo === "ADMIN") {
+        return true;
+    }
+
+    return String(usuarioAtual.perfil || "").trim().toLowerCase() === "admin";
+}
+
+function obterProfessorSolicitanteSelecionadoId() {
+    return Number(el("professorSolicitante")?.value || 0);
+}
+
+function obterProfessorSelecionado() {
+    const professorId = obterProfessorSolicitanteSelecionadoId();
+    return professoresImpressao.find((professor) => Number(professor.id) === professorId) || null;
+}
+
+function adminPrecisaSelecionarProfessor() {
+    return usuarioEhAdmin() && !obterProfessorSolicitanteSelecionadoId();
+}
+
+function montarUrlConsultaImpressao(urlBase) {
+    const professorId = obterProfessorSolicitanteSelecionadoId();
+    if (!(usuarioEhAdmin() && professorId > 0)) {
+        return urlBase;
+    }
+
+    const params = new URLSearchParams({ professor_id: String(professorId) });
+    return `${urlBase}?${params.toString()}`;
+}
+
+function atualizarTitulosContextoImpressao() {
+    const tituloCota = el("tituloCota");
+    const tituloJobs = el("tituloJobs");
+    const contexto = el("contextoProfessorImpressao");
+
+    if (!tituloCota || !tituloJobs) {
+        return;
+    }
+
+    if (!usuarioEhAdmin()) {
+        tituloCota.innerText = "Sua cota";
+        tituloJobs.innerText = "Seus pedidos";
+        if (contexto) {
+            contexto.innerText = "";
+        }
+        return;
+    }
+
+    const professor = obterProfessorSelecionado();
+    tituloCota.innerText = professor ? `Cota de ${professor.nome}` : "Cota do professor";
+    tituloJobs.innerText = professor ? `Pedidos de ${professor.nome}` : "Pedidos do professor";
+
+    if (contexto) {
+        contexto.innerText = professor
+            ? `A impressao sera contabilizada para ${professor.nome}.`
+            : "Selecione o professor solicitante para consultar cota, historico e imprimir.";
+    }
+}
+
+function renderFilaVazia(texto) {
+    const ul = el("lista-jobs");
+    if (!ul) {
+        return;
+    }
+
+    ul.innerHTML = "";
+    const li = document.createElement("li");
+    li.classList.add("print-job-empty");
+    li.innerText = texto;
+    ul.appendChild(li);
+}
+
+async function carregarUsuario() {
+    const res = await fetchComAuth("/me", { headers });
+    if (!res.ok) {
+        throw new Error("Nao foi possivel carregar o usuario.");
+    }
+
+    usuarioAtual = await res.json();
+    atualizarTitulosContextoImpressao();
+}
+
+async function carregarProfessoresImpressaoAdmin() {
+    const grupo = el("grupoProfessorSolicitante");
+    const select = el("professorSolicitante");
+
+    if (!grupo || !select) {
+        return;
+    }
+
+    if (!usuarioEhAdmin()) {
+        grupo.style.display = "none";
+        professoresImpressao = [];
+        select.innerHTML = "";
+        atualizarTitulosContextoImpressao();
+        return;
+    }
+
+    grupo.style.display = "block";
+    const res = await fetchComAuth("/agendamento/professores", { headers });
+    if (!res.ok) {
+        throw new Error("Nao foi possivel carregar os professores para impressao.");
+    }
+
+    professoresImpressao = await res.json();
+    select.innerHTML = "";
+
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.innerText = Array.isArray(professoresImpressao) && professoresImpressao.length > 0
+        ? "Selecione um professor"
+        : "Nenhum professor disponivel";
+    placeholder.selected = true;
+    select.appendChild(placeholder);
+
+    if (!Array.isArray(professoresImpressao) || professoresImpressao.length === 0) {
+        select.disabled = true;
+        atualizarTitulosContextoImpressao();
+        return;
+    }
+
+    professoresImpressao.forEach((professor) => {
+        const option = document.createElement("option");
+        option.value = String(professor.id);
+        option.innerText = `${professor.nome} (${professor.email})`;
+        select.appendChild(option);
+    });
+    select.disabled = false;
+    atualizarTitulosContextoImpressao();
 }
 
 function obterExtensaoArquivo(nomeArquivo) {
@@ -455,6 +598,12 @@ async function enviarImpressao() {
     const duplex = el("duplex").checked;
     const orientacao = obterOrientacaoPreview();
     const intervaloPaginas = el("intervaloPaginas").value.trim();
+    const professorSolicitanteId = obterProfessorSolicitanteSelecionadoId();
+
+    if (usuarioEhAdmin() && !professorSolicitanteId) {
+        el("msg").innerText = "Selecione o professor solicitante da impressao.";
+        return;
+    }
 
     if (!arquivo || !copias || copias < 1) {
         el("msg").innerText = "Selecione um arquivo e informe uma quantidade válida de cópias.";
@@ -489,6 +638,9 @@ async function enviarImpressao() {
         if (intervaloPaginas) {
             formData.append("intervalo_paginas", intervaloPaginas);
         }
+        if (professorSolicitanteId > 0) {
+            formData.append("professor_id", professorSolicitanteId);
+        }
 
         const res = await fetchComAuth("/imprimir", {
             method: "POST",
@@ -502,7 +654,9 @@ async function enviarImpressao() {
             return;
         }
 
-        el("msg").innerText = `Enviado! Restam ${data.paginas_restantes} páginas`;
+        const professorSelecionado = obterProfessorSelecionado();
+        const sufixoDestino = professorSelecionado ? ` para ${professorSelecionado.nome}` : "";
+        el("msg").innerText = `Enviado${sufixoDestino}! Restam ${data.paginas_restantes} páginas`;
         await carregarFila();
         await carregarCota();
         calcularConsumo();
@@ -515,7 +669,18 @@ async function enviarImpressao() {
 }
 
 async function carregarCota() {
-    const res = await fetchComAuth("/minha-cota", { headers });
+    atualizarTitulosContextoImpressao();
+
+    if (adminPrecisaSelecionarProfessor()) {
+        el("cota").innerText = "Selecione um professor solicitante.";
+        return;
+    }
+
+    const res = await fetchComAuth(montarUrlConsultaImpressao("/minha-cota"), { headers });
+    if (!res.ok) {
+        throw new Error(await extrairMensagemErroResposta(res, "Nao foi possivel carregar a cota."));
+    }
+
     const data = await res.json();
     el("cota").innerText = `Restante: ${data.restante} páginas`;
 }
@@ -619,17 +784,30 @@ function criarItemJob(job) {
 }
 
 async function carregarFila() {
-    const res = await fetchComAuth("/meus-jobs", { headers });
+    atualizarTitulosContextoImpressao();
+
+    if (adminPrecisaSelecionarProfessor()) {
+        renderFilaVazia("Selecione um professor solicitante para ver os pedidos.");
+        return;
+    }
+
+    const res = await fetchComAuth(montarUrlConsultaImpressao("/meus-jobs"), { headers });
+    if (!res.ok) {
+        throw new Error(await extrairMensagemErroResposta(res, "Nao foi possivel carregar os pedidos de impressao."));
+    }
+
     const jobs = await res.json();
 
     const ul = el("lista-jobs");
     ul.innerHTML = "";
 
     if (!Array.isArray(jobs) || jobs.length === 0) {
-        const li = document.createElement("li");
-        li.classList.add("print-job-empty");
-        li.innerText = "Nenhuma impressão enviada até o momento.";
-        ul.appendChild(li);
+        const professorSelecionado = obterProfessorSelecionado();
+        renderFilaVazia(
+            professorSelecionado
+                ? `Nenhuma impressão enviada por ${professorSelecionado.nome} até o momento.`
+                : "Nenhuma impressão enviada até o momento."
+        );
         return;
     }
 
@@ -1071,6 +1249,22 @@ function registrarEventos() {
     el("btnAnterior").addEventListener("click", folhaAnterior);
     el("btnProxima").addEventListener("click", proximaFolha);
     window.addEventListener("resize", reagendarRenderAposResize);
+
+    const professorSolicitante = el("professorSolicitante");
+    if (professorSolicitante) {
+        professorSolicitante.addEventListener("change", async () => {
+            atualizarTitulosContextoImpressao();
+            el("msg").innerText = "";
+
+            try {
+                await carregarCota();
+                await carregarFila();
+            } catch (err) {
+                el("msg").innerText = err?.message || "Falha ao atualizar o professor solicitante.";
+            }
+        });
+    }
+
     if (previewPane) {
         previewPane.addEventListener("scroll", reagirScrollPreview, { passive: true });
     }
@@ -1103,12 +1297,24 @@ window.enviarImpressao = enviarImpressao;
 window.proximaFolha = proximaFolha;
 window.folhaAnterior = folhaAnterior;
 
-registrarEventos();
-atualizarComportamentoOrientacao();
-carregarCota();
-carregarFila();
-iniciarPollingFila();
-mostrarPreviewVazio();
+async function inicializarPagina() {
+    registrarEventos();
+    atualizarComportamentoOrientacao();
+    mostrarPreviewVazio();
+
+    try {
+        await carregarUsuario();
+        await carregarProfessoresImpressaoAdmin();
+        await carregarCota();
+        await carregarFila();
+    } catch (err) {
+        el("msg").innerText = err?.message || "Falha ao carregar os dados da impressao.";
+    }
+
+    iniciarPollingFila();
+}
+
+inicializarPagina();
 
 window.addEventListener("beforeunload", () => {
     if (filaPollingTimer) {

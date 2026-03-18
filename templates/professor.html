@@ -24,6 +24,16 @@
                 <p class="print-file-hint">Formatos aceitos: PDF, DOCX, DOC, PNG, JPG e JPEG.</p>
             </article>
 
+            <article id="grupoProfessorSolicitante" class="ios-group" style="display: none;">
+                <div class="ios-row">
+                    <label for="professorSolicitante">Professor solicitante</label>
+                    <select id="professorSolicitante">
+                        <option value="">Selecione um professor</option>
+                    </select>
+                </div>
+                <p id="contextoProfessorImpressao" class="print-file-hint"></p>
+            </article>
+
             <article class="ios-group">
                 <div class="ios-row">
                     <label for="copias">Cópias</label>
@@ -94,12 +104,12 @@
 
             <div class="print-meta-compact">
                 <article class="print-meta-card">
-                    <h2>Sua cota</h2>
+                    <h2 id="tituloCota">Sua cota</h2>
                     <p id="cota">Carregando...</p>
                 </article>
 
                 <article class="print-meta-card print-jobs-card">
-                    <h2>Seus pedidos</h2>
+                    <h2 id="tituloJobs">Seus pedidos</h2>
                     <p class="print-jobs-hint">
                         A impressão inicia após {{ cancel_window_seconds | default(15) }}s.
                         Nesse período você pode cancelar impressões pendentes.

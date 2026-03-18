@@ -516,6 +516,32 @@ def exigir_gestor(usuario):
         raise HTTPException(403, "Acesso negado")
     return usuario
 
+def resolver_usuario_professor_selecionado(
+    usuario: dict,
+    professor_id: int | None,
+    *,
+    contexto: str
+) -> dict:
+    if professor_id is None:
+        return usuario
+
+    professor_id_int = int(professor_id)
+    if professor_id_int <= 0:
+        raise HTTPException(400, "Professor inválido.")
+
+    if not usuario_eh_admin(usuario):
+        raise HTTPException(403, f"Apenas administrador pode selecionar o professor {contexto}.")
+
+    professor = buscar_usuario_por_id(professor_id_int)
+    if not professor:
+        raise HTTPException(404, "Professor não encontrado.")
+
+    cargo_professor = normalizar_cargo_usuario(professor)
+    if cargo_professor != CARGO_PROFESSOR:
+        raise HTTPException(400, "O usuário selecionado não é professor.")
+
+    return professor
+
 def validar_numero_nao_negativo(valor: int, campo: str):
     if int(valor) < 0:
         raise HTTPException(400, f"{campo} não pode ser negativo.")
@@ -608,6 +634,7 @@ def imprimir(
     duplex: bool = Form(False),
     orientacao: str = Form("retrato"),
     intervalo_paginas: str = Form(""),
+    professor_id: int | None = Form(None),
     usuario = Depends(get_usuario_logado)
 ):
     if copias <= 0:
@@ -625,6 +652,12 @@ def imprimir(
         raise HTTPException(400, "Paginação por folha inválida")
     if orientacao not in ("retrato", "paisagem"):
         raise HTTPException(400, "Orientação inválida")
+
+    usuario_responsavel = resolver_usuario_professor_selecionado(
+        usuario,
+        professor_id,
+        contexto="solicitante da impressão"
+    )
 
     conteudo_arquivo = arquivo.file.read()
     if not conteudo_arquivo:
@@ -682,7 +715,7 @@ def imprimir(
 
     try:
         autorizado, restante = validar_e_consumir_cota(
-            usuario_id=usuario["id"],
+            usuario_id=usuario_responsavel["id"],
             paginas=paginas_totais
         )
     except Exception:
@@ -706,7 +739,7 @@ def imprimir(
 
     try:
         criar_job(
-            usuario_id=usuario["id"],
+            usuario_id=usuario_responsavel["id"],
             arquivo=arquivo.filename,
             arquivo_path=str(caminho_arquivo),
             copias=copias,
@@ -841,13 +874,29 @@ def prioridade(
 # =========================================================
 
 @app.get("/meus-jobs")
-def meus_jobs(usuario = Depends(get_usuario_logado)):
-    return listar_jobs_por_usuario(usuario["id"])
+def meus_jobs(
+    professor_id: int | None = None,
+    usuario = Depends(get_usuario_logado)
+):
+    usuario_consulta = resolver_usuario_professor_selecionado(
+        usuario,
+        professor_id,
+        contexto="na impressão"
+    )
+    return listar_jobs_por_usuario(usuario_consulta["id"])
 
 
 @app.get("/minha-cota")
-def minha_cota(usuario = Depends(get_usuario_logado)):
-    return obter_cota_atual(usuario["id"])
+def minha_cota(
+    professor_id: int | None = None,
+    usuario = Depends(get_usuario_logado)
+):
+    usuario_consulta = resolver_usuario_professor_selecionado(
+        usuario,
+        professor_id,
+        contexto="na impressão"
+    )
+    return obter_cota_atual(usuario_consulta["id"])
 
 
 @app.get("/me")
@@ -952,21 +1001,12 @@ def criar_reserva_agendamento(
 
     aula = validar_aula(payload.aula, turno)
     faixa_global = calcular_faixa_global(turno, aula)
-    usuario_reserva_id = int(usuario["id"])
-    professor_id_payload = payload.professor_id
-    if professor_id_payload is not None:
-        if not usuario_eh_admin(usuario):
-            raise HTTPException(403, "Apenas administrador pode escolher o professor no agendamento.")
-
-        professor = buscar_usuario_por_id(int(professor_id_payload))
-        if not professor:
-            raise HTTPException(404, "Professor não encontrado.")
-
-        cargo_professor = normalizar_cargo_usuario(professor)
-        if cargo_professor != CARGO_PROFESSOR:
-            raise HTTPException(400, "O usuário selecionado não é professor.")
-
-        usuario_reserva_id = int(professor["id"])
+    usuario_reserva = resolver_usuario_professor_selecionado(
+        usuario,
+        payload.professor_id,
+        contexto="solicitante do agendamento"
+    )
+    usuario_reserva_id = int(usuario_reserva["id"])
 
     capacidade_recurso = max(int(recurso.get("quantidade_itens") or 1), 1)
     reservas_ativas_faixa = contar_agendamentos_ativos_faixa(
