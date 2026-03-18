@@ -1093,13 +1093,16 @@ def servicos_page(request: Request):
 
 @app.get("/impressao")
 def impressao_page(request: Request):
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         "professor.html",
         {
             "request": request,
             "cancel_window_seconds": PRINT_CANCEL_WINDOW_SECONDS,
+            "asset_version": ASSET_VERSION,
         }
     )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/professor")
