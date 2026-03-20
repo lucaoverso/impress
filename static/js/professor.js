@@ -46,6 +46,7 @@ let envioEmAndamento = false;
 let filaPollingTimer = null;
 let usuarioAtual = null;
 let professoresImpressao = [];
+let arquivoSelecionadoAtual = null;
 const QUALIDADE_MAX_DPR = 1.4;
 const FOLHA_PADDING = 8;
 const FOLHA_GAP = 6;
@@ -224,6 +225,161 @@ function obterExtensaoArquivo(nomeArquivo) {
     return nomeArquivo.slice(indicePonto + 1).toLowerCase();
 }
 
+function obterArquivoSelecionado() {
+    return arquivoSelecionadoAtual || el("arquivo")?.files?.[0] || null;
+}
+
+function atualizarEstadoArquivoSelecionado() {
+    const dropzone = el("arquivoDropzone");
+    const nomeArquivo = el("arquivoSelecionadoNome");
+    const arquivo = obterArquivoSelecionado();
+
+    if (dropzone) {
+        dropzone.classList.toggle("has-file", Boolean(arquivo));
+    }
+
+    if (nomeArquivo) {
+        nomeArquivo.innerText = arquivo
+            ? `Selecionado: ${arquivo.name}`
+            : "Nenhum arquivo selecionado.";
+    }
+}
+
+function sincronizarInputArquivo(file) {
+    const input = el("arquivo");
+    if (!input) {
+        return;
+    }
+
+    if (!file) {
+        input.value = "";
+        return;
+    }
+
+    try {
+        if (typeof DataTransfer === "function") {
+            const transfer = new DataTransfer();
+            transfer.items.add(file);
+            input.files = transfer.files;
+        }
+    } catch (_err) {
+        // Alguns navegadores nao permitem atribuir FileList manualmente.
+    }
+}
+
+function obterExtensaoPorMime(tipoMime) {
+    const tipo = String(tipoMime || "").trim().toLowerCase();
+    if (!tipo) {
+        return "";
+    }
+    if (tipo === "application/pdf") {
+        return "pdf";
+    }
+    if (tipo === "image/png") {
+        return "png";
+    }
+    if (tipo === "image/jpeg") {
+        return "jpg";
+    }
+    if (
+        tipo === "application/msword"
+        || tipo === "application/x-ole-storage"
+    ) {
+        return "doc";
+    }
+    if (
+        tipo === "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+        || tipo === "application/zip"
+    ) {
+        return "docx";
+    }
+    return "";
+}
+
+function normalizarArquivoTransferido(file, prefixo = "arquivo") {
+    if (!file) {
+        return null;
+    }
+
+    if (file.name) {
+        return file;
+    }
+
+    const extensao = obterExtensaoPorMime(file.type);
+    if (!extensao || typeof File !== "function") {
+        return file;
+    }
+
+    try {
+        return new File(
+            [file],
+            `${prefixo}-${Date.now()}.${extensao}`,
+            { type: file.type || "", lastModified: Date.now() }
+        );
+    } catch (_err) {
+        return file;
+    }
+}
+
+function dataTransferTemArquivo(dataTransfer) {
+    if (!dataTransfer) {
+        return false;
+    }
+
+    if (dataTransfer.files && dataTransfer.files.length > 0) {
+        return true;
+    }
+
+    return Array.from(dataTransfer.items || []).some((item) => item.kind === "file");
+}
+
+function obterArquivoTransferido(dataTransfer) {
+    if (!dataTransfer) {
+        return null;
+    }
+
+    if (dataTransfer.files && dataTransfer.files.length > 0) {
+        const arquivos = Array.from(dataTransfer.files);
+        return arquivos.find((file) => arquivoSuportado(normalizarArquivoTransferido(file))) || arquivos[0];
+    }
+
+    const arquivos = [];
+    for (const item of Array.from(dataTransfer.items || [])) {
+        if (item.kind !== "file") {
+            continue;
+        }
+
+        const file = item.getAsFile();
+        if (file) {
+            arquivos.push(file);
+        }
+    }
+
+    return arquivos.find((file) => arquivoSuportado(normalizarArquivoTransferido(file))) || arquivos[0] || null;
+}
+
+async function selecionarArquivoParaImpressao(file, mensagemSucesso = "") {
+    if (!file) {
+        return false;
+    }
+
+    const arquivo = normalizarArquivoTransferido(file, "arquivo-colado");
+    if (!arquivoSuportado(arquivo)) {
+        el("msg").innerText = "Formato nao suportado. Use PDF, DOCX, DOC, PNG, JPG ou JPEG.";
+        return false;
+    }
+
+    arquivoSelecionadoAtual = arquivo;
+    sincronizarInputArquivo(arquivo);
+    atualizarEstadoArquivoSelecionado();
+
+    await carregarPreview(arquivo);
+    if (mensagemSucesso && !el("msg").innerText.trim()) {
+        el("msg").innerText = mensagemSucesso;
+    }
+    return true;
+}
+
 function arquivoEhPdf(file) {
     return obterExtensaoArquivo(file?.name || "") === "pdf";
 }
@@ -234,7 +390,7 @@ function arquivoSuportado(file) {
 }
 
 function obterMensagemPreviewVazio() {
-    const arquivo = el("arquivo")?.files?.[0];
+    const arquivo = obterArquivoSelecionado();
     if (!arquivo) {
         return "Selecione um arquivo para visualizar as páginas.";
     }
@@ -507,7 +663,7 @@ function alternarSelecaoPagina(numeroPagina) {
 
 function calcularConsumo() {
     if (!pdfDoc) {
-        const arquivo = el("arquivo")?.files?.[0];
+        const arquivo = obterArquivoSelecionado();
         if (arquivo && arquivoSuportado(arquivo) && !el("intervaloInfo").innerText.trim()) {
             el("intervaloInfo").innerText = "Aguardando pré-visualização do documento.";
         }
@@ -592,7 +748,7 @@ async function enviarImpressao() {
         return;
     }
 
-    const arquivo = el("arquivo").files[0];
+    const arquivo = obterArquivoSelecionado();
     const copias = Number(el("copias").value);
     const paginasPorFolha = Number(el("paginasPorFolha").value);
     const duplex = el("duplex").checked;
@@ -837,6 +993,9 @@ async function carregarPreview(file) {
     }
 
     if (!file) {
+        arquivoSelecionadoAtual = null;
+        sincronizarInputArquivo(null);
+        atualizarEstadoArquivoSelecionado();
         pdfDoc = null;
         folhaAtual = 1;
         el("intervaloPaginas").value = "";
@@ -849,6 +1008,9 @@ async function carregarPreview(file) {
     }
 
     if (!arquivoSuportado(file)) {
+        arquivoSelecionadoAtual = null;
+        sincronizarInputArquivo(null);
+        atualizarEstadoArquivoSelecionado();
         pdfDoc = null;
         folhaAtual = 1;
         renderTokenAtual += 1;
@@ -1212,6 +1374,40 @@ function folhaAnterior() {
     irParaFolha(folhaAtual - 1);
 }
 
+function atualizarEstadoDropzoneArraste(ativo) {
+    const dropzone = el("arquivoDropzone");
+    if (!dropzone) {
+        return;
+    }
+    dropzone.classList.toggle("is-drag-over", Boolean(ativo));
+}
+
+async function lidarArquivoColado(event) {
+    const arquivo = obterArquivoTransferido(event?.clipboardData);
+    if (!arquivo) {
+        return;
+    }
+
+    event.preventDefault();
+    await selecionarArquivoParaImpressao(
+        arquivo,
+        "Arquivo colado da area de transferencia."
+    );
+}
+
+async function lidarArquivoSolto(event) {
+    if (!dataTransferTemArquivo(event?.dataTransfer)) {
+        return;
+    }
+
+    event.preventDefault();
+    atualizarEstadoDropzoneArraste(false);
+    await selecionarArquivoParaImpressao(
+        obterArquivoTransferido(event.dataTransfer),
+        "Arquivo adicionado por arrastar e soltar."
+    );
+}
+
 function reagendarRenderAposResize() {
     if (resizeTimer) {
         clearTimeout(resizeTimer);
@@ -1228,9 +1424,78 @@ function reagendarRenderAposResize() {
 
 function registrarEventos() {
     const previewPane = document.querySelector(".print-preview-pane");
+    const inputArquivo = el("arquivo");
+    const dropzoneArquivo = el("arquivoDropzone");
     ajustarPosicaoPainelMeta();
 
-    el("arquivo").addEventListener("change", (e) => carregarPreview(e.target.files[0]));
+    if (inputArquivo) {
+        inputArquivo.addEventListener("change", async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) {
+                return;
+            }
+
+            try {
+                await selecionarArquivoParaImpressao(file);
+            } catch (err) {
+                el("msg").innerText = err?.message || "Falha ao carregar o arquivo.";
+            }
+        });
+    }
+
+    if (dropzoneArquivo) {
+        dropzoneArquivo.addEventListener("click", () => {
+            inputArquivo?.click();
+        });
+        dropzoneArquivo.addEventListener("dragenter", (event) => {
+            if (!dataTransferTemArquivo(event.dataTransfer)) {
+                return;
+            }
+            event.preventDefault();
+            atualizarEstadoDropzoneArraste(true);
+        });
+        dropzoneArquivo.addEventListener("dragover", (event) => {
+            if (!dataTransferTemArquivo(event.dataTransfer)) {
+                return;
+            }
+            event.preventDefault();
+            atualizarEstadoDropzoneArraste(true);
+        });
+        dropzoneArquivo.addEventListener("dragleave", (event) => {
+            if (dropzoneArquivo.contains(event.relatedTarget)) {
+                return;
+            }
+            atualizarEstadoDropzoneArraste(false);
+        });
+        dropzoneArquivo.addEventListener("drop", (event) => {
+            lidarArquivoSolto(event).catch((err) => {
+                el("msg").innerText = err?.message || "Falha ao processar o arquivo solto.";
+            });
+        });
+    }
+
+    window.addEventListener("paste", (event) => {
+        lidarArquivoColado(event).catch((err) => {
+            el("msg").innerText = err?.message || "Falha ao colar o arquivo.";
+        });
+    });
+    window.addEventListener("dragover", (event) => {
+        if (!dataTransferTemArquivo(event.dataTransfer)) {
+            return;
+        }
+        event.preventDefault();
+    });
+    window.addEventListener("drop", (event) => {
+        if (!dataTransferTemArquivo(event.dataTransfer)) {
+            return;
+        }
+        if (dropzoneArquivo && dropzoneArquivo.contains(event.target)) {
+            return;
+        }
+        event.preventDefault();
+        atualizarEstadoDropzoneArraste(false);
+    });
+
     el("orientacao").addEventListener("change", atualizarPreview);
     el("copias").addEventListener("input", calcularConsumo);
     el("duplex").addEventListener("change", atualizarPreview);
@@ -1300,6 +1565,7 @@ window.folhaAnterior = folhaAnterior;
 async function inicializarPagina() {
     registrarEventos();
     atualizarComportamentoOrientacao();
+    atualizarEstadoArquivoSelecionado();
     mostrarPreviewVazio();
 
     try {
