@@ -32,6 +32,9 @@
             <button class="admin-tab-btn" data-coord-tab-trigger="estudantes" aria-controls="coord-tab-estudantes" aria-selected="false" type="button">
                 Cadastro de estudantes
             </button>
+            <button class="admin-tab-btn" data-coord-tab-trigger="regimento" aria-controls="coord-tab-regimento" aria-selected="false" type="button">
+                Regimento escolar
+            </button>
         </nav>
 
         <section class="coordenacao-tab-panels">
@@ -193,6 +196,16 @@
                                 <span>Descricao</span>
                                 <textarea id="ocorrenciaDescricao" rows="5" placeholder="Descricao da ocorrencia" required></textarea>
                             </label>
+
+                            <div class="coordenacao-field coordenacao-field-wide">
+                                <span>Itens do regimento escolar</span>
+                                <div id="ocorrenciaRegimentoItens" class="coordenacao-regimento-selector">
+                                    <p class="coordenacao-empty-state">Cadastre itens do regimento para seleciona-los na ocorrencia.</p>
+                                </div>
+                                <p class="coordenacao-field-hint">
+                                    Selecione os artigos aplicaveis para que eles sejam incluidos automaticamente no documento.
+                                </p>
+                            </div>
 
                             <label class="coordenacao-field" for="ocorrenciaAcaoAplicada">
                                 <span>Acao aplicada</span>
@@ -410,6 +423,59 @@
                                     </tr>
                                 </thead>
                                 <tbody id="tbodyEstudantes"></tbody>
+                            </table>
+                        </div>
+                    </article>
+                </section>
+            </section>
+
+            <section id="coord-tab-regimento" class="coordenacao-tab-panel" data-coord-tab-panel="regimento" hidden>
+                <section class="coordenacao-grid">
+                    <article class="coordenacao-card">
+                        <div class="coordenacao-section-header">
+                            <div>
+                                <p class="coordenacao-eyebrow">Cadastro</p>
+                                <h2 id="tituloFormRegimento">Cadastrar item do regimento</h2>
+                                <p>Monte a base de artigos e descricoes para agilizar o preenchimento das ocorrencias e dos PDFs.</p>
+                            </div>
+                            <p id="msgRegimento"></p>
+                        </div>
+                        <form id="formRegimento" class="coordenacao-form">
+                            <label class="coordenacao-field" for="regimentoArtigo">
+                                <span>Artigo / referencia</span>
+                                <input id="regimentoArtigo" type="text" placeholder="Ex: Art. 76, inciso VII" maxlength="120" required>
+                            </label>
+                            <label class="coordenacao-field" for="regimentoDescricao">
+                                <span>Descricao</span>
+                                <textarea id="regimentoDescricao" rows="6" placeholder="Descreva o trecho do regimento escolar" required></textarea>
+                            </label>
+                            <div class="coordenacao-inline coordenacao-form-actions">
+                                <button class="btn-destaque" type="submit">Salvar item</button>
+                                <button id="btnCancelarEdicaoRegimento" type="button" style="display: none;">Cancelar edicao</button>
+                            </div>
+                        </form>
+                    </article>
+
+                    <article class="coordenacao-card coordenacao-card-wide">
+                        <div class="coordenacao-section-header">
+                            <div>
+                                <h2>Itens cadastrados</h2>
+                                <p>Esses artigos aparecem no formulario da ocorrencia e sao copiados para o documento quando selecionados.</p>
+                            </div>
+                        </div>
+
+                        <div class="coordenacao-table-wrap">
+                            <table class="coordenacao-table">
+                                <thead>
+                                    <tr>
+                                        <th>Artigo</th>
+                                        <th>Descricao</th>
+                                        <th>Status</th>
+                                        <th>Atualizado em</th>
+                                        <th>Acoes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyRegimento"></tbody>
                             </table>
                         </div>
                     </article>

@@ -111,6 +111,37 @@ class RegrasCotaIn(BaseModel):
     paginas_por_turma: int
     cota_mensal_escola: int
 
+
+class RegimentoItemCreateIn(BaseModel):
+    artigo: str
+    descricao: str
+
+
+class RegimentoItemUpdateIn(BaseModel):
+    artigo: str
+    descricao: str
+    ativo: bool = True
+
+
+class RegimentoItemStatusIn(BaseModel):
+    ativo: bool
+
+
+class RegimentoItemOut(BaseModel):
+    id: int
+    artigo: str
+    descricao: str
+    ativo: int | bool
+    criado_em: str
+    atualizado_em: str
+
+
+class RegimentoItemOcorrenciaOut(BaseModel):
+    regimento_item_id: int | None = None
+    artigo: str
+    descricao: str
+    ordem: int = 0
+
 AcaoAplicadaOcorrencia = Literal[
     "orientacao_verbal",
     "advertencia",
@@ -137,6 +168,7 @@ class OcorrenciaCreateIn(BaseModel):
     aula: str
     horario_ocorrencia: str
     descricao: str
+    regimento_item_ids: list[int] = Field(default_factory=list)
     acao_aplicada: AcaoAplicadaOcorrencia
     status: StatusOcorrencia | None = None
 
@@ -151,6 +183,7 @@ class OcorrenciaUpdateIn(BaseModel):
     aula: str | None = None
     horario_ocorrencia: str | None = None
     descricao: str | None = None
+    regimento_item_ids: list[int] | None = None
     acao_aplicada: AcaoAplicadaOcorrencia | None = None
     status: StatusOcorrencia | None = None
 
@@ -167,6 +200,7 @@ class OcorrenciaOut(BaseModel):
     aula: str
     horario_ocorrencia: str
     descricao: str
+    regimento_itens: list[RegimentoItemOcorrenciaOut] = Field(default_factory=list)
     acao_aplicada: str
     status: str
     criado_em: str

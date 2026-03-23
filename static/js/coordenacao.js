@@ -17,8 +17,10 @@ let abaCoordAtiva = "ocorrencias";
 let ocorrenciaEmEdicaoId = null;
 let ocorrenciaSelecionadaId = null;
 let estudanteEmEdicao = null;
+let regimentoItemEmEdicao = null;
 let ocorrenciasCache = [];
 let estudantesCache = [];
+let regimentoItensCache = [];
 let relatorioOcorrenciasCache = [];
 let relatorioOcorrenciasCarregado = false;
 let opcoesOcorrencias = {
@@ -26,6 +28,7 @@ let opcoesOcorrencias = {
     professores: [],
     status: [],
     acoes_aplicadas: [],
+    regimento_itens: [],
     status_padrao: "registrado"
 };
 const MAX_AULAS_EXIBICAO = 5;
@@ -76,6 +79,13 @@ function setMensagemRelatorios(texto, erro = false) {
     target.style.color = erro ? "#b42318" : "#0f766e";
 }
 
+function setMensagemRegimento(texto, erro = false) {
+    const target = el("msgRegimento");
+    if (!target) return;
+    target.innerText = texto || "";
+    target.style.color = erro ? "#b42318" : "#0f766e";
+}
+
 function normalizarErro(res, body) {
     if (body && body.detail) return body.detail;
     return `Erro ${res.status}`;
@@ -103,6 +113,43 @@ async function fetchJson(url, options = {}) {
         throw erro;
     }
     return body;
+}
+
+async function fetchResposta(url, options = {}) {
+    const res = await fetch(url, options);
+
+    if (res.status === 401) {
+        localStorage.removeItem("token");
+        localStorage.removeItem("token_expira_em");
+        window.location.href = "/login-page";
+        throw new Error("Sessao expirada.");
+    }
+
+    if (!res.ok) {
+        let detalhe = `Erro ${res.status}`;
+        const tipoConteudo = String(res.headers.get("content-type") || "").toLowerCase();
+        if (tipoConteudo.includes("application/json")) {
+            try {
+                const body = await res.json();
+                detalhe = normalizarErro(res, body);
+            } catch (_err) {
+                detalhe = `Erro ${res.status}`;
+            }
+        } else {
+            try {
+                const texto = (await res.text()).trim();
+                if (texto) detalhe = texto;
+            } catch (_err) {
+                detalhe = `Erro ${res.status}`;
+            }
+        }
+
+        const erro = new Error(detalhe);
+        erro.status = res.status;
+        throw erro;
+    }
+
+    return res;
 }
 
 async function requisitarExclusao(urlDelete, urlFallback) {
@@ -274,6 +321,100 @@ function preencherDatalist(datalistId, mapa, itens) {
         datalist.appendChild(option);
         mapa.set(label, item);
     });
+}
+
+function normalizarIdsRegimento(valores) {
+    const vistos = new Set();
+    return (valores || []).map((valor) => Number(valor || 0))
+        .filter((valor) => Number.isInteger(valor) && valor > 0)
+        .filter((valor) => {
+            if (vistos.has(valor)) return false;
+            vistos.add(valor);
+            return true;
+        });
+}
+
+function obterIdsRegimentoSelecionadosFormulario() {
+    return normalizarIdsRegimento(
+        Array.from(document.querySelectorAll('input[name="ocorrenciaRegimentoItem"]:checked'))
+            .map((input) => input.value)
+    );
+}
+
+function obterIdsRegimentoSelecionadosOcorrencia(ocorrencia) {
+    return normalizarIdsRegimento(
+        Array.isArray(ocorrencia?.regimento_itens)
+            ? ocorrencia.regimento_itens.map((item) => item.regimento_item_id)
+            : []
+    );
+}
+
+function renderSelecionadorRegimento(idsSelecionados = null) {
+    const container = el("ocorrenciaRegimentoItens");
+    if (!container) return;
+
+    const idsAtivos = new Set(
+        idsSelecionados === null
+            ? obterIdsRegimentoSelecionadosFormulario()
+            : normalizarIdsRegimento(idsSelecionados)
+    );
+    container.innerHTML = "";
+
+    const itens = Array.isArray(opcoesOcorrencias.regimento_itens)
+        ? opcoesOcorrencias.regimento_itens
+        : [];
+    if (itens.length === 0) {
+        const vazio = document.createElement("p");
+        vazio.className = "coordenacao-empty-state";
+        vazio.innerText = "Cadastre itens do regimento para seleciona-los na ocorrencia.";
+        container.appendChild(vazio);
+        return;
+    }
+
+    const lista = document.createElement("div");
+    lista.className = "coordenacao-regimento-list";
+
+    itens.forEach((item) => {
+        const id = Number(item.id || 0);
+        if (!id) return;
+
+        const label = document.createElement("label");
+        label.className = "coordenacao-regimento-option";
+        if (!Boolean(item.ativo)) {
+            label.classList.add("is-inactive");
+        }
+
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.name = "ocorrenciaRegimentoItem";
+        input.value = String(id);
+        input.checked = idsAtivos.has(id);
+
+        const corpo = document.createElement("div");
+        corpo.className = "coordenacao-regimento-option-body";
+
+        const artigo = document.createElement("strong");
+        artigo.innerText = String(item.artigo || "Sem artigo");
+
+        const descricao = document.createElement("span");
+        descricao.innerText = String(item.descricao || "").trim() || "Sem descricao.";
+
+        corpo.appendChild(artigo);
+        corpo.appendChild(descricao);
+
+        if (!Boolean(item.ativo)) {
+            const meta = document.createElement("small");
+            meta.className = "coordenacao-regimento-option-meta";
+            meta.innerText = "Item inativo no cadastro.";
+            corpo.appendChild(meta);
+        }
+
+        label.appendChild(input);
+        label.appendChild(corpo);
+        lista.appendChild(label);
+    });
+
+    container.appendChild(lista);
 }
 
 function normalizarTurnoId(turnoId) {
@@ -456,6 +597,7 @@ function limparFormularioOcorrencia({ manterAberto = false } = {}) {
     if (opcoesOcorrencias.status_padrao) {
         el("ocorrenciaStatus").value = opcoesOcorrencias.status_padrao;
     }
+    renderSelecionadorRegimento([]);
     el("tituloFormOcorrencia").innerText = "Nova ocorrencia";
     el("btnCancelarEdicaoOcorrencia").style.display = "none";
     if (manterAberto) {
@@ -491,6 +633,7 @@ function preencherFormularioOcorrencia(ocorrencia) {
     el("ocorrenciaData").value = ocorrencia.data_ocorrencia || "";
     el("ocorrenciaHorario").value = ocorrencia.horario_ocorrencia || "";
     el("ocorrenciaDescricao").value = ocorrencia.descricao || "";
+    renderSelecionadorRegimento(obterIdsRegimentoSelecionadosOcorrencia(ocorrencia));
     el("ocorrenciaAcaoAplicada").value = ocorrencia.acao_aplicada || "";
     el("ocorrenciaStatus").value = ocorrencia.status || opcoesOcorrencias.status_padrao || "registrado";
     el("tituloFormOcorrencia").innerText = "Editar ocorrencia";
@@ -505,6 +648,108 @@ function selecionarOcorrencia(ocorrencia) {
     renderTabelaOcorrencias();
 }
 
+function obterNomeArquivoContentDisposition(contentDisposition, ocorrencia) {
+    const header = String(contentDisposition || "");
+    const match = header.match(/filename="?([^";]+)"?/i);
+    if (match && match[1]) {
+        return match[1];
+    }
+
+    const nomeBase = String(ocorrencia?.nome_estudante || "ocorrencia")
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "_")
+        .replace(/^_+|_+$/g, "") || "ocorrencia";
+    return `registro_ocorrencia_${nomeBase}.pdf`;
+}
+
+async function abrirPdfOcorrencia(ocorrencia) {
+    if (!ocorrencia?.id) {
+        setMensagemOcorrencias("Selecione uma ocorrencia valida para gerar o PDF.", true);
+        return;
+    }
+
+    let blobUrl = "";
+    setMensagemOcorrencias("Gerando PDF da ocorrencia...");
+
+    try {
+        const resposta = await fetchResposta(`/ocorrencias/${ocorrencia.id}/pdf`, { headers });
+        const blob = await resposta.blob();
+        const nomeArquivo = obterNomeArquivoContentDisposition(
+            resposta.headers.get("content-disposition"),
+            ocorrencia
+        );
+
+        blobUrl = URL.createObjectURL(blob);
+        const novaGuia = window.open(blobUrl, "_blank", "noopener");
+
+        if (!novaGuia) {
+            const link = document.createElement("a");
+            link.href = blobUrl;
+            link.download = nomeArquivo;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setMensagemOcorrencias("PDF gerado e baixado para impressao.");
+        } else {
+            novaGuia.focus();
+            setMensagemOcorrencias("PDF gerado e aberto em nova guia.");
+        }
+
+        window.setTimeout(() => {
+            URL.revokeObjectURL(blobUrl);
+        }, 60000);
+    } catch (err) {
+        if (blobUrl) {
+            URL.revokeObjectURL(blobUrl);
+        }
+        setMensagemOcorrencias(
+            err?.message || "Nao foi possivel gerar o PDF da ocorrencia.",
+            true
+        );
+    }
+}
+
+function criarBlocoDetalhesRegimento(ocorrencia) {
+    const wrapper = document.createElement("div");
+    wrapper.className = "coordenacao-detail-block";
+
+    const titulo = document.createElement("strong");
+    titulo.className = "coordenacao-detail-block-title";
+    titulo.innerText = "Itens do regimento escolar";
+    wrapper.appendChild(titulo);
+
+    const itens = Array.isArray(ocorrencia?.regimento_itens) ? ocorrencia.regimento_itens : [];
+    if (itens.length === 0) {
+        const vazio = document.createElement("p");
+        vazio.className = "coordenacao-detail-hint";
+        vazio.innerText = "Nenhum item do regimento vinculado a esta ocorrencia.";
+        wrapper.appendChild(vazio);
+        return wrapper;
+    }
+
+    const lista = document.createElement("div");
+    lista.className = "coordenacao-detail-list";
+
+    itens.forEach((item) => {
+        const artigo = document.createElement("div");
+        artigo.className = "coordenacao-detail-list-item";
+
+        const artigoTitulo = document.createElement("strong");
+        artigoTitulo.innerText = item.artigo || "Sem artigo";
+
+        const descricao = document.createElement("span");
+        descricao.innerText = item.descricao || "Sem descricao.";
+
+        artigo.appendChild(artigoTitulo);
+        artigo.appendChild(descricao);
+        lista.appendChild(artigo);
+    });
+
+    wrapper.appendChild(lista);
+    return wrapper;
+}
+
 function renderDetalhesOcorrencia(ocorrencia) {
     const container = el("detalhesOcorrencia");
     if (!container) return;
@@ -514,6 +759,24 @@ function renderDetalhesOcorrencia(ocorrencia) {
     }
 
     container.innerHTML = "";
+    const actions = document.createElement("div");
+    actions.className = "coordenacao-detail-actions";
+
+    const btnPdf = document.createElement("button");
+    btnPdf.type = "button";
+    btnPdf.className = "btn-destaque";
+    btnPdf.innerText = "Gerar PDF para impressao";
+    btnPdf.addEventListener("click", () => {
+        abrirPdfOcorrencia(ocorrencia);
+    });
+    actions.appendChild(btnPdf);
+    container.appendChild(actions);
+
+    const hint = document.createElement("p");
+    hint.className = "coordenacao-detail-hint";
+    hint.innerText = "Use este documento para impressao e anexo fisico no livro de registro.";
+    container.appendChild(hint);
+
     const campos = [
         ["Estudante", ocorrencia.nome_estudante],
         ["Turma", ocorrencia.turma_nome || `ID ${ocorrencia.turma_id}`],
@@ -540,6 +803,8 @@ function renderDetalhesOcorrencia(ocorrencia) {
         linha.appendChild(span);
         container.appendChild(linha);
     });
+
+    container.appendChild(criarBlocoDetalhesRegimento(ocorrencia));
 }
 
 function valorCampo(id) {
@@ -800,14 +1065,23 @@ function invalidarRelatorioOcorrencias() {
 }
 
 async function carregarOpcoesOcorrencias() {
+    const idsRegimentoSelecionados = obterIdsRegimentoSelecionadosFormulario();
     const opcoesApi = await fetchJson("/ocorrencias/opcoes", { headers });
     opcoesOcorrencias = {
         turmas: Array.isArray(opcoesApi.turmas) ? opcoesApi.turmas : [],
         professores: Array.isArray(opcoesApi.professores) ? opcoesApi.professores : [],
         status: Array.isArray(opcoesApi.status) ? opcoesApi.status : [],
         acoes_aplicadas: Array.isArray(opcoesApi.acoes_aplicadas) ? opcoesApi.acoes_aplicadas : [],
+        regimento_itens: Array.isArray(opcoesApi.regimento_itens) ? opcoesApi.regimento_itens : [],
         status_padrao: opcoesApi.status_padrao || "registrado"
     };
+    regimentoItensCache = Array.isArray(opcoesOcorrencias.regimento_itens)
+        ? opcoesOcorrencias.regimento_itens.map((item) => ({
+            ...item,
+            atualizado_em: item.atualizado_em || "",
+            criado_em: item.criado_em || ""
+        }))
+        : [];
 
     rotulosAcao.clear();
     rotulosStatus.clear();
@@ -842,6 +1116,7 @@ async function carregarOpcoesOcorrencias() {
 
     const turmaInicial = opcoesOcorrencias.turmas[0];
     atualizarSelectAulasPorTurma(turmaInicial ? turmaInicial.id : "");
+    renderSelecionadorRegimento(idsRegimentoSelecionados);
 }
 
 function queryFiltrosOcorrencias() {
@@ -1061,6 +1336,135 @@ async function carregarEstudantes() {
     renderTabelaEstudantes();
 }
 
+function renderTabelaRegimento() {
+    const tbody = el("tbodyRegimento");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    if (!Array.isArray(regimentoItensCache) || regimentoItensCache.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 5;
+        td.className = "booking-empty";
+        td.innerText = "Nenhum item do regimento cadastrado.";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+    }
+
+    regimentoItensCache.forEach((item) => {
+        const tr = document.createElement("tr");
+        tr.appendChild(criarCelulaTabela("Artigo", item.artigo || ""));
+        tr.appendChild(criarCelulaTabela("Descricao", item.descricao || ""));
+
+        const badge = document.createElement("span");
+        badge.className = `status-chip ${classeStatusEstudante(Boolean(item.ativo))}`;
+        badge.innerText = item.ativo ? "Ativo" : "Inativo";
+        tr.appendChild(criarCelulaTabela("Status", badge));
+        tr.appendChild(criarCelulaTabela("Atualizado em", formatarDataHora(item.atualizado_em)));
+
+        const linhaAcoes = document.createElement("div");
+        linhaAcoes.className = "coordenacao-inline";
+
+        const btnEditar = document.createElement("button");
+        btnEditar.type = "button";
+        btnEditar.innerText = "Editar";
+        btnEditar.addEventListener("click", () => {
+            iniciarEdicaoRegimento(item);
+        });
+
+        const btnStatus = document.createElement("button");
+        btnStatus.type = "button";
+        btnStatus.innerText = item.ativo ? "Desativar" : "Ativar";
+        btnStatus.addEventListener("click", async () => {
+            const idsSelecionados = obterIdsRegimentoSelecionadosFormulario();
+            try {
+                await fetchJson(`/regimento-itens/${item.id}/status`, {
+                    method: "PUT",
+                    headers: headersJson,
+                    body: JSON.stringify({ ativo: !Boolean(item.ativo) })
+                });
+                setMensagemRegimento("Status do item atualizado.");
+                await carregarRegimentoItens(idsSelecionados);
+            } catch (err) {
+                setMensagemRegimento(err.message, true);
+            }
+        });
+
+        linhaAcoes.appendChild(btnEditar);
+        linhaAcoes.appendChild(btnStatus);
+        tr.appendChild(criarCelulaTabela("Acoes", linhaAcoes));
+
+        tbody.appendChild(tr);
+    });
+}
+
+async function carregarRegimentoItens(idsSelecionados = null) {
+    const idsPreferidos = idsSelecionados === null
+        ? obterIdsRegimentoSelecionadosFormulario()
+        : idsSelecionados;
+    regimentoItensCache = await fetchJson("/regimento-itens?incluir_inativos=true", { headers });
+    opcoesOcorrencias.regimento_itens = Array.isArray(regimentoItensCache)
+        ? regimentoItensCache.map((item) => ({
+            ...item,
+            label: item.artigo || `Item ${item.id}`
+        }))
+        : [];
+    renderTabelaRegimento();
+    renderSelecionadorRegimento(idsPreferidos);
+}
+
+function limparFormularioRegimento() {
+    regimentoItemEmEdicao = null;
+    el("formRegimento").reset();
+    el("tituloFormRegimento").innerText = "Cadastrar item do regimento";
+    el("btnCancelarEdicaoRegimento").style.display = "none";
+}
+
+function iniciarEdicaoRegimento(item) {
+    regimentoItemEmEdicao = item;
+    el("regimentoArtigo").value = item.artigo || "";
+    el("regimentoDescricao").value = item.descricao || "";
+    el("tituloFormRegimento").innerText = "Editar item do regimento";
+    el("btnCancelarEdicaoRegimento").style.display = "inline-block";
+    ativarAbaCoordenacao("regimento");
+}
+
+async function salvarRegimento(event) {
+    event.preventDefault();
+    const idsSelecionados = obterIdsRegimentoSelecionadosFormulario();
+    const payload = {
+        artigo: el("regimentoArtigo").value.trim(),
+        descricao: el("regimentoDescricao").value.trim()
+    };
+
+    try {
+        if (regimentoItemEmEdicao) {
+            await fetchJson(`/regimento-itens/${regimentoItemEmEdicao.id}`, {
+                method: "PUT",
+                headers: headersJson,
+                body: JSON.stringify({
+                    ...payload,
+                    ativo: Boolean(regimentoItemEmEdicao.ativo)
+                })
+            });
+            setMensagemRegimento("Item do regimento atualizado com sucesso.");
+        } else {
+            await fetchJson("/regimento-itens", {
+                method: "POST",
+                headers: headersJson,
+                body: JSON.stringify(payload)
+            });
+            setMensagemRegimento("Item do regimento cadastrado com sucesso.");
+        }
+
+        limparFormularioRegimento();
+        await carregarRegimentoItens(idsSelecionados);
+    } catch (err) {
+        setMensagemRegimento(err.message, true);
+    }
+}
+
 function limparFormularioEstudante() {
     estudanteEmEdicao = null;
     el("formEstudante").reset();
@@ -1143,6 +1547,7 @@ function montarPayloadOcorrencia() {
         aula: String(el("ocorrenciaAula").value || "").trim(),
         horario_ocorrencia: el("ocorrenciaHorario").value.trim(),
         descricao: el("ocorrenciaDescricao").value.trim(),
+        regimento_item_ids: obterIdsRegimentoSelecionadosFormulario(),
         acao_aplicada: el("ocorrenciaAcaoAplicada").value,
         status: el("ocorrenciaStatus").value || opcoesOcorrencias.status_padrao || "registrado"
     };
@@ -1398,6 +1803,11 @@ function registrarEventosEstudantes() {
     el("filtroEstudanteStatus").addEventListener("change", renderTabelaEstudantes);
 }
 
+function registrarEventosRegimento() {
+    el("formRegimento").addEventListener("submit", salvarRegimento);
+    el("btnCancelarEdicaoRegimento").addEventListener("click", limparFormularioRegimento);
+}
+
 function registrarEventosGerais() {
     el("btnVoltarServicos").addEventListener("click", () => {
         window.location.href = "/servicos";
@@ -1421,18 +1831,21 @@ async function init() {
         registrarEventosOcorrencias();
         registrarEventosRelatorios();
         registrarEventosEstudantes();
+        registrarEventosRegimento();
         registrarEventosGerais();
 
         await carregarOpcoesOcorrencias();
         limparFormularioOcorrencia();
         limparFormularioEstudante();
+        limparFormularioRegimento();
         renderDetalhesOcorrencia(null);
         renderRelatorioOcorrencias();
         ativarAbaCoordenacao(abaCoordAtiva);
 
         await Promise.all([
             carregarOcorrencias(),
-            carregarEstudantes()
+            carregarEstudantes(),
+            carregarRegimentoItens()
         ]);
     } catch (err) {
         setMensagemOcorrencias(err.message || "Erro ao carregar modulo de coordenacao.", true);

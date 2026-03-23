@@ -1,7 +1,8 @@
 import re
+import unicodedata
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from auth import get_usuario_logado
 from database import (
@@ -10,21 +11,28 @@ from database import (
     STATUS_OCORRENCIA_VALIDOS,
     atualizar_ocorrencia,
     atualizar_estudante,
+    atualizar_regimento_item,
+    atualizar_status_regimento_item,
     atualizar_status_estudante,
     buscar_estudante_por_id,
     buscar_estudantes_ocorrencia,
     buscar_ocorrencia_por_id,
     buscar_professor_por_id_ocorrencia,
     buscar_professores_ocorrencia,
+    buscar_regimento_item_por_id,
+    buscar_regimento_itens_por_ids,
     buscar_turma_por_id,
     criar_estudante,
     criar_ocorrencia,
+    criar_regimento_item,
     listar_estudantes,
     listar_ocorrencias,
     listar_professores_agendamento,
+    listar_regimento_itens,
     listar_turmas_ativas,
     remover_estudante,
     remover_ocorrencia,
+    salvar_regimento_itens_ocorrencia,
 )
 from models import (
     EstudanteCreateIn,
@@ -34,7 +42,12 @@ from models import (
     OcorrenciaCreateIn,
     OcorrenciaOut,
     OcorrenciaUpdateIn,
+    RegimentoItemCreateIn,
+    RegimentoItemOut,
+    RegimentoItemStatusIn,
+    RegimentoItemUpdateIn,
 )
+from services.ocorrencia_pdf_service import gerar_pdf_ocorrencia_registro
 
 router = APIRouter()
 
@@ -293,6 +306,51 @@ def _montar_resposta_ocorrencia(ocorrencia_id: int) -> dict:
     return ocorrencia
 
 
+def _slug_ascii(texto: str) -> str:
+    texto_normalizado = unicodedata.normalize("NFKD", str(texto or "").strip())
+    texto_ascii = texto_normalizado.encode("ascii", "ignore").decode("ascii")
+    texto_limpo = re.sub(r"[^A-Za-z0-9]+", "_", texto_ascii).strip("_").lower()
+    return texto_limpo or "ocorrencia"
+
+
+def _nome_arquivo_pdf_ocorrencia(ocorrencia: dict) -> str:
+    estudante = _slug_ascii(ocorrencia.get("nome_estudante") or "ocorrencia")
+    data = str(ocorrencia.get("data_ocorrencia") or "").strip() or datetime.now().date().isoformat()
+    data_limpa = re.sub(r"[^0-9-]+", "", data) or datetime.now().date().isoformat()
+    return f"registro_ocorrencia_{estudante}_{data_limpa}.pdf"
+
+
+def _normalizar_regimento_item_ids(valores: list[int] | None) -> list[int]:
+    ids_norm = []
+    vistos = set()
+    for valor in valores or []:
+        try:
+            regimento_item_id = int(valor)
+        except (TypeError, ValueError) as exc:
+            raise HTTPException(400, "Item do regimento invalido.") from exc
+        if regimento_item_id <= 0:
+            raise HTTPException(400, "Item do regimento invalido.")
+        if regimento_item_id in vistos:
+            continue
+        vistos.add(regimento_item_id)
+        ids_norm.append(regimento_item_id)
+
+    if not ids_norm:
+        return []
+
+    itens = buscar_regimento_itens_por_ids(ids_norm)
+    if len(itens) != len(ids_norm):
+        raise HTTPException(400, "Um ou mais itens do regimento nao foram encontrados.")
+    return ids_norm
+
+
+def _montar_resposta_regimento_item(regimento_item_id: int) -> dict:
+    item = buscar_regimento_item_por_id(regimento_item_id)
+    if not item:
+        raise HTTPException(404, "Item do regimento nao encontrado.")
+    return item
+
+
 def _montar_resposta_estudante(estudante_id: int) -> dict:
     estudante = buscar_estudante_por_id(estudante_id)
     if not estudante:
@@ -345,6 +403,16 @@ def listar_opcoes_ocorrencias(usuario=Depends(get_usuario_logado)):
                 ),
             }
             for professor in professores
+        ],
+        "regimento_itens": [
+            {
+                "id": item["id"],
+                "artigo": item["artigo"],
+                "descricao": item.get("descricao", ""),
+                "ativo": item.get("ativo", 1),
+                "label": item["artigo"],
+            }
+            for item in listar_regimento_itens(incluir_inativos=True)
         ],
     }
 
@@ -409,6 +477,7 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
     faixa_aula = _validar_faixa_aula_por_turma(payload.aula, turma_id)
     status = _validar_status(payload.status or STATUS_OCORRENCIA_REGISTRADO)
     acao_aplicada = _validar_acao_aplicada(payload.acao_aplicada)
+    regimento_item_ids = _normalizar_regimento_item_ids(payload.regimento_item_ids)
 
     nome_estudante, estudante_id = _resolver_dados_estudante(
         nome_estudante=payload.nome_estudante,
@@ -435,6 +504,10 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
             acao_aplicada=acao_aplicada,
             status=status,
         )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    try:
+        salvar_regimento_itens_ocorrencia(ocorrencia_id, regimento_item_ids)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return _montar_resposta_ocorrencia(ocorrencia_id)
@@ -479,6 +552,20 @@ def buscar_ocorrencia_api(ocorrencia_id: int, usuario=Depends(get_usuario_logado
     return _montar_resposta_ocorrencia(ocorrencia_id)
 
 
+@router.get("/ocorrencias/{ocorrencia_id}/pdf")
+def gerar_pdf_ocorrencia_api(ocorrencia_id: int, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    ocorrencia = _montar_resposta_ocorrencia(ocorrencia_id)
+    turma = buscar_turma_por_id(int(ocorrencia.get("turma_id") or 0))
+    pdf_bytes = gerar_pdf_ocorrencia_registro(ocorrencia, turma=turma)
+    nome_arquivo = _nome_arquivo_pdf_ocorrencia(ocorrencia)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={"Content-Disposition": f'inline; filename="{nome_arquivo}"'},
+    )
+
+
 @router.patch("/ocorrencias/{ocorrencia_id}", response_model=OcorrenciaOut)
 def atualizar_ocorrencia_parcial_api(
     ocorrencia_id: int,
@@ -495,6 +582,7 @@ def atualizar_ocorrencia_parcial_api(
         raise HTTPException(400, "Informe ao menos um campo para atualizar.")
 
     dados_validados = {}
+    regimento_item_ids_validados = None
 
     if {"nome_estudante", "estudante_id", "turma_id"} & set(dados_brutos.keys()):
         turma_id_merge = _validar_turma_id(dados_brutos.get("turma_id", atual["turma_id"]))
@@ -555,21 +643,32 @@ def atualizar_ocorrencia_parcial_api(
             "Descricao",
             max_len=5000,
         )
+    if "regimento_item_ids" in dados_brutos:
+        regimento_item_ids_validados = _normalizar_regimento_item_ids(
+            dados_brutos.get("regimento_item_ids")
+        )
     if "acao_aplicada" in dados_brutos:
         dados_validados["acao_aplicada"] = _validar_acao_aplicada(dados_brutos["acao_aplicada"])
     if "status" in dados_brutos:
         dados_validados["status"] = _validar_status(dados_brutos["status"])
 
-    if not dados_validados:
+    if not dados_validados and regimento_item_ids_validados is None:
         raise HTTPException(400, "Nenhum campo valido informado para atualizacao.")
 
-    try:
-        alterado = atualizar_ocorrencia(ocorrencia_id, dados_validados)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
+    alterado = True
+    if dados_validados:
+        try:
+            alterado = atualizar_ocorrencia(ocorrencia_id, dados_validados)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
 
     if not alterado:
         raise HTTPException(404, "Ocorrencia nao encontrada.")
+    if regimento_item_ids_validados is not None:
+        try:
+            salvar_regimento_itens_ocorrencia(ocorrencia_id, regimento_item_ids_validados)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
     return _montar_resposta_ocorrencia(ocorrencia_id)
 
 
@@ -690,3 +789,73 @@ def remover_estudante_api(estudante_id: int, usuario=Depends(get_usuario_logado)
 @router.post("/estudantes/{estudante_id}/excluir")
 def remover_estudante_fallback_api(estudante_id: int, usuario=Depends(get_usuario_logado)):
     return remover_estudante_api(estudante_id, usuario)
+
+
+@router.get("/regimento-itens", response_model=list[RegimentoItemOut])
+def listar_regimento_itens_api(
+    incluir_inativos: bool = Query(default=True),
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    return listar_regimento_itens(incluir_inativos=incluir_inativos)
+
+
+@router.get("/regimento-itens/{regimento_item_id}", response_model=RegimentoItemOut)
+def buscar_regimento_item_api(regimento_item_id: int, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    return _montar_resposta_regimento_item(regimento_item_id)
+
+
+@router.post("/regimento-itens", response_model=RegimentoItemOut)
+def criar_regimento_item_api(
+    payload: RegimentoItemCreateIn,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    try:
+        regimento_item_id = criar_regimento_item(
+            artigo=_texto_obrigatorio(payload.artigo, "Artigo", max_len=120),
+            descricao=_texto_obrigatorio(payload.descricao, "Descricao", max_len=5000),
+            ativo=True,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return _montar_resposta_regimento_item(regimento_item_id)
+
+
+@router.put("/regimento-itens/{regimento_item_id}", response_model=RegimentoItemOut)
+def atualizar_regimento_item_api(
+    regimento_item_id: int,
+    payload: RegimentoItemUpdateIn,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    if not buscar_regimento_item_por_id(regimento_item_id):
+        raise HTTPException(404, "Item do regimento nao encontrado.")
+
+    try:
+        alterado = atualizar_regimento_item(
+            regimento_item_id=regimento_item_id,
+            artigo=_texto_obrigatorio(payload.artigo, "Artigo", max_len=120),
+            descricao=_texto_obrigatorio(payload.descricao, "Descricao", max_len=5000),
+            ativo=bool(payload.ativo),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    if not alterado:
+        raise HTTPException(404, "Item do regimento nao encontrado.")
+    return _montar_resposta_regimento_item(regimento_item_id)
+
+
+@router.put("/regimento-itens/{regimento_item_id}/status")
+def atualizar_status_regimento_item_api(
+    regimento_item_id: int,
+    payload: RegimentoItemStatusIn,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    alterado = atualizar_status_regimento_item(regimento_item_id, bool(payload.ativo))
+    if not alterado:
+        raise HTTPException(404, "Item do regimento nao encontrado.")
+    return {"mensagem": "Status do item do regimento atualizado com sucesso."}

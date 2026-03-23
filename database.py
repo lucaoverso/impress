@@ -412,6 +412,31 @@ def criar_tabelas():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS regimento_itens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            artigo TEXT NOT NULL,
+            descricao TEXT NOT NULL,
+            ativo INTEGER NOT NULL DEFAULT 1,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ocorrencia_regimento_itens (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ocorrencia_id INTEGER NOT NULL,
+            regimento_item_id INTEGER,
+            artigo TEXT NOT NULL,
+            descricao TEXT NOT NULL,
+            ordem INTEGER NOT NULL DEFAULT 0,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(ocorrencia_id) REFERENCES ocorrencias(id),
+            FOREIGN KEY(regimento_item_id) REFERENCES regimento_itens(id)
+        )
+    """)
+
     _garantir_colunas_usuarios(cursor)
     _garantir_colunas_tokens(cursor)
     _garantir_colunas_jobs(cursor)
@@ -505,6 +530,26 @@ def criar_tabelas():
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_ocorrencias_data_criado
         ON ocorrencias(data_ocorrencia DESC, criado_em DESC)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_regimento_itens_ativo
+        ON regimento_itens(ativo)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_regimento_itens_artigo
+        ON regimento_itens(artigo)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ocorrencia_regimento_ocorrencia
+        ON ocorrencia_regimento_itens(ocorrencia_id, ordem)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ocorrencia_regimento_item
+        ON ocorrencia_regimento_itens(regimento_item_id)
     """)
 
     cursor.execute("""
@@ -917,6 +962,52 @@ def _garantir_colunas_ocorrencias(cursor):
         SET atualizado_em = datetime('now')
         WHERE TRIM(COALESCE(atualizado_em, '')) = ''
     """)
+
+
+def _mapear_regimento_itens_por_ocorrencia(cursor, ocorrencia_ids: list[int]) -> dict[int, list[dict]]:
+    ids_validos = [int(ocorrencia_id) for ocorrencia_id in ocorrencia_ids if int(ocorrencia_id) > 0]
+    if not ids_validos:
+        return {}
+
+    placeholders = ",".join(["?"] * len(ids_validos))
+    cursor.execute(f"""
+        SELECT
+            ocorrencia_id,
+            regimento_item_id,
+            artigo,
+            descricao,
+            ordem
+        FROM ocorrencia_regimento_itens
+        WHERE ocorrencia_id IN ({placeholders})
+        ORDER BY ocorrencia_id ASC, ordem ASC, id ASC
+    """, ids_validos)
+
+    mapa: dict[int, list[dict]] = {}
+    for row in cursor.fetchall():
+        ocorrencia_id = int(row["ocorrencia_id"])
+        mapa.setdefault(ocorrencia_id, []).append(
+            {
+                "regimento_item_id": int(row["regimento_item_id"]) if row["regimento_item_id"] is not None else None,
+                "artigo": str(row["artigo"] or "").strip(),
+                "descricao": str(row["descricao"] or "").strip(),
+                "ordem": int(row["ordem"] or 0),
+            }
+        )
+    return mapa
+
+
+def _anexar_regimento_itens_ocorrencias(cursor, ocorrencias: list[dict]) -> list[dict]:
+    if not ocorrencias:
+        return ocorrencias
+
+    mapa = _mapear_regimento_itens_por_ocorrencia(
+        cursor,
+        [int(ocorrencia.get("id") or 0) for ocorrencia in ocorrencias],
+    )
+    for ocorrencia in ocorrencias:
+        ocorrencia_id = int(ocorrencia.get("id") or 0)
+        ocorrencia["regimento_itens"] = mapa.get(ocorrencia_id, [])
+    return ocorrencias
 
 def _garantir_view_radcheck(cursor):
     # O sistema usa email como identificador de login para autenticação.
@@ -2543,6 +2634,215 @@ def buscar_recurso_por_id(recurso_id: int):
     conn.close()
     return dict(row) if row else None
 
+
+def listar_regimento_itens(incluir_inativos: bool = True):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT
+            id,
+            artigo,
+            descricao,
+            ativo,
+            criado_em,
+            atualizado_em
+        FROM regimento_itens
+    """
+    if not incluir_inativos:
+        query += " WHERE ativo = 1"
+    query += " ORDER BY artigo COLLATE NOCASE ASC, id ASC"
+
+    cursor.execute(query)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def buscar_regimento_item_por_id(regimento_item_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT
+            id,
+            artigo,
+            descricao,
+            ativo,
+            criado_em,
+            atualizado_em
+        FROM regimento_itens
+        WHERE id = ?
+    """, (int(regimento_item_id),))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def buscar_regimento_itens_por_ids(regimento_item_ids: list[int]):
+    ids_validos = []
+    vistos = set()
+    for regimento_item_id in regimento_item_ids or []:
+        valor = int(regimento_item_id)
+        if valor <= 0 or valor in vistos:
+            continue
+        vistos.add(valor)
+        ids_validos.append(valor)
+
+    if not ids_validos:
+        return []
+
+    placeholders = ",".join(["?"] * len(ids_validos))
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(f"""
+        SELECT
+            id,
+            artigo,
+            descricao,
+            ativo,
+            criado_em,
+            atualizado_em
+        FROM regimento_itens
+        WHERE id IN ({placeholders})
+    """, ids_validos)
+    rows = {int(row["id"]): dict(row) for row in cursor.fetchall()}
+    conn.close()
+    return [rows[regimento_item_id] for regimento_item_id in ids_validos if regimento_item_id in rows]
+
+
+def criar_regimento_item(artigo: str, descricao: str, ativo: bool = True):
+    artigo_limpo = _normalizar_nome_catalogo(artigo)
+    descricao_limpa = str(descricao or "").strip()
+    if not artigo_limpo:
+        raise ValueError("Artigo do regimento e obrigatorio.")
+    if not descricao_limpa:
+        raise ValueError("Descricao do regimento e obrigatoria.")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO regimento_itens (
+            artigo,
+            descricao,
+            ativo,
+            criado_em,
+            atualizado_em
+        )
+        VALUES (?, ?, ?, datetime('now'), datetime('now'))
+    """, (artigo_limpo, descricao_limpa, int(bool(ativo))))
+    regimento_item_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return regimento_item_id
+
+
+def atualizar_regimento_item(
+    regimento_item_id: int,
+    artigo: str,
+    descricao: str,
+    ativo: bool = True,
+):
+    artigo_limpo = _normalizar_nome_catalogo(artigo)
+    descricao_limpa = str(descricao or "").strip()
+    if not artigo_limpo:
+        raise ValueError("Artigo do regimento e obrigatorio.")
+    if not descricao_limpa:
+        raise ValueError("Descricao do regimento e obrigatoria.")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE regimento_itens
+        SET artigo = ?, descricao = ?, ativo = ?, atualizado_em = datetime('now')
+        WHERE id = ?
+    """, (artigo_limpo, descricao_limpa, int(bool(ativo)), int(regimento_item_id)))
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def atualizar_status_regimento_item(regimento_item_id: int, ativo: bool):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        UPDATE regimento_itens
+        SET ativo = ?, atualizado_em = datetime('now')
+        WHERE id = ?
+    """, (int(bool(ativo)), int(regimento_item_id)))
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def salvar_regimento_itens_ocorrencia(ocorrencia_id: int, regimento_item_ids: list[int] | None):
+    ocorrencia_id_valor = int(ocorrencia_id or 0)
+    if ocorrencia_id_valor <= 0:
+        raise ValueError("Ocorrencia invalida.")
+
+    ids_norm = []
+    vistos = set()
+    for regimento_item_id in regimento_item_ids or []:
+        valor = int(regimento_item_id)
+        if valor <= 0 or valor in vistos:
+            continue
+        vistos.add(valor)
+        ids_norm.append(valor)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM ocorrencias WHERE id = ?", (ocorrencia_id_valor,))
+    if not cursor.fetchone():
+        conn.close()
+        raise ValueError("Ocorrencia nao encontrada.")
+
+    cursor.execute(
+        "DELETE FROM ocorrencia_regimento_itens WHERE ocorrencia_id = ?",
+        (ocorrencia_id_valor,),
+    )
+
+    if ids_norm:
+        placeholders = ",".join(["?"] * len(ids_norm))
+        cursor.execute(f"""
+            SELECT
+                id,
+                artigo,
+                descricao
+            FROM regimento_itens
+            WHERE id IN ({placeholders})
+        """, ids_norm)
+        itens = {int(row["id"]): dict(row) for row in cursor.fetchall()}
+        faltantes = [regimento_item_id for regimento_item_id in ids_norm if regimento_item_id not in itens]
+        if faltantes:
+            conn.close()
+            raise ValueError("Um ou mais itens do regimento nao foram encontrados.")
+
+        cursor.executemany("""
+            INSERT INTO ocorrencia_regimento_itens (
+                ocorrencia_id,
+                regimento_item_id,
+                artigo,
+                descricao,
+                ordem,
+                criado_em
+            )
+            VALUES (?, ?, ?, ?, ?, datetime('now'))
+        """, [
+            (
+                ocorrencia_id_valor,
+                regimento_item_id,
+                str(itens[regimento_item_id]["artigo"] or "").strip(),
+                str(itens[regimento_item_id]["descricao"] or "").strip(),
+                ordem,
+            )
+            for ordem, regimento_item_id in enumerate(ids_norm, start=1)
+        ])
+
+    conn.commit()
+    conn.close()
+    return True
+
 def criar_ocorrencia(
     nome_estudante: str,
     estudante_id: int | None,
@@ -2706,8 +3006,10 @@ def listar_ocorrencias(
 
     cursor.execute(query, params)
     rows = cursor.fetchall()
+    ocorrencias = [dict(row) for row in rows]
+    _anexar_regimento_itens_ocorrencias(cursor, ocorrencias)
     conn.close()
-    return [dict(row) for row in rows]
+    return ocorrencias
 
 def buscar_ocorrencia_por_id(ocorrencia_id: int):
     conn = get_connection()
@@ -2737,8 +3039,11 @@ def buscar_ocorrencia_por_id(ocorrencia_id: int):
     """, (int(ocorrencia_id),))
 
     row = cursor.fetchone()
+    ocorrencia = dict(row) if row else None
+    if ocorrencia:
+        _anexar_regimento_itens_ocorrencias(cursor, [ocorrencia])
     conn.close()
-    return dict(row) if row else None
+    return ocorrencia
 
 def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
     campos_permitidos = {
@@ -2841,6 +3146,10 @@ def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
 def remover_ocorrencia(ocorrencia_id: int):
     conn = get_connection()
     cursor = conn.cursor()
+    cursor.execute(
+        "DELETE FROM ocorrencia_regimento_itens WHERE ocorrencia_id = ?",
+        (int(ocorrencia_id),),
+    )
     cursor.execute("DELETE FROM ocorrencias WHERE id = ?", (int(ocorrencia_id),))
     removido = cursor.rowcount > 0
     conn.commit()
