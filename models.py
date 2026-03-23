@@ -226,3 +226,13 @@ class EstudanteOut(BaseModel):
     ativo: int | bool
     criado_em: str
     atualizado_em: str
+
+
+class ImportacaoCsvOut(BaseModel):
+    mensagem: str
+    linhas_processadas: int
+    importados: int
+    criados: int
+    atualizados: int
+    erros: int
+    detalhes_erros: list[str] = Field(default_factory=list)

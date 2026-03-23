@@ -2,7 +2,7 @@ import re
 import unicodedata
 from datetime import datetime
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Response
+from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 
 from auth import get_usuario_logado
 from database import (
@@ -25,6 +25,7 @@ from database import (
     criar_estudante,
     criar_ocorrencia,
     criar_regimento_item,
+    listar_disciplinas_ativas,
     listar_estudantes,
     listar_ocorrencias,
     listar_professores_agendamento,
@@ -39,6 +40,7 @@ from models import (
     EstudanteOut,
     EstudanteStatusIn,
     EstudanteUpdateIn,
+    ImportacaoCsvOut,
     OcorrenciaCreateIn,
     OcorrenciaOut,
     OcorrenciaUpdateIn,
@@ -47,6 +49,7 @@ from models import (
     RegimentoItemStatusIn,
     RegimentoItemUpdateIn,
 )
+from services.csv_import_service import importar_base_legal_csv, importar_estudantes_csv
 from services.ocorrencia_pdf_service import gerar_pdf_ocorrencia_registro
 
 router = APIRouter()
@@ -358,6 +361,21 @@ def _montar_resposta_estudante(estudante_id: int) -> dict:
     return estudante
 
 
+def _ler_upload_csv(arquivo: UploadFile) -> bytes:
+    nome_arquivo = str(getattr(arquivo, "filename", "") or "").strip()
+    if not nome_arquivo:
+        raise HTTPException(400, "Arquivo CSV nao enviado.")
+
+    tipo_conteudo = str(getattr(arquivo, "content_type", "") or "").lower()
+    if not nome_arquivo.lower().endswith(".csv") and "csv" not in tipo_conteudo:
+        raise HTTPException(400, "Envie um arquivo CSV valido.")
+
+    conteudo = arquivo.file.read()
+    if not conteudo:
+        raise HTTPException(400, "Arquivo CSV vazio.")
+    return conteudo
+
+
 @router.get("/ocorrencias/opcoes")
 def listar_opcoes_ocorrencias(usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
@@ -403,6 +421,14 @@ def listar_opcoes_ocorrencias(usuario=Depends(get_usuario_logado)):
                 ),
             }
             for professor in professores
+        ],
+        "disciplinas": [
+            {
+                "id": disciplina["id"],
+                "nome": disciplina["nome"],
+                "label": disciplina["nome"],
+            }
+            for disciplina in listar_disciplinas_ativas()
         ],
         "regimento_itens": [
             {
@@ -735,6 +761,18 @@ def criar_estudante_api(payload: EstudanteCreateIn, usuario=Depends(get_usuario_
     return _montar_resposta_estudante(estudante_id)
 
 
+@router.post("/estudantes/importar-csv", response_model=ImportacaoCsvOut)
+def importar_estudantes_csv_api(
+    arquivo: UploadFile = File(...),
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    try:
+        return importar_estudantes_csv(_ler_upload_csv(arquivo))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
 @router.put("/estudantes/{estudante_id}", response_model=EstudanteOut)
 def atualizar_estudante_api(
     estudante_id: int,
@@ -821,6 +859,18 @@ def criar_regimento_item_api(
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return _montar_resposta_regimento_item(regimento_item_id)
+
+
+@router.post("/regimento-itens/importar-csv", response_model=ImportacaoCsvOut)
+def importar_regimento_itens_csv_api(
+    arquivo: UploadFile = File(...),
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    try:
+        return importar_base_legal_csv(_ler_upload_csv(arquivo))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.put("/regimento-itens/{regimento_item_id}", response_model=RegimentoItemOut)

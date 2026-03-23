@@ -26,6 +26,7 @@ let relatorioOcorrenciasCarregado = false;
 let opcoesOcorrencias = {
     turmas: [],
     professores: [],
+    disciplinas: [],
     status: [],
     acoes_aplicadas: [],
     regimento_itens: [],
@@ -42,7 +43,27 @@ const TURNO_OFFSET_FAIXA = {
 const rotulosAcao = new Map();
 const rotulosStatus = new Map();
 const mapaBuscaEstudantes = new Map();
+const mapaBuscaProfessores = new Map();
+const mapaBuscaDisciplinas = new Map();
+const mapaBuscaRegimento = new Map();
 let timerBuscaEstudantes = null;
+const MODELO_CSV_ESTUDANTES = [
+    "nome,turma,ativo",
+    "Ana Maria Souza,8 B,ativo",
+    "Bruno Henrique Lima,9 A,1"
+].join("\n");
+const MODELO_CSV_BASE_LEGAL = [
+    "artigo,descricao,ativo",
+    "\"Art. 76 - VII\",\"Integrar-se ao processo pedagogico desenvolvido pela unidade escolar.\",ativo",
+    "\"Art. 53 - ECA\",\"A crianca e o adolescente tem direito a educacao e respeito.\",ativo"
+].join("\n");
+const OBSERVACOES_ACAO_PREVIEW = {
+    orientacao_verbal: "OBS.: O registro fica arquivado para acompanhamento pedagogico e orientacao verbal junto ao estudante.",
+    advertencia: "OBS.: Pela falta de integracao e compromisso e por nao acatar as solicitacoes da docente, recebe esta acao pedagogico-disciplinar de advertencia.",
+    chamada_responsavel: "OBS.: Solicitado o comparecimento do responsavel para alinhamento e acompanhamento conjunto do caso.",
+    encaminhamento_direcao: "OBS.: O registro segue encaminhado a Direcao para providencias e acompanhamento institucional.",
+    registro_informativo: "OBS.: Documento emitido para registro informativo e acompanhamento pedagogico interno."
+};
 
 function el(id) {
     return document.getElementById(id);
@@ -84,6 +105,36 @@ function setMensagemRegimento(texto, erro = false) {
     if (!target) return;
     target.innerText = texto || "";
     target.style.color = erro ? "#b42318" : "#0f766e";
+}
+
+function houveFalhaImportacao(resultado) {
+    return Number(resultado?.importados || 0) <= 0 && Number(resultado?.erros || 0) > 0;
+}
+
+function comporMensagemImportacaoCsv(resultado) {
+    const mensagemBase = String(resultado?.mensagem || "Importacao concluida.").trim();
+    const detalhes = Array.isArray(resultado?.detalhes_erros) ? resultado.detalhes_erros : [];
+    if (detalhes.length === 0) return mensagemBase;
+
+    const amostra = detalhes.slice(0, 3);
+    const restante = detalhes.length - amostra.length;
+    let mensagem = `${mensagemBase} ${amostra.join(" | ")}`;
+    if (restante > 0) {
+        mensagem += ` | +${restante} erro(s) adicional(is).`;
+    }
+    return mensagem;
+}
+
+function baixarArquivoTexto(nomeArquivo, conteudo, tipo = "text/csv;charset=utf-8") {
+    const blob = new Blob(["\uFEFF", conteudo], { type: tipo });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = nomeArquivo;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
 }
 
 function normalizarErro(res, body) {
@@ -306,21 +357,136 @@ function preencherSelect(selectId, opcoes, {
     }
 }
 
-function preencherDatalist(datalistId, mapa, itens) {
+function limparMapaSugestoes(mapa) {
+    if (mapa && typeof mapa.clear === "function") {
+        mapa.clear();
+    }
+}
+
+function registrarMapaSugestoes(mapa, item) {
+    if (!mapa || typeof mapa.set !== "function" || !item) return;
+
+    const chaves = new Set(
+        [
+            item.label,
+            item.nome,
+            item.artigo,
+        ]
+            .map((valor) => String(valor || "").trim())
+            .filter(Boolean)
+    );
+    chaves.forEach((chave) => mapa.set(chave, item));
+}
+
+function obterDescricaoSugestao(item) {
+    if (!item) return "";
+    if (item.turma_nome) return `Turma: ${item.turma_nome}`;
+    if (item.email) return item.email;
+    if (item.descricao) {
+        return String(item.descricao).trim();
+    }
+    return "";
+}
+
+function obterTituloSugestao(item) {
+    return String(item?.nome || item?.artigo || item?.label || "").trim();
+}
+
+function obterItemSugestaoPorTexto(mapa, texto, itensFallback = []) {
+    const termo = String(texto || "").trim();
+    if (!termo) return null;
+    if (mapa && mapa.has(termo)) return mapa.get(termo);
+
+    const termoLower = termo.toLowerCase();
+    const candidatos = [];
+    if (mapa && typeof mapa.values === "function") {
+        candidatos.push(...mapa.values());
+    }
+    if (Array.isArray(itensFallback)) {
+        candidatos.push(...itensFallback);
+    }
+
+    const vistos = new Set();
+    for (const item of candidatos) {
+        if (!item || vistos.has(item)) continue;
+        vistos.add(item);
+
+        const textos = [
+            item.label,
+            item.nome,
+            item.artigo,
+        ]
+            .map((valor) => String(valor || "").trim().toLowerCase())
+            .filter(Boolean);
+        if (textos.includes(termoLower)) {
+            return item;
+        }
+    }
+    return null;
+}
+
+function ocultarSugestoes(autocompleteId) {
+    const lista = el(autocompleteId);
+    if (!lista) return;
+    lista.innerHTML = "";
+    lista.hidden = true;
+}
+
+function ocultarTodasSugestoes() {
+    ["listaEstudantesBusca", "listaProfessoresBusca", "listaDisciplinasBusca", "listaRegimentoBusca"].forEach(ocultarSugestoes);
+}
+
+function preencherDatalist(datalistId, mapa, itens, { onSelect = null, textoVazio = "" } = {}) {
     const datalist = el(datalistId);
     if (!datalist) return;
     datalist.innerHTML = "";
-    mapa.clear();
+    limparMapaSugestoes(mapa);
 
-    (itens || []).forEach((item) => {
-        const label = String(item.label || item.nome || "").trim();
-        if (!label) return;
+    const itensValidos = Array.isArray(itens) ? itens.filter(Boolean) : [];
+    itensValidos.forEach((item) => registrarMapaSugestoes(mapa, item));
 
-        const option = document.createElement("option");
-        option.value = label;
+    if (itensValidos.length === 0) {
+        if (textoVazio) {
+            const vazio = document.createElement("div");
+            vazio.className = "coordenacao-autocomplete-empty";
+            vazio.innerText = textoVazio;
+            datalist.appendChild(vazio);
+            datalist.hidden = false;
+            return;
+        }
+        datalist.hidden = true;
+        return;
+    }
+
+    itensValidos.forEach((item) => {
+        const tituloTexto = obterTituloSugestao(item);
+        if (!tituloTexto) return;
+
+        const option = document.createElement("button");
+        option.type = "button";
+        option.className = "coordenacao-autocomplete-item";
+
+        const titulo = document.createElement("strong");
+        titulo.innerText = tituloTexto;
+        option.appendChild(titulo);
+
+        const descricaoTexto = obterDescricaoSugestao(item);
+        if (descricaoTexto) {
+            const descricao = document.createElement("span");
+            descricao.innerText = descricaoTexto;
+            option.appendChild(descricao);
+        }
+
+        option.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            if (typeof onSelect === "function") {
+                onSelect(item);
+            }
+            ocultarSugestoes(datalistId);
+        });
         datalist.appendChild(option);
-        mapa.set(label, item);
     });
+    datalist.hidden = false;
 }
 
 function normalizarIdsRegimento(valores) {
@@ -336,8 +502,8 @@ function normalizarIdsRegimento(valores) {
 
 function obterIdsRegimentoSelecionadosFormulario() {
     return normalizarIdsRegimento(
-        Array.from(document.querySelectorAll('input[name="ocorrenciaRegimentoItem"]:checked'))
-            .map((input) => input.value)
+        Array.from(document.querySelectorAll("#ocorrenciaRegimentoSelecionados [data-regimento-item-id]"))
+            .map((item) => item.dataset.regimentoItemId)
     );
 }
 
@@ -350,8 +516,11 @@ function obterIdsRegimentoSelecionadosOcorrencia(ocorrencia) {
 }
 
 function renderSelecionadorRegimento(idsSelecionados = null) {
-    const container = el("ocorrenciaRegimentoItens");
-    if (!container) return;
+    const container = el("ocorrenciaRegimentoSelecionados");
+    if (!container) {
+        atualizarPreviewOcorrencia();
+        return;
+    }
 
     const idsAtivos = new Set(
         idsSelecionados === null
@@ -366,32 +535,35 @@ function renderSelecionadorRegimento(idsSelecionados = null) {
     if (itens.length === 0) {
         const vazio = document.createElement("p");
         vazio.className = "coordenacao-empty-state";
-        vazio.innerText = "Cadastre itens do regimento para seleciona-los na ocorrencia.";
+        vazio.innerText = "Cadastre itens da base legal para anexa-los na ocorrencia.";
         container.appendChild(vazio);
+        atualizarPreviewOcorrencia();
         return;
     }
 
-    const lista = document.createElement("div");
-    lista.className = "coordenacao-regimento-list";
+    const itensSelecionados = itens.filter((item) => idsAtivos.has(Number(item.id || 0)));
+    if (itensSelecionados.length === 0) {
+        const vazio = document.createElement("p");
+        vazio.className = "coordenacao-empty-state";
+        vazio.innerText = "Nenhuma base legal anexada ainda.";
+        container.appendChild(vazio);
+        atualizarPreviewOcorrencia();
+        return;
+    }
 
-    itens.forEach((item) => {
+    itensSelecionados.forEach((item) => {
         const id = Number(item.id || 0);
         if (!id) return;
 
-        const label = document.createElement("label");
-        label.className = "coordenacao-regimento-option";
+        const card = document.createElement("article");
+        card.className = "coordenacao-regimento-card";
+        card.dataset.regimentoItemId = String(id);
         if (!Boolean(item.ativo)) {
-            label.classList.add("is-inactive");
+            card.classList.add("is-inactive");
         }
 
-        const input = document.createElement("input");
-        input.type = "checkbox";
-        input.name = "ocorrenciaRegimentoItem";
-        input.value = String(id);
-        input.checked = idsAtivos.has(id);
-
         const corpo = document.createElement("div");
-        corpo.className = "coordenacao-regimento-option-body";
+        corpo.className = "coordenacao-regimento-card-body";
 
         const artigo = document.createElement("strong");
         artigo.innerText = String(item.artigo || "Sem artigo");
@@ -409,12 +581,20 @@ function renderSelecionadorRegimento(idsSelecionados = null) {
             corpo.appendChild(meta);
         }
 
-        label.appendChild(input);
-        label.appendChild(corpo);
-        lista.appendChild(label);
-    });
+        const btnRemover = document.createElement("button");
+        btnRemover.type = "button";
+        btnRemover.className = "coordenacao-regimento-remove";
+        btnRemover.innerText = "Remover";
+        btnRemover.addEventListener("click", () => {
+            const proximosIds = obterIdsRegimentoSelecionadosFormulario().filter((valor) => Number(valor) !== id);
+            renderSelecionadorRegimento(proximosIds);
+        });
 
-    container.appendChild(lista);
+        card.appendChild(corpo);
+        card.appendChild(btnRemover);
+        container.appendChild(card);
+    });
+    atualizarPreviewOcorrencia();
 }
 
 function normalizarTurnoId(turnoId) {
@@ -461,6 +641,102 @@ function obterTurmaOpcaoPorId(turmaId) {
 function obterProfessorOpcaoPorId(professorId) {
     const professorIdNumero = Number(professorId || 0);
     return (opcoesOcorrencias.professores || []).find((item) => Number(item.id) === professorIdNumero) || null;
+}
+
+function popularSugestoesProfessores() {
+    limparMapaSugestoes(mapaBuscaProfessores);
+    (opcoesOcorrencias.professores || []).forEach((item) => registrarMapaSugestoes(mapaBuscaProfessores, item));
+    ocultarSugestoes("listaProfessoresBusca");
+}
+
+function popularSugestoesDisciplinas() {
+    limparMapaSugestoes(mapaBuscaDisciplinas);
+    (opcoesOcorrencias.disciplinas || []).forEach((item) => registrarMapaSugestoes(mapaBuscaDisciplinas, item));
+    ocultarSugestoes("listaDisciplinasBusca");
+}
+
+function popularSugestoesRegimento() {
+    limparMapaSugestoes(mapaBuscaRegimento);
+    (opcoesOcorrencias.regimento_itens || []).forEach((item) => registrarMapaSugestoes(mapaBuscaRegimento, item));
+    ocultarSugestoes("listaRegimentoBusca");
+}
+
+function obterItensDisponiveisRegimento() {
+    const idsSelecionados = new Set(obterIdsRegimentoSelecionadosFormulario());
+    return (opcoesOcorrencias.regimento_itens || []).filter((item) => {
+        const id = Number(item?.id || 0);
+        if (id <= 0 || idsSelecionados.has(id)) {
+            return false;
+        }
+        return Boolean(item.ativo);
+    });
+}
+
+function correspondeTextoRegimento(item, termo) {
+    const termoNormalizado = String(termo || "").trim().toLowerCase();
+    if (!termoNormalizado) return false;
+
+    return [
+        item?.artigo,
+        item?.label,
+        item?.descricao
+    ].some((valor) => String(valor || "").trim().toLowerCase() === termoNormalizado);
+}
+
+function selecionarSugestaoRegimento(item) {
+    const id = Number(item?.id || 0);
+    if (id <= 0) return;
+
+    const proximosIds = normalizarIdsRegimento([
+        ...obterIdsRegimentoSelecionadosFormulario(),
+        id
+    ]);
+    renderSelecionadorRegimento(proximosIds);
+    el("ocorrenciaBuscaRegimento").value = "";
+    ocultarSugestoes("listaRegimentoBusca");
+}
+
+function aplicarSelecaoRegimentoPorTexto() {
+    const input = el("ocorrenciaBuscaRegimento");
+    const texto = input.value.trim();
+    if (!texto) {
+        ocultarSugestoes("listaRegimentoBusca");
+        return;
+    }
+
+    const item = obterItensDisponiveisRegimento().find((candidato) => correspondeTextoRegimento(candidato, texto));
+    if (item) {
+        selecionarSugestaoRegimento(item);
+        return;
+    }
+
+    input.value = "";
+    ocultarSugestoes("listaRegimentoBusca");
+}
+
+function atualizarSugestoesRegimentoBusca(forcar = false) {
+    const termo = el("ocorrenciaBuscaRegimento").value.trim();
+    if (!forcar && termo.length < 1) {
+        ocultarSugestoes("listaRegimentoBusca");
+        return;
+    }
+
+    const itensDisponiveis = obterItensDisponiveisRegimento();
+    const itens = filtrarSugestoesLocais(itensDisponiveis, termo, {
+        limite: 12,
+        campos: ["artigo", "descricao", "label"]
+    });
+
+    const totalAtivos = (opcoesOcorrencias.regimento_itens || []).filter((item) => Boolean(item?.ativo)).length;
+    const textoVazio = totalAtivos === 0
+        ? "Cadastre bases legais ativas para pesquisar."
+        : itensDisponiveis.length === 0
+            ? "Todas as bases legais ativas ja foram anexadas."
+        : "Nenhuma base legal encontrada.";
+    preencherDatalist("listaRegimentoBusca", mapaBuscaRegimento, itens, {
+        onSelect: selecionarSugestaoRegimento,
+        textoVazio
+    });
 }
 
 function faixasDisponiveisTurma(turma) {
@@ -519,6 +795,131 @@ function formatarAulaOcorrencia(ocorrencia) {
         return `Faixa ${faixa}`;
     }
     return `${aulaLabel(aulaTurno)} (faixa ${faixa})`;
+}
+
+function obterOcorrenciaEmEdicaoAtual() {
+    if (!ocorrenciaEmEdicaoId) return null;
+    return (ocorrenciasCache || []).find((ocorrencia) => Number(ocorrencia.id) === Number(ocorrenciaEmEdicaoId)) || null;
+}
+
+function obterTextoOuPadrao(valor, padrao = "Nao informado") {
+    const texto = String(valor || "").trim();
+    return texto || padrao;
+}
+
+function obterTurmaPreviewFormulario() {
+    const turmaId = el("ocorrenciaTurmaId")?.value;
+    const turma = obterTurmaOpcaoPorId(turmaId);
+    if (turma?.nome) return turma.nome;
+
+    const select = el("ocorrenciaTurmaId");
+    const opcao = select?.selectedOptions?.[0];
+    return obterTextoOuPadrao(opcao?.textContent, "Nao informada");
+}
+
+function obterAulaPreviewFormulario() {
+    const select = el("ocorrenciaAula");
+    const opcao = select?.selectedOptions?.[0];
+    const textoOpcao = String(opcao?.textContent || "").trim();
+    if (textoOpcao && !opcao?.disabled) {
+        return textoOpcao;
+    }
+
+    const valor = String(select?.value || "").trim();
+    return valor || "Nao informada";
+}
+
+function obterHorarioPreviewFormulario() {
+    const horario = String(el("ocorrenciaHorario")?.value || "").trim();
+    return horario ? `As ${horario} h` : "Nao informado";
+}
+
+function obterObservacaoFinalPreview(acaoAplicada) {
+    const acao = String(acaoAplicada || "").trim();
+    return OBSERVACOES_ACAO_PREVIEW[acao] || `OBS.: Documento emitido para registro e acompanhamento da acao aplicada: ${rotuloAcao(acao)}.`;
+}
+
+function obterItensRegimentoSelecionadosPreview() {
+    const idsSelecionados = new Set(obterIdsRegimentoSelecionadosFormulario());
+    return (opcoesOcorrencias.regimento_itens || []).filter((item) => idsSelecionados.has(Number(item?.id || 0)));
+}
+
+function definirTextoPreview(id, valor, padrao = "Nao informado") {
+    const target = el(id);
+    if (!target) return;
+    target.innerText = obterTextoOuPadrao(valor, padrao);
+}
+
+function renderizarBaseLegalPreview(itens) {
+    const container = el("previewBaseLegal");
+    if (!container) return;
+
+    container.innerHTML = "";
+    if (!Array.isArray(itens) || itens.length === 0) {
+        const vazio = document.createElement("p");
+        vazio.className = "coordenacao-preview-empty";
+        vazio.innerText = "Nenhuma base legal anexada ainda.";
+        container.appendChild(vazio);
+        return;
+    }
+
+    itens.forEach((item) => {
+        const artigo = document.createElement("div");
+        artigo.className = "coordenacao-preview-legal-item";
+
+        const titulo = document.createElement("strong");
+        titulo.innerText = obterTextoOuPadrao(item?.artigo, "Sem artigo");
+
+        const descricao = document.createElement("span");
+        descricao.innerText = obterTextoOuPadrao(item?.descricao, "Sem descricao.");
+
+        artigo.appendChild(titulo);
+        artigo.appendChild(descricao);
+        container.appendChild(artigo);
+    });
+}
+
+function atualizarPreviewOcorrencia() {
+    if (!el("ocorrenciaPreviewPdf")) return;
+
+    const ocorrenciaAtual = obterOcorrenciaEmEdicaoAtual();
+    const estudante = el("ocorrenciaBuscaEstudante")?.value;
+    const professor = el("ocorrenciaBuscaProfessor")?.value;
+    const disciplina = el("ocorrenciaDisciplina")?.value;
+    const descricao = el("ocorrenciaDescricao")?.value;
+    const dataOcorrencia = el("ocorrenciaData")?.value;
+    const acaoAplicada = el("ocorrenciaAcaoAplicada")?.value;
+    const status = el("ocorrenciaStatus")?.value;
+
+    definirTextoPreview("previewNomeEstudante", estudante);
+    definirTextoPreview("previewTurma", obterTurmaPreviewFormulario(), "Nao informada");
+    definirTextoPreview("previewProfessor", professor);
+    definirTextoPreview("previewDisciplina", disciplina, "Nao informada");
+    definirTextoPreview("previewData", formatarDataBr(dataOcorrencia), "Nao informada");
+    definirTextoPreview("previewAula", obterAulaPreviewFormulario(), "Nao informada");
+    definirTextoPreview("previewHorario", obterHorarioPreviewFormulario(), "Nao informado");
+    definirTextoPreview("previewAcao", rotuloAcao(acaoAplicada), "Nao informada");
+    definirTextoPreview("previewStatus", rotuloStatus(status), "Nao informado");
+
+    const descricaoPreview = el("previewDescricao");
+    if (descricaoPreview) {
+        descricaoPreview.innerText = obterTextoOuPadrao(
+            descricao,
+            "A descricao digitada no formulario aparecera aqui automaticamente."
+        );
+    }
+
+    renderizarBaseLegalPreview(obterItensRegimentoSelecionadosPreview());
+
+    const observacaoPreview = el("previewObservacao");
+    if (observacaoPreview) {
+        observacaoPreview.innerText = obterObservacaoFinalPreview(acaoAplicada);
+    }
+
+    const emitidoEm = ocorrenciaAtual?.criado_em
+        ? `Emitido em ${formatarDataHora(ocorrenciaAtual.criado_em)}`
+        : `Emitido em ${new Date().toLocaleString("pt-BR")}`;
+    definirTextoPreview("previewEmitidoEm", emitidoEm, "Emitido automaticamente no momento do registro.");
 }
 
 function atualizarSelectAulasPorTurma(turmaId, faixaSelecionada = null) {
@@ -581,14 +982,12 @@ function limparFormularioOcorrencia({ manterAberto = false } = {}) {
     el("formOcorrencia").reset();
     ocorrenciaEmEdicaoId = null;
     el("ocorrenciaEstudanteId").value = "";
+    el("ocorrenciaProfessorRequerenteId").value = "";
+    ocultarTodasSugestoes();
 
     const turmaSelect = el("ocorrenciaTurmaId");
-    const professorSelect = el("ocorrenciaProfessorRequerenteId");
     if (opcoesOcorrencias.turmas.length > 0) {
         turmaSelect.value = String(opcoesOcorrencias.turmas[0].id);
-    }
-    if (opcoesOcorrencias.professores.length > 0) {
-        professorSelect.value = String(opcoesOcorrencias.professores[0].id);
     }
     atualizarSelectAulasPorTurma(turmaSelect.value);
 
@@ -605,12 +1004,14 @@ function limparFormularioOcorrencia({ manterAberto = false } = {}) {
     } else {
         ocultarPainelFormularioOcorrencia();
     }
+    atualizarPreviewOcorrencia();
 }
 
 function preencherFormularioOcorrencia(ocorrencia) {
     ocorrenciaEmEdicaoId = Number(ocorrencia.id);
     el("ocorrenciaBuscaEstudante").value = ocorrencia.nome_estudante || "";
     el("ocorrenciaEstudanteId").value = ocorrencia.estudante_id || "";
+    el("ocorrenciaBuscaRegimento").value = "";
 
     const turmaId = String(ocorrencia.turma_id || "");
     el("ocorrenciaTurmaId").value = turmaId;
@@ -621,11 +1022,15 @@ function preencherFormularioOcorrencia(ocorrencia) {
 
     const professorPorId = obterProfessorOpcaoPorId(ocorrencia.professor_requerente_id);
     if (professorPorId) {
+        el("ocorrenciaBuscaProfessor").value = professorPorId.label || professorPorId.nome || "";
         el("ocorrenciaProfessorRequerenteId").value = String(professorPorId.id);
     } else {
         const professorPorNome = (opcoesOcorrencias.professores || []).find(
             (professor) => String(professor.nome || "").trim().toLowerCase() === String(ocorrencia.professor_requerente || "").trim().toLowerCase()
         );
+        el("ocorrenciaBuscaProfessor").value = professorPorNome
+            ? (professorPorNome.label || professorPorNome.nome || "")
+            : (ocorrencia.professor_requerente || "");
         el("ocorrenciaProfessorRequerenteId").value = professorPorNome ? String(professorPorNome.id) : "";
     }
 
@@ -640,6 +1045,7 @@ function preencherFormularioOcorrencia(ocorrencia) {
     el("btnCancelarEdicaoOcorrencia").style.display = "inline-block";
     ativarAbaCoordenacao("ocorrencias");
     mostrarPainelFormularioOcorrencia({ scroll: true });
+    atualizarPreviewOcorrencia();
 }
 
 function selecionarOcorrencia(ocorrencia) {
@@ -716,14 +1122,14 @@ function criarBlocoDetalhesRegimento(ocorrencia) {
 
     const titulo = document.createElement("strong");
     titulo.className = "coordenacao-detail-block-title";
-    titulo.innerText = "Itens do regimento escolar";
+    titulo.innerText = "Base legal vinculada";
     wrapper.appendChild(titulo);
 
     const itens = Array.isArray(ocorrencia?.regimento_itens) ? ocorrencia.regimento_itens : [];
     if (itens.length === 0) {
         const vazio = document.createElement("p");
         vazio.className = "coordenacao-detail-hint";
-        vazio.innerText = "Nenhum item do regimento vinculado a esta ocorrencia.";
+        vazio.innerText = "Nenhum item de base legal vinculado a esta ocorrencia.";
         wrapper.appendChild(vazio);
         return wrapper;
     }
@@ -1070,6 +1476,7 @@ async function carregarOpcoesOcorrencias() {
     opcoesOcorrencias = {
         turmas: Array.isArray(opcoesApi.turmas) ? opcoesApi.turmas : [],
         professores: Array.isArray(opcoesApi.professores) ? opcoesApi.professores : [],
+        disciplinas: Array.isArray(opcoesApi.disciplinas) ? opcoesApi.disciplinas : [],
         status: Array.isArray(opcoesApi.status) ? opcoesApi.status : [],
         acoes_aplicadas: Array.isArray(opcoesApi.acoes_aplicadas) ? opcoesApi.acoes_aplicadas : [],
         regimento_itens: Array.isArray(opcoesApi.regimento_itens) ? opcoesApi.regimento_itens : [],
@@ -1095,14 +1502,6 @@ async function carregarOpcoesOcorrencias() {
     preencherSelect("ocorrenciaTurmaId", opcoesOcorrencias.turmas, { placeholder: "Selecione a turma" });
     preencherSelect("filtroTurmaId", opcoesOcorrencias.turmas, { incluirTodos: true });
     preencherSelect("relatorioTurmaId", opcoesOcorrencias.turmas, { incluirTodos: true });
-    preencherSelect("ocorrenciaProfessorRequerenteId", opcoesOcorrencias.professores, {
-        placeholder: "Selecione o professor requerente",
-        obterRotulo: (item) => {
-            const nome = String(item.nome || "").trim();
-            const email = String(item.email || "").trim();
-            return email ? `${nome} (${email})` : nome;
-        }
-    });
     preencherSelect("ocorrenciaAcaoAplicada", opcoesOcorrencias.acoes_aplicadas, { placeholder: "Selecione a acao aplicada" });
     preencherSelect("ocorrenciaStatus", opcoesOcorrencias.status, {
         placeholder: "Selecione o status",
@@ -1113,10 +1512,14 @@ async function carregarOpcoesOcorrencias() {
 
     preencherSelect("estudanteTurmaId", opcoesOcorrencias.turmas, { placeholder: "Selecione a turma" });
     preencherSelect("filtroEstudanteTurmaId", opcoesOcorrencias.turmas, { incluirTodos: true });
+    popularSugestoesProfessores();
+    popularSugestoesDisciplinas();
+    popularSugestoesRegimento();
 
     const turmaInicial = opcoesOcorrencias.turmas[0];
     atualizarSelectAulasPorTurma(turmaInicial ? turmaInicial.id : "");
     renderSelecionadorRegimento(idsRegimentoSelecionados);
+    atualizarPreviewOcorrencia();
 }
 
 function queryFiltrosOcorrencias() {
@@ -1346,7 +1749,7 @@ function renderTabelaRegimento() {
         const td = document.createElement("td");
         td.colSpan = 5;
         td.className = "booking-empty";
-        td.innerText = "Nenhum item do regimento cadastrado.";
+        td.innerText = "Nenhum item da base legal cadastrado.";
         tr.appendChild(td);
         tbody.appendChild(tr);
         return;
@@ -1384,7 +1787,7 @@ function renderTabelaRegimento() {
                     headers: headersJson,
                     body: JSON.stringify({ ativo: !Boolean(item.ativo) })
                 });
-                setMensagemRegimento("Status do item atualizado.");
+                setMensagemRegimento("Status da base legal atualizado.");
                 await carregarRegimentoItens(idsSelecionados);
             } catch (err) {
                 setMensagemRegimento(err.message, true);
@@ -1410,14 +1813,16 @@ async function carregarRegimentoItens(idsSelecionados = null) {
             label: item.artigo || `Item ${item.id}`
         }))
         : [];
+    popularSugestoesRegimento();
     renderTabelaRegimento();
     renderSelecionadorRegimento(idsPreferidos);
+    atualizarPreviewOcorrencia();
 }
 
 function limparFormularioRegimento() {
     regimentoItemEmEdicao = null;
     el("formRegimento").reset();
-    el("tituloFormRegimento").innerText = "Cadastrar item do regimento";
+    el("tituloFormRegimento").innerText = "Cadastrar base legal";
     el("btnCancelarEdicaoRegimento").style.display = "none";
 }
 
@@ -1425,7 +1830,7 @@ function iniciarEdicaoRegimento(item) {
     regimentoItemEmEdicao = item;
     el("regimentoArtigo").value = item.artigo || "";
     el("regimentoDescricao").value = item.descricao || "";
-    el("tituloFormRegimento").innerText = "Editar item do regimento";
+    el("tituloFormRegimento").innerText = "Editar base legal";
     el("btnCancelarEdicaoRegimento").style.display = "inline-block";
     ativarAbaCoordenacao("regimento");
 }
@@ -1448,14 +1853,14 @@ async function salvarRegimento(event) {
                     ativo: Boolean(regimentoItemEmEdicao.ativo)
                 })
             });
-            setMensagemRegimento("Item do regimento atualizado com sucesso.");
+            setMensagemRegimento("Base legal atualizada com sucesso.");
         } else {
             await fetchJson("/regimento-itens", {
                 method: "POST",
                 headers: headersJson,
                 body: JSON.stringify(payload)
             });
-            setMensagemRegimento("Item do regimento cadastrado com sucesso.");
+            setMensagemRegimento("Base legal cadastrada com sucesso.");
         }
 
         limparFormularioRegimento();
@@ -1487,26 +1892,100 @@ function aplicarSelecaoEstudantePorTexto() {
     const texto = input.value.trim();
     if (!texto) {
         hidden.value = "";
+        ocultarSugestoes("listaEstudantesBusca");
         return;
     }
 
-    const item = mapaBuscaEstudantes.get(texto);
+    const item = obterItemSugestaoPorTexto(mapaBuscaEstudantes, texto);
     if (!item) {
         hidden.value = "";
+        ocultarSugestoes("listaEstudantesBusca");
         return;
     }
 
+    input.value = String(item.nome || item.label || texto).trim();
     hidden.value = String(item.id);
     el("ocorrenciaTurmaId").value = String(item.turma_id);
     atualizarSelectAulasPorTurma(item.turma_id);
+    ocultarSugestoes("listaEstudantesBusca");
+}
+
+function aplicarSelecaoProfessorPorTexto() {
+    const input = el("ocorrenciaBuscaProfessor");
+    const hidden = el("ocorrenciaProfessorRequerenteId");
+    const texto = input.value.trim();
+    if (!texto) {
+        hidden.value = "";
+        ocultarSugestoes("listaProfessoresBusca");
+        return;
+    }
+
+    const item = obterItemSugestaoPorTexto(mapaBuscaProfessores, texto, opcoesOcorrencias.professores || []);
+    if (item) {
+        input.value = String(item.nome || item.label || texto).trim();
+    }
+    hidden.value = item ? String(item.id) : "";
+    ocultarSugestoes("listaProfessoresBusca");
+}
+
+function aplicarSelecaoDisciplinaPorTexto() {
+    const input = el("ocorrenciaDisciplina");
+    const texto = input.value.trim();
+    if (!texto) {
+        ocultarSugestoes("listaDisciplinasBusca");
+        return;
+    }
+
+    const item = obterItemSugestaoPorTexto(mapaBuscaDisciplinas, texto, opcoesOcorrencias.disciplinas || []);
+    if (item) {
+        input.value = String(item.nome || item.label || texto).trim();
+    }
+    ocultarSugestoes("listaDisciplinasBusca");
+}
+
+function selecionarSugestaoEstudante(item) {
+    if (!item) return;
+    el("ocorrenciaBuscaEstudante").value = String(item.nome || item.label || "").trim();
+    el("ocorrenciaEstudanteId").value = String(item.id || "");
+    if (item.turma_id) {
+        el("ocorrenciaTurmaId").value = String(item.turma_id);
+        atualizarSelectAulasPorTurma(item.turma_id);
+    }
+    atualizarPreviewOcorrencia();
+}
+
+function selecionarSugestaoProfessor(item) {
+    if (!item) return;
+    el("ocorrenciaBuscaProfessor").value = String(item.nome || item.label || "").trim();
+    el("ocorrenciaProfessorRequerenteId").value = String(item.id || "");
+    atualizarPreviewOcorrencia();
+}
+
+function selecionarSugestaoDisciplina(item) {
+    if (!item) return;
+    el("ocorrenciaDisciplina").value = String(item.nome || item.label || "").trim();
+    atualizarPreviewOcorrencia();
+}
+
+function filtrarSugestoesLocais(itens, termo, { limite = 12, campos = ["nome", "label"] } = {}) {
+    const lista = Array.isArray(itens) ? itens : [];
+    const termoLimpo = String(termo || "").trim().toLowerCase();
+    if (!termoLimpo) {
+        return lista.slice(0, limite);
+    }
+
+    return lista.filter((item) => campos.some((campo) => {
+        const valor = String(item?.[campo] || "").trim().toLowerCase();
+        return valor.includes(termoLimpo);
+    })).slice(0, limite);
 }
 
 async function atualizarSugestoesEstudantesBusca(forcar = false) {
     const input = el("ocorrenciaBuscaEstudante");
     const termo = input.value.trim();
     const turmaId = el("ocorrenciaTurmaId").value;
-    if (!forcar && termo.length < 2) {
-        preencherDatalist("listaEstudantesBusca", mapaBuscaEstudantes, []);
+    if (!forcar && termo.length < 1) {
+        ocultarSugestoes("listaEstudantesBusca");
         return;
     }
 
@@ -1515,7 +1994,10 @@ async function atualizarSugestoesEstudantesBusca(forcar = false) {
     if (turmaId) params.set("turma_id", turmaId);
     params.set("limite", "20");
     const itens = await fetchJson(`/ocorrencias/busca/estudantes?${params.toString()}`, { headers });
-    preencherDatalist("listaEstudantesBusca", mapaBuscaEstudantes, itens);
+    preencherDatalist("listaEstudantesBusca", mapaBuscaEstudantes, itens, {
+        onSelect: selecionarSugestaoEstudante,
+        textoVazio: "Nenhum estudante encontrado."
+    });
 }
 
 function agendarBuscaEstudantes() {
@@ -1525,13 +2007,51 @@ function agendarBuscaEstudantes() {
     }, 250);
 }
 
+function atualizarSugestoesProfessoresBusca(forcar = false) {
+    const termo = el("ocorrenciaBuscaProfessor").value.trim();
+    if (!forcar && termo.length < 1) {
+        ocultarSugestoes("listaProfessoresBusca");
+        return;
+    }
+
+    const itens = filtrarSugestoesLocais(opcoesOcorrencias.professores, termo, {
+        limite: 12,
+        campos: ["nome", "email", "label"]
+    });
+    preencherDatalist("listaProfessoresBusca", mapaBuscaProfessores, itens, {
+        onSelect: selecionarSugestaoProfessor,
+        textoVazio: "Nenhum professor encontrado."
+    });
+}
+
+function atualizarSugestoesDisciplinasBusca(forcar = false) {
+    const termo = el("ocorrenciaDisciplina").value.trim();
+    if (!forcar && termo.length < 1) {
+        ocultarSugestoes("listaDisciplinasBusca");
+        return;
+    }
+
+    const itens = filtrarSugestoesLocais(opcoesOcorrencias.disciplinas, termo, {
+        limite: 12,
+        campos: ["nome", "label"]
+    });
+    preencherDatalist("listaDisciplinasBusca", mapaBuscaDisciplinas, itens, {
+        onSelect: selecionarSugestaoDisciplina,
+        textoVazio: "Nenhuma disciplina encontrada."
+    });
+}
+
 function montarPayloadOcorrencia() {
     const textoEstudante = el("ocorrenciaBuscaEstudante").value.trim();
-    const itemEstudante = mapaBuscaEstudantes.get(textoEstudante);
+    const itemEstudante = obterItemSugestaoPorTexto(mapaBuscaEstudantes, textoEstudante);
+    const textoProfessor = el("ocorrenciaBuscaProfessor").value.trim();
+    const itemProfessor = obterItemSugestaoPorTexto(mapaBuscaProfessores, textoProfessor, opcoesOcorrencias.professores || []);
 
     const estudanteIdHidden = Number(el("ocorrenciaEstudanteId").value || 0);
     const professorIdSelecionado = Number(el("ocorrenciaProfessorRequerenteId").value || 0);
-    const professorSelecionado = obterProfessorOpcaoPorId(professorIdSelecionado);
+    const professorSelecionado = professorIdSelecionado > 0
+        ? obterProfessorOpcaoPorId(professorIdSelecionado)
+        : itemProfessor;
 
     const estudanteId = estudanteIdHidden || (itemEstudante ? Number(itemEstudante.id) : 0);
     const nomeEstudante = itemEstudante ? itemEstudante.nome : textoEstudante;
@@ -1540,7 +2060,7 @@ function montarPayloadOcorrencia() {
         nome_estudante: nomeEstudante || null,
         estudante_id: estudanteId > 0 ? estudanteId : null,
         turma_id: Number(el("ocorrenciaTurmaId").value),
-        professor_requerente: professorSelecionado ? professorSelecionado.nome : null,
+        professor_requerente: professorSelecionado ? professorSelecionado.nome : (textoProfessor || null),
         professor_requerente_id: professorSelecionado ? Number(professorSelecionado.id) : null,
         disciplina: el("ocorrenciaDisciplina").value.trim(),
         data_ocorrencia: el("ocorrenciaData").value,
@@ -1717,6 +2237,65 @@ async function salvarEstudante(event) {
     }
 }
 
+async function importarEstudantesCsv(event) {
+    event.preventDefault();
+    const arquivo = el("arquivoCsvEstudantes")?.files?.[0];
+    if (!arquivo) {
+        setMensagemEstudantes("Selecione um arquivo CSV para importar.", true);
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("arquivo", arquivo);
+
+    try {
+        const resposta = await fetchJson("/estudantes/importar-csv", {
+            method: "POST",
+            headers,
+            body: formData
+        });
+        setMensagemEstudantes(comporMensagemImportacaoCsv(resposta), houveFalhaImportacao(resposta));
+        el("formImportarEstudantesCsv").reset();
+        await Promise.all([carregarEstudantes(), atualizarSugestoesEstudantesBusca(true)]);
+    } catch (err) {
+        setMensagemEstudantes(err.message, true);
+    }
+}
+
+async function importarRegimentoCsv(event) {
+    event.preventDefault();
+    const arquivo = el("arquivoCsvRegimento")?.files?.[0];
+    if (!arquivo) {
+        setMensagemRegimento("Selecione um arquivo CSV para importar.", true);
+        return;
+    }
+
+    const idsSelecionados = obterIdsRegimentoSelecionadosFormulario();
+    const formData = new FormData();
+    formData.append("arquivo", arquivo);
+
+    try {
+        const resposta = await fetchJson("/regimento-itens/importar-csv", {
+            method: "POST",
+            headers,
+            body: formData
+        });
+        setMensagemRegimento(comporMensagemImportacaoCsv(resposta), houveFalhaImportacao(resposta));
+        el("formImportarRegimentoCsv").reset();
+        await carregarRegimentoItens(idsSelecionados);
+    } catch (err) {
+        setMensagemRegimento(err.message, true);
+    }
+}
+
+function baixarModeloEstudantesCsv() {
+    baixarArquivoTexto("modelo_estudantes.csv", MODELO_CSV_ESTUDANTES);
+}
+
+function baixarModeloRegimentoCsv() {
+    baixarArquivoTexto("modelo_base_legal.csv", MODELO_CSV_BASE_LEGAL);
+}
+
 async function filtrarEstudantes(event) {
     event.preventDefault();
     try {
@@ -1757,6 +2336,8 @@ function registrarEventosAbas() {
 function registrarEventosOcorrencias() {
     el("formFiltrosOcorrencias").addEventListener("submit", filtrarOcorrencias);
     el("formOcorrencia").addEventListener("submit", salvarOcorrencia);
+    el("formOcorrencia").addEventListener("input", atualizarPreviewOcorrencia);
+    el("formOcorrencia").addEventListener("change", atualizarPreviewOcorrencia);
     el("btnLimparFiltros").addEventListener("click", limparFiltrosOcorrencias);
     el("btnNovaOcorrencia").addEventListener("click", () => {
         const painelAberto = painelFormularioOcorrenciaAberto();
@@ -1782,11 +2363,44 @@ function registrarEventosOcorrencias() {
     });
     el("ocorrenciaBuscaEstudante").addEventListener("change", aplicarSelecaoEstudantePorTexto);
     el("ocorrenciaBuscaEstudante").addEventListener("blur", aplicarSelecaoEstudantePorTexto);
+    el("ocorrenciaBuscaEstudante").addEventListener("focus", () => {
+        atualizarSugestoesEstudantesBusca(true).catch((err) => setMensagemOcorrencias(err.message, true));
+    });
+
+    el("ocorrenciaBuscaProfessor").addEventListener("input", () => {
+        el("ocorrenciaProfessorRequerenteId").value = "";
+        atualizarSugestoesProfessoresBusca();
+    });
+    el("ocorrenciaBuscaProfessor").addEventListener("change", aplicarSelecaoProfessorPorTexto);
+    el("ocorrenciaBuscaProfessor").addEventListener("blur", aplicarSelecaoProfessorPorTexto);
+    el("ocorrenciaBuscaProfessor").addEventListener("focus", () => {
+        atualizarSugestoesProfessoresBusca(true);
+    });
+
+    el("ocorrenciaDisciplina").addEventListener("input", () => {
+        atualizarSugestoesDisciplinasBusca();
+    });
+    el("ocorrenciaDisciplina").addEventListener("change", aplicarSelecaoDisciplinaPorTexto);
+    el("ocorrenciaDisciplina").addEventListener("blur", aplicarSelecaoDisciplinaPorTexto);
+    el("ocorrenciaDisciplina").addEventListener("focus", () => {
+        atualizarSugestoesDisciplinasBusca(true);
+    });
+
+    el("ocorrenciaBuscaRegimento").addEventListener("input", () => {
+        atualizarSugestoesRegimentoBusca();
+    });
+    el("ocorrenciaBuscaRegimento").addEventListener("change", aplicarSelecaoRegimentoPorTexto);
+    el("ocorrenciaBuscaRegimento").addEventListener("blur", aplicarSelecaoRegimentoPorTexto);
+    el("ocorrenciaBuscaRegimento").addEventListener("focus", () => {
+        atualizarSugestoesRegimentoBusca(true);
+    });
 
     el("ocorrenciaTurmaId").addEventListener("change", () => {
         el("ocorrenciaEstudanteId").value = "";
         atualizarSelectAulasPorTurma(el("ocorrenciaTurmaId").value);
         agendarBuscaEstudantes();
+        ocultarSugestoes("listaEstudantesBusca");
+        atualizarPreviewOcorrencia();
     });
 }
 
@@ -1797,7 +2411,9 @@ function registrarEventosRelatorios() {
 
 function registrarEventosEstudantes() {
     el("formEstudante").addEventListener("submit", salvarEstudante);
+    el("formImportarEstudantesCsv").addEventListener("submit", importarEstudantesCsv);
     el("btnCancelarEdicaoEstudante").addEventListener("click", limparFormularioEstudante);
+    el("btnBaixarModeloEstudantesCsv").addEventListener("click", baixarModeloEstudantesCsv);
     el("formFiltrosEstudantes").addEventListener("submit", filtrarEstudantes);
     el("btnLimparFiltrosEstudantes").addEventListener("click", limparFiltrosEstudantes);
     el("filtroEstudanteStatus").addEventListener("change", renderTabelaEstudantes);
@@ -1805,10 +2421,16 @@ function registrarEventosEstudantes() {
 
 function registrarEventosRegimento() {
     el("formRegimento").addEventListener("submit", salvarRegimento);
+    el("formImportarRegimentoCsv").addEventListener("submit", importarRegimentoCsv);
     el("btnCancelarEdicaoRegimento").addEventListener("click", limparFormularioRegimento);
+    el("btnBaixarModeloRegimentoCsv").addEventListener("click", baixarModeloRegimentoCsv);
 }
 
 function registrarEventosGerais() {
+    document.addEventListener("click", (event) => {
+        if (event.target.closest(".coordenacao-autocomplete-shell")) return;
+        ocultarTodasSugestoes();
+    });
     el("btnVoltarServicos").addEventListener("click", () => {
         window.location.href = "/servicos";
     });

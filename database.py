@@ -1836,6 +1836,36 @@ def buscar_estudante_por_id(estudante_id: int):
     conn.close()
     return dict(row) if row else None
 
+def buscar_estudante_por_nome_turma(nome: str, turma_id: int):
+    nome_limpo = _normalizar_nome_catalogo(nome)
+    turma_id_valor = int(turma_id or 0)
+    if not nome_limpo or turma_id_valor <= 0:
+        return None
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            e.id,
+            e.nome,
+            e.turma_id,
+            COALESCE(t.nome, '') AS turma_nome,
+            e.ativo,
+            e.criado_em,
+            e.atualizado_em
+        FROM estudantes e
+        LEFT JOIN turmas t ON t.id = e.turma_id
+        WHERE e.turma_id = ?
+          AND COALESCE(e.nome, '') = ? COLLATE NOCASE
+        ORDER BY e.id ASC
+        LIMIT 1
+    """, (turma_id_valor, nome_limpo))
+
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
 def criar_estudante(nome: str, turma_id: int, ativo: bool = True):
     nome_limpo = _normalizar_nome_catalogo(nome)
     turma_id_valor = int(turma_id or 0)
@@ -1855,6 +1885,20 @@ def criar_estudante(nome: str, turma_id: int, ativo: bool = True):
     conn.commit()
     conn.close()
     return estudante_id
+
+def criar_ou_atualizar_estudante_por_nome_turma(nome: str, turma_id: int, ativo: bool = True):
+    existente = buscar_estudante_por_nome_turma(nome, turma_id)
+    if existente:
+        atualizar_estudante(
+            estudante_id=int(existente["id"]),
+            nome=nome,
+            turma_id=turma_id,
+            ativo=ativo,
+        )
+        return int(existente["id"]), False
+
+    estudante_id = criar_estudante(nome=nome, turma_id=turma_id, ativo=ativo)
+    return int(estudante_id), True
 
 def atualizar_estudante(estudante_id: int, nome: str, turma_id: int, ativo: bool):
     nome_limpo = _normalizar_nome_catalogo(nome)
@@ -1978,6 +2022,29 @@ def buscar_turma_por_id(turma_id: int):
         WHERE id = ?
     """, (int(turma_id),))
 
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def buscar_turma_por_nome(nome: str, incluir_inativas: bool = True):
+    nome_limpo = _normalizar_nome_catalogo(nome)
+    if not nome_limpo:
+        return None
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT id, nome, turno, quantidade_estudantes, ativo, criado_em
+        FROM turmas
+        WHERE nome = ? COLLATE NOCASE
+    """
+    params = [nome_limpo]
+    if not incluir_inativas:
+        query += " AND ativo = 1"
+    query += " ORDER BY id ASC LIMIT 1"
+
+    cursor.execute(query, params)
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
@@ -2677,6 +2744,30 @@ def buscar_regimento_item_por_id(regimento_item_id: int):
     conn.close()
     return dict(row) if row else None
 
+def buscar_regimento_item_por_artigo(artigo: str):
+    artigo_limpo = _normalizar_nome_catalogo(artigo)
+    if not artigo_limpo:
+        return None
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT
+            id,
+            artigo,
+            descricao,
+            ativo,
+            criado_em,
+            atualizado_em
+        FROM regimento_itens
+        WHERE artigo = ? COLLATE NOCASE
+        ORDER BY id ASC
+        LIMIT 1
+    """, (artigo_limpo,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
 
 def buscar_regimento_itens_por_ids(regimento_item_ids: list[int]):
     ids_validos = []
@@ -2734,6 +2825,28 @@ def criar_regimento_item(artigo: str, descricao: str, ativo: bool = True):
     conn.commit()
     conn.close()
     return regimento_item_id
+
+def criar_ou_atualizar_regimento_item_por_artigo(
+    artigo: str,
+    descricao: str,
+    ativo: bool = True,
+):
+    existente = buscar_regimento_item_por_artigo(artigo)
+    if existente:
+        atualizar_regimento_item(
+            regimento_item_id=int(existente["id"]),
+            artigo=artigo,
+            descricao=descricao,
+            ativo=ativo,
+        )
+        return int(existente["id"]), False
+
+    regimento_item_id = criar_regimento_item(
+        artigo=artigo,
+        descricao=descricao,
+        ativo=ativo,
+    )
+    return int(regimento_item_id), True
 
 
 def atualizar_regimento_item(
