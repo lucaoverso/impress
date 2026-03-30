@@ -333,6 +333,36 @@ function iniciarEdicaoProfessor(professor) {
     el("formProfessor").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
+async function excluirProfessor(professor) {
+    const professorId = Number(professor?.id || 0);
+    if (professorId <= 0) {
+        setMensagem("msgProfessor", "Professor invalido para exclusao.", true);
+        return;
+    }
+
+    const nomeProfessor = String(professor?.nome || "este professor").trim() || "este professor";
+    const confirmado = window.confirm(
+        `Excluir ${nomeProfessor}? O acesso sera bloqueado e o professor saira das listas operacionais.`
+    );
+    if (!confirmado) {
+        return;
+    }
+
+    try {
+        await fetchJson(`/admin/professores/${professorId}`, {
+            method: "DELETE",
+            headers
+        });
+        if (professorEmEdicaoId === professorId) {
+            limparFormularioProfessor();
+        }
+        setMensagem("msgProfessor", `${nomeProfessor} excluido com sucesso.`);
+        await carregarProfessores();
+    } catch (err) {
+        setMensagem("msgProfessor", err.message, true);
+    }
+}
+
 function aplicarModoFormularioRecurso(edicao = false) {
     const titulo = el("tituloFormRecurso");
     const btnSalvar = el("btnSalvarRecurso");
@@ -756,6 +786,13 @@ async function carregarProfessores() {
             iniciarEdicaoProfessor(prof);
         });
 
+        const btnExcluir = document.createElement("button");
+        btnExcluir.type = "button";
+        btnExcluir.innerText = "Excluir professor";
+        btnExcluir.addEventListener("click", async () => {
+            await excluirProfessor(prof);
+        });
+
         const linhaSenha = document.createElement("div");
         linhaSenha.className = "admin-inline";
 
@@ -807,6 +844,7 @@ async function carregarProfessores() {
         linha.appendChild(inputTurmas);
         linha.appendChild(btnSalvar);
         linha.appendChild(btnEditar);
+        linha.appendChild(btnExcluir);
 
         linhaSenha.appendChild(inputNovaSenha);
         linhaSenha.appendChild(inputConfirmacaoSenha);

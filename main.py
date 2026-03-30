@@ -101,6 +101,7 @@ from database import (
     buscar_usuario_por_id,
     atualizar_senha_usuario,
     revogar_tokens_usuario,
+    desativar_professor,
     criar_agendamento,
     listar_agendamentos,
     buscar_agendamento_por_id,
@@ -1532,6 +1533,26 @@ def redefinir_senha_professor_painel(
 
     revogar_tokens_usuario(professor_id)
     return {"mensagem": "Senha redefinida com sucesso."}
+
+
+@app.delete("/admin/professores/{professor_id}")
+def excluir_professor_painel(
+    professor_id: int,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    professor = buscar_usuario_por_id(professor_id, incluir_inativos=True)
+    if not professor or professor["perfil"] != "professor":
+        raise HTTPException(404, "Professor nao encontrado.")
+    if not int(professor.get("ativo", 1)):
+        raise HTTPException(400, "Professor ja foi excluido.")
+
+    alterado = desativar_professor(professor_id)
+    if not alterado:
+        raise HTTPException(404, "Professor nao encontrado.")
+
+    return {"mensagem": "Professor excluido com sucesso."}
+
 
 @app.put("/admin/professores/{professor_id}/carga")
 def atualizar_carga_professor_painel(

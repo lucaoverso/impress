@@ -96,6 +96,9 @@ VALORES_BOOLEANOS_TRUE = {
     "s",
     "true",
     "ativo",
+    "em_curso",
+    "cursando",
+    "matriculado",
     "yes",
 }
 
@@ -105,6 +108,11 @@ VALORES_BOOLEANOS_FALSE = {
     "n",
     "false",
     "inativo",
+    "remanejado",
+    "transferido",
+    "desistente",
+    "evadido",
+    "cancelado",
     "no",
 }
 
@@ -480,6 +488,93 @@ def _extrair_linhas_base_legal_json(conteudo: bytes) -> list[tuple[str, dict[str
     return linhas
 
 
+def _extrair_linhas_estudantes_json(conteudo: bytes) -> list[tuple[str, dict[str, str]]]:
+    if not conteudo:
+        raise ValueError("Arquivo JSON vazio.")
+    if len(conteudo) > LIMITE_ARQUIVO_IMPORTACAO_BYTES:
+        raise ValueError("Arquivo JSON muito grande. Envie um arquivo de ate 2 MB.")
+
+    texto = _decodificar_texto_importacao(conteudo, formato="arquivo JSON")
+    if not texto.strip():
+        raise ValueError("Arquivo JSON vazio.")
+
+    try:
+        payload = json.loads(texto)
+    except json.JSONDecodeError as exc:
+        raise ValueError("JSON invalido para importacao de estudantes.") from exc
+
+    if isinstance(payload, list):
+        grupos = payload
+    elif isinstance(payload, dict):
+        grupos = _obter_valor_json(payload, "turmas", "grupos")
+        if grupos is None:
+            grupos = [payload]
+    else:
+        raise ValueError("JSON invalido: informe um objeto ou lista de turmas.")
+
+    grupos = _lista_json(grupos, campo="grupos de estudantes")
+    linhas: list[tuple[str, dict[str, str]]] = []
+
+    for indice_grupo, grupo in enumerate(grupos, start=1):
+        if not isinstance(grupo, dict):
+            raise ValueError(f"Grupo de estudantes #{indice_grupo}: estrutura invalida.")
+
+        turma_padrao = _texto_json(
+            _obter_valor_json(grupo, "turma", "turma_nome", "nome_turma", "classe", "sala")
+        )
+        turma_id_padrao = _texto_json(
+            _obter_valor_json(grupo, "turma_id", "id_turma")
+        )
+        estudantes = _lista_json(
+            _obter_valor_json(grupo, "estudantes", "alunos"),
+            campo=f"estudantes do grupo {indice_grupo}",
+        )
+        if not estudantes:
+            raise ValueError(f"Grupo de estudantes #{indice_grupo}: informe ao menos um estudante.")
+
+        for indice_estudante, estudante_item in enumerate(estudantes, start=1):
+            if not isinstance(estudante_item, dict):
+                raise ValueError(
+                    f"Grupo de estudantes #{indice_grupo}: estudante #{indice_estudante} com estrutura invalida."
+                )
+
+            nome = _texto_json(
+                _obter_valor_json(
+                    estudante_item,
+                    "nome",
+                    "nome_estudante",
+                    "aluno",
+                    "estudante",
+                    "nome_aluno",
+                )
+            )
+            turma = _texto_json(
+                _obter_valor_json(estudante_item, "turma", "turma_nome", "nome_turma")
+            ) or turma_padrao
+            turma_id = _texto_json(
+                _obter_valor_json(estudante_item, "turma_id", "id_turma")
+            ) or turma_id_padrao
+            ativo = _texto_json(
+                _obter_valor_json(estudante_item, "ativo", "status", "situacao")
+            )
+
+            referencia_turma = turma or turma_id or f"grupo {indice_grupo}"
+            referencia_nome = nome or f"estudante #{indice_estudante}"
+            linhas.append((
+                f"{referencia_turma} > {referencia_nome}",
+                {
+                    "nome": nome,
+                    "turma": turma,
+                    "turma_id": turma_id,
+                    "ativo": ativo,
+                }
+            ))
+
+    if not linhas:
+        raise ValueError("O JSON nao possui estudantes para importar.")
+    return linhas
+
+
 def _importar_linhas_base_legal(linhas: list[tuple[int | str, dict[str, str]]]) -> dict:
     criados = 0
     atualizados = 0
@@ -532,18 +627,12 @@ def _importar_linhas_base_legal(linhas: list[tuple[int | str, dict[str, str]]]) 
     )
 
 
-def importar_estudantes_csv(conteudo: bytes) -> dict:
-    linhas = _carregar_linhas_csv(
-        conteudo,
-        colunas_aceitas=COLUNAS_ESTUDANTES,
-        colunas_obrigatorias={"nome"},
-    )
-
+def _importar_linhas_estudantes(linhas: list[tuple[int | str, dict[str, str]]]) -> dict:
     criados = 0
     atualizados = 0
     detalhes_erros = []
 
-    for indice_linha, linha in linhas:
+    for origem, linha in linhas:
         try:
             nome = _normalizar_texto(linha.get("nome"))
             if not nome:
@@ -562,7 +651,8 @@ def importar_estudantes_csv(conteudo: bytes) -> dict:
             else:
                 atualizados += 1
         except ValueError as exc:
-            detalhes_erros.append(f"Linha {indice_linha}: {exc}")
+            prefixo = f"Linha {origem}" if isinstance(origem, int) else f"Item {origem}"
+            detalhes_erros.append(f"{prefixo}: {exc}")
 
     return _montar_resultado_importacao(
         entidade="estudantes",
@@ -571,6 +661,20 @@ def importar_estudantes_csv(conteudo: bytes) -> dict:
         atualizados=atualizados,
         detalhes_erros=detalhes_erros,
     )
+
+
+def importar_estudantes_csv(conteudo: bytes) -> dict:
+    linhas = _carregar_linhas_csv(
+        conteudo,
+        colunas_aceitas=COLUNAS_ESTUDANTES,
+        colunas_obrigatorias={"nome"},
+    )
+    return _importar_linhas_estudantes(linhas)
+
+
+def importar_estudantes_json(conteudo: bytes) -> dict:
+    linhas = _extrair_linhas_estudantes_json(conteudo)
+    return _importar_linhas_estudantes(linhas)
 
 
 def importar_base_legal_csv(conteudo: bytes) -> dict:
@@ -585,6 +689,26 @@ def importar_base_legal_csv(conteudo: bytes) -> dict:
 def importar_base_legal_json(conteudo: bytes) -> dict:
     linhas = _extrair_linhas_base_legal_json(conteudo)
     return _importar_linhas_base_legal(linhas)
+
+
+def importar_estudantes_arquivo(
+    conteudo: bytes,
+    *,
+    nome_arquivo: str | None = None,
+    tipo_conteudo: str | None = None,
+) -> dict:
+    nome = _normalizar_texto(nome_arquivo).lower()
+    tipo = _normalizar_texto(tipo_conteudo).lower()
+
+    if nome.endswith(".json") or "json" in tipo:
+        return importar_estudantes_json(conteudo)
+    if nome.endswith(".csv") or "csv" in tipo:
+        return importar_estudantes_csv(conteudo)
+
+    texto = _decodificar_texto_importacao(conteudo)
+    if texto.lstrip().startswith("{") or texto.lstrip().startswith("["):
+        return importar_estudantes_json(conteudo)
+    return importar_estudantes_csv(conteudo)
 
 
 def importar_base_legal_arquivo(

@@ -61,10 +61,32 @@ const mapaBuscaLeisBaseLegal = new Map();
 const mapaBuscaArtigosBaseLegal = new Map();
 const mapaBuscaIncisosBaseLegal = new Map();
 let timerBuscaEstudantes = null;
-const MODELO_CSV_ESTUDANTES = [
-    "nome,turma,ativo",
-    "Ana Maria Souza,8 B,ativo",
-    "Bruno Henrique Lima,9 A,1"
+const MODELO_JSON_ESTUDANTES = [
+    "{",
+    "  \"turma\": \"6o Ano A\",",
+    "  \"turno\": \"Integral\",",
+    "  \"ano_letivo\": 2026,",
+    "  \"estudantes\": [",
+    "    {",
+    "      \"matricula\": \"1428172\",",
+    "      \"nome\": \"Adam Jose Marques Machado\",",
+    "      \"situacao\": \"Em curso\",",
+    "      \"faltas\": 0",
+    "    },",
+    "    {",
+    "      \"matricula\": \"1474330\",",
+    "      \"nome\": \"Bianca Oliveira de Souza\",",
+    "      \"situacao\": \"Em curso\",",
+    "      \"faltas\": 0",
+    "    },",
+    "    {",
+    "      \"matricula\": \"1465299\",",
+    "      \"nome\": \"Davi Yudi Kimura\",",
+    "      \"situacao\": \"Remanejado\",",
+    "      \"faltas\": 0",
+    "    }",
+    "  ]",
+    "}"
 ].join("\n");
 const MODELO_JSON_BASE_LEGAL = [
     "{",
@@ -3368,11 +3390,11 @@ async function salvarEstudante(event) {
     }
 }
 
-async function importarEstudantesCsv(event) {
+async function importarEstudantesArquivo(event) {
     event.preventDefault();
     const arquivo = el("arquivoCsvEstudantes")?.files?.[0];
     if (!arquivo) {
-        setMensagemEstudantes("Selecione um arquivo CSV para importar.", true);
+        setMensagemEstudantes("Selecione um arquivo JSON ou CSV para importar.", true);
         return;
     }
 
@@ -3380,7 +3402,7 @@ async function importarEstudantesCsv(event) {
     formData.append("arquivo", arquivo);
 
     try {
-        const resposta = await fetchJson("/estudantes/importar-csv", {
+        const resposta = await fetchJson("/estudantes/importar", {
             method: "POST",
             headers,
             body: formData
@@ -3420,7 +3442,7 @@ async function importarRegimentoCsv(event) {
 }
 
 function baixarModeloEstudantesCsv() {
-    baixarArquivoTexto("modelo_estudantes.csv", MODELO_CSV_ESTUDANTES);
+    baixarArquivoTexto("modelo_estudantes.json", MODELO_JSON_ESTUDANTES, "application/json;charset=utf-8");
 }
 
 function baixarModeloRegimentoCsv() {
@@ -3542,7 +3564,7 @@ function registrarEventosRelatorios() {
 
 function registrarEventosEstudantes() {
     el("formEstudante").addEventListener("submit", salvarEstudante);
-    el("formImportarEstudantesCsv").addEventListener("submit", importarEstudantesCsv);
+    el("formImportarEstudantesCsv").addEventListener("submit", importarEstudantesArquivo);
     el("btnCancelarEdicaoEstudante").addEventListener("click", limparFormularioEstudante);
     el("btnBaixarModeloEstudantesCsv").addEventListener("click", baixarModeloEstudantesCsv);
     el("formFiltrosEstudantes").addEventListener("submit", filtrarEstudantes);

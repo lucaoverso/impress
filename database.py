@@ -253,7 +253,8 @@ def criar_tabelas():
             nt_hash CHAR(32),
             perfil TEXT NOT NULL,
             cargo TEXT NOT NULL DEFAULT 'PROFESSOR',
-            data_nascimento TEXT
+            data_nascimento TEXT,
+            ativo INTEGER NOT NULL DEFAULT 1
         )
     """)
 
@@ -716,6 +717,10 @@ def _garantir_colunas_usuarios(cursor):
         cursor.execute("ALTER TABLE usuarios ADD COLUMN data_nascimento TEXT")
     if "nt_hash" not in colunas:
         cursor.execute("ALTER TABLE usuarios ADD COLUMN nt_hash CHAR(32)")
+    if "ativo" not in colunas:
+        cursor.execute(
+            "ALTER TABLE usuarios ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1"
+        )
 
     # Backfill de cargo para bancos legados baseando-se no perfil existente.
     cursor.execute("""
@@ -740,6 +745,22 @@ def _garantir_colunas_usuarios(cursor):
         SET nt_hash = LOWER(TRIM(nt_hash))
         WHERE TRIM(COALESCE(nt_hash, '')) <> ''
     """)
+    cursor.execute("""
+        UPDATE usuarios
+        SET ativo = 1
+        WHERE ativo IS NULL
+           OR TRIM(COALESCE(CAST(ativo AS TEXT), '')) = ''
+    """)
+
+
+def _clausula_usuario_ativo(alias: str = "") -> str:
+    prefixo = ""
+    if alias:
+        prefixo = alias if alias.endswith(".") else f"{alias}."
+    return (
+        f"(COALESCE({prefixo}ativo, 1) = 1 "
+        f"OR LOWER(CAST(COALESCE({prefixo}ativo, 1) AS TEXT)) = 'true')"
+    )
 
 def _garantir_colunas_tokens(cursor):
     cursor.execute("PRAGMA table_info(tokens)")
@@ -1716,12 +1737,13 @@ def buscar_usuario_por_token(token: str):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT u.id, u.nome, u.email, u.perfil, u.cargo
         FROM usuarios u
         JOIN tokens t ON u.id = t.usuario_id
         WHERE t.token = ?
           AND t.expira_em > datetime('now')
+          AND {_clausula_usuario_ativo('u')}
     """, (token,))
 
     row = cursor.fetchone()
@@ -1764,29 +1786,34 @@ def criar_usuario(nome, email, senha, perfil, cargo: str = ""):
     conn.commit()
     conn.close()
 
-def buscar_usuario_por_email(email):
+def buscar_usuario_por_email(email, incluir_inativos: bool = False):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        "SELECT * FROM usuarios WHERE email = ?",
-        (email,)
-    )
+    query = "SELECT * FROM usuarios WHERE email = ?"
+    if not incluir_inativos:
+        query += f" AND {_clausula_usuario_ativo()}"
+
+    cursor.execute(query, (email,))
 
     row = cursor.fetchone()
     conn.close()
 
     return dict(row) if row else None
 
-def buscar_usuario_por_id(usuario_id: int):
+def buscar_usuario_por_id(usuario_id: int, incluir_inativos: bool = False):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        SELECT id, nome, email, perfil, cargo, data_nascimento
+    query = """
+        SELECT id, nome, email, perfil, cargo, data_nascimento, ativo
         FROM usuarios
         WHERE id = ?
-    """, (usuario_id,))
+    """
+    if not incluir_inativos:
+        query += f" AND {_clausula_usuario_ativo()}"
+
+    cursor.execute(query, (usuario_id,))
 
     row = cursor.fetchone()
     conn.close()
@@ -1802,7 +1829,7 @@ def criar_usuario_se_nao_existir(
     senha_plana: str | None = None,
     nt_hash: str | None = None,
 ):
-    usuario = buscar_usuario_por_email(email)
+    usuario = buscar_usuario_por_email(email, incluir_inativos=True)
     if usuario:
         return
 
@@ -1980,10 +2007,11 @@ def listar_coordenadores_admin():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT id, nome, email, data_nascimento
         FROM usuarios
         WHERE UPPER(COALESCE(cargo, '')) = ?
+          AND {_clausula_usuario_ativo()}
         ORDER BY nome ASC
     """, (CARGO_COORDENADOR,))
 
@@ -2036,6 +2064,30 @@ def atualizar_senha_usuario(usuario_id: int, senha_em_texto: str):
         usuario_id
     ))
     alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def desativar_professor(usuario_id: int) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(f"""
+        UPDATE usuarios
+        SET ativo = 0
+        WHERE id = ?
+          AND perfil = 'professor'
+          AND {_clausula_usuario_ativo()}
+    """, (usuario_id,))
+    alterado = cursor.rowcount > 0
+
+    if alterado:
+        cursor.execute("""
+            DELETE FROM tokens
+            WHERE usuario_id = ?
+        """, (usuario_id,))
+
     conn.commit()
     conn.close()
     return alterado
@@ -2156,7 +2208,7 @@ def calcular_cotas_mensais_professores():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT
             u.id,
             u.nome,
@@ -2166,6 +2218,7 @@ def calcular_cotas_mensais_professores():
         FROM usuarios u
         LEFT JOIN professores_carga pc ON pc.usuario_id = u.id
         WHERE u.perfil = 'professor'
+          AND {_clausula_usuario_ativo('u')}
         ORDER BY u.nome COLLATE NOCASE ASC, u.id ASC
     """)
     professores_rows = cursor.fetchall()
@@ -2287,7 +2340,7 @@ def listar_professores_admin(mes: str = None):
     conn = get_connection()
     cursor = conn.cursor()
 
-    query = """
+    query = f"""
         SELECT
             u.id,
             u.nome,
@@ -2300,6 +2353,7 @@ def listar_professores_admin(mes: str = None):
         FROM usuarios u
         LEFT JOIN professores_carga pc ON pc.usuario_id = u.id
         WHERE u.perfil = 'professor'
+          AND {_clausula_usuario_ativo('u')}
         ORDER BY u.nome ASC
     """
     cursor.execute(query)
@@ -2330,14 +2384,17 @@ def listar_professores_agendamento():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT id, nome, email
         FROM usuarios
-        WHERE UPPER(COALESCE(cargo, '')) = ?
-           OR (
+        WHERE (
+                UPPER(COALESCE(cargo, '')) = ?
+                OR (
                 TRIM(COALESCE(cargo, '')) = ''
                 AND LOWER(COALESCE(perfil, '')) = 'professor'
-           )
+                )
+              )
+          AND {_clausula_usuario_ativo()}
         ORDER BY nome COLLATE NOCASE ASC
     """, (CARGO_PROFESSOR,))
 
@@ -2349,10 +2406,11 @@ def buscar_professor_por_id_ocorrencia(usuario_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(f"""
         SELECT id, nome, email
         FROM usuarios
         WHERE id = ?
+          AND {_clausula_usuario_ativo()}
           AND (
               UPPER(COALESCE(cargo, '')) = ?
               OR (
@@ -2373,16 +2431,17 @@ def buscar_professores_ocorrencia(termo: str = "", limite: int = 20):
     termo_limpo = _normalizar_nome_catalogo(termo).lower()
     limite_final = max(int(limite or 20), 1)
 
-    query = """
+    query = f"""
         SELECT id, nome, email
         FROM usuarios
-        WHERE (
-            UPPER(COALESCE(cargo, '')) = ?
-            OR (
-                TRIM(COALESCE(cargo, '')) = ''
-                AND LOWER(COALESCE(perfil, '')) = 'professor'
-            )
-        )
+        WHERE {_clausula_usuario_ativo()}
+          AND (
+              UPPER(COALESCE(cargo, '')) = ?
+              OR (
+                  TRIM(COALESCE(cargo, '')) = ''
+                  AND LOWER(COALESCE(perfil, '')) = 'professor'
+              )
+          )
     """
     params = [CARGO_PROFESSOR]
 

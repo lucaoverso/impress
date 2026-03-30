@@ -82,7 +82,7 @@ from models import (
     RegimentoItemStatusIn,
     RegimentoItemUpdateIn,
 )
-from services.csv_import_service import importar_base_legal_arquivo, importar_estudantes_csv
+from services.csv_import_service import importar_base_legal_arquivo, importar_estudantes_arquivo
 from services.ocorrencia_disciplina_service import (
     acao_compativel_com_gravidade,
     inferir_gravidade_ocorrencia,
@@ -487,19 +487,21 @@ def _montar_resposta_estudante(estudante_id: int) -> dict:
     return estudante
 
 
-def _ler_upload_csv(arquivo: UploadFile) -> bytes:
+def _ler_upload_estudantes(arquivo: UploadFile) -> tuple[bytes, str, str]:
     nome_arquivo = str(getattr(arquivo, "filename", "") or "").strip()
     if not nome_arquivo:
-        raise HTTPException(400, "Arquivo CSV nao enviado.")
+        raise HTTPException(400, "Arquivo de estudantes nao enviado.")
 
     tipo_conteudo = str(getattr(arquivo, "content_type", "") or "").lower()
-    if not nome_arquivo.lower().endswith(".csv") and "csv" not in tipo_conteudo:
-        raise HTTPException(400, "Envie um arquivo CSV valido.")
+    extensao_valida = nome_arquivo.lower().endswith(".json") or nome_arquivo.lower().endswith(".csv")
+    tipo_valido = "json" in tipo_conteudo or "csv" in tipo_conteudo or "text/plain" in tipo_conteudo
+    if not extensao_valida and not tipo_valido:
+        raise HTTPException(400, "Envie um arquivo JSON ou CSV valido.")
 
     conteudo = arquivo.file.read()
     if not conteudo:
-        raise HTTPException(400, "Arquivo CSV vazio.")
-    return conteudo
+        raise HTTPException(400, "Arquivo de estudantes vazio.")
+    return conteudo, nome_arquivo, tipo_conteudo
 
 
 def _ler_upload_base_legal(arquivo: UploadFile) -> tuple[bytes, str, str]:
@@ -916,14 +918,20 @@ def criar_estudante_api(payload: EstudanteCreateIn, usuario=Depends(get_usuario_
     return _montar_resposta_estudante(estudante_id)
 
 
+@router.post("/estudantes/importar", response_model=ImportacaoCsvOut)
 @router.post("/estudantes/importar-csv", response_model=ImportacaoCsvOut)
-def importar_estudantes_csv_api(
+def importar_estudantes_arquivo_api(
     arquivo: UploadFile = File(...),
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
     try:
-        return importar_estudantes_csv(_ler_upload_csv(arquivo))
+        conteudo, nome_arquivo, tipo_conteudo = _ler_upload_estudantes(arquivo)
+        return importar_estudantes_arquivo(
+            conteudo,
+            nome_arquivo=nome_arquivo,
+            tipo_conteudo=tipo_conteudo,
+        )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 

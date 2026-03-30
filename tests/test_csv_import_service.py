@@ -178,6 +178,97 @@ class CsvImportServiceTest(unittest.TestCase):
             self.assertEqual(len(resultado["detalhes_erros"]), 1)
             self.assertIn("Linha 3", resultado["detalhes_erros"][0])
 
+    def test_importa_estudantes_json_por_turma_sem_duplicar(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, csv_import_service = _reload_modulos(db_path)
+            database.criar_tabelas()
+            turma_id = database.criar_turma("6o Ano A")
+
+            resultado_inicial = csv_import_service.importar_estudantes_arquivo(
+                (
+                    "{"
+                    "\"turma\": \"6o Ano A\","
+                    "\"turno\": \"Integral\","
+                    "\"ano_letivo\": 2026,"
+                    "\"estudantes\": ["
+                    "  {"
+                    "    \"matricula\": \"1428172\","
+                    "    \"nome\": \"Adam Jose Marques Machado\","
+                    "    \"situacao\": \"Em curso\","
+                    "    \"faltas\": 0"
+                    "  },"
+                    "  {"
+                    "    \"matricula\": \"1474330\","
+                    "    \"nome\": \"Bianca Oliveira de Souza\","
+                    "    \"situacao\": \"Em curso\","
+                    "    \"faltas\": 0"
+                    "  },"
+                    "  {"
+                    "    \"matricula\": \"1465299\","
+                    "    \"nome\": \"Davi Yudi Kimura\","
+                    "    \"situacao\": \"Remanejado\","
+                    "    \"faltas\": 0"
+                    "  }"
+                    "]"
+                    "}"
+                ).encode("utf-8"),
+                nome_arquivo="estudantes.json",
+                tipo_conteudo="application/json",
+            )
+
+            self.assertEqual(resultado_inicial["criados"], 3)
+            self.assertEqual(resultado_inicial["atualizados"], 0)
+            self.assertEqual(resultado_inicial["erros"], 0)
+
+            resultado_reenvio = csv_import_service.importar_estudantes_arquivo(
+                (
+                    "{"
+                    "\"turma\": \"6o Ano A\","
+                    "\"turno\": \"Integral\","
+                    "\"ano_letivo\": 2026,"
+                    "\"estudantes\": ["
+                    "  {"
+                    "    \"matricula\": \"1428172\","
+                    "    \"nome\": \"Adam Jose Marques Machado\","
+                    "    \"situacao\": \"Remanejado\","
+                    "    \"faltas\": 2"
+                    "  },"
+                    "  {"
+                    "    \"matricula\": \"1474330\","
+                    "    \"nome\": \"Bianca Oliveira de Souza\","
+                    "    \"situacao\": \"Em curso\","
+                    "    \"faltas\": 1"
+                    "  },"
+                    "  {"
+                    "    \"matricula\": \"1465299\","
+                    "    \"nome\": \"Davi Yudi Kimura\","
+                    "    \"situacao\": \"Em curso\","
+                    "    \"faltas\": 0"
+                    "  }"
+                    "]"
+                    "}"
+                ).encode("utf-8"),
+                nome_arquivo="estudantes.json",
+                tipo_conteudo="application/json",
+            )
+
+            self.assertEqual(resultado_reenvio["criados"], 0)
+            self.assertEqual(resultado_reenvio["atualizados"], 3)
+            self.assertEqual(resultado_reenvio["erros"], 0)
+
+            estudantes = database.listar_estudantes(
+                incluir_inativos=True,
+                turma_id=turma_id,
+            )
+            self.assertEqual(len(estudantes), 3)
+            estudante_adam = next(item for item in estudantes if item["nome"] == "Adam Jose Marques Machado")
+            estudante_bianca = next(item for item in estudantes if item["nome"] == "Bianca Oliveira de Souza")
+            estudante_davi = next(item for item in estudantes if item["nome"] == "Davi Yudi Kimura")
+            self.assertEqual(int(estudante_adam["ativo"]), 0)
+            self.assertEqual(int(estudante_bianca["ativo"]), 1)
+            self.assertEqual(int(estudante_davi["ativo"]), 1)
+
 
 if __name__ == "__main__":
     unittest.main()

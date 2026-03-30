@@ -533,22 +533,25 @@
 
                         <section class="coordenacao-import-box">
                             <div>
-                                <h3>Importar estudantes via CSV</h3>
-                                <p>Envie planilhas exportadas com as colunas <strong>nome</strong>,
-                                    <strong>turma</strong> e <strong>ativo</strong> (opcional).</p>
+                                <h3>Importar estudantes via JSON</h3>
+                                <p>Envie um arquivo JSON estruturado por <strong>turma</strong> com a lista de
+                                    <strong>estudantes</strong>. O CSV antigo continua aceito por compatibilidade.</p>
                             </div>
                             <form id="formImportarEstudantesCsv" class="coordenacao-form">
                                 <label class="coordenacao-field" for="arquivoCsvEstudantes">
-                                    <span>Arquivo CSV</span>
-                                    <input id="arquivoCsvEstudantes" type="file" accept=".csv,text/csv" required>
+                                    <span>Arquivo JSON ou CSV</span>
+                                    <input id="arquivoCsvEstudantes" type="file"
+                                        accept=".json,application/json,.csv,text/csv,text/plain" required>
                                 </label>
                                 <p class="coordenacao-field-hint">
-                                    Tambem aceitamos cabecalhos como <strong>nome_estudante</strong>,
-                                    <strong>turma_nome</strong> e <strong>status</strong>.
+                                    O JSON com <strong>turma</strong>, <strong>turno</strong>, <strong>ano_letivo</strong>
+                                    e <strong>estudantes</strong> e o formato recomendado. O CSV com
+                                    <strong>nome_estudante</strong>, <strong>turma_nome</strong> e
+                                    <strong>status</strong> continua aceito.
                                 </p>
                                 <div class="coordenacao-inline coordenacao-form-actions">
-                                    <button class="btn-destaque" type="submit">Importar CSV</button>
-                                    <button id="btnBaixarModeloEstudantesCsv" type="button">Baixar modelo CSV</button>
+                                    <button class="btn-destaque" type="submit">Importar arquivo</button>
+                                    <button id="btnBaixarModeloEstudantesCsv" type="button">Baixar modelo JSON</button>
                                 </div>
                             </form>
                         </section>
