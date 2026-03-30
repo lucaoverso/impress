@@ -6,6 +6,12 @@ from pathlib import Path
 
 
 ACOES_APLICADAS = (
+    "advertencia_verbal",
+    "retirada_sala_orientacao",
+    "suspensao_extracurricular",
+    "suspensao_orientada_2_dias",
+    "suspensao_aulas_3_dias",
+    "transferencia_compulsoria",
     "orientacao_verbal",
     "advertencia",
     "chamada_responsavel",

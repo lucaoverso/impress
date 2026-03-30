@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coordenacao - Registro de Ocorrencias</title>
-    <link rel="stylesheet" href="{{ request.url_for('static', path='css/style.css') }}?v={{ asset_version | default('1') }}">
+    <link rel="stylesheet"
+        href="{{ request.url_for('static', path='css/style.css') }}?v={{ asset_version | default('1') }}">
 </head>
 
 <body>
@@ -23,32 +24,40 @@
         </header>
 
         <nav class="admin-tabs coordenacao-tabs" aria-label="Abas do modulo de coordenacao">
-            <button class="admin-tab-btn is-active" data-coord-tab-trigger="ocorrencias" aria-controls="coord-tab-ocorrencias" aria-selected="true" type="button">
+            <button class="admin-tab-btn is-active" data-coord-tab-trigger="ocorrencias"
+                aria-controls="coord-tab-ocorrencias" aria-selected="true" type="button">
                 Ocorrencias
             </button>
-            <button class="admin-tab-btn" data-coord-tab-trigger="relatorios" aria-controls="coord-tab-relatorios" aria-selected="false" type="button">
+            <button class="admin-tab-btn" data-coord-tab-trigger="relatorios" aria-controls="coord-tab-relatorios"
+                aria-selected="false" type="button">
                 Relatorios
             </button>
-            <button class="admin-tab-btn" data-coord-tab-trigger="estudantes" aria-controls="coord-tab-estudantes" aria-selected="false" type="button">
+            <button class="admin-tab-btn" data-coord-tab-trigger="estudantes" aria-controls="coord-tab-estudantes"
+                aria-selected="false" type="button">
                 Cadastro de estudantes
             </button>
-            <button class="admin-tab-btn" data-coord-tab-trigger="regimento" aria-controls="coord-tab-regimento" aria-selected="false" type="button">
+            <button class="admin-tab-btn" data-coord-tab-trigger="regimento" aria-controls="coord-tab-regimento"
+                aria-selected="false" type="button">
                 Base legal
             </button>
         </nav>
 
         <section class="coordenacao-tab-panels">
-            <section id="coord-tab-ocorrencias" class="coordenacao-tab-panel is-active" data-coord-tab-panel="ocorrencias">
+            <section id="coord-tab-ocorrencias" class="coordenacao-tab-panel is-active"
+                data-coord-tab-panel="ocorrencias">
                 <section class="coordenacao-stack coordenacao-ocorrencias-stack">
                     <article class="coordenacao-card coordenacao-ocorrencias-hub">
                         <div class="coordenacao-ocorrencias-hub-main">
                             <div class="coordenacao-ocorrencias-copy">
                                 <p class="coordenacao-eyebrow">Operacao diaria</p>
                                 <h2>Registre, consulte e acompanhe ocorrencias</h2>
-                                <p>Esta area foi reorganizada para separar melhor a consulta dos registros, o acompanhamento do caso e o cadastro da ocorrencia com seu documento de impressao.</p>
+                                <p>Esta area foi reorganizada para separar melhor a consulta dos registros, o
+                                    acompanhamento do caso e o cadastro da ocorrencia com seu documento de impressao.
+                                </p>
                             </div>
                             <div class="coordenacao-ocorrencias-hub-side">
-                                <button id="btnNovaOcorrencia" class="btn-destaque" type="button" aria-controls="painelFormOcorrencia" aria-expanded="false">
+                                <button id="btnNovaOcorrencia" class="btn-destaque" type="button"
+                                    aria-controls="painelFormOcorrencia" aria-expanded="false">
                                     Registrar ocorrencia
                                 </button>
                                 <p id="msgOcorrencias" class="coordenacao-status-copy"></p>
@@ -58,22 +67,27 @@
                         <div class="coordenacao-ocorrencias-summary">
                             <article class="coordenacao-ocorrencias-summary-card is-primary">
                                 <span class="coordenacao-ocorrencias-summary-label">Total no painel</span>
-                                <strong id="resumoOcorrenciasTotal" class="coordenacao-ocorrencias-summary-value">0</strong>
-                                <span id="resumoOcorrenciasPeriodo" class="coordenacao-ocorrencias-summary-meta">Sem filtro aplicado.</span>
+                                <strong id="resumoOcorrenciasTotal"
+                                    class="coordenacao-ocorrencias-summary-value">0</strong>
+                                <span id="resumoOcorrenciasPeriodo" class="coordenacao-ocorrencias-summary-meta">Sem
+                                    filtro aplicado.</span>
                             </article>
                             <article class="coordenacao-ocorrencias-summary-card">
                                 <span class="coordenacao-ocorrencias-summary-label">Em acompanhamento</span>
-                                <strong id="resumoOcorrenciasAcompanhamento" class="coordenacao-ocorrencias-summary-value">0</strong>
+                                <strong id="resumoOcorrenciasAcompanhamento"
+                                    class="coordenacao-ocorrencias-summary-value">0</strong>
                                 <span class="coordenacao-ocorrencias-summary-meta">Casos que seguem em tratativa.</span>
                             </article>
                             <article class="coordenacao-ocorrencias-summary-card">
                                 <span class="coordenacao-ocorrencias-summary-label">Aguardando responsavel</span>
-                                <strong id="resumoOcorrenciasAguardando" class="coordenacao-ocorrencias-summary-value">0</strong>
+                                <strong id="resumoOcorrenciasAguardando"
+                                    class="coordenacao-ocorrencias-summary-value">0</strong>
                                 <span class="coordenacao-ocorrencias-summary-meta">Dependem de retorno externo.</span>
                             </article>
                             <article class="coordenacao-ocorrencias-summary-card">
                                 <span class="coordenacao-ocorrencias-summary-label">Resolvidas</span>
-                                <strong id="resumoOcorrenciasResolvido" class="coordenacao-ocorrencias-summary-value">0</strong>
+                                <strong id="resumoOcorrenciasResolvido"
+                                    class="coordenacao-ocorrencias-summary-value">0</strong>
                                 <span class="coordenacao-ocorrencias-summary-meta">Registros finalizados.</span>
                             </article>
                         </div>
@@ -85,7 +99,8 @@
                                 <div>
                                     <span class="coordenacao-panel-tag">Consulta</span>
                                     <h2>Buscar registros</h2>
-                                    <p>Filtre por estudante, turma, status ou periodo para localizar rapidamente as ocorrencias cadastradas.</p>
+                                    <p>Filtre por estudante, turma, status ou periodo para localizar rapidamente as
+                                        ocorrencias cadastradas.</p>
                                 </div>
                             </div>
 
@@ -139,7 +154,8 @@
                                 <div>
                                     <span class="coordenacao-panel-tag">Acompanhamento</span>
                                     <h2>Ficha da ocorrencia</h2>
-                                    <p>Selecione um item da tabela para ver os dados completos, a base legal vinculada e o atalho para o PDF.</p>
+                                    <p>Selecione um item da tabela para ver os dados completos, a base legal vinculada e
+                                        o atalho para o PDF.</p>
                                 </div>
                             </div>
                             <div id="detalhesOcorrencia" class="coordenacao-details">
@@ -148,12 +164,14 @@
                         </article>
                     </section>
 
-                    <article id="painelFormOcorrencia" class="coordenacao-card coordenacao-form-shell coordenacao-ocorrencias-editor" hidden>
+                    <article id="painelFormOcorrencia"
+                        class="coordenacao-card coordenacao-form-shell coordenacao-ocorrencias-editor" hidden>
                         <div class="coordenacao-section-header coordenacao-editor-header">
                             <div>
                                 <p class="coordenacao-panel-tag">Cadastro e impressao</p>
                                 <h2 id="tituloFormOcorrencia">Nova ocorrencia</h2>
-                                <p>Preencha a ocorrencia sem sair da consulta principal. O preview ao lado acompanha o documento que sera gerado para impressao.</p>
+                                <p>Preencha a ocorrencia sem sair da consulta principal. O preview ao lado acompanha o
+                                    documento que sera gerado para impressao.</p>
                             </div>
                             <button id="btnFecharPainelOcorrencia" type="button">Fechar formulario</button>
                         </div>
@@ -161,11 +179,14 @@
                         <div class="coordenacao-ocorrencia-workspace">
                             <div class="coordenacao-ocorrencia-form-panel">
                                 <form id="formOcorrencia" class="coordenacao-form coordenacao-form-grid">
-                                    <label class="coordenacao-field coordenacao-field-wide" for="ocorrenciaBuscaEstudante">
+                                    <label class="coordenacao-field coordenacao-field-wide"
+                                        for="ocorrenciaBuscaEstudante">
                                         <span>Estudante</span>
                                         <div class="coordenacao-autocomplete-shell">
-                                            <input id="ocorrenciaBuscaEstudante" type="text" autocomplete="off" placeholder="Buscar estudante cadastrado ou digitar nome" required>
-                                            <div id="listaEstudantesBusca" class="coordenacao-autocomplete-list" hidden></div>
+                                            <input id="ocorrenciaBuscaEstudante" type="text" autocomplete="off"
+                                                placeholder="Buscar estudante cadastrado ou digitar nome" required>
+                                            <div id="listaEstudantesBusca" class="coordenacao-autocomplete-list" hidden>
+                                            </div>
                                         </div>
                                     </label>
                                     <input id="ocorrenciaEstudanteId" type="hidden">
@@ -178,8 +199,10 @@
                                     <label class="coordenacao-field" for="ocorrenciaBuscaProfessor">
                                         <span>Professor requerente</span>
                                         <div class="coordenacao-autocomplete-shell">
-                                            <input id="ocorrenciaBuscaProfessor" type="text" autocomplete="off" placeholder="Buscar professor cadastrado ou digitar nome" required>
-                                            <div id="listaProfessoresBusca" class="coordenacao-autocomplete-list" hidden></div>
+                                            <input id="ocorrenciaBuscaProfessor" type="text" autocomplete="off"
+                                                placeholder="Buscar professor cadastrado ou digitar nome" required>
+                                            <div id="listaProfessoresBusca" class="coordenacao-autocomplete-list"
+                                                hidden></div>
                                         </div>
                                     </label>
                                     <input id="ocorrenciaProfessorRequerenteId" type="hidden">
@@ -187,8 +210,10 @@
                                     <label class="coordenacao-field" for="ocorrenciaDisciplina">
                                         <span>Disciplina</span>
                                         <div class="coordenacao-autocomplete-shell">
-                                            <input id="ocorrenciaDisciplina" type="text" autocomplete="off" placeholder="Buscar disciplina cadastrada ou digitar nome" required>
-                                            <div id="listaDisciplinasBusca" class="coordenacao-autocomplete-list" hidden></div>
+                                            <input id="ocorrenciaDisciplina" type="text" autocomplete="off"
+                                                placeholder="Buscar disciplina cadastrada ou digitar nome" required>
+                                            <div id="listaDisciplinasBusca" class="coordenacao-autocomplete-list"
+                                                hidden></div>
                                         </div>
                                     </label>
 
@@ -204,35 +229,45 @@
 
                                     <label class="coordenacao-field" for="ocorrenciaHorario">
                                         <span>Horario</span>
-                                        <input id="ocorrenciaHorario" type="text" placeholder="Horario (ex: 07:30)" maxlength="30" required>
+                                        <input id="ocorrenciaHorario" type="text" placeholder="Horario (ex: 07:30)"
+                                            maxlength="30" required>
                                     </label>
 
                                     <label class="coordenacao-field coordenacao-field-wide" for="ocorrenciaDescricao">
                                         <span>Descricao</span>
-                                        <textarea id="ocorrenciaDescricao" rows="5" placeholder="Descricao da ocorrencia" required></textarea>
+                                        <textarea id="ocorrenciaDescricao" rows="5"
+                                            placeholder="Descricao da ocorrencia" required></textarea>
                                     </label>
 
                                     <div class="coordenacao-field coordenacao-field-wide">
                                         <span>Base legal vinculada</span>
                                         <div id="ocorrenciaRegimentoItens" class="coordenacao-regimento-selector">
                                             <div class="coordenacao-autocomplete-shell">
-                                                <input id="ocorrenciaBuscaRegimento" type="text" autocomplete="off" placeholder="Pesquisar artigo, ECA ou outra base legal">
-                                                <div id="listaRegimentoBusca" class="coordenacao-autocomplete-list" hidden></div>
+                                                <input id="ocorrenciaBuscaRegimento" type="text" autocomplete="off"
+                                                    placeholder="Pesquisar lei, artigo, inciso ou alinea">
+                                                <div id="listaRegimentoBusca" class="coordenacao-autocomplete-list"
+                                                    hidden></div>
                                             </div>
-                                            <div id="ocorrenciaRegimentoSelecionados" class="coordenacao-regimento-selecionados">
-                                                <p class="coordenacao-empty-state">Cadastre itens da base legal para anexa-los na ocorrencia.</p>
+                                            <div id="ocorrenciaRegimentoSelecionados"
+                                                class="coordenacao-regimento-selecionados">
+                                                <p class="coordenacao-empty-state">Cadastre itens da base legal para
+                                                    anexa-los na ocorrencia.</p>
                                             </div>
                                         </div>
                                         <p class="coordenacao-field-hint">
-                                            Pesquise, clique para anexar e repita o processo para vincular mais de uma base legal ao documento.
+                                            Pesquise, clique para anexar e repita o processo para vincular mais de uma
+                                            base legal ao documento.
                                         </p>
                                     </div>
 
                                     <label class="coordenacao-field" for="ocorrenciaAcaoAplicada">
-                                        <span>Acao aplicada</span>
+                                        <span>Ação aplicada</span>
                                         <select id="ocorrenciaAcaoAplicada" required></select>
+                                        <small id="ocorrenciaGravidadeInfo" class="coordenacao-field-hint">
+                                            Selecione a base legal para identificar a gravidade automatica.
+                                        </small>
                                     </label>
-
+                                        <br>
                                     <label class="coordenacao-field" for="ocorrenciaStatus">
                                         <span>Status</span>
                                         <select id="ocorrenciaStatus" required></select>
@@ -240,7 +275,8 @@
 
                                     <div class="coordenacao-inline coordenacao-form-actions coordenacao-field-wide">
                                         <button class="btn-destaque" type="submit">Salvar ocorrencia</button>
-                                        <button id="btnCancelarEdicaoOcorrencia" type="button" style="display: none;">Cancelar edicao</button>
+                                        <button id="btnCancelarEdicaoOcorrencia" type="button"
+                                            style="display: none;">Cancelar edicao</button>
                                     </div>
                                 </form>
                             </div>
@@ -259,47 +295,66 @@
                                     <article id="ocorrenciaPreviewPdf" class="coordenacao-preview-page">
                                         <div class="coordenacao-preview-page-inner">
                                             <header class="coordenacao-preview-doc-header">
-                                                <p class="coordenacao-preview-school">ESCOLA ESTADUAL PADRE JOSE DANIEL</p>
-                                                <img
-                                                    class="coordenacao-preview-logo"
+                                                <p class="coordenacao-preview-school">ESCOLA ESTADUAL PADRE JOSÉ DANIEL
+                                                </p>
+                                                <p class="coordenacao-preview-subtitle">COORDENAÇÃO PEDAGÓGICA</p>
+
+                                                <img class="coordenacao-preview-logo"
                                                     src="{{ request.url_for('static', path='img/logo_escola.PNG') }}"
-                                                    alt="Logo da escola"
-                                                >
-                                                <p class="coordenacao-preview-subtitle">COORDENACAO PEDAGOGICA - ASSESSORAMENTO</p>
-                                                <p class="coordenacao-preview-title">REGISTRO DE OCORRENCIAS DISCIPLINARES</p>
+                                                    alt="Logo da escola">
+                                                <p id="previewTituloDocumento" class="coordenacao-preview-title">
+                                                    REGISTRO DE OCORRENCIAS DISCIPLINARES
+                                                </p>
+                                                <p id="previewGravidade" class="coordenacao-preview-gravidade">
+                                                    Gravidade: Nao identificada
+                                                </p>
                                             </header>
 
                                             <section class="coordenacao-preview-meta">
-                                                <p class="coordenacao-preview-line"><strong>Estudante(s):</strong> <span id="previewNomeEstudante">Nao informado</span></p>
+                                                <p class="coordenacao-preview-line"><strong>Estudante(s):</strong> <span
+                                                        id="previewNomeEstudante">Não informado</span></p>
                                                 <div class="coordenacao-preview-grid">
-                                                    <p class="coordenacao-preview-line"><strong>Turma:</strong> <span id="previewTurma">Nao informada</span></p>
-                                                    <p class="coordenacao-preview-line"><strong>Professor requerente:</strong> <span id="previewProfessor">Nao informado</span></p>
-                                                    <p class="coordenacao-preview-line"><strong>Disciplina ou funcao:</strong> <span id="previewDisciplina">Nao informada</span></p>
-                                                    <p class="coordenacao-preview-line"><strong>Data:</strong> <span id="previewData">Nao informada</span></p>
-                                                    <p class="coordenacao-preview-line"><strong>Aula:</strong> <span id="previewAula">Nao informada</span></p>
-                                                    <p class="coordenacao-preview-line"><strong>Horario:</strong> <span id="previewHorario">Nao informado</span></p>
-                                                    <p class="coordenacao-preview-line"><strong>Acao aplicada:</strong> <span id="previewAcao">Nao informada</span></p>
-                                                    <p class="coordenacao-preview-line"><strong>Status:</strong> <span id="previewStatus">Nao informado</span></p>
+                                                    <p class="coordenacao-preview-line"><strong>Turma:</strong> <span
+                                                            id="previewTurma">Não informada</span></p>
+                                                    <p class="coordenacao-preview-line"><strong>Professor
+                                                            requerente:</strong> <span id="previewProfessor">Não 
+                                                            informado</span></p>
+                                                    <p class="coordenacao-preview-line"><strong>Disciplina ou
+                                                            função:</strong> <span id="previewDisciplina">Não
+                                                            informada</span></p>
+                                                    <p class="coordenacao-preview-line"><strong>Data:</strong> <span
+                                                            id="previewData">Não informada</span></p>
+                                                    <p class="coordenacao-preview-line"><strong>Aula:</strong> <span
+                                                            id="previewAula">Não informada</span></p>
+                                                    <p class="coordenacao-preview-line"><strong>Horário:</strong> <span
+                                                            id="previewHorario">Não informado</span></p>
+                                                    <p class="coordenacao-preview-line"><strong>Ação aplicada:</strong>
+                                                        <span id="previewAcao">Não informada</span></p>
+                                                    <p class="coordenacao-preview-line"><strong>Status:</strong> <span
+                                                            id="previewStatus">Não informado</span></p>
                                                 </div>
                                             </section>
 
                                             <section class="coordenacao-preview-section">
-                                                <h4>DESCRICAO DA OCORRENCIA</h4>
+                                                <h4>DESCRIÇÃO DA OCORRENCIA</h4>
                                                 <div id="previewDescricao" class="coordenacao-preview-paragraph">
-                                                    A descricao digitada no formulario aparecera aqui automaticamente.
+                                                    A descrição digitada no formulário aparecerá aqui automaticamente.
                                                 </div>
                                             </section>
 
                                             <section class="coordenacao-preview-section">
                                                 <h4>BASE LEGAL</h4>
                                                 <div id="previewBaseLegal" class="coordenacao-preview-legal-box">
-                                                    <p class="coordenacao-preview-empty">Nenhuma base legal anexada ainda.</p>
+                                                    <p class="coordenacao-preview-empty">Nenhuma base legal anexada
+                                                        ainda.</p>
                                                 </div>
                                             </section>
 
-                                            <section class="coordenacao-preview-section coordenacao-preview-section-note">
+                                            <section
+                                                class="coordenacao-preview-section coordenacao-preview-section-note">
                                                 <div id="previewObservacao" class="coordenacao-preview-observation">
-                                                    OBS.: Documento emitido para registro e acompanhamento pedagogico da ocorrencia.
+                                                    OBS.: Documento emitido para registro e acompanhamento pedagogico da
+                                                    ocorrencia.
                                                 </div>
                                             </section>
 
@@ -307,8 +362,8 @@
                                                 <div class="coordenacao-preview-signature-line"></div>
                                                 <p>E.E. Padre Jose Daniel</p>
                                                 <p>Coordenacao Pedagogica</p>
-                                                <p>Assessoria</p>
-                                                <small id="previewEmitidoEm">Emitido automaticamente no momento do registro.</small>
+                                                <small id="previewEmitidoEm">Emitido automaticamente no momento do
+                                                    registro.</small>
                                             </footer>
                                         </div>
                                     </article>
@@ -326,7 +381,8 @@
                             <div>
                                 <p class="coordenacao-eyebrow">Relatorios</p>
                                 <h2>Gere relatorios de ocorrencias</h2>
-                                <p>Monte um recorte por periodo, turma, estudante ou status para ter uma visao consolidada sem poluir a tela principal.</p>
+                                <p>Monte um recorte por periodo, turma, estudante ou status para ter uma visao
+                                    consolidada sem poluir a tela principal.</p>
                             </div>
                             <p id="msgRelatorios"></p>
                         </div>
@@ -436,7 +492,7 @@
                                         <th>Estudante</th>
                                         <th>Turma</th>
                                         <th>Professor requerente</th>
-                                        <th>Acao aplicada</th>
+                                        <th>Ação aplicada</th>
                                         <th>Status</th>
                                     </tr>
                                 </thead>
@@ -454,7 +510,8 @@
                             <div>
                                 <p class="coordenacao-eyebrow">Cadastro</p>
                                 <h2 id="tituloFormEstudante">Cadastrar estudante</h2>
-                                <p>Mantenha a base de estudantes atualizada para agilizar a abertura de novas ocorrencias.</p>
+                                <p>Mantenha a base de estudantes atualizada para agilizar a abertura de novas
+                                    ocorrencias.</p>
                             </div>
                             <p id="msgEstudantes"></p>
                         </div>
@@ -469,14 +526,16 @@
                             </label>
                             <div class="coordenacao-inline coordenacao-form-actions">
                                 <button class="btn-destaque" type="submit">Salvar estudante</button>
-                                <button id="btnCancelarEdicaoEstudante" type="button" style="display: none;">Cancelar edicao</button>
+                                <button id="btnCancelarEdicaoEstudante" type="button" style="display: none;">Cancelar
+                                    edicao</button>
                             </div>
                         </form>
 
                         <section class="coordenacao-import-box">
                             <div>
                                 <h3>Importar estudantes via CSV</h3>
-                                <p>Envie planilhas exportadas com as colunas <strong>nome</strong>, <strong>turma</strong> e <strong>ativo</strong> (opcional).</p>
+                                <p>Envie planilhas exportadas com as colunas <strong>nome</strong>,
+                                    <strong>turma</strong> e <strong>ativo</strong> (opcional).</p>
                             </div>
                             <form id="formImportarEstudantesCsv" class="coordenacao-form">
                                 <label class="coordenacao-field" for="arquivoCsvEstudantes">
@@ -484,7 +543,8 @@
                                     <input id="arquivoCsvEstudantes" type="file" accept=".csv,text/csv" required>
                                 </label>
                                 <p class="coordenacao-field-hint">
-                                    Tambem aceitamos cabecalhos como <strong>nome_estudante</strong>, <strong>turma_nome</strong> e <strong>status</strong>.
+                                    Tambem aceitamos cabecalhos como <strong>nome_estudante</strong>,
+                                    <strong>turma_nome</strong> e <strong>status</strong>.
                                 </p>
                                 <div class="coordenacao-inline coordenacao-form-actions">
                                     <button class="btn-destaque" type="submit">Importar CSV</button>
@@ -549,41 +609,167 @@
                             <div>
                                 <p class="coordenacao-eyebrow">Cadastro</p>
                                 <h2 id="tituloFormRegimento">Cadastrar base legal</h2>
-                                <p>Monte a base de artigos do regimento, ECA e demais leis para agilizar o preenchimento das ocorrencias e dos PDFs.</p>
+                                <p>Cadastre leis e organize artigos, incisos e alineas com relacionamento direto, para
+                                    facilitar a busca e o vinculo correto nas ocorrencias.</p>
                             </div>
                             <p id="msgRegimento"></p>
                         </div>
-                        <form id="formRegimento" class="coordenacao-form">
-                            <label class="coordenacao-field" for="regimentoArtigo">
-                                <span>Artigo / referencia</span>
-                                <input id="regimentoArtigo" type="text" placeholder="Ex: Art. 76, inciso VII" maxlength="120" required>
-                            </label>
-                            <label class="coordenacao-field" for="regimentoDescricao">
-                                <span>Descricao</span>
-                                <textarea id="regimentoDescricao" rows="6" placeholder="Descreva o trecho do regimento, ECA ou outra base legal" required></textarea>
-                            </label>
-                            <div class="coordenacao-inline coordenacao-form-actions">
-                                <button class="btn-destaque" type="submit">Salvar item</button>
-                                <button id="btnCancelarEdicaoRegimento" type="button" style="display: none;">Cancelar edicao</button>
+                        <section class="coordenacao-import-box">
+                            <div>
+                                <h3 id="tituloFormLeiBaseLegal">Cadastrar lei</h3>
+                                <p>Cadastre o documento principal, como ECA, LDB ou Regimento Escolar.</p>
                             </div>
-                        </form>
+                            <form id="formLeiBaseLegal" class="coordenacao-form">
+                                <label class="coordenacao-field coordenacao-field-wide" for="leiBaseLegalNome">
+                                    <span>Nome da lei</span>
+                                    <input id="leiBaseLegalNome" type="text" placeholder="Ex: ECA ou Regimento Interno"
+                                        maxlength="120" required>
+                                </label>
+                                <div class="coordenacao-inline coordenacao-form-actions">
+                                    <button class="btn-destaque" type="submit">Salvar lei</button>
+                                    <button id="btnCancelarEdicaoLeiBaseLegal" type="button"
+                                        style="display: none;">Cancelar edicao</button>
+                                </div>
+                            </form>
+
+                            <div class="coordenacao-table-wrap">
+                                <table class="coordenacao-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Lei</th>
+                                            <th>Acoes</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbodyLeisBaseLegal"></tbody>
+                                </table>
+                            </div>
+                        </section>
 
                         <section class="coordenacao-import-box">
                             <div>
-                                <h3>Importar base legal via CSV</h3>
-                                <p>Envie planilhas com as colunas <strong>artigo</strong>, <strong>descricao</strong> e <strong>ativo</strong> (opcional).</p>
+                                <h3 id="tituloFormArtigoBaseLegal">Cadastrar artigo</h3>
+                                <p>Relacione o artigo com uma lei ja cadastrada. A busca abaixo consulta as leis
+                                    existentes.</p>
+                            </div>
+                            <form id="formArtigoBaseLegal" class="coordenacao-form">
+                                <label class="coordenacao-field coordenacao-field-wide" for="artigoBaseLegalLeiBusca">
+                                    <span>Lei vinculada</span>
+                                    <div class="coordenacao-autocomplete-shell">
+                                        <input id="artigoBaseLegalLeiBusca" type="text" autocomplete="off"
+                                            placeholder="Buscar lei cadastrada" required>
+                                        <div id="listaLeisBaseLegal" class="coordenacao-autocomplete-list" hidden></div>
+                                    </div>
+                                </label>
+                                <input id="artigoBaseLegalLeiId" type="hidden">
+                                <label class="coordenacao-field" for="artigoBaseLegalNumero">
+                                    <span>Numero do artigo</span>
+                                    <input id="artigoBaseLegalNumero" type="text" placeholder="Ex: 121" maxlength="120"
+                                        required>
+                                </label>
+                                <label class="coordenacao-field coordenacao-field-wide" for="artigoBaseLegalDescricao">
+                                    <span>Descricao do artigo</span>
+                                    <textarea id="artigoBaseLegalDescricao" rows="4"
+                                        placeholder="Texto ou resumo do artigo" required></textarea>
+                                </label>
+                                <div class="coordenacao-inline coordenacao-form-actions">
+                                    <button class="btn-destaque" type="submit">Salvar artigo</button>
+                                    <button id="btnCancelarEdicaoArtigoBaseLegal" type="button"
+                                        style="display: none;">Cancelar edicao</button>
+                                </div>
+                            </form>
+                        </section>
+
+                        <section class="coordenacao-import-box">
+                            <div>
+                                <h3 id="tituloFormIncisoBaseLegal">Cadastrar inciso</h3>
+                                <p>Busque um artigo ja cadastrado para vincular o inciso ao registro correto.</p>
+                            </div>
+                            <form id="formIncisoBaseLegal" class="coordenacao-form">
+                                <label class="coordenacao-field coordenacao-field-wide"
+                                    for="incisoBaseLegalArtigoBusca">
+                                    <span>Artigo vinculado</span>
+                                    <div class="coordenacao-autocomplete-shell">
+                                        <input id="incisoBaseLegalArtigoBusca" type="text" autocomplete="off"
+                                            placeholder="Buscar artigo cadastrado" required>
+                                        <div id="listaArtigosBaseLegal" class="coordenacao-autocomplete-list" hidden>
+                                        </div>
+                                    </div>
+                                </label>
+                                <input id="incisoBaseLegalArtigoId" type="hidden">
+                                <label class="coordenacao-field" for="incisoBaseLegalNumero">
+                                    <span>Numero do inciso</span>
+                                    <input id="incisoBaseLegalNumero" type="text" placeholder="Ex: I, II, III"
+                                        maxlength="40" required>
+                                </label>
+                                <label class="coordenacao-field coordenacao-field-wide" for="incisoBaseLegalDescricao">
+                                    <span>Descricao do inciso</span>
+                                    <textarea id="incisoBaseLegalDescricao" rows="3" placeholder="Texto do inciso"
+                                        required></textarea>
+                                </label>
+                                <div class="coordenacao-inline coordenacao-form-actions">
+                                    <button class="btn-destaque" type="submit">Salvar inciso</button>
+                                    <button id="btnCancelarEdicaoIncisoBaseLegal" type="button"
+                                        style="display: none;">Cancelar edicao</button>
+                                </div>
+                            </form>
+                        </section>
+
+                        <section class="coordenacao-import-box">
+                            <div>
+                                <h3 id="tituloFormAlineaBaseLegal">Cadastrar alinea</h3>
+                                <p>Quando houver detalhamento adicional, localize o inciso ja cadastrado e registre a
+                                    alinea.</p>
+                            </div>
+                            <form id="formAlineaBaseLegal" class="coordenacao-form">
+                                <label class="coordenacao-field coordenacao-field-wide"
+                                    for="alineaBaseLegalIncisoBusca">
+                                    <span>Inciso vinculado</span>
+                                    <div class="coordenacao-autocomplete-shell">
+                                        <input id="alineaBaseLegalIncisoBusca" type="text" autocomplete="off"
+                                            placeholder="Buscar inciso cadastrado" required>
+                                        <div id="listaIncisosBaseLegal" class="coordenacao-autocomplete-list" hidden>
+                                        </div>
+                                    </div>
+                                </label>
+                                <input id="alineaBaseLegalIncisoId" type="hidden">
+                                <label class="coordenacao-field" for="alineaBaseLegalIdentificador">
+                                    <span>Identificador</span>
+                                    <input id="alineaBaseLegalIdentificador" type="text" placeholder="Ex: a"
+                                        maxlength="40" required>
+                                </label>
+                                <label class="coordenacao-field coordenacao-field-wide" for="alineaBaseLegalDescricao">
+                                    <span>Descricao da alinea</span>
+                                    <textarea id="alineaBaseLegalDescricao" rows="3" placeholder="Texto da alinea"
+                                        required></textarea>
+                                </label>
+                                <div class="coordenacao-inline coordenacao-form-actions">
+                                    <button class="btn-destaque" type="submit">Salvar alinea</button>
+                                    <button id="btnCancelarEdicaoAlineaBaseLegal" type="button"
+                                        style="display: none;">Cancelar edicao</button>
+                                </div>
+                            </form>
+                        </section>
+
+                        <section class="coordenacao-import-box">
+                            <div>
+                                <h3>Importar base legal via JSON</h3>
+                                <p>Envie um arquivo JSON estruturado por <strong>lei</strong>, <strong>artigos</strong>,
+                                    <strong>incisos</strong> e <strong>alineas</strong>, evitando repetir o texto da
+                                    mesma lei em cada item.</p>
                             </div>
                             <form id="formImportarRegimentoCsv" class="coordenacao-form">
                                 <label class="coordenacao-field" for="arquivoCsvRegimento">
-                                    <span>Arquivo CSV</span>
-                                    <input id="arquivoCsvRegimento" type="file" accept=".csv,text/csv" required>
+                                    <span>Arquivo JSON ou CSV</span>
+                                    <input id="arquivoCsvRegimento" type="file"
+                                        accept=".json,application/json,.csv,text/csv,text/plain" required>
                                 </label>
                                 <p class="coordenacao-field-hint">
-                                    Tambem aceitamos cabecalhos como <strong>referencia</strong>, <strong>base_legal</strong>, <strong>texto</strong> e <strong>status</strong>.
+                                    O JSON estruturado e o formato recomendado. O CSV antigo com <strong>artigo</strong>
+                                    e <strong>descricao</strong> continua aceito por compatibilidade.
                                 </p>
                                 <div class="coordenacao-inline coordenacao-form-actions">
-                                    <button class="btn-destaque" type="submit">Importar CSV</button>
-                                    <button id="btnBaixarModeloRegimentoCsv" type="button">Baixar modelo CSV</button>
+                                    <button class="btn-destaque" type="submit">Importar arquivo</button>
+                                    <button id="btnBaixarModeloRegimentoCsv" type="button">Baixar modelo JSON</button>
                                 </div>
                             </form>
                         </section>
@@ -593,7 +779,8 @@
                         <div class="coordenacao-section-header">
                             <div>
                                 <h2>Base legal cadastrada</h2>
-                                <p>Esses itens aparecem no formulario da ocorrencia e sao copiados para o documento quando selecionados.</p>
+                                <p>Esses itens aparecem no formulario da ocorrencia e sao copiados para o documento
+                                    quando selecionados.</p>
                             </div>
                         </div>
 
@@ -601,10 +788,10 @@
                             <table class="coordenacao-table">
                                 <thead>
                                     <tr>
-                                        <th>Artigo</th>
+                                        <th>Tipo</th>
+                                        <th>Lei</th>
+                                        <th>Referencia</th>
                                         <th>Descricao</th>
-                                        <th>Status</th>
-                                        <th>Atualizado em</th>
                                         <th>Acoes</th>
                                     </tr>
                                 </thead>
@@ -617,7 +804,8 @@
         </section>
     </main>
 
-    <script src="{{ request.url_for('static', path='js/coordenacao.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script
+        src="{{ request.url_for('static', path='js/coordenacao.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>
 
 </html>

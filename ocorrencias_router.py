@@ -9,12 +9,20 @@ from database import (
     ACAO_OCORRENCIA_VALIDAS,
     STATUS_OCORRENCIA_REGISTRADO,
     STATUS_OCORRENCIA_VALIDOS,
+    atualizar_alinea,
+    atualizar_artigo,
+    atualizar_inciso,
+    atualizar_lei,
     atualizar_ocorrencia,
     atualizar_estudante,
     atualizar_regimento_item,
     atualizar_status_regimento_item,
     atualizar_status_estudante,
+    buscar_alinea_por_id,
+    buscar_artigo_por_id,
     buscar_estudante_por_id,
+    buscar_inciso_por_id,
+    buscar_lei_por_id,
     buscar_estudantes_ocorrencia,
     buscar_ocorrencia_por_id,
     buscar_professor_por_id_ocorrencia,
@@ -22,25 +30,50 @@ from database import (
     buscar_regimento_item_por_id,
     buscar_regimento_itens_por_ids,
     buscar_turma_por_id,
+    criar_alinea,
+    criar_artigo,
     criar_estudante,
+    criar_inciso,
+    criar_lei,
     criar_ocorrencia,
     criar_regimento_item,
+    listar_alineas,
+    listar_artigos,
     listar_disciplinas_ativas,
     listar_estudantes,
+    listar_incisos,
+    listar_leis,
     listar_ocorrencias,
     listar_professores_agendamento,
     listar_regimento_itens,
     listar_turmas_ativas,
+    remover_alinea,
+    remover_artigo,
     remover_estudante,
+    remover_inciso,
+    remover_lei,
     remover_ocorrencia,
+    remover_regimento_item,
     salvar_regimento_itens_ocorrencia,
 )
 from models import (
+    AlineaCreateIn,
+    AlineaOut,
+    AlineaUpdateIn,
+    ArtigoCreateIn,
+    ArtigoOut,
+    ArtigoUpdateIn,
     EstudanteCreateIn,
     EstudanteOut,
     EstudanteStatusIn,
     EstudanteUpdateIn,
     ImportacaoCsvOut,
+    IncisoCreateIn,
+    IncisoOut,
+    IncisoUpdateIn,
+    LeiCreateIn,
+    LeiOut,
+    LeiUpdateIn,
     OcorrenciaCreateIn,
     OcorrenciaOut,
     OcorrenciaUpdateIn,
@@ -49,23 +82,30 @@ from models import (
     RegimentoItemStatusIn,
     RegimentoItemUpdateIn,
 )
-from services.csv_import_service import importar_base_legal_csv, importar_estudantes_csv
+from services.csv_import_service import importar_base_legal_arquivo, importar_estudantes_csv
+from services.ocorrencia_disciplina_service import (
+    acao_compativel_com_gravidade,
+    inferir_gravidade_ocorrencia,
+    listar_acoes_aplicadas,
+    rotulo_gravidade_ocorrencia,
+)
 from services.ocorrencia_pdf_service import gerar_pdf_ocorrencia_registro
 
 router = APIRouter()
 
 _HORARIO_REGEX = re.compile(r"^\d{1,2}:\d{2}(:\d{2})?$")
 _ACOES_ROTULOS = {
-    "orientacao_verbal": "Orientacao verbal",
-    "advertencia": "Advertencia",
-    "chamada_responsavel": "Chamada de responsavel",
-    "encaminhamento_direcao": "Encaminhamento a direcao",
+    "orientacao_verbal": "Orientação verbal",
+    "advertencia": "Advertência verbal",
+    ""
+    "chamada_responsavel": "Chamada de responsável",
+    "encaminhamento_direcao": "Encaminhamento à direção",
     "registro_informativo": "Registro informativo",
 }
 _STATUS_ROTULOS = {
     "registrado": "Registrado",
     "em_acompanhamento": "Em acompanhamento",
-    "aguardando_responsavel": "Aguardando responsavel",
+    "aguardando_responsavel": "Aguardando responsável",
     "resolvido": "Resolvido",
 }
 _TURNOS_CONFIG = {
@@ -166,6 +206,19 @@ def _validar_acao_aplicada(valor: str) -> str:
     if acao not in ACAO_OCORRENCIA_VALIDAS:
         raise HTTPException(400, "Acao aplicada invalida.")
     return acao
+
+
+def _validar_acao_compativel_com_base_legal(acao_aplicada: str, itens_regimento: list[dict]) -> str | None:
+    gravidade = inferir_gravidade_ocorrencia(itens_regimento)
+    if gravidade and not acao_compativel_com_gravidade(acao_aplicada, gravidade):
+        raise HTTPException(
+            400,
+            (
+                "A acao aplicada nao e compativel com a gravidade automatica da ocorrencia "
+                f"({rotulo_gravidade_ocorrencia(gravidade)})."
+            ),
+        )
+    return gravidade
 
 
 def _validar_turma_id(turma_id: int) -> int:
@@ -354,6 +407,79 @@ def _montar_resposta_regimento_item(regimento_item_id: int) -> dict:
     return item
 
 
+def _montar_resposta_lei(lei_id: int) -> dict:
+    lei = buscar_lei_por_id(lei_id)
+    if not lei:
+        raise HTTPException(404, "Lei nao encontrada.")
+    return lei
+
+
+def _montar_resposta_artigo(artigo_id: int) -> dict:
+    artigo = buscar_artigo_por_id(artigo_id)
+    if not artigo:
+        raise HTTPException(404, "Artigo nao encontrado.")
+    return artigo
+
+
+def _montar_resposta_inciso(inciso_id: int) -> dict:
+    inciso = buscar_inciso_por_id(inciso_id)
+    if not inciso:
+        raise HTTPException(404, "Inciso nao encontrado.")
+    return inciso
+
+
+def _montar_resposta_alinea(alinea_id: int) -> dict:
+    alinea = buscar_alinea_por_id(alinea_id)
+    if not alinea:
+        raise HTTPException(404, "Alinea nao encontrada.")
+    return alinea
+
+
+def _normalizar_payload_regimento(payload) -> dict:
+    dados_brutos = _model_to_dict(payload, exclude_unset=False)
+    lei_nome = _texto_obrigatorio(
+        dados_brutos.get("lei_nome"),
+        "Lei",
+        max_len=120,
+    ) if str(dados_brutos.get("lei_nome") or "").strip() else "Base legal"
+
+    artigo_numero = _texto_obrigatorio(
+        dados_brutos.get("artigo_numero") or dados_brutos.get("artigo"),
+        "Numero do artigo",
+        max_len=120,
+    )
+    artigo_descricao = _texto_obrigatorio(
+        dados_brutos.get("artigo_descricao") or dados_brutos.get("descricao"),
+        "Descricao do artigo",
+        max_len=5000,
+    )
+
+    inciso_numero = _texto_opcional(dados_brutos.get("inciso_numero"), max_len=40)
+    inciso_descricao = _texto_opcional(dados_brutos.get("inciso_descricao"), max_len=5000)
+    alinea_identificador = _texto_opcional(
+        dados_brutos.get("alinea_identificador"),
+        max_len=40,
+    )
+    alinea_descricao = _texto_opcional(dados_brutos.get("alinea_descricao"), max_len=5000)
+
+    if bool(inciso_numero) != bool(inciso_descricao):
+        raise HTTPException(400, "Inciso e descricao do inciso devem ser informados juntos.")
+    if alinea_identificador and not inciso_numero:
+        raise HTTPException(400, "Informe um inciso antes de cadastrar uma alinea.")
+    if bool(alinea_identificador) != bool(alinea_descricao):
+        raise HTTPException(400, "Alinea e descricao da alinea devem ser informadas juntas.")
+
+    return {
+        "lei_nome": lei_nome,
+        "artigo_numero": artigo_numero,
+        "artigo_descricao": artigo_descricao,
+        "inciso_numero": inciso_numero,
+        "inciso_descricao": inciso_descricao,
+        "alinea_identificador": alinea_identificador,
+        "alinea_descricao": alinea_descricao,
+    }
+
+
 def _montar_resposta_estudante(estudante_id: int) -> dict:
     estudante = buscar_estudante_por_id(estudante_id)
     if not estudante:
@@ -374,6 +500,23 @@ def _ler_upload_csv(arquivo: UploadFile) -> bytes:
     if not conteudo:
         raise HTTPException(400, "Arquivo CSV vazio.")
     return conteudo
+
+
+def _ler_upload_base_legal(arquivo: UploadFile) -> tuple[bytes, str, str]:
+    nome_arquivo = str(getattr(arquivo, "filename", "") or "").strip()
+    if not nome_arquivo:
+        raise HTTPException(400, "Arquivo da base legal nao enviado.")
+
+    tipo_conteudo = str(getattr(arquivo, "content_type", "") or "").lower()
+    extensao_valida = nome_arquivo.lower().endswith(".json") or nome_arquivo.lower().endswith(".csv")
+    tipo_valido = "json" in tipo_conteudo or "csv" in tipo_conteudo or "text/plain" in tipo_conteudo
+    if not extensao_valida and not tipo_valido:
+        raise HTTPException(400, "Envie um arquivo JSON ou CSV valido.")
+
+    conteudo = arquivo.file.read()
+    if not conteudo:
+        raise HTTPException(400, "Arquivo da base legal vazio.")
+    return conteudo, nome_arquivo, tipo_conteudo
 
 
 @router.get("/ocorrencias/opcoes")
@@ -400,10 +543,7 @@ def listar_opcoes_ocorrencias(usuario=Depends(get_usuario_logado)):
 
     return {
         "status_padrao": STATUS_OCORRENCIA_REGISTRADO,
-        "acoes_aplicadas": [
-            {"id": acao, "nome": _ACOES_ROTULOS.get(acao, acao)}
-            for acao in ACAO_OCORRENCIA_VALIDAS
-        ],
+        "acoes_aplicadas": listar_acoes_aplicadas(),
         "status": [
             {"id": status, "nome": _STATUS_ROTULOS.get(status, status)}
             for status in STATUS_OCORRENCIA_VALIDOS
@@ -430,12 +570,13 @@ def listar_opcoes_ocorrencias(usuario=Depends(get_usuario_logado)):
             }
             for disciplina in listar_disciplinas_ativas()
         ],
+        "leis": listar_leis(),
+        "artigos": listar_artigos(),
+        "incisos": listar_incisos(),
+        "alineas": listar_alineas(),
         "regimento_itens": [
             {
-                "id": item["id"],
-                "artigo": item["artigo"],
-                "descricao": item.get("descricao", ""),
-                "ativo": item.get("ativo", 1),
+                **item,
                 "label": item["artigo"],
             }
             for item in listar_regimento_itens(incluir_inativos=True)
@@ -504,6 +645,8 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
     status = _validar_status(payload.status or STATUS_OCORRENCIA_REGISTRADO)
     acao_aplicada = _validar_acao_aplicada(payload.acao_aplicada)
     regimento_item_ids = _normalizar_regimento_item_ids(payload.regimento_item_ids)
+    regimento_itens = buscar_regimento_itens_por_ids(regimento_item_ids) if regimento_item_ids else []
+    _validar_acao_compativel_com_base_legal(acao_aplicada, regimento_itens)
 
     nome_estudante, estudante_id = _resolver_dados_estudante(
         nome_estudante=payload.nome_estudante,
@@ -681,6 +824,18 @@ def atualizar_ocorrencia_parcial_api(
     if not dados_validados and regimento_item_ids_validados is None:
         raise HTTPException(400, "Nenhum campo valido informado para atualizacao.")
 
+    if regimento_item_ids_validados is not None or "acao_aplicada" in dados_validados:
+        acao_para_validar = str(dados_validados.get("acao_aplicada", atual.get("acao_aplicada") or "")).strip()
+        if regimento_item_ids_validados is not None:
+            itens_para_validar = (
+                buscar_regimento_itens_por_ids(regimento_item_ids_validados)
+                if regimento_item_ids_validados
+                else []
+            )
+        else:
+            itens_para_validar = list(atual.get("regimento_itens") or [])
+        _validar_acao_compativel_com_base_legal(acao_para_validar, itens_para_validar)
+
     alterado = True
     if dados_validados:
         try:
@@ -829,6 +984,287 @@ def remover_estudante_fallback_api(estudante_id: int, usuario=Depends(get_usuari
     return remover_estudante_api(estudante_id, usuario)
 
 
+@router.get("/leis", response_model=list[LeiOut])
+def listar_leis_api(usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    return listar_leis()
+
+
+@router.get("/leis/{lei_id}", response_model=LeiOut)
+def buscar_lei_api(lei_id: int, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    return _montar_resposta_lei(lei_id)
+
+
+@router.post("/leis", response_model=LeiOut)
+def criar_lei_api(payload: LeiCreateIn, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    try:
+        lei_id = criar_lei(
+            nome=_texto_obrigatorio(payload.nome, "Nome da lei", max_len=120),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return _montar_resposta_lei(lei_id)
+
+
+@router.put("/leis/{lei_id}", response_model=LeiOut)
+def atualizar_lei_api(
+    lei_id: int,
+    payload: LeiUpdateIn,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    if not buscar_lei_por_id(lei_id):
+        raise HTTPException(404, "Lei nao encontrada.")
+    try:
+        alterado = atualizar_lei(
+            lei_id=lei_id,
+            nome=_texto_obrigatorio(payload.nome, "Nome da lei", max_len=120),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if not alterado:
+        raise HTTPException(404, "Lei nao encontrada.")
+    return _montar_resposta_lei(lei_id)
+
+
+@router.delete("/leis/{lei_id}")
+def remover_lei_api(lei_id: int, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    try:
+        removido = remover_lei(lei_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if not removido:
+        raise HTTPException(404, "Lei nao encontrada.")
+    return {"mensagem": "Lei excluida com sucesso."}
+
+
+@router.post("/leis/{lei_id}/excluir")
+def remover_lei_fallback_api(lei_id: int, usuario=Depends(get_usuario_logado)):
+    return remover_lei_api(lei_id, usuario)
+
+
+@router.get("/artigos", response_model=list[ArtigoOut])
+def listar_artigos_api(
+    lei_id: int | None = Query(default=None),
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    return listar_artigos(lei_id=lei_id)
+
+
+@router.get("/artigos/{artigo_id}", response_model=ArtigoOut)
+def buscar_artigo_api(artigo_id: int, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    return _montar_resposta_artigo(artigo_id)
+
+
+@router.post("/artigos", response_model=ArtigoOut)
+def criar_artigo_api(payload: ArtigoCreateIn, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    if not buscar_lei_por_id(payload.lei_id):
+        raise HTTPException(404, "Lei nao encontrada.")
+    try:
+        artigo_id = criar_artigo(
+            lei_id=payload.lei_id,
+            numero=_texto_obrigatorio(payload.numero, "Numero do artigo", max_len=120),
+            descricao=_texto_obrigatorio(payload.descricao, "Descricao do artigo", max_len=5000),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return _montar_resposta_artigo(artigo_id)
+
+
+@router.put("/artigos/{artigo_id}", response_model=ArtigoOut)
+def atualizar_artigo_api(
+    artigo_id: int,
+    payload: ArtigoUpdateIn,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    if not buscar_artigo_por_id(artigo_id):
+        raise HTTPException(404, "Artigo nao encontrado.")
+    if not buscar_lei_por_id(payload.lei_id):
+        raise HTTPException(404, "Lei nao encontrada.")
+    try:
+        alterado = atualizar_artigo(
+            artigo_id=artigo_id,
+            lei_id=payload.lei_id,
+            numero=_texto_obrigatorio(payload.numero, "Numero do artigo", max_len=120),
+            descricao=_texto_obrigatorio(payload.descricao, "Descricao do artigo", max_len=5000),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if not alterado:
+        raise HTTPException(404, "Artigo nao encontrado.")
+    return _montar_resposta_artigo(artigo_id)
+
+
+@router.delete("/artigos/{artigo_id}")
+def remover_artigo_api(artigo_id: int, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    try:
+        removido = remover_artigo(artigo_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if not removido:
+        raise HTTPException(404, "Artigo nao encontrado.")
+    return {"mensagem": "Artigo excluido com sucesso."}
+
+
+@router.post("/artigos/{artigo_id}/excluir")
+def remover_artigo_fallback_api(artigo_id: int, usuario=Depends(get_usuario_logado)):
+    return remover_artigo_api(artigo_id, usuario)
+
+
+@router.get("/incisos", response_model=list[IncisoOut])
+def listar_incisos_api(
+    artigo_id: int | None = Query(default=None),
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    return listar_incisos(artigo_id=artigo_id)
+
+
+@router.get("/incisos/{inciso_id}", response_model=IncisoOut)
+def buscar_inciso_api(inciso_id: int, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    return _montar_resposta_inciso(inciso_id)
+
+
+@router.post("/incisos", response_model=IncisoOut)
+def criar_inciso_api(payload: IncisoCreateIn, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    if not buscar_artigo_por_id(payload.artigo_id):
+        raise HTTPException(404, "Artigo nao encontrado.")
+    try:
+        inciso_id = criar_inciso(
+            artigo_id=payload.artigo_id,
+            numero=_texto_obrigatorio(payload.numero, "Numero do inciso", max_len=40),
+            descricao=_texto_obrigatorio(payload.descricao, "Descricao do inciso", max_len=5000),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return _montar_resposta_inciso(inciso_id)
+
+
+@router.put("/incisos/{inciso_id}", response_model=IncisoOut)
+def atualizar_inciso_api(
+    inciso_id: int,
+    payload: IncisoUpdateIn,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    if not buscar_inciso_por_id(inciso_id):
+        raise HTTPException(404, "Inciso nao encontrado.")
+    if not buscar_artigo_por_id(payload.artigo_id):
+        raise HTTPException(404, "Artigo nao encontrado.")
+    try:
+        alterado = atualizar_inciso(
+            inciso_id=inciso_id,
+            artigo_id=payload.artigo_id,
+            numero=_texto_obrigatorio(payload.numero, "Numero do inciso", max_len=40),
+            descricao=_texto_obrigatorio(payload.descricao, "Descricao do inciso", max_len=5000),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if not alterado:
+        raise HTTPException(404, "Inciso nao encontrado.")
+    return _montar_resposta_inciso(inciso_id)
+
+
+@router.delete("/incisos/{inciso_id}")
+def remover_inciso_api(inciso_id: int, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    try:
+        removido = remover_inciso(inciso_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if not removido:
+        raise HTTPException(404, "Inciso nao encontrado.")
+    return {"mensagem": "Inciso excluido com sucesso."}
+
+
+@router.post("/incisos/{inciso_id}/excluir")
+def remover_inciso_fallback_api(inciso_id: int, usuario=Depends(get_usuario_logado)):
+    return remover_inciso_api(inciso_id, usuario)
+
+
+@router.get("/alineas", response_model=list[AlineaOut])
+def listar_alineas_api(
+    inciso_id: int | None = Query(default=None),
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    return listar_alineas(inciso_id=inciso_id)
+
+
+@router.get("/alineas/{alinea_id}", response_model=AlineaOut)
+def buscar_alinea_api(alinea_id: int, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    return _montar_resposta_alinea(alinea_id)
+
+
+@router.post("/alineas", response_model=AlineaOut)
+def criar_alinea_api(payload: AlineaCreateIn, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    if not buscar_inciso_por_id(payload.inciso_id):
+        raise HTTPException(404, "Inciso nao encontrado.")
+    try:
+        alinea_id = criar_alinea(
+            inciso_id=payload.inciso_id,
+            identificador=_texto_obrigatorio(payload.identificador, "Identificador da alinea", max_len=40),
+            descricao=_texto_obrigatorio(payload.descricao, "Descricao da alinea", max_len=5000),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return _montar_resposta_alinea(alinea_id)
+
+
+@router.put("/alineas/{alinea_id}", response_model=AlineaOut)
+def atualizar_alinea_api(
+    alinea_id: int,
+    payload: AlineaUpdateIn,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    if not buscar_alinea_por_id(alinea_id):
+        raise HTTPException(404, "Alinea nao encontrada.")
+    if not buscar_inciso_por_id(payload.inciso_id):
+        raise HTTPException(404, "Inciso nao encontrado.")
+    try:
+        alterado = atualizar_alinea(
+            alinea_id=alinea_id,
+            inciso_id=payload.inciso_id,
+            identificador=_texto_obrigatorio(payload.identificador, "Identificador da alinea", max_len=40),
+            descricao=_texto_obrigatorio(payload.descricao, "Descricao da alinea", max_len=5000),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if not alterado:
+        raise HTTPException(404, "Alinea nao encontrada.")
+    return _montar_resposta_alinea(alinea_id)
+
+
+@router.delete("/alineas/{alinea_id}")
+def remover_alinea_api(alinea_id: int, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    try:
+        removido = remover_alinea(alinea_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if not removido:
+        raise HTTPException(404, "Alinea nao encontrada.")
+    return {"mensagem": "Alinea excluida com sucesso."}
+
+
+@router.post("/alineas/{alinea_id}/excluir")
+def remover_alinea_fallback_api(alinea_id: int, usuario=Depends(get_usuario_logado)):
+    return remover_alinea_api(alinea_id, usuario)
+
+
 @router.get("/regimento-itens", response_model=list[RegimentoItemOut])
 def listar_regimento_itens_api(
     incluir_inativos: bool = Query(default=True),
@@ -844,31 +1280,59 @@ def buscar_regimento_item_api(regimento_item_id: int, usuario=Depends(get_usuari
     return _montar_resposta_regimento_item(regimento_item_id)
 
 
+@router.delete("/regimento-itens/{regimento_item_id}")
+def remover_regimento_item_api(regimento_item_id: int, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    try:
+        removido = remover_regimento_item(regimento_item_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if not removido:
+        raise HTTPException(404, "Item do regimento nao encontrado.")
+    return {"mensagem": "Item da base legal excluido com sucesso."}
+
+
+@router.post("/regimento-itens/{regimento_item_id}/excluir")
+def remover_regimento_item_fallback_api(regimento_item_id: int, usuario=Depends(get_usuario_logado)):
+    return remover_regimento_item_api(regimento_item_id, usuario)
+
+
 @router.post("/regimento-itens", response_model=RegimentoItemOut)
 def criar_regimento_item_api(
     payload: RegimentoItemCreateIn,
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
+    dados = _normalizar_payload_regimento(payload)
     try:
         regimento_item_id = criar_regimento_item(
-            artigo=_texto_obrigatorio(payload.artigo, "Artigo", max_len=120),
-            descricao=_texto_obrigatorio(payload.descricao, "Descricao", max_len=5000),
-            ativo=True,
+            lei_nome=dados["lei_nome"],
+            artigo_numero=dados["artigo_numero"],
+            artigo_descricao=dados["artigo_descricao"],
+            inciso_numero=dados["inciso_numero"],
+            inciso_descricao=dados["inciso_descricao"],
+            alinea_identificador=dados["alinea_identificador"],
+            alinea_descricao=dados["alinea_descricao"],
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return _montar_resposta_regimento_item(regimento_item_id)
 
 
+@router.post("/regimento-itens/importar", response_model=ImportacaoCsvOut)
 @router.post("/regimento-itens/importar-csv", response_model=ImportacaoCsvOut)
-def importar_regimento_itens_csv_api(
+def importar_regimento_itens_arquivo_api(
     arquivo: UploadFile = File(...),
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
     try:
-        return importar_base_legal_csv(_ler_upload_csv(arquivo))
+        conteudo, nome_arquivo, tipo_conteudo = _ler_upload_base_legal(arquivo)
+        return importar_base_legal_arquivo(
+            conteudo,
+            nome_arquivo=nome_arquivo,
+            tipo_conteudo=tipo_conteudo,
+        )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 
@@ -883,11 +1347,17 @@ def atualizar_regimento_item_api(
     if not buscar_regimento_item_por_id(regimento_item_id):
         raise HTTPException(404, "Item do regimento nao encontrado.")
 
+    dados = _normalizar_payload_regimento(payload)
     try:
         alterado = atualizar_regimento_item(
             regimento_item_id=regimento_item_id,
-            artigo=_texto_obrigatorio(payload.artigo, "Artigo", max_len=120),
-            descricao=_texto_obrigatorio(payload.descricao, "Descricao", max_len=5000),
+            lei_nome=dados["lei_nome"],
+            artigo_numero=dados["artigo_numero"],
+            artigo_descricao=dados["artigo_descricao"],
+            inciso_numero=dados["inciso_numero"],
+            inciso_descricao=dados["inciso_descricao"],
+            alinea_identificador=dados["alinea_identificador"],
+            alinea_descricao=dados["alinea_descricao"],
             ativo=bool(payload.ativo),
         )
     except ValueError as exc:

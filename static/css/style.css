@@ -2419,6 +2419,15 @@ footer {
     text-transform: uppercase;
 }
 
+.coordenacao-preview-gravidade {
+    margin: 0;
+    color: #5d6c80;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+}
+
 .coordenacao-preview-meta {
     display: grid;
     gap: 12px;
@@ -2475,7 +2484,7 @@ footer {
 
 .coordenacao-preview-legal-item {
     display: grid;
-    gap: 4px;
+    gap: 5px;
     padding-bottom: 10px;
     border-bottom: 1px solid #ebf0f5;
 }
@@ -2495,6 +2504,34 @@ footer {
     font-size: 11px;
     line-height: 1.5;
     white-space: pre-wrap;
+}
+
+.coordenacao-preview-legal-law {
+    color: #17324c;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.coordenacao-preview-legal-line {
+    color: #43546a;
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.coordenacao-preview-legal-line.is-artigo {
+    color: #17324c;
+    font-size: 12px;
+}
+
+.coordenacao-preview-legal-line.is-inciso {
+    padding-left: 16px;
+}
+
+.coordenacao-preview-legal-line.is-alinea {
+    padding-left: 34px;
 }
 
 .coordenacao-preview-empty {
@@ -2841,7 +2878,7 @@ footer {
 
 .coordenacao-detail-list-item {
     display: grid;
-    gap: 4px;
+    gap: 6px;
     border: 1px solid #dbe4ef;
     border-radius: 10px;
     background: #fff;
@@ -2859,13 +2896,31 @@ footer {
     white-space: pre-wrap;
 }
 
+.coordenacao-detail-list-law {
+    color: #29486d;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
 .coordenacao-detail-line {
     font-size: 14px;
     color: var(--text-main);
+    white-space: pre-wrap;
 }
 
-.coordenacao-detail-line strong {
+.coordenacao-detail-line.is-artigo {
     color: #29486d;
+    font-weight: 700;
+}
+
+.coordenacao-detail-line.is-inciso {
+    padding-left: 16px;
+}
+
+.coordenacao-detail-line.is-alinea {
+    padding-left: 34px;
 }
 
 .coordenacao-ranking-list {

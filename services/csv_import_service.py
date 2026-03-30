@@ -2,16 +2,18 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import unicodedata
 
 from database import (
+    LEI_PADRAO_IMPORTACAO,
     buscar_turma_por_id,
     buscar_turma_por_nome,
     criar_ou_atualizar_estudante_por_nome_turma,
-    criar_ou_atualizar_regimento_item_por_artigo,
+    criar_ou_atualizar_regimento_item,
 )
 
-LIMITE_ARQUIVO_CSV_BYTES = 2 * 1024 * 1024
+LIMITE_ARQUIVO_IMPORTACAO_BYTES = 2 * 1024 * 1024
 
 COLUNAS_ESTUDANTES = {
     "nome": {
@@ -40,19 +42,46 @@ COLUNAS_ESTUDANTES = {
 }
 
 COLUNAS_BASE_LEGAL = {
-    "artigo": {
-        "artigo",
-        "referencia",
-        "base_legal",
+    "lei_nome": {
+        "lei_nome",
         "lei",
+        "nome_lei",
+        "base_legal",
+        "nome_base_legal",
+    },
+    "artigo_numero": {
+        "artigo_numero",
+        "artigo",
+        "numero_artigo",
+        "referencia",
         "item",
     },
-    "descricao": {
+    "artigo_descricao": {
+        "artigo_descricao",
+        "descricao_artigo",
         "descricao",
         "texto",
         "conteudo",
         "detalhe",
         "trecho",
+    },
+    "inciso_numero": {
+        "inciso_numero",
+        "inciso",
+        "numero_inciso",
+    },
+    "inciso_descricao": {
+        "inciso_descricao",
+        "descricao_inciso",
+    },
+    "alinea_identificador": {
+        "alinea_identificador",
+        "alinea",
+        "identificador_alinea",
+    },
+    "alinea_descricao": {
+        "alinea_descricao",
+        "descricao_alinea",
     },
     "ativo": {
         "ativo",
@@ -100,13 +129,13 @@ def _normalizar_chave(valor: str | None) -> str:
     return "".join(partes).strip("_")
 
 
-def _decodificar_csv(conteudo: bytes) -> str:
+def _decodificar_texto_importacao(conteudo: bytes, *, formato: str = "arquivo") -> str:
     for encoding in ("utf-8-sig", "utf-8", "latin-1"):
         try:
             return conteudo.decode(encoding)
         except UnicodeDecodeError:
             continue
-    raise ValueError("Nao foi possivel ler o arquivo CSV. Salve-o em UTF-8 ou CSV padrao do Excel.")
+    raise ValueError(f"Nao foi possivel ler o {formato}. Salve-o em UTF-8.")
 
 
 def _detectar_delimitador(texto: str) -> str:
@@ -137,10 +166,10 @@ def _carregar_linhas_csv(
 ) -> list[tuple[int, dict[str, str]]]:
     if not conteudo:
         raise ValueError("Arquivo CSV vazio.")
-    if len(conteudo) > LIMITE_ARQUIVO_CSV_BYTES:
+    if len(conteudo) > LIMITE_ARQUIVO_IMPORTACAO_BYTES:
         raise ValueError("Arquivo CSV muito grande. Envie um arquivo de ate 2 MB.")
 
-    texto = _decodificar_csv(conteudo)
+    texto = _decodificar_texto_importacao(conteudo, formato="arquivo CSV")
     if not texto.strip():
         raise ValueError("Arquivo CSV vazio.")
 
@@ -251,6 +280,258 @@ def _resolver_turma_importacao(linha: dict[str, str]) -> int:
     return int(turma["id"])
 
 
+def _obter_valor_json(objeto: dict, *aliases: str):
+    if not isinstance(objeto, dict):
+        return None
+
+    mapa = {
+        _normalizar_chave(chave): valor
+        for chave, valor in objeto.items()
+    }
+    for alias in aliases:
+        chave = _normalizar_chave(alias)
+        if chave in mapa:
+            return mapa[chave]
+    return None
+
+
+def _texto_json(valor) -> str:
+    return _normalizar_texto("" if valor is None else str(valor))
+
+
+def _lista_json(valor, *, campo: str) -> list:
+    if valor is None:
+        return []
+    if not isinstance(valor, list):
+        raise ValueError(f"O campo {campo} deve ser uma lista.")
+    return valor
+
+
+def _identificador_item_base_legal(
+    *,
+    lei_nome: str,
+    artigo_numero: str,
+    inciso_numero: str | None = None,
+    alinea_identificador: str | None = None,
+) -> str:
+    partes = [lei_nome or LEI_PADRAO_IMPORTACAO, f"Art. {artigo_numero}"]
+    if _normalizar_texto(inciso_numero):
+        partes.append(f"inciso {_normalizar_texto(inciso_numero)}")
+    if _normalizar_texto(alinea_identificador):
+        partes.append(f"alinea {_normalizar_texto(alinea_identificador)}")
+    return " > ".join(partes)
+
+
+def _extrair_linhas_base_legal_json(conteudo: bytes) -> list[tuple[str, dict[str, str]]]:
+    if not conteudo:
+        raise ValueError("Arquivo JSON vazio.")
+    if len(conteudo) > LIMITE_ARQUIVO_IMPORTACAO_BYTES:
+        raise ValueError("Arquivo JSON muito grande. Envie um arquivo de ate 2 MB.")
+
+    texto = _decodificar_texto_importacao(conteudo, formato="arquivo JSON")
+    if not texto.strip():
+        raise ValueError("Arquivo JSON vazio.")
+
+    try:
+        payload = json.loads(texto)
+    except json.JSONDecodeError as exc:
+        raise ValueError("JSON invalido para importacao da base legal.") from exc
+
+    if isinstance(payload, list):
+        leis = payload
+    elif isinstance(payload, dict):
+        leis = _obter_valor_json(payload, "leis")
+        if leis is None:
+            leis = [payload]
+    else:
+        raise ValueError("JSON invalido: informe um objeto ou lista de leis.")
+
+    leis = _lista_json(leis, campo="leis")
+    linhas: list[tuple[str, dict[str, str]]] = []
+
+    for indice_lei, lei_item in enumerate(leis, start=1):
+        if not isinstance(lei_item, dict):
+            raise ValueError(f"Lei #{indice_lei}: estrutura invalida.")
+
+        lei_nome = _texto_json(
+            _obter_valor_json(lei_item, "lei", "lei_nome", "nome")
+        ) or LEI_PADRAO_IMPORTACAO
+        artigos = _lista_json(
+            _obter_valor_json(lei_item, "artigos"),
+            campo=f"artigos da lei {lei_nome}",
+        )
+        if not artigos:
+            raise ValueError(f"Lei {lei_nome}: informe ao menos um artigo.")
+
+        for artigo_item in artigos:
+            if not isinstance(artigo_item, dict):
+                raise ValueError(f"Lei {lei_nome}: artigo com estrutura invalida.")
+
+            artigo_numero = _texto_json(
+                _obter_valor_json(artigo_item, "numero", "artigo_numero", "artigo")
+            )
+            artigo_descricao = _texto_json(
+                _obter_valor_json(artigo_item, "descricao", "artigo_descricao", "texto")
+            )
+            if not artigo_numero:
+                raise ValueError(f"Lei {lei_nome}: numero do artigo obrigatorio.")
+            if not artigo_descricao:
+                raise ValueError(f"Lei {lei_nome} > Art. {artigo_numero}: descricao do artigo obrigatoria.")
+
+            linhas.append((
+                _identificador_item_base_legal(
+                    lei_nome=lei_nome,
+                    artigo_numero=artigo_numero,
+                ),
+                {
+                    "lei_nome": lei_nome,
+                    "artigo_numero": artigo_numero,
+                    "artigo_descricao": artigo_descricao,
+                    "inciso_numero": "",
+                    "inciso_descricao": "",
+                    "alinea_identificador": "",
+                    "alinea_descricao": "",
+                }
+            ))
+
+            incisos = _lista_json(
+                _obter_valor_json(artigo_item, "incisos"),
+                campo=f"incisos do artigo {artigo_numero}",
+            )
+            for inciso_item in incisos:
+                if not isinstance(inciso_item, dict):
+                    raise ValueError(f"Lei {lei_nome} > Art. {artigo_numero}: inciso com estrutura invalida.")
+
+                inciso_numero = _texto_json(
+                    _obter_valor_json(inciso_item, "numero", "inciso_numero", "inciso")
+                )
+                inciso_descricao = _texto_json(
+                    _obter_valor_json(inciso_item, "descricao", "inciso_descricao", "texto")
+                )
+                if not inciso_numero:
+                    raise ValueError(f"Lei {lei_nome} > Art. {artigo_numero}: numero do inciso obrigatorio.")
+                if not inciso_descricao:
+                    raise ValueError(
+                        f"Lei {lei_nome} > Art. {artigo_numero} > inciso {inciso_numero}: descricao do inciso obrigatoria."
+                    )
+
+                linhas.append((
+                    _identificador_item_base_legal(
+                        lei_nome=lei_nome,
+                        artigo_numero=artigo_numero,
+                        inciso_numero=inciso_numero,
+                    ),
+                    {
+                        "lei_nome": lei_nome,
+                        "artigo_numero": artigo_numero,
+                        "artigo_descricao": artigo_descricao,
+                        "inciso_numero": inciso_numero,
+                        "inciso_descricao": inciso_descricao,
+                        "alinea_identificador": "",
+                        "alinea_descricao": "",
+                    }
+                ))
+
+                alineas = _lista_json(
+                    _obter_valor_json(inciso_item, "alineas"),
+                    campo=f"alineas do inciso {inciso_numero}",
+                )
+                for alinea_item in alineas:
+                    if not isinstance(alinea_item, dict):
+                        raise ValueError(
+                            f"Lei {lei_nome} > Art. {artigo_numero} > inciso {inciso_numero}: alinea com estrutura invalida."
+                        )
+
+                    alinea_identificador = _texto_json(
+                        _obter_valor_json(alinea_item, "identificador", "alinea_identificador", "alinea")
+                    )
+                    alinea_descricao = _texto_json(
+                        _obter_valor_json(alinea_item, "descricao", "alinea_descricao", "texto")
+                    )
+                    if not alinea_identificador:
+                        raise ValueError(
+                            f"Lei {lei_nome} > Art. {artigo_numero} > inciso {inciso_numero}: identificador da alinea obrigatorio."
+                        )
+                    if not alinea_descricao:
+                        raise ValueError(
+                            f"Lei {lei_nome} > Art. {artigo_numero} > inciso {inciso_numero} > alinea {alinea_identificador}: descricao da alinea obrigatoria."
+                        )
+
+                    linhas.append((
+                        _identificador_item_base_legal(
+                            lei_nome=lei_nome,
+                            artigo_numero=artigo_numero,
+                            inciso_numero=inciso_numero,
+                            alinea_identificador=alinea_identificador,
+                        ),
+                        {
+                            "lei_nome": lei_nome,
+                            "artigo_numero": artigo_numero,
+                            "artigo_descricao": artigo_descricao,
+                            "inciso_numero": inciso_numero,
+                            "inciso_descricao": inciso_descricao,
+                            "alinea_identificador": alinea_identificador,
+                            "alinea_descricao": alinea_descricao,
+                        }
+                    ))
+
+    if not linhas:
+        raise ValueError("O JSON nao possui itens de base legal para importar.")
+    return linhas
+
+
+def _importar_linhas_base_legal(linhas: list[tuple[int | str, dict[str, str]]]) -> dict:
+    criados = 0
+    atualizados = 0
+    detalhes_erros = []
+
+    for origem, linha in linhas:
+        try:
+            lei_nome = _normalizar_texto(linha.get("lei_nome")) or LEI_PADRAO_IMPORTACAO
+            artigo_numero = _normalizar_texto(linha.get("artigo_numero"))
+            artigo_descricao = _normalizar_texto(linha.get("artigo_descricao"))
+            inciso_numero = _normalizar_texto(linha.get("inciso_numero"))
+            inciso_descricao = _normalizar_texto(linha.get("inciso_descricao"))
+            alinea_identificador = _normalizar_texto(linha.get("alinea_identificador"))
+            alinea_descricao = _normalizar_texto(linha.get("alinea_descricao"))
+
+            if not artigo_numero:
+                raise ValueError("Numero do artigo obrigatorio.")
+            if not artigo_descricao:
+                raise ValueError("Descricao do artigo obrigatoria.")
+            if bool(inciso_numero) != bool(inciso_descricao):
+                raise ValueError("Inciso e descricao do inciso devem ser informados juntos.")
+            if alinea_identificador and not inciso_numero:
+                raise ValueError("Informe um inciso antes de cadastrar uma alinea.")
+            if bool(alinea_identificador) != bool(alinea_descricao):
+                raise ValueError("Alinea e descricao da alinea devem ser informadas juntas.")
+
+            _item_id, criado = criar_ou_atualizar_regimento_item(
+                lei_nome=lei_nome,
+                artigo_numero=artigo_numero,
+                artigo_descricao=artigo_descricao,
+                inciso_numero=inciso_numero or None,
+                inciso_descricao=inciso_descricao or None,
+                alinea_identificador=alinea_identificador or None,
+                alinea_descricao=alinea_descricao or None,
+            )
+            if criado:
+                criados += 1
+            else:
+                atualizados += 1
+        except ValueError as exc:
+            prefixo = f"Linha {origem}" if isinstance(origem, int) else f"Item {origem}"
+            detalhes_erros.append(f"{prefixo}: {exc}")
+
+    return _montar_resultado_importacao(
+        entidade="base legal",
+        linhas_processadas=len(linhas),
+        criados=criados,
+        atualizados=atualizados,
+        detalhes_erros=detalhes_erros,
+    )
+
+
 def importar_estudantes_csv(conteudo: bytes) -> dict:
     linhas = _carregar_linhas_csv(
         conteudo,
@@ -296,39 +577,31 @@ def importar_base_legal_csv(conteudo: bytes) -> dict:
     linhas = _carregar_linhas_csv(
         conteudo,
         colunas_aceitas=COLUNAS_BASE_LEGAL,
-        colunas_obrigatorias={"artigo", "descricao"},
+        colunas_obrigatorias={"artigo_numero", "artigo_descricao"},
     )
+    return _importar_linhas_base_legal(linhas)
 
-    criados = 0
-    atualizados = 0
-    detalhes_erros = []
 
-    for indice_linha, linha in linhas:
-        try:
-            artigo = _normalizar_texto(linha.get("artigo"))
-            descricao = _normalizar_texto(linha.get("descricao"))
-            if not artigo:
-                raise ValueError("Artigo ou referencia obrigatoria.")
-            if not descricao:
-                raise ValueError("Descricao obrigatoria.")
+def importar_base_legal_json(conteudo: bytes) -> dict:
+    linhas = _extrair_linhas_base_legal_json(conteudo)
+    return _importar_linhas_base_legal(linhas)
 
-            ativo = _parse_bool_csv(linha.get("ativo"), padrao=True)
-            _item_id, criado = criar_ou_atualizar_regimento_item_por_artigo(
-                artigo=artigo,
-                descricao=descricao,
-                ativo=ativo,
-            )
-            if criado:
-                criados += 1
-            else:
-                atualizados += 1
-        except ValueError as exc:
-            detalhes_erros.append(f"Linha {indice_linha}: {exc}")
 
-    return _montar_resultado_importacao(
-        entidade="base legal",
-        linhas_processadas=len(linhas),
-        criados=criados,
-        atualizados=atualizados,
-        detalhes_erros=detalhes_erros,
-    )
+def importar_base_legal_arquivo(
+    conteudo: bytes,
+    *,
+    nome_arquivo: str | None = None,
+    tipo_conteudo: str | None = None,
+) -> dict:
+    nome = _normalizar_texto(nome_arquivo).lower()
+    tipo = _normalizar_texto(tipo_conteudo).lower()
+
+    if nome.endswith(".json") or "json" in tipo:
+        return importar_base_legal_json(conteudo)
+    if nome.endswith(".csv") or "csv" in tipo:
+        return importar_base_legal_csv(conteudo)
+
+    texto = _decodificar_texto_importacao(conteudo)
+    if texto.lstrip().startswith("{") or texto.lstrip().startswith("["):
+        return importar_base_legal_json(conteudo)
+    return importar_base_legal_csv(conteudo)

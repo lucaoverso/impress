@@ -7,6 +7,11 @@ from datetime import datetime
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
+from services.ocorrencia_disciplina_service import (
+    inferir_gravidade_ocorrencia,
+    rotulo_acao_ocorrencia,
+    rotulo_gravidade_ocorrencia,
+)
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
@@ -142,8 +147,7 @@ def _formatar_data_hora_br(valor: str | None) -> str:
 
 
 def _rotulo_acao(valor: str | None) -> str:
-    texto = str(valor or "").strip()
-    return ACOES_ROTULOS.get(texto, texto or "Nao informada")
+    return rotulo_acao_ocorrencia(valor)
 
 
 def _rotulo_status(valor: str | None) -> str:
@@ -180,6 +184,24 @@ def _formatar_aula(ocorrencia: dict, turma: dict | None) -> str:
 def _obter_observacao_final(ocorrencia: dict) -> str:
     acao = str(ocorrencia.get("acao_aplicada") or "").strip()
     observacoes = {
+        "advertencia_verbal": (
+            "OBS.: Aplicada advertencia verbal com orientacao pedagogica, conforme a base legal selecionada."
+        ),
+        "retirada_sala_orientacao": (
+            "OBS.: Aplicada retirada do estudante da sala ou atividade, com encaminhamento para orientacao."
+        ),
+        "suspensao_extracurricular": (
+            "OBS.: Aplicada suspensao temporaria de participacao em programas extracurriculares."
+        ),
+        "suspensao_orientada_2_dias": (
+            "OBS.: Aplicada suspensao orientada das aulas pelo periodo definido pela equipe escolar."
+        ),
+        "suspensao_aulas_3_dias": (
+            "OBS.: Aplicada suspensao das aulas, respeitado o limite previsto na base legal."
+        ),
+        "transferencia_compulsoria": (
+            "OBS.: Aplicada transferencia compulsoria, conforme decisao institucional cabivel ao caso."
+        ),
         "orientacao_verbal": (
             "OBS.: O registro fica arquivado para acompanhamento pedag\u00f3gico e "
             "orienta\u00e7\u00e3o verbal junto ao estudante."
@@ -207,10 +229,25 @@ def _obter_observacao_final(ocorrencia: dict) -> str:
     )
 
 
+def _obter_gravidade_ocorrencia(ocorrencia: dict) -> str | None:
+    return inferir_gravidade_ocorrencia(_obter_itens_regimento_ocorrencia(ocorrencia))
+
+
+def _obter_titulo_documento(ocorrencia: dict) -> str:
+    acao = str(ocorrencia.get("acao_aplicada") or "").strip()
+    if not acao:
+        return TITULO_REGISTRO
+    return _rotulo_acao(acao).upper()
+
+
 def _obter_itens_regimento_ocorrencia(ocorrencia: dict) -> list[dict]:
     itens = ocorrencia.get("regimento_itens")
     if not isinstance(itens, list):
         return []
+
+    regex_artigo = re.compile(r"Art\.?\s*([^\s,;:-]+(?:[-A-Za-z0-9.]+)?)", re.IGNORECASE)
+    regex_inciso = re.compile(r"(?:inciso\s+([IVXLCDM]+)|-\s*([IVXLCDM]+)\b)", re.IGNORECASE)
+    regex_alinea = re.compile(r"alinea\s+([a-z])\b", re.IGNORECASE)
 
     itens_norm = []
     for item in itens:
@@ -220,8 +257,60 @@ def _obter_itens_regimento_ocorrencia(ocorrencia: dict) -> list[dict]:
         descricao = str(item.get("descricao") or "").strip()
         if not artigo and not descricao:
             continue
+
+        lei_nome = str(item.get("lei_nome") or "").strip()
+        artigo_numero = str(item.get("artigo_numero") or "").strip()
+        artigo_descricao = str(item.get("artigo_descricao") or "").strip()
+        inciso_numero = str(item.get("inciso_numero") or "").strip()
+        inciso_descricao = str(item.get("inciso_descricao") or "").strip()
+        alinea_identificador = str(item.get("alinea_identificador") or "").strip()
+        alinea_descricao = str(item.get("alinea_descricao") or "").strip()
+
+        if not lei_nome and " - Art." in artigo:
+            lei_nome = artigo.split(" - Art.", 1)[0].strip()
+
+        if not artigo_numero:
+            match_artigo = regex_artigo.search(artigo)
+            if match_artigo:
+                artigo_numero = str(match_artigo.group(1) or "").strip()
+        if not inciso_numero:
+            match_inciso = regex_inciso.search(artigo)
+            if match_inciso:
+                inciso_numero = str(match_inciso.group(1) or match_inciso.group(2) or "").strip()
+        if not alinea_identificador:
+            match_alinea = regex_alinea.search(artigo)
+            if match_alinea:
+                alinea_identificador = str(match_alinea.group(1) or "").strip()
+
+        tipo = str(item.get("tipo") or "").strip().lower()
+        if not tipo:
+            if alinea_identificador or item.get("alinea_id") is not None:
+                tipo = "alinea"
+            elif inciso_numero or item.get("inciso_id") is not None:
+                tipo = "inciso"
+            else:
+                tipo = "artigo"
+
+        if tipo == "artigo" and not artigo_descricao:
+            artigo_descricao = descricao
+        if tipo == "inciso" and not inciso_descricao:
+            inciso_descricao = descricao
+        if tipo == "alinea" and not alinea_descricao:
+            alinea_descricao = descricao
+
         itens_norm.append(
             {
+                "tipo": tipo,
+                "artigo_id": int(item["artigo_id"]) if item.get("artigo_id") is not None else None,
+                "inciso_id": int(item["inciso_id"]) if item.get("inciso_id") is not None else None,
+                "alinea_id": int(item["alinea_id"]) if item.get("alinea_id") is not None else None,
+                "lei_nome": lei_nome or None,
+                "artigo_numero": artigo_numero or None,
+                "artigo_descricao": artigo_descricao or None,
+                "inciso_numero": inciso_numero or None,
+                "inciso_descricao": inciso_descricao or None,
+                "alinea_identificador": alinea_identificador or None,
+                "alinea_descricao": alinea_descricao or None,
                 "artigo": artigo or "Sem artigo",
                 "descricao": descricao,
                 "ordem": int(item.get("ordem") or 0),
@@ -232,6 +321,223 @@ def _obter_itens_regimento_ocorrencia(ocorrencia: dict) -> list[dict]:
         itens_norm,
         key=lambda item: (item.get("ordem", 0), item.get("artigo", "")),
     )
+
+
+def _formatar_linha_artigo(numero: str | None, descricao: str | None, rotulo_legado: str | None = None) -> str:
+    numero_limpo = re.sub(r"^art\.?\s*", "", str(numero or "").strip(), flags=re.IGNORECASE)
+    descricao_limpa = str(descricao or "").strip()
+    if numero_limpo:
+        prefixo = f"Art. {numero_limpo}."
+        return f"{prefixo} {descricao_limpa}".strip() if descricao_limpa else prefixo
+    return str(rotulo_legado or descricao_limpa or "Sem artigo").strip() or "Sem artigo"
+
+
+def _formatar_linha_inciso(numero: str | None, descricao: str | None) -> str:
+    numero_limpo = str(numero or "").strip()
+    descricao_limpa = str(descricao or "").strip()
+    if numero_limpo and descricao_limpa:
+        return f"{numero_limpo} - {descricao_limpa}"
+    return numero_limpo or descricao_limpa
+
+
+def _formatar_linha_alinea(identificador: str | None, descricao: str | None) -> str:
+    identificador_limpo = str(identificador or "").strip()
+    descricao_limpa = str(descricao or "").strip()
+    if identificador_limpo and descricao_limpa:
+        return f"{identificador_limpo}) {descricao_limpa}"
+    return identificador_limpo or descricao_limpa
+
+
+def _normalizar_texto_chave(valor: str | None) -> str:
+    return re.sub(r"\s+", " ", str(valor or "").strip()).casefold()
+
+
+def _limpar_rotulo_artigo_legado(rotulo: str | None) -> str:
+    texto = str(rotulo or "").strip()
+    if not texto:
+        return ""
+    if " - Art." in texto:
+        texto = f"Art.{texto.split(' - Art.', 1)[1]}"
+    texto = re.sub(r",?\s*alinea\s+[a-z]\b.*$", "", texto, flags=re.IGNORECASE)
+    texto = re.sub(r",?\s*inciso\s+[IVXLCDM]+\b.*$", "", texto, flags=re.IGNORECASE)
+    texto = re.sub(r"\s*-\s*[IVXLCDM]+\b.*$", "", texto, flags=re.IGNORECASE)
+    return re.sub(r"\s+", " ", texto).strip(" ,;-")
+
+
+def _montar_chave_artigo(item: dict, chave_lei: str, ordem: int) -> str | int:
+    artigo_id = item.get("artigo_id")
+    if artigo_id is not None and int(artigo_id) > 0:
+        return int(artigo_id)
+
+    artigo_numero = _normalizar_texto_chave(item.get("artigo_numero"))
+    if artigo_numero:
+        return f"{chave_lei}|artigo|{artigo_numero}"
+
+    rotulo_legado = _normalizar_texto_chave(_limpar_rotulo_artigo_legado(item.get("artigo")))
+    if rotulo_legado:
+        return f"{chave_lei}|artigo-legado|{rotulo_legado}"
+
+    return f"{chave_lei}|artigo-ordem|{ordem}"
+
+
+def _montar_chave_inciso(item: dict, chave_artigo: str | int, ordem: int) -> str | int:
+    inciso_id = item.get("inciso_id")
+    if inciso_id is not None and int(inciso_id) > 0:
+        return int(inciso_id)
+
+    inciso_numero = _normalizar_texto_chave(item.get("inciso_numero"))
+    if inciso_numero:
+        return f"{chave_artigo}|inciso|{inciso_numero}"
+
+    return f"{chave_artigo}|inciso-ordem|{ordem}"
+
+
+def _montar_chave_alinea(item: dict, chave_inciso: str | int, ordem: int) -> str | int:
+    alinea_id = item.get("alinea_id")
+    if alinea_id is not None and int(alinea_id) > 0:
+        return int(alinea_id)
+
+    alinea_identificador = _normalizar_texto_chave(item.get("alinea_identificador"))
+    if alinea_identificador:
+        return f"{chave_inciso}|alinea|{alinea_identificador}"
+
+    return f"{chave_inciso}|alinea-ordem|{ordem}"
+
+
+def _montar_blocos_base_legal(itens: list[dict]) -> list[dict]:
+    if not itens:
+        return []
+
+    leis: dict[str, dict] = {}
+    for item in itens:
+        lei_nome = str(item.get("lei_nome") or "").strip()
+        artigo_numero = str(item.get("artigo_numero") or "").strip()
+        artigo_descricao = str(item.get("artigo_descricao") or "").strip()
+        inciso_numero = str(item.get("inciso_numero") or "").strip()
+        inciso_descricao = str(item.get("inciso_descricao") or "").strip()
+        alinea_identificador = str(item.get("alinea_identificador") or "").strip()
+        alinea_descricao = str(item.get("alinea_descricao") or "").strip()
+        ordem = int(item.get("ordem") or 0)
+        tipo = str(item.get("tipo") or "").strip().lower() or "artigo"
+
+        chave_lei = lei_nome or "__sem_lei__"
+        lei = leis.setdefault(
+            chave_lei,
+            {
+                "nome": lei_nome,
+                "ordem": ordem,
+                "artigos": {},
+            },
+        )
+        lei["ordem"] = min(int(lei.get("ordem") or ordem), ordem)
+
+        chave_artigo = _montar_chave_artigo(item, chave_lei, ordem)
+        artigo = lei["artigos"].setdefault(
+            chave_artigo,
+            {
+                "ordem": ordem,
+                "numero": artigo_numero,
+                "descricao": artigo_descricao,
+                "rotulo_legado": str(item.get("artigo") or "").strip(),
+                "incisos": {},
+            },
+        )
+        artigo["ordem"] = min(int(artigo.get("ordem") or ordem), ordem)
+        if artigo_numero and not artigo.get("numero"):
+            artigo["numero"] = artigo_numero
+        if artigo_descricao and not artigo.get("descricao"):
+            artigo["descricao"] = artigo_descricao
+        if str(item.get("artigo") or "").strip() and not artigo.get("rotulo_legado"):
+            artigo["rotulo_legado"] = str(item.get("artigo") or "").strip()
+
+        if tipo == "artigo" and not inciso_numero and not alinea_identificador:
+            continue
+
+        chave_inciso = _montar_chave_inciso(item, chave_artigo, ordem)
+        inciso = artigo["incisos"].setdefault(
+            chave_inciso,
+            {
+                "ordem": ordem,
+                "numero": inciso_numero,
+                "descricao": inciso_descricao,
+                "alineas": {},
+            },
+        )
+        inciso["ordem"] = min(int(inciso.get("ordem") or ordem), ordem)
+        if inciso_numero and not inciso.get("numero"):
+            inciso["numero"] = inciso_numero
+        if inciso_descricao and not inciso.get("descricao"):
+            inciso["descricao"] = inciso_descricao
+
+        if tipo != "alinea" and not alinea_identificador:
+            continue
+
+        chave_alinea = _montar_chave_alinea(item, chave_inciso, ordem)
+        alinea = inciso["alineas"].setdefault(
+            chave_alinea,
+            {
+                "ordem": ordem,
+                "identificador": alinea_identificador,
+                "descricao": alinea_descricao,
+            },
+        )
+        alinea["ordem"] = min(int(alinea.get("ordem") or ordem), ordem)
+        if alinea_identificador and not alinea.get("identificador"):
+            alinea["identificador"] = alinea_identificador
+        if alinea_descricao and not alinea.get("descricao"):
+            alinea["descricao"] = alinea_descricao
+
+    blocos: list[dict] = []
+    leis_ordenadas = sorted(
+        leis.values(),
+        key=lambda lei: (int(lei.get("ordem") or 0), str(lei.get("nome") or "").lower()),
+    )
+    total_leis_nomeadas = len([lei for lei in leis_ordenadas if str(lei.get("nome") or "").strip()])
+    mostrar_lei = total_leis_nomeadas > 1
+
+    for lei in leis_ordenadas:
+        nome_lei = str(lei.get("nome") or "").strip()
+        if mostrar_lei and nome_lei:
+            blocos.append({"tipo": "lei", "texto": nome_lei})
+
+        artigos_ordenados = sorted(
+            lei["artigos"].values(),
+            key=lambda artigo: (int(artigo.get("ordem") or 0), str(artigo.get("numero") or "")),
+        )
+        for artigo in artigos_ordenados:
+            blocos.append(
+                {
+                    "tipo": "artigo",
+                    "texto": _formatar_linha_artigo(
+                        artigo.get("numero"),
+                        artigo.get("descricao"),
+                        artigo.get("rotulo_legado"),
+                    ),
+                }
+            )
+
+            incisos_ordenados = sorted(
+                artigo["incisos"].values(),
+                key=lambda inciso: (int(inciso.get("ordem") or 0), str(inciso.get("numero") or "")),
+            )
+            for inciso in incisos_ordenados:
+                texto_inciso = _formatar_linha_inciso(inciso.get("numero"), inciso.get("descricao"))
+                if texto_inciso:
+                    blocos.append({"tipo": "inciso", "texto": texto_inciso})
+
+                alineas_ordenadas = sorted(
+                    inciso["alineas"].values(),
+                    key=lambda alinea: (int(alinea.get("ordem") or 0), str(alinea.get("identificador") or "")),
+                )
+                for alinea in alineas_ordenadas:
+                    texto_alinea = _formatar_linha_alinea(
+                        alinea.get("identificador"),
+                        alinea.get("descricao"),
+                    )
+                    if texto_alinea:
+                        blocos.append({"tipo": "alinea", "texto": texto_alinea})
+
+    return blocos
 
 
 def _carregar_logo() -> Image.Image | None:
@@ -319,21 +625,29 @@ class _RenderizadorRegistroOcorrencia:
         return altura
 
     def _desenhar_titulo_destacado(self, texto: str, y: int) -> int:
-        largura, altura = self._medir_texto(texto, self.fontes.titulo)
         padding_x = 24
         padding_y = 14
-        x = (self.largura - largura) / 2 - padding_x
+        largura_max = max(200, self.largura - (MARGEM_X * 2) - padding_x * 2)
+        linhas = self._quebrar_linhas(texto, self.fontes.titulo, largura_max)
+        altura_linha = self._altura_linha(self.fontes.titulo, fator=1.08)
+        largura_bloco = max(self._medir_texto(linha, self.fontes.titulo)[0] for linha in linhas)
+        altura_bloco = max(len(linhas), 1) * altura_linha
+        x = (self.largura - largura_bloco) / 2 - padding_x
         self.draw.rectangle(
-            (x, y, x + largura + padding_x * 2, y + altura + padding_y * 2),
+            (x, y, x + largura_bloco + padding_x * 2, y + altura_bloco + padding_y * 2),
             fill=COR_DESTAQUE,
         )
-        self.draw.text(
-            ((self.largura - largura) / 2, y + padding_y),
-            texto,
-            fill=COR_TEXTO,
-            font=self.fontes.titulo,
-        )
-        return altura + padding_y * 2
+        cursor_y = y + padding_y
+        for linha in linhas:
+            largura_linha, _ = self._medir_texto(linha, self.fontes.titulo)
+            self.draw.text(
+                ((self.largura - largura_linha) / 2, cursor_y),
+                linha,
+                fill=COR_TEXTO,
+                font=self.fontes.titulo,
+            )
+            cursor_y += altura_linha
+        return altura_bloco + padding_y * 2
 
     def _desenhar_cabecalho(self, *, continuacao: bool) -> int:
         y = MARGEM_TOPO
@@ -368,8 +682,18 @@ class _RenderizadorRegistroOcorrencia:
             y,
         )
         y += 8
-        y += self._desenhar_titulo_destacado(TITULO_REGISTRO, y)
-        return y + 34
+        y += self._desenhar_titulo_destacado(_obter_titulo_documento(self.ocorrencia), y)
+
+        gravidade = _obter_gravidade_ocorrencia(self.ocorrencia)
+        texto_gravidade = f"Gravidade: {rotulo_gravidade_ocorrencia(gravidade)}"
+        y += 12
+        y += self._desenhar_texto_centralizado(
+            texto_gravidade,
+            self.fontes.pequeno_bold,
+            y,
+            fill=COR_TEXTO_MUTED,
+        )
+        return y + 28
 
     def _quebrar_linhas(
         self,
@@ -456,14 +780,30 @@ class _RenderizadorRegistroOcorrencia:
 
     def _adicionar_secao_regimento(self, itens: list[dict]):
         self._adicionar_titulo_secao(SECAO_REGIMENTO)
-        for indice, item in enumerate(itens):
-            artigo = str(item.get("artigo") or "").strip() or "Sem artigo"
-            descricao = str(item.get("descricao") or "").strip()
-            self._adicionar_paragrafos(artigo, fonte=self.fontes.pequeno_bold)
-            if descricao:
-                self._adicionar_paragrafos(descricao, fonte=self.fontes.pequeno)
-            if indice != len(itens) - 1:
-                self._adicionar_espaco(10)
+        blocos = _montar_blocos_base_legal(itens)
+        for indice, bloco in enumerate(blocos):
+            tipo = str(bloco.get("tipo") or "").strip().lower()
+            texto = str(bloco.get("texto") or "").strip()
+            if not texto:
+                continue
+
+            if tipo == "lei":
+                self._adicionar_paragrafos(texto, fonte=self.fontes.pequeno_bold, espaco_final=4)
+                self._adicionar_espaco(4)
+            elif tipo == "artigo":
+                self._adicionar_paragrafos(texto, fonte=self.fontes.pequeno_bold, espaco_final=2)
+            elif tipo == "inciso":
+                self._adicionar_paragrafos(texto, fonte=self.fontes.pequeno, recuo=36, espaco_final=2)
+            elif tipo == "alinea":
+                self._adicionar_paragrafos(texto, fonte=self.fontes.pequeno, recuo=74, espaco_final=2)
+            else:
+                self._adicionar_paragrafos(texto, fonte=self.fontes.pequeno, espaco_final=2)
+
+            proximo_tipo = str(blocos[indice + 1].get("tipo") or "").strip().lower() if indice < len(blocos) - 1 else ""
+            if tipo == "alinea" and proximo_tipo != "alinea":
+                self._adicionar_espaco(4)
+            if tipo == "inciso" and proximo_tipo not in {"alinea", "inciso"}:
+                self._adicionar_espaco(4)
 
     def _adicionar_rotulo_valor(self, rotulo: str, valor: str):
         prefixo = f"{rotulo}: "
@@ -520,8 +860,11 @@ class _RenderizadorRegistroOcorrencia:
         *,
         fonte: ImageFont.ImageFont,
         destaque_primeira_linha: bool = False,
+        recuo: int = 0,
+        espaco_final: int = 8,
     ):
-        largura_disponivel = self.direita - self.esquerda
+        x_inicio = self.esquerda + max(0, int(recuo))
+        largura_disponivel = self.direita - x_inicio
         altura_linha = self._altura_linha(fonte)
         paragrafos = str(texto or "").replace("\r", "").split("\n")
 
@@ -532,13 +875,13 @@ class _RenderizadorRegistroOcorrencia:
 
             for linha in linhas:
                 self._garantir_espaco(altura_linha + 2)
-                self.draw.text((self.esquerda, self.y), linha, fill=COR_TEXTO, font=fonte)
+                self.draw.text((x_inicio, self.y), linha, fill=COR_TEXTO, font=fonte)
                 self.y += altura_linha
 
             if indice != len(paragrafos) - 1:
                 self.y += altura_linha // 3
 
-        self.y += 8
+        self.y += max(0, int(espaco_final))
 
     def _desenhar_rodape(self):
         altura_bloco = 220

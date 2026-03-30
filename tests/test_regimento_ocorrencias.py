@@ -30,12 +30,18 @@ class RegimentoOcorrenciasTest(unittest.TestCase):
 
             turma_id = int(database.listar_turmas_ativas()[0]["id"])
             item_1_id = database.criar_regimento_item(
-                "Art. 76 - VII",
-                "Integrar-se ao processo pedagogico desenvolvido pela unidade escolar.",
+                lei_nome="Regimento Interno",
+                artigo_numero="76",
+                artigo_descricao="Dos deveres do estudante.",
+                inciso_numero="VII",
+                inciso_descricao="Integrar-se ao processo pedagogico desenvolvido pela unidade escolar.",
             )
             item_2_id = database.criar_regimento_item(
-                "Art. 76 - X",
-                "Atender convocacao da Direcao Escolar e Coordenacao Pedagogica.",
+                lei_nome="Regimento Interno",
+                artigo_numero="76",
+                artigo_descricao="Dos deveres do estudante.",
+                inciso_numero="X",
+                inciso_descricao="Atender convocacao da Direcao Escolar e Coordenacao Pedagogica.",
             )
 
             ocorrencia_id = database.criar_ocorrencia(
@@ -64,18 +70,29 @@ class RegimentoOcorrenciasTest(unittest.TestCase):
                 ocorrencia["regimento_itens"][0]["descricao"],
                 "Atender convocacao da Direcao Escolar e Coordenacao Pedagogica.",
             )
+            self.assertEqual(
+                ocorrencia["regimento_itens"][0]["artigo_descricao"],
+                "Dos deveres do estudante.",
+            )
 
             database.atualizar_regimento_item(
                 item_2_id,
-                "Art. 76 - X",
-                "Descricao alterada no cadastro master.",
-                True,
+                lei_nome="Regimento Interno",
+                artigo_numero="76",
+                artigo_descricao="Descricao alterada no artigo master.",
+                inciso_numero="X",
+                inciso_descricao="Descricao alterada no cadastro master.",
+                ativo=True,
             )
 
             ocorrencia_atualizada = database.buscar_ocorrencia_por_id(ocorrencia_id)
             self.assertEqual(
                 ocorrencia_atualizada["regimento_itens"][0]["descricao"],
                 "Atender convocacao da Direcao Escolar e Coordenacao Pedagogica.",
+            )
+            self.assertEqual(
+                ocorrencia_atualizada["regimento_itens"][0]["artigo_descricao"],
+                "Dos deveres do estudante.",
             )
 
     def test_listar_ocorrencias_retorna_itens_do_regimento(self):
@@ -86,8 +103,9 @@ class RegimentoOcorrenciasTest(unittest.TestCase):
 
             turma_id = int(database.listar_turmas_ativas()[0]["id"])
             item_id = database.criar_regimento_item(
-                "Art. 80",
-                "Zelar pelo patrimonio e materiais da unidade escolar.",
+                lei_nome="ECA",
+                artigo_numero="80",
+                artigo_descricao="Zelar pelo patrimonio e materiais da unidade escolar.",
             )
             ocorrencia_id = database.criar_ocorrencia(
                 nome_estudante="Outro Estudante",
@@ -108,7 +126,38 @@ class RegimentoOcorrenciasTest(unittest.TestCase):
             ocorrencias = database.listar_ocorrencias()
             ocorrencia = next(item for item in ocorrencias if int(item["id"]) == int(ocorrencia_id))
             self.assertEqual(len(ocorrencia["regimento_itens"]), 1)
-            self.assertEqual(ocorrencia["regimento_itens"][0]["artigo"], "Art. 80")
+            self.assertEqual(ocorrencia["regimento_itens"][0]["artigo"], "ECA - Art. 80")
+
+    def test_nao_permite_excluir_item_da_base_legal_vinculado_a_ocorrencia(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database = _reload_database(db_path)
+            database.criar_tabelas()
+
+            turma_id = int(database.listar_turmas_ativas()[0]["id"])
+            item_id = database.criar_regimento_item(
+                lei_nome="ECA",
+                artigo_numero="90",
+                artigo_descricao="Registro protegido por vinculo de ocorrencia.",
+            )
+            ocorrencia_id = database.criar_ocorrencia(
+                nome_estudante="Estudante Protegido",
+                estudante_id=None,
+                turma_id=turma_id,
+                professor_requerente="Professor Teste",
+                professor_requerente_id=None,
+                disciplina="Historia",
+                data_ocorrencia="2026-03-22",
+                aula="4",
+                horario_ocorrencia="10:15",
+                descricao="Descricao protegida.",
+                acao_aplicada="advertencia",
+                status="registrado",
+            )
+            database.salvar_regimento_itens_ocorrencia(ocorrencia_id, [item_id])
+
+            with self.assertRaisesRegex(ValueError, "vinculado a ocorrencias"):
+                database.remover_regimento_item(item_id)
 
 
 if __name__ == "__main__":

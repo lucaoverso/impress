@@ -17,16 +17,27 @@ let abaCoordAtiva = "ocorrencias";
 let ocorrenciaEmEdicaoId = null;
 let ocorrenciaSelecionadaId = null;
 let estudanteEmEdicao = null;
-let regimentoItemEmEdicao = null;
+let leiBaseLegalEmEdicao = null;
+let artigoBaseLegalEmEdicao = null;
+let incisoBaseLegalEmEdicao = null;
+let alineaBaseLegalEmEdicao = null;
 let ocorrenciasCache = [];
 let estudantesCache = [];
 let regimentoItensCache = [];
+let leisBaseLegalCache = [];
+let artigosBaseLegalCache = [];
+let incisosBaseLegalCache = [];
+let alineasBaseLegalCache = [];
 let relatorioOcorrenciasCache = [];
 let relatorioOcorrenciasCarregado = false;
 let opcoesOcorrencias = {
     turmas: [],
     professores: [],
     disciplinas: [],
+    leis: [],
+    artigos: [],
+    incisos: [],
+    alineas: [],
     status: [],
     acoes_aplicadas: [],
     regimento_itens: [],
@@ -46,23 +57,68 @@ const mapaBuscaEstudantes = new Map();
 const mapaBuscaProfessores = new Map();
 const mapaBuscaDisciplinas = new Map();
 const mapaBuscaRegimento = new Map();
+const mapaBuscaLeisBaseLegal = new Map();
+const mapaBuscaArtigosBaseLegal = new Map();
+const mapaBuscaIncisosBaseLegal = new Map();
 let timerBuscaEstudantes = null;
 const MODELO_CSV_ESTUDANTES = [
     "nome,turma,ativo",
     "Ana Maria Souza,8 B,ativo",
     "Bruno Henrique Lima,9 A,1"
 ].join("\n");
-const MODELO_CSV_BASE_LEGAL = [
-    "artigo,descricao,ativo",
-    "\"Art. 76 - VII\",\"Integrar-se ao processo pedagogico desenvolvido pela unidade escolar.\",ativo",
-    "\"Art. 53 - ECA\",\"A crianca e o adolescente tem direito a educacao e respeito.\",ativo"
+const MODELO_JSON_BASE_LEGAL = [
+    "{",
+    "  \"lei\": \"Regimento Escolar\",",
+    "  \"artigos\": [",
+    "    {",
+    "      \"numero\": 76,",
+    "      \"descricao\": \"Sao deveres do estudante, alem daqueles previstos na legislacao vigente, os seguintes:\",",
+    "      \"incisos\": [",
+    "        {",
+    "          \"numero\": \"I\",",
+    "          \"descricao\": \"comparecer, pontualmente, as aulas, provas e outras atividades preparadas e programadas pelo professor;\"",
+    "        },",
+    "        {",
+    "          \"numero\": \"IV\",",
+    "          \"descricao\": \"apresentar-se, adequadamente, trajado para as aulas...\",",
+    "          \"alineas\": [",
+    "            {",
+    "              \"identificador\": \"a\",",
+    "              \"descricao\": \"short e bermuda (5 (cinco) centimetros acima do joelho);\"",
+    "            },",
+    "            {",
+    "              \"identificador\": \"b\",",
+    "              \"descricao\": \"oculos escuros, salvo se recomendacao medica;\"",
+    "            }",
+    "          ]",
+    "        }",
+    "      ]",
+    "    }",
+    "  ]",
+    "}"
 ].join("\n");
 const OBSERVACOES_ACAO_PREVIEW = {
+    advertencia_verbal: "OBS.: Aplicada advertencia verbal com orientacao pedagogica, conforme a base legal selecionada.",
+    retirada_sala_orientacao: "OBS.: Aplicada retirada do estudante da sala ou atividade, com encaminhamento para orientacao.",
+    suspensao_extracurricular: "OBS.: Aplicada suspensao temporaria de participacao em programas extracurriculares.",
+    suspensao_orientada_2_dias: "OBS.: Aplicada suspensao orientada das aulas pelo periodo definido pela equipe escolar.",
+    suspensao_aulas_3_dias: "OBS.: Aplicada suspensao das aulas, respeitado o limite previsto na base legal.",
+    transferencia_compulsoria: "OBS.: Aplicada transferencia compulsoria, conforme decisao institucional cabivel ao caso.",
     orientacao_verbal: "OBS.: O registro fica arquivado para acompanhamento pedagogico e orientacao verbal junto ao estudante.",
     advertencia: "OBS.: Pela falta de integracao e compromisso e por nao acatar as solicitacoes da docente, recebe esta acao pedagogico-disciplinar de advertencia.",
     chamada_responsavel: "OBS.: Solicitado o comparecimento do responsavel para alinhamento e acompanhamento conjunto do caso.",
     encaminhamento_direcao: "OBS.: O registro segue encaminhado a Direcao para providencias e acompanhamento institucional.",
     registro_informativo: "OBS.: Documento emitido para registro informativo e acompanhamento pedagogico interno."
+};
+const GRAVIDADE_ROTULOS = {
+    leve: "Falta leve",
+    grave: "Falta grave",
+    gravissima: "Falta gravissima"
+};
+const ORDEM_GRAVIDADE = {
+    leve: 1,
+    grave: 2,
+    gravissima: 3
 };
 
 function el(id) {
@@ -371,6 +427,7 @@ function registrarMapaSugestoes(mapa, item) {
             item.label,
             item.nome,
             item.artigo,
+            item.referencia,
         ]
             .map((valor) => String(valor || "").trim())
             .filter(Boolean)
@@ -389,7 +446,7 @@ function obterDescricaoSugestao(item) {
 }
 
 function obterTituloSugestao(item) {
-    return String(item?.nome || item?.artigo || item?.label || "").trim();
+    return String(item?.label || item?.nome || item?.artigo || item?.referencia || "").trim();
 }
 
 function obterItemSugestaoPorTexto(mapa, texto, itensFallback = []) {
@@ -415,6 +472,7 @@ function obterItemSugestaoPorTexto(mapa, texto, itensFallback = []) {
             item.label,
             item.nome,
             item.artigo,
+            item.referencia,
         ]
             .map((valor) => String(valor || "").trim().toLowerCase())
             .filter(Boolean);
@@ -433,7 +491,15 @@ function ocultarSugestoes(autocompleteId) {
 }
 
 function ocultarTodasSugestoes() {
-    ["listaEstudantesBusca", "listaProfessoresBusca", "listaDisciplinasBusca", "listaRegimentoBusca"].forEach(ocultarSugestoes);
+    [
+        "listaEstudantesBusca",
+        "listaProfessoresBusca",
+        "listaDisciplinasBusca",
+        "listaRegimentoBusca",
+        "listaLeisBaseLegal",
+        "listaArtigosBaseLegal",
+        "listaIncisosBaseLegal"
+    ].forEach(ocultarSugestoes);
 }
 
 function preencherDatalist(datalistId, mapa, itens, { onSelect = null, textoVazio = "" } = {}) {
@@ -518,6 +584,9 @@ function obterIdsRegimentoSelecionadosOcorrencia(ocorrencia) {
 function renderSelecionadorRegimento(idsSelecionados = null) {
     const container = el("ocorrenciaRegimentoSelecionados");
     if (!container) {
+        atualizarAcaoAplicadaPorGravidade({
+            gravidade: inferirGravidadeOcorrenciaBaseLegal(obterItensRegimentoSelecionadosPreview())
+        });
         atualizarPreviewOcorrencia();
         return;
     }
@@ -537,6 +606,7 @@ function renderSelecionadorRegimento(idsSelecionados = null) {
         vazio.className = "coordenacao-empty-state";
         vazio.innerText = "Cadastre itens da base legal para anexa-los na ocorrencia.";
         container.appendChild(vazio);
+        atualizarAcaoAplicadaPorGravidade({ gravidade: "" });
         atualizarPreviewOcorrencia();
         return;
     }
@@ -547,6 +617,7 @@ function renderSelecionadorRegimento(idsSelecionados = null) {
         vazio.className = "coordenacao-empty-state";
         vazio.innerText = "Nenhuma base legal anexada ainda.";
         container.appendChild(vazio);
+        atualizarAcaoAplicadaPorGravidade({ gravidade: "" });
         atualizarPreviewOcorrencia();
         return;
     }
@@ -593,6 +664,9 @@ function renderSelecionadorRegimento(idsSelecionados = null) {
         card.appendChild(corpo);
         card.appendChild(btnRemover);
         container.appendChild(card);
+    });
+    atualizarAcaoAplicadaPorGravidade({
+        gravidade: inferirGravidadeOcorrenciaBaseLegal(itensSelecionados)
     });
     atualizarPreviewOcorrencia();
 }
@@ -659,6 +733,24 @@ function popularSugestoesRegimento() {
     limparMapaSugestoes(mapaBuscaRegimento);
     (opcoesOcorrencias.regimento_itens || []).forEach((item) => registrarMapaSugestoes(mapaBuscaRegimento, item));
     ocultarSugestoes("listaRegimentoBusca");
+}
+
+function popularSugestoesLeisBaseLegal() {
+    limparMapaSugestoes(mapaBuscaLeisBaseLegal);
+    leisBaseLegalCache.forEach((item) => registrarMapaSugestoes(mapaBuscaLeisBaseLegal, item));
+    ocultarSugestoes("listaLeisBaseLegal");
+}
+
+function popularSugestoesArtigosBaseLegal() {
+    limparMapaSugestoes(mapaBuscaArtigosBaseLegal);
+    artigosBaseLegalCache.forEach((item) => registrarMapaSugestoes(mapaBuscaArtigosBaseLegal, item));
+    ocultarSugestoes("listaArtigosBaseLegal");
+}
+
+function popularSugestoesIncisosBaseLegal() {
+    limparMapaSugestoes(mapaBuscaIncisosBaseLegal);
+    incisosBaseLegalCache.forEach((item) => registrarMapaSugestoes(mapaBuscaIncisosBaseLegal, item));
+    ocultarSugestoes("listaIncisosBaseLegal");
 }
 
 function obterItensDisponiveisRegimento() {
@@ -807,6 +899,489 @@ function obterTextoOuPadrao(valor, padrao = "Nao informado") {
     return texto || padrao;
 }
 
+function normalizarIdBaseLegal(valor) {
+    const numero = Number(valor || 0);
+    return Number.isInteger(numero) && numero > 0 ? numero : null;
+}
+
+function normalizarTextoChaveBaseLegal(valor) {
+    return String(valor || "").trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function limparRotuloArtigoLegadoBaseLegal(rotulo) {
+    let texto = String(rotulo || "").trim();
+    if (!texto) return "";
+
+    if (texto.includes(" - Art.")) {
+        texto = `Art.${texto.split(" - Art.", 2)[1] || ""}`;
+    }
+
+    texto = texto.replace(/,?\s*alinea\s+[a-z]\b.*$/i, "");
+    texto = texto.replace(/,?\s*inciso\s+[IVXLCDM]+\b.*$/i, "");
+    texto = texto.replace(/\s*-\s*[IVXLCDM]+\b.*$/i, "");
+    return texto.replace(/\s+/g, " ").replace(/^[\s,;-]+|[\s,;-]+$/g, "");
+}
+
+function formatarLinhaArtigoBaseLegal(numero, descricao, rotuloLegado = "") {
+    const numeroLimpo = String(numero || "").trim().replace(/^art\.?\s*/i, "");
+    const descricaoLimpa = String(descricao || "").trim();
+    if (numeroLimpo) {
+        const prefixo = `Art. ${numeroLimpo}.`;
+        return descricaoLimpa ? `${prefixo} ${descricaoLimpa}` : prefixo;
+    }
+
+    const rotulo = String(rotuloLegado || "").trim();
+    return rotulo || descricaoLimpa || "Sem artigo";
+}
+
+function formatarLinhaIncisoBaseLegal(numero, descricao) {
+    const numeroLimpo = String(numero || "").trim();
+    const descricaoLimpa = String(descricao || "").trim();
+    if (numeroLimpo && descricaoLimpa) {
+        return `${numeroLimpo} - ${descricaoLimpa}`;
+    }
+    return numeroLimpo || descricaoLimpa;
+}
+
+function formatarLinhaAlineaBaseLegal(identificador, descricao) {
+    const identificadorLimpo = String(identificador || "").trim();
+    const descricaoLimpa = String(descricao || "").trim();
+    if (identificadorLimpo && descricaoLimpa) {
+        return `${identificadorLimpo}) ${descricaoLimpa}`;
+    }
+    return identificadorLimpo || descricaoLimpa;
+}
+
+function normalizarItensBaseLegal(itens) {
+    const regexArtigo = /Art\.?\s*([^\s,;:-]+(?:[-A-Za-z0-9.]+)?)/i;
+    const regexInciso = /(?:inciso\s+([IVXLCDM]+)|-\s*([IVXLCDM]+)\b)/i;
+    const regexAlinea = /alinea\s+([a-z])\b/i;
+
+    return (Array.isArray(itens) ? itens : [])
+        .map((item, indice) => {
+            if (!item || typeof item !== "object") return null;
+
+            const artigo = String(item.artigo || "").trim();
+            const descricao = String(item.descricao || "").trim();
+            if (!artigo && !descricao) return null;
+
+            let leiNome = String(item.lei_nome || "").trim();
+            let artigoNumero = String(item.artigo_numero || "").trim();
+            let artigoDescricao = String(item.artigo_descricao || "").trim();
+            let incisoNumero = String(item.inciso_numero || "").trim();
+            let incisoDescricao = String(item.inciso_descricao || "").trim();
+            let alineaIdentificador = String(item.alinea_identificador || "").trim();
+            let alineaDescricao = String(item.alinea_descricao || "").trim();
+
+            if (!leiNome && artigo.includes(" - Art.")) {
+                leiNome = artigo.split(" - Art.", 2)[0].trim();
+            }
+
+            if (!artigoNumero) {
+                const matchArtigo = artigo.match(regexArtigo);
+                if (matchArtigo?.[1]) {
+                    artigoNumero = String(matchArtigo[1]).trim();
+                }
+            }
+
+            if (!incisoNumero) {
+                const matchInciso = artigo.match(regexInciso);
+                if (matchInciso?.[1] || matchInciso?.[2]) {
+                    incisoNumero = String(matchInciso[1] || matchInciso[2] || "").trim();
+                }
+            }
+
+            if (!alineaIdentificador) {
+                const matchAlinea = artigo.match(regexAlinea);
+                if (matchAlinea?.[1]) {
+                    alineaIdentificador = String(matchAlinea[1]).trim();
+                }
+            }
+
+            let tipo = String(item.tipo || "").trim().toLowerCase();
+            if (!tipo) {
+                if (alineaIdentificador || normalizarIdBaseLegal(item.alinea_id)) {
+                    tipo = "alinea";
+                } else if (incisoNumero || normalizarIdBaseLegal(item.inciso_id)) {
+                    tipo = "inciso";
+                } else {
+                    tipo = "artigo";
+                }
+            }
+
+            if (tipo === "artigo" && !artigoDescricao) artigoDescricao = descricao;
+            if (tipo === "inciso" && !incisoDescricao) incisoDescricao = descricao;
+            if (tipo === "alinea" && !alineaDescricao) alineaDescricao = descricao;
+
+            const ordemBruta = Number(item.ordem);
+            const ordem = Number.isFinite(ordemBruta) && ordemBruta > 0
+                ? Math.trunc(ordemBruta)
+                : indice + 1;
+
+            return {
+                tipo,
+                artigo_id: normalizarIdBaseLegal(item.artigo_id),
+                inciso_id: normalizarIdBaseLegal(item.inciso_id),
+                alinea_id: normalizarIdBaseLegal(item.alinea_id),
+                lei_nome: leiNome || "",
+                artigo_numero: artigoNumero || "",
+                artigo_descricao: artigoDescricao || "",
+                inciso_numero: incisoNumero || "",
+                inciso_descricao: incisoDescricao || "",
+                alinea_identificador: alineaIdentificador || "",
+                alinea_descricao: alineaDescricao || "",
+                artigo: artigo || "Sem artigo",
+                descricao,
+                ordem
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => (
+            a.ordem - b.ordem
+            || String(a.artigo || "").localeCompare(String(b.artigo || ""), "pt-BR", { sensitivity: "base" })
+        ));
+}
+
+function montarChaveArtigoBaseLegal(item, chaveLei, ordem) {
+    if (item.artigo_id) return String(item.artigo_id);
+
+    const artigoNumero = normalizarTextoChaveBaseLegal(item.artigo_numero);
+    if (artigoNumero) {
+        return `${chaveLei}|artigo|${artigoNumero}`;
+    }
+
+    const rotuloLegado = normalizarTextoChaveBaseLegal(limparRotuloArtigoLegadoBaseLegal(item.artigo));
+    if (rotuloLegado) {
+        return `${chaveLei}|artigo-legado|${rotuloLegado}`;
+    }
+
+    return `${chaveLei}|artigo-ordem|${ordem}`;
+}
+
+function montarChaveIncisoBaseLegal(item, chaveArtigo, ordem) {
+    if (item.inciso_id) return String(item.inciso_id);
+
+    const incisoNumero = normalizarTextoChaveBaseLegal(item.inciso_numero);
+    if (incisoNumero) {
+        return `${chaveArtigo}|inciso|${incisoNumero}`;
+    }
+
+    return `${chaveArtigo}|inciso-ordem|${ordem}`;
+}
+
+function montarChaveAlineaBaseLegal(item, chaveInciso, ordem) {
+    if (item.alinea_id) return String(item.alinea_id);
+
+    const alineaIdentificador = normalizarTextoChaveBaseLegal(item.alinea_identificador);
+    if (alineaIdentificador) {
+        return `${chaveInciso}|alinea|${alineaIdentificador}`;
+    }
+
+    return `${chaveInciso}|alinea-ordem|${ordem}`;
+}
+
+function ordenarColecaoBaseLegal(itens, campoTexto) {
+    return Array.from(itens.values()).sort((a, b) => (
+        Number(a.ordem || 0) - Number(b.ordem || 0)
+        || String(a[campoTexto] || "").localeCompare(String(b[campoTexto] || ""), "pt-BR", { sensitivity: "base" })
+    ));
+}
+
+function construirEstruturaBaseLegal(itens) {
+    const leis = new Map();
+
+    normalizarItensBaseLegal(itens).forEach((item) => {
+        const ordem = Number(item.ordem || 0);
+        const chaveLei = String(item.lei_nome || "__sem_lei__").trim() || "__sem_lei__";
+        let lei = leis.get(chaveLei);
+        if (!lei) {
+            lei = {
+                nome: String(item.lei_nome || "").trim(),
+                ordem,
+                artigos: new Map()
+            };
+            leis.set(chaveLei, lei);
+        } else {
+            lei.ordem = Math.min(Number(lei.ordem || ordem), ordem);
+        }
+
+        const chaveArtigo = montarChaveArtigoBaseLegal(item, chaveLei, ordem);
+        let artigo = lei.artigos.get(chaveArtigo);
+        if (!artigo) {
+            artigo = {
+                ordem,
+                numero: item.artigo_numero,
+                descricao: item.artigo_descricao,
+                rotulo_legado: String(item.artigo || "").trim(),
+                incisos: new Map()
+            };
+            lei.artigos.set(chaveArtigo, artigo);
+        } else {
+            artigo.ordem = Math.min(Number(artigo.ordem || ordem), ordem);
+            if (item.artigo_numero && !artigo.numero) artigo.numero = item.artigo_numero;
+            if (item.artigo_descricao && !artigo.descricao) artigo.descricao = item.artigo_descricao;
+            if (item.artigo && !artigo.rotulo_legado) artigo.rotulo_legado = String(item.artigo || "").trim();
+        }
+
+        if (item.tipo === "artigo" && !item.inciso_numero && !item.alinea_identificador) {
+            return;
+        }
+
+        const chaveInciso = montarChaveIncisoBaseLegal(item, chaveArtigo, ordem);
+        let inciso = artigo.incisos.get(chaveInciso);
+        if (!inciso) {
+            inciso = {
+                ordem,
+                numero: item.inciso_numero,
+                descricao: item.inciso_descricao,
+                alineas: new Map()
+            };
+            artigo.incisos.set(chaveInciso, inciso);
+        } else {
+            inciso.ordem = Math.min(Number(inciso.ordem || ordem), ordem);
+            if (item.inciso_numero && !inciso.numero) inciso.numero = item.inciso_numero;
+            if (item.inciso_descricao && !inciso.descricao) inciso.descricao = item.inciso_descricao;
+        }
+
+        if (item.tipo !== "alinea" && !item.alinea_identificador) {
+            return;
+        }
+
+        const chaveAlinea = montarChaveAlineaBaseLegal(item, chaveInciso, ordem);
+        let alinea = inciso.alineas.get(chaveAlinea);
+        if (!alinea) {
+            alinea = {
+                ordem,
+                identificador: item.alinea_identificador,
+                descricao: item.alinea_descricao
+            };
+            inciso.alineas.set(chaveAlinea, alinea);
+        } else {
+            alinea.ordem = Math.min(Number(alinea.ordem || ordem), ordem);
+            if (item.alinea_identificador && !alinea.identificador) alinea.identificador = item.alinea_identificador;
+            if (item.alinea_descricao && !alinea.descricao) alinea.descricao = item.alinea_descricao;
+        }
+    });
+
+    const leisOrdenadas = Array.from(leis.values())
+        .sort((a, b) => (
+            Number(a.ordem || 0) - Number(b.ordem || 0)
+            || String(a.nome || "").localeCompare(String(b.nome || ""), "pt-BR", { sensitivity: "base" })
+        ))
+        .map((lei) => ({
+            ...lei,
+            artigos: ordenarColecaoBaseLegal(lei.artigos, "numero").map((artigo) => ({
+                ...artigo,
+                incisos: ordenarColecaoBaseLegal(artigo.incisos, "numero").map((inciso) => ({
+                    ...inciso,
+                    alineas: ordenarColecaoBaseLegal(inciso.alineas, "identificador")
+                }))
+            }))
+        }));
+
+    const totalLeisNomeadas = leisOrdenadas.filter((lei) => String(lei.nome || "").trim()).length;
+    return {
+        leis: leisOrdenadas,
+        mostrarLei: totalLeisNomeadas > 1
+    };
+}
+
+function criarElementoTextoBaseLegal(tagName, className, texto) {
+    const elemento = document.createElement(tagName);
+    if (className) {
+        elemento.className = className;
+    }
+    elemento.innerText = texto;
+    return elemento;
+}
+
+function construirFragmentoBaseLegalAgrupada(itens, classes) {
+    const estrutura = construirEstruturaBaseLegal(itens);
+    if (!estrutura.leis.length) return null;
+
+    const fragmento = document.createDocumentFragment();
+    estrutura.leis.forEach((lei) => {
+        if (estrutura.mostrarLei && lei.nome) {
+            fragmento.appendChild(
+                criarElementoTextoBaseLegal("div", classes.law, lei.nome)
+            );
+        }
+
+        lei.artigos.forEach((artigo) => {
+            const grupo = document.createElement("div");
+            grupo.className = classes.group;
+            grupo.appendChild(
+                criarElementoTextoBaseLegal(
+                    "strong",
+                    `${classes.line} is-artigo`,
+                    formatarLinhaArtigoBaseLegal(artigo.numero, artigo.descricao, artigo.rotulo_legado)
+                )
+            );
+
+            artigo.incisos.forEach((inciso) => {
+                const textoInciso = formatarLinhaIncisoBaseLegal(inciso.numero, inciso.descricao);
+                if (textoInciso) {
+                    grupo.appendChild(
+                        criarElementoTextoBaseLegal("span", `${classes.line} is-inciso`, textoInciso)
+                    );
+                }
+
+                inciso.alineas.forEach((alinea) => {
+                    const textoAlinea = formatarLinhaAlineaBaseLegal(alinea.identificador, alinea.descricao);
+                    if (textoAlinea) {
+                        grupo.appendChild(
+                            criarElementoTextoBaseLegal("span", `${classes.line} is-alinea`, textoAlinea)
+                        );
+                    }
+                });
+            });
+
+            fragmento.appendChild(grupo);
+        });
+    });
+
+    return fragmento;
+}
+
+function romanoParaInteiroBaseLegal(valor) {
+    const texto = String(valor || "").trim().toUpperCase();
+    if (!texto) return null;
+    const mapa = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
+    let total = 0;
+    let anterior = 0;
+
+    for (let indice = texto.length - 1; indice >= 0; indice -= 1) {
+        const simbolo = texto[indice];
+        const atual = mapa[simbolo];
+        if (!atual) return null;
+        if (atual < anterior) {
+            total -= atual;
+        } else {
+            total += atual;
+            anterior = atual;
+        }
+    }
+    return total;
+}
+
+function extrairReferenciaItemBaseLegal(item) {
+    const artigoRotulo = String(item?.artigo || "").trim();
+    let artigoNumero = String(item?.artigo_numero || "").trim().replace(/^art\.?\s*/i, "");
+    let incisoNumero = String(item?.inciso_numero || "").trim().toUpperCase();
+
+    if (!artigoNumero && artigoRotulo) {
+        const matchArtigo = artigoRotulo.match(/Art\.?\s*([^\s,;:-]+(?:[-A-Za-z0-9.]+)?)/i);
+        if (matchArtigo?.[1]) {
+            artigoNumero = String(matchArtigo[1]).trim().replace(/^art\.?\s*/i, "");
+        }
+    }
+    if (!incisoNumero && artigoRotulo) {
+        const matchInciso = artigoRotulo.match(/(?:inciso\s+([IVXLCDM]+)|-\s*([IVXLCDM]+)\b)/i);
+        if (matchInciso?.[1] || matchInciso?.[2]) {
+            incisoNumero = String(matchInciso[1] || matchInciso[2] || "").trim().toUpperCase();
+        }
+    }
+
+    return {
+        artigoNumero,
+        incisoNumero
+    };
+}
+
+function inferirGravidadeItemBaseLegal(item) {
+    const { artigoNumero, incisoNumero } = extrairReferenciaItemBaseLegal(item);
+    if (!artigoNumero) return "";
+
+    if (artigoNumero === "76") {
+        return "leve";
+    }
+
+    const incisoValor = romanoParaInteiroBaseLegal(incisoNumero);
+    if (artigoNumero === "81" || artigoNumero === "82") {
+        if (incisoValor === 1) return "leve";
+        if (incisoValor === 2) return "grave";
+        if (incisoValor === 3) return "gravissima";
+        return "";
+    }
+
+    if (artigoNumero !== "77" || !incisoValor) {
+        return "";
+    }
+    if (incisoValor >= 1 && incisoValor <= 7) return "leve";
+    if (incisoValor >= 8 && incisoValor <= 13) return "grave";
+    if (incisoValor >= 14 && incisoValor <= 26) return "gravissima";
+    return "";
+}
+
+function inferirGravidadeOcorrenciaBaseLegal(itens) {
+    let gravidadeFinal = "";
+    let ordemFinal = 0;
+    normalizarItensBaseLegal(itens).forEach((item) => {
+        const gravidadeItem = inferirGravidadeItemBaseLegal(item);
+        const ordemItem = ORDEM_GRAVIDADE[gravidadeItem] || 0;
+        if (ordemItem > ordemFinal) {
+            gravidadeFinal = gravidadeItem;
+            ordemFinal = ordemItem;
+        }
+    });
+    return gravidadeFinal;
+}
+
+function obterAcoesAplicadasDisponiveis(gravidade, acaoAtual = "") {
+    const acaoAtualLimpa = String(acaoAtual || "").trim();
+    const acoes = Array.isArray(opcoesOcorrencias.acoes_aplicadas)
+        ? opcoesOcorrencias.acoes_aplicadas
+        : [];
+    const detalhadas = acoes.filter((item) => !Boolean(item?.legado));
+    const filtradas = gravidade
+        ? detalhadas.filter((item) => String(item?.gravidade || "").trim() === gravidade)
+        : detalhadas;
+
+    const opcoes = filtradas.length > 0 ? filtradas : detalhadas;
+    if (!acaoAtualLimpa) return opcoes;
+
+    const atual = acoes.find((item) => String(item?.id || "").trim() === acaoAtualLimpa);
+    if (!atual) return opcoes;
+    if (opcoes.some((item) => String(item?.id || "").trim() === acaoAtualLimpa)) {
+        return opcoes;
+    }
+    return [...opcoes, atual];
+}
+
+function atualizarAcaoAplicadaPorGravidade({
+    manterValorAtual = true,
+    gravidade = "",
+    acaoAtual = null
+} = {}) {
+    const select = el("ocorrenciaAcaoAplicada");
+    if (!select) return "";
+
+    const valorAtual = acaoAtual === null
+        ? String(select.value || "").trim()
+        : String(acaoAtual || "").trim();
+    const opcoes = obterAcoesAplicadasDisponiveis(gravidade, valorAtual);
+    const placeholder = gravidade
+        ? "Selecione a acao permitida"
+        : "Selecione a acao aplicada";
+
+    preencherSelect("ocorrenciaAcaoAplicada", opcoes, {
+        placeholder
+    });
+
+    if (manterValorAtual && valorAtual && opcoes.some((item) => String(item.id) === valorAtual)) {
+        select.value = valorAtual;
+    }
+
+    const hint = el("ocorrenciaGravidadeInfo");
+    if (hint) {
+        hint.innerText = gravidade
+            ? `Gravidade automatica: ${GRAVIDADE_ROTULOS[gravidade] || gravidade}.`
+            : "Gravidade automatica ainda nao identificada pela base legal selecionada.";
+    }
+
+    return gravidade;
+}
+
 function obterTurmaPreviewFormulario() {
     const turmaId = el("ocorrenciaTurmaId")?.value;
     const turma = obterTurmaOpcaoPorId(turmaId);
@@ -844,6 +1419,19 @@ function obterItensRegimentoSelecionadosPreview() {
     return (opcoesOcorrencias.regimento_itens || []).filter((item) => idsSelecionados.has(Number(item?.id || 0)));
 }
 
+function atualizarCabecalhoPreviewOcorrencia(acaoAplicada, gravidade) {
+    const titulo = el("previewTituloDocumento");
+    if (titulo) {
+        const rotulo = String(rotuloAcao(acaoAplicada) || "").trim();
+        titulo.innerText = rotulo ? rotulo.toUpperCase() : "REGISTRO DE OCORRENCIAS DISCIPLINARES";
+    }
+
+    const previewGravidade = el("previewGravidade");
+    if (previewGravidade) {
+        previewGravidade.innerText = `Gravidade: ${GRAVIDADE_ROTULOS[gravidade] || "Nao identificada"}`;
+    }
+}
+
 function definirTextoPreview(id, valor, padrao = "Nao informado") {
     const target = el(id);
     if (!target) return;
@@ -863,20 +1451,21 @@ function renderizarBaseLegalPreview(itens) {
         return;
     }
 
-    itens.forEach((item) => {
-        const artigo = document.createElement("div");
-        artigo.className = "coordenacao-preview-legal-item";
-
-        const titulo = document.createElement("strong");
-        titulo.innerText = obterTextoOuPadrao(item?.artigo, "Sem artigo");
-
-        const descricao = document.createElement("span");
-        descricao.innerText = obterTextoOuPadrao(item?.descricao, "Sem descricao.");
-
-        artigo.appendChild(titulo);
-        artigo.appendChild(descricao);
-        container.appendChild(artigo);
+    const fragmento = construirFragmentoBaseLegalAgrupada(itens, {
+        group: "coordenacao-preview-legal-item",
+        line: "coordenacao-preview-legal-line",
+        law: "coordenacao-preview-legal-law"
     });
+
+    if (!fragmento) {
+        const vazio = document.createElement("p");
+        vazio.className = "coordenacao-preview-empty";
+        vazio.innerText = "Nenhuma base legal anexada ainda.";
+        container.appendChild(vazio);
+        return;
+    }
+
+    container.appendChild(fragmento);
 }
 
 function atualizarPreviewOcorrencia() {
@@ -890,6 +1479,8 @@ function atualizarPreviewOcorrencia() {
     const dataOcorrencia = el("ocorrenciaData")?.value;
     const acaoAplicada = el("ocorrenciaAcaoAplicada")?.value;
     const status = el("ocorrenciaStatus")?.value;
+    const itensRegimentoSelecionados = obterItensRegimentoSelecionadosPreview();
+    const gravidade = inferirGravidadeOcorrenciaBaseLegal(itensRegimentoSelecionados);
 
     definirTextoPreview("previewNomeEstudante", estudante);
     definirTextoPreview("previewTurma", obterTurmaPreviewFormulario(), "Nao informada");
@@ -900,6 +1491,7 @@ function atualizarPreviewOcorrencia() {
     definirTextoPreview("previewHorario", obterHorarioPreviewFormulario(), "Nao informado");
     definirTextoPreview("previewAcao", rotuloAcao(acaoAplicada), "Nao informada");
     definirTextoPreview("previewStatus", rotuloStatus(status), "Nao informado");
+    atualizarCabecalhoPreviewOcorrencia(acaoAplicada, gravidade);
 
     const descricaoPreview = el("previewDescricao");
     if (descricaoPreview) {
@@ -909,7 +1501,7 @@ function atualizarPreviewOcorrencia() {
         );
     }
 
-    renderizarBaseLegalPreview(obterItensRegimentoSelecionadosPreview());
+    renderizarBaseLegalPreview(itensRegimentoSelecionados);
 
     const observacaoPreview = el("previewObservacao");
     if (observacaoPreview) {
@@ -1039,7 +1631,10 @@ function preencherFormularioOcorrencia(ocorrencia) {
     el("ocorrenciaHorario").value = ocorrencia.horario_ocorrencia || "";
     el("ocorrenciaDescricao").value = ocorrencia.descricao || "";
     renderSelecionadorRegimento(obterIdsRegimentoSelecionadosOcorrencia(ocorrencia));
-    el("ocorrenciaAcaoAplicada").value = ocorrencia.acao_aplicada || "";
+    atualizarAcaoAplicadaPorGravidade({
+        gravidade: inferirGravidadeOcorrenciaBaseLegal(obterItensRegimentoSelecionadosPreview()),
+        acaoAtual: ocorrencia.acao_aplicada || ""
+    });
     el("ocorrenciaStatus").value = ocorrencia.status || opcoesOcorrencias.status_padrao || "registrado";
     el("tituloFormOcorrencia").innerText = "Editar ocorrencia";
     el("btnCancelarEdicaoOcorrencia").style.display = "inline-block";
@@ -1136,21 +1731,14 @@ function criarBlocoDetalhesRegimento(ocorrencia) {
 
     const lista = document.createElement("div");
     lista.className = "coordenacao-detail-list";
-
-    itens.forEach((item) => {
-        const artigo = document.createElement("div");
-        artigo.className = "coordenacao-detail-list-item";
-
-        const artigoTitulo = document.createElement("strong");
-        artigoTitulo.innerText = item.artigo || "Sem artigo";
-
-        const descricao = document.createElement("span");
-        descricao.innerText = item.descricao || "Sem descricao.";
-
-        artigo.appendChild(artigoTitulo);
-        artigo.appendChild(descricao);
-        lista.appendChild(artigo);
+    const fragmento = construirFragmentoBaseLegalAgrupada(itens, {
+        group: "coordenacao-detail-list-item",
+        line: "coordenacao-detail-line",
+        law: "coordenacao-detail-list-law"
     });
+    if (fragmento) {
+        lista.appendChild(fragmento);
+    }
 
     wrapper.appendChild(lista);
     return wrapper;
@@ -1472,11 +2060,16 @@ function invalidarRelatorioOcorrencias() {
 
 async function carregarOpcoesOcorrencias() {
     const idsRegimentoSelecionados = obterIdsRegimentoSelecionadosFormulario();
+    const acaoAplicadaAtual = String(el("ocorrenciaAcaoAplicada")?.value || "").trim();
     const opcoesApi = await fetchJson("/ocorrencias/opcoes", { headers });
     opcoesOcorrencias = {
         turmas: Array.isArray(opcoesApi.turmas) ? opcoesApi.turmas : [],
         professores: Array.isArray(opcoesApi.professores) ? opcoesApi.professores : [],
         disciplinas: Array.isArray(opcoesApi.disciplinas) ? opcoesApi.disciplinas : [],
+        leis: Array.isArray(opcoesApi.leis) ? opcoesApi.leis : [],
+        artigos: Array.isArray(opcoesApi.artigos) ? opcoesApi.artigos : [],
+        incisos: Array.isArray(opcoesApi.incisos) ? opcoesApi.incisos : [],
+        alineas: Array.isArray(opcoesApi.alineas) ? opcoesApi.alineas : [],
         status: Array.isArray(opcoesApi.status) ? opcoesApi.status : [],
         acoes_aplicadas: Array.isArray(opcoesApi.acoes_aplicadas) ? opcoesApi.acoes_aplicadas : [],
         regimento_itens: Array.isArray(opcoesApi.regimento_itens) ? opcoesApi.regimento_itens : [],
@@ -1489,6 +2082,12 @@ async function carregarOpcoesOcorrencias() {
             criado_em: item.criado_em || ""
         }))
         : [];
+    sincronizarCatalogosBaseLegal({
+        leis: opcoesOcorrencias.leis,
+        artigos: opcoesOcorrencias.artigos,
+        incisos: opcoesOcorrencias.incisos,
+        alineas: opcoesOcorrencias.alineas
+    });
 
     rotulosAcao.clear();
     rotulosStatus.clear();
@@ -1502,7 +2101,6 @@ async function carregarOpcoesOcorrencias() {
     preencherSelect("ocorrenciaTurmaId", opcoesOcorrencias.turmas, { placeholder: "Selecione a turma" });
     preencherSelect("filtroTurmaId", opcoesOcorrencias.turmas, { incluirTodos: true });
     preencherSelect("relatorioTurmaId", opcoesOcorrencias.turmas, { incluirTodos: true });
-    preencherSelect("ocorrenciaAcaoAplicada", opcoesOcorrencias.acoes_aplicadas, { placeholder: "Selecione a acao aplicada" });
     preencherSelect("ocorrenciaStatus", opcoesOcorrencias.status, {
         placeholder: "Selecione o status",
         valorPadrao: opcoesOcorrencias.status_padrao || "registrado"
@@ -1515,6 +2113,15 @@ async function carregarOpcoesOcorrencias() {
     popularSugestoesProfessores();
     popularSugestoesDisciplinas();
     popularSugestoesRegimento();
+
+    const idsSelecionadosSet = new Set(normalizarIdsRegimento(idsRegimentoSelecionados));
+    const itensRegimentoSelecionados = (opcoesOcorrencias.regimento_itens || []).filter((item) =>
+        idsSelecionadosSet.has(Number(item?.id || 0))
+    );
+    atualizarAcaoAplicadaPorGravidade({
+        gravidade: inferirGravidadeOcorrenciaBaseLegal(itensRegimentoSelecionados),
+        acaoAtual: acaoAplicadaAtual
+    });
 
     const turmaInicial = opcoesOcorrencias.turmas[0];
     atualizarSelectAulasPorTurma(turmaInicial ? turmaInicial.id : "");
@@ -1757,14 +2364,10 @@ function renderTabelaRegimento() {
 
     regimentoItensCache.forEach((item) => {
         const tr = document.createElement("tr");
-        tr.appendChild(criarCelulaTabela("Artigo", item.artigo || ""));
+        tr.appendChild(criarCelulaTabela("Tipo", rotuloTipoBaseLegal(item.tipo)));
+        tr.appendChild(criarCelulaTabela("Lei", item.lei_nome || ""));
+        tr.appendChild(criarCelulaTabela("Referencia", item.artigo || ""));
         tr.appendChild(criarCelulaTabela("Descricao", item.descricao || ""));
-
-        const badge = document.createElement("span");
-        badge.className = `status-chip ${classeStatusEstudante(Boolean(item.ativo))}`;
-        badge.innerText = item.ativo ? "Ativo" : "Inativo";
-        tr.appendChild(criarCelulaTabela("Status", badge));
-        tr.appendChild(criarCelulaTabela("Atualizado em", formatarDataHora(item.atualizado_em)));
 
         const linhaAcoes = document.createElement("div");
         linhaAcoes.className = "coordenacao-inline";
@@ -1773,32 +2376,349 @@ function renderTabelaRegimento() {
         btnEditar.type = "button";
         btnEditar.innerText = "Editar";
         btnEditar.addEventListener("click", () => {
-            iniciarEdicaoRegimento(item);
+            iniciarEdicaoBaseLegal(item);
         });
 
-        const btnStatus = document.createElement("button");
-        btnStatus.type = "button";
-        btnStatus.innerText = item.ativo ? "Desativar" : "Ativar";
-        btnStatus.addEventListener("click", async () => {
-            const idsSelecionados = obterIdsRegimentoSelecionadosFormulario();
-            try {
-                await fetchJson(`/regimento-itens/${item.id}/status`, {
-                    method: "PUT",
-                    headers: headersJson,
-                    body: JSON.stringify({ ativo: !Boolean(item.ativo) })
-                });
-                setMensagemRegimento("Status da base legal atualizado.");
-                await carregarRegimentoItens(idsSelecionados);
-            } catch (err) {
-                setMensagemRegimento(err.message, true);
-            }
+        const btnExcluir = document.createElement("button");
+        btnExcluir.type = "button";
+        btnExcluir.className = "coordenacao-btn-danger";
+        btnExcluir.innerText = "Excluir";
+        btnExcluir.addEventListener("click", () => {
+            excluirBaseLegal(item);
         });
 
         linhaAcoes.appendChild(btnEditar);
-        linhaAcoes.appendChild(btnStatus);
+        linhaAcoes.appendChild(btnExcluir);
         tr.appendChild(criarCelulaTabela("Acoes", linhaAcoes));
 
         tbody.appendChild(tr);
+    });
+}
+
+function renderTabelaLeisBaseLegal() {
+    const tbody = el("tbodyLeisBaseLegal");
+    if (!tbody) return;
+    tbody.innerHTML = "";
+
+    if (!Array.isArray(leisBaseLegalCache) || leisBaseLegalCache.length === 0) {
+        const tr = document.createElement("tr");
+        const td = document.createElement("td");
+        td.colSpan = 2;
+        td.className = "booking-empty";
+        td.innerText = "Nenhuma lei cadastrada.";
+        tr.appendChild(td);
+        tbody.appendChild(tr);
+        return;
+    }
+
+    leisBaseLegalCache.forEach((lei) => {
+        const tr = document.createElement("tr");
+        tr.appendChild(criarCelulaTabela("Lei", lei.nome || ""));
+
+        const linhaAcoes = document.createElement("div");
+        linhaAcoes.className = "coordenacao-inline";
+
+        const btnEditar = document.createElement("button");
+        btnEditar.type = "button";
+        btnEditar.innerText = "Editar";
+        btnEditar.addEventListener("click", () => {
+            iniciarEdicaoLeiBaseLegal(lei);
+        });
+
+        const btnExcluir = document.createElement("button");
+        btnExcluir.type = "button";
+        btnExcluir.className = "coordenacao-btn-danger";
+        btnExcluir.innerText = "Excluir";
+        btnExcluir.addEventListener("click", () => {
+            excluirLeiBaseLegal(lei);
+        });
+
+        linhaAcoes.appendChild(btnEditar);
+        linhaAcoes.appendChild(btnExcluir);
+        tr.appendChild(criarCelulaTabela("Acoes", linhaAcoes));
+        tbody.appendChild(tr);
+    });
+}
+
+function sincronizarCatalogosBaseLegal({
+    leis = [],
+    artigos = [],
+    incisos = [],
+    alineas = []
+} = {}) {
+    leisBaseLegalCache = Array.isArray(leis) ? leis : [];
+    artigosBaseLegalCache = Array.isArray(artigos) ? artigos : [];
+    incisosBaseLegalCache = Array.isArray(incisos) ? incisos : [];
+    alineasBaseLegalCache = Array.isArray(alineas) ? alineas : [];
+
+    opcoesOcorrencias.leis = leisBaseLegalCache;
+    opcoesOcorrencias.artigos = artigosBaseLegalCache;
+    opcoesOcorrencias.incisos = incisosBaseLegalCache;
+    opcoesOcorrencias.alineas = alineasBaseLegalCache;
+
+    popularSugestoesLeisBaseLegal();
+    popularSugestoesArtigosBaseLegal();
+    popularSugestoesIncisosBaseLegal();
+    renderTabelaLeisBaseLegal();
+}
+
+async function carregarCatalogosBaseLegal() {
+    const [leis, artigos, incisos, alineas] = await Promise.all([
+        fetchJson("/leis", { headers }),
+        fetchJson("/artigos", { headers }),
+        fetchJson("/incisos", { headers }),
+        fetchJson("/alineas", { headers })
+    ]);
+    sincronizarCatalogosBaseLegal({ leis, artigos, incisos, alineas });
+}
+
+function rotuloTipoBaseLegal(tipo) {
+    if (tipo === "inciso") return "Inciso";
+    if (tipo === "alinea") return "Alinea";
+    return "Artigo";
+}
+
+function limparFormularioLeiBaseLegal() {
+    leiBaseLegalEmEdicao = null;
+    el("formLeiBaseLegal").reset();
+    el("tituloFormLeiBaseLegal").innerText = "Cadastrar lei";
+    el("btnCancelarEdicaoLeiBaseLegal").style.display = "none";
+}
+
+function limparFormularioArtigoBaseLegal() {
+    artigoBaseLegalEmEdicao = null;
+    el("formArtigoBaseLegal").reset();
+    el("artigoBaseLegalLeiId").value = "";
+    el("tituloFormArtigoBaseLegal").innerText = "Cadastrar artigo";
+    el("btnCancelarEdicaoArtigoBaseLegal").style.display = "none";
+    ocultarSugestoes("listaLeisBaseLegal");
+}
+
+function limparFormularioIncisoBaseLegal() {
+    incisoBaseLegalEmEdicao = null;
+    el("formIncisoBaseLegal").reset();
+    el("incisoBaseLegalArtigoId").value = "";
+    el("tituloFormIncisoBaseLegal").innerText = "Cadastrar inciso";
+    el("btnCancelarEdicaoIncisoBaseLegal").style.display = "none";
+    ocultarSugestoes("listaArtigosBaseLegal");
+}
+
+function limparFormularioAlineaBaseLegal() {
+    alineaBaseLegalEmEdicao = null;
+    el("formAlineaBaseLegal").reset();
+    el("alineaBaseLegalIncisoId").value = "";
+    el("tituloFormAlineaBaseLegal").innerText = "Cadastrar alinea";
+    el("btnCancelarEdicaoAlineaBaseLegal").style.display = "none";
+    ocultarSugestoes("listaIncisosBaseLegal");
+}
+
+function iniciarEdicaoLeiBaseLegal(lei) {
+    leiBaseLegalEmEdicao = lei;
+    el("leiBaseLegalNome").value = lei.nome || "";
+    el("tituloFormLeiBaseLegal").innerText = "Editar lei";
+    el("btnCancelarEdicaoLeiBaseLegal").style.display = "inline-block";
+    ativarAbaCoordenacao("regimento");
+}
+
+function iniciarEdicaoArtigoBaseLegal(artigo) {
+    artigoBaseLegalEmEdicao = artigo;
+    el("artigoBaseLegalLeiBusca").value = artigo.lei_nome || "";
+    el("artigoBaseLegalLeiId").value = artigo.lei_id ? String(artigo.lei_id) : "";
+    el("artigoBaseLegalNumero").value = artigo.numero || artigo.artigo_numero || "";
+    el("artigoBaseLegalDescricao").value = artigo.descricao || artigo.artigo_descricao || "";
+    el("tituloFormArtigoBaseLegal").innerText = "Editar artigo";
+    el("btnCancelarEdicaoArtigoBaseLegal").style.display = "inline-block";
+    ativarAbaCoordenacao("regimento");
+}
+
+function iniciarEdicaoIncisoBaseLegal(inciso) {
+    incisoBaseLegalEmEdicao = inciso;
+    el("incisoBaseLegalArtigoBusca").value = inciso.label || inciso.artigo || "";
+    el("incisoBaseLegalArtigoId").value = inciso.artigo_id ? String(inciso.artigo_id) : "";
+    el("incisoBaseLegalNumero").value = inciso.numero || inciso.inciso_numero || "";
+    el("incisoBaseLegalDescricao").value = inciso.descricao || inciso.inciso_descricao || "";
+    el("tituloFormIncisoBaseLegal").innerText = "Editar inciso";
+    el("btnCancelarEdicaoIncisoBaseLegal").style.display = "inline-block";
+    ativarAbaCoordenacao("regimento");
+}
+
+function iniciarEdicaoAlineaBaseLegal(alinea) {
+    alineaBaseLegalEmEdicao = alinea;
+    el("alineaBaseLegalIncisoBusca").value = alinea.label || alinea.artigo || "";
+    el("alineaBaseLegalIncisoId").value = alinea.inciso_id ? String(alinea.inciso_id) : "";
+    el("alineaBaseLegalIdentificador").value = alinea.identificador || alinea.alinea_identificador || "";
+    el("alineaBaseLegalDescricao").value = alinea.descricao || alinea.alinea_descricao || "";
+    el("tituloFormAlineaBaseLegal").innerText = "Editar alinea";
+    el("btnCancelarEdicaoAlineaBaseLegal").style.display = "inline-block";
+    ativarAbaCoordenacao("regimento");
+}
+
+function iniciarEdicaoBaseLegal(item) {
+    if (!item) return;
+    if (item.tipo === "inciso") {
+        iniciarEdicaoIncisoBaseLegal({
+            id: item.inciso_id,
+            artigo_id: item.artigo_id,
+            numero: item.inciso_numero,
+            descricao: item.inciso_descricao,
+            label: item.artigo
+        });
+        return;
+    }
+    if (item.tipo === "alinea") {
+        iniciarEdicaoAlineaBaseLegal({
+            id: item.alinea_id,
+            inciso_id: item.inciso_id,
+            identificador: item.alinea_identificador,
+            descricao: item.alinea_descricao,
+            label: item.artigo
+        });
+        return;
+    }
+    iniciarEdicaoArtigoBaseLegal({
+        id: item.artigo_id,
+        lei_id: item.lei_id,
+        lei_nome: item.lei_nome,
+        numero: item.artigo_numero,
+        descricao: item.artigo_descricao
+    });
+}
+
+function selecionarLeiBaseLegal(item) {
+    if (!item) return;
+    el("artigoBaseLegalLeiBusca").value = String(item.nome || item.label || "").trim();
+    el("artigoBaseLegalLeiId").value = String(item.id || "");
+}
+
+function aplicarSelecaoLeiBaseLegalPorTexto() {
+    const input = el("artigoBaseLegalLeiBusca");
+    const hidden = el("artigoBaseLegalLeiId");
+    const texto = input.value.trim();
+    if (!texto) {
+        hidden.value = "";
+        ocultarSugestoes("listaLeisBaseLegal");
+        return;
+    }
+
+    const item = obterItemSugestaoPorTexto(mapaBuscaLeisBaseLegal, texto, leisBaseLegalCache);
+    if (!item) {
+        hidden.value = "";
+        ocultarSugestoes("listaLeisBaseLegal");
+        return;
+    }
+
+    selecionarLeiBaseLegal(item);
+    ocultarSugestoes("listaLeisBaseLegal");
+}
+
+function atualizarSugestoesLeisBaseLegal(forcar = false) {
+    const termo = el("artigoBaseLegalLeiBusca").value.trim();
+    if (!forcar && termo.length < 1) {
+        ocultarSugestoes("listaLeisBaseLegal");
+        return;
+    }
+
+    const itens = filtrarSugestoesLocais(leisBaseLegalCache, termo, {
+        limite: 12,
+        campos: ["nome", "label"]
+    });
+    preencherDatalist("listaLeisBaseLegal", mapaBuscaLeisBaseLegal, itens, {
+        onSelect: selecionarLeiBaseLegal,
+        textoVazio: leisBaseLegalCache.length === 0
+            ? "Cadastre uma lei para continuar."
+            : "Nenhuma lei encontrada."
+    });
+}
+
+function selecionarArtigoBaseLegal(item) {
+    if (!item) return;
+    el("incisoBaseLegalArtigoBusca").value = String(item.label || item.referencia || "").trim();
+    el("incisoBaseLegalArtigoId").value = String(item.id || "");
+}
+
+function aplicarSelecaoArtigoBaseLegalPorTexto() {
+    const input = el("incisoBaseLegalArtigoBusca");
+    const hidden = el("incisoBaseLegalArtigoId");
+    const texto = input.value.trim();
+    if (!texto) {
+        hidden.value = "";
+        ocultarSugestoes("listaArtigosBaseLegal");
+        return;
+    }
+
+    const item = obterItemSugestaoPorTexto(mapaBuscaArtigosBaseLegal, texto, artigosBaseLegalCache);
+    if (!item) {
+        hidden.value = "";
+        ocultarSugestoes("listaArtigosBaseLegal");
+        return;
+    }
+
+    selecionarArtigoBaseLegal(item);
+    ocultarSugestoes("listaArtigosBaseLegal");
+}
+
+function atualizarSugestoesArtigosBaseLegal(forcar = false) {
+    const termo = el("incisoBaseLegalArtigoBusca").value.trim();
+    if (!forcar && termo.length < 1) {
+        ocultarSugestoes("listaArtigosBaseLegal");
+        return;
+    }
+
+    const itens = filtrarSugestoesLocais(artigosBaseLegalCache, termo, {
+        limite: 12,
+        campos: ["label", "referencia", "numero", "descricao", "lei_nome"]
+    });
+    preencherDatalist("listaArtigosBaseLegal", mapaBuscaArtigosBaseLegal, itens, {
+        onSelect: selecionarArtigoBaseLegal,
+        textoVazio: artigosBaseLegalCache.length === 0
+            ? "Cadastre um artigo para continuar."
+            : "Nenhum artigo encontrado."
+    });
+}
+
+function selecionarIncisoBaseLegal(item) {
+    if (!item) return;
+    el("alineaBaseLegalIncisoBusca").value = String(item.label || item.referencia || "").trim();
+    el("alineaBaseLegalIncisoId").value = String(item.id || "");
+}
+
+function aplicarSelecaoIncisoBaseLegalPorTexto() {
+    const input = el("alineaBaseLegalIncisoBusca");
+    const hidden = el("alineaBaseLegalIncisoId");
+    const texto = input.value.trim();
+    if (!texto) {
+        hidden.value = "";
+        ocultarSugestoes("listaIncisosBaseLegal");
+        return;
+    }
+
+    const item = obterItemSugestaoPorTexto(mapaBuscaIncisosBaseLegal, texto, incisosBaseLegalCache);
+    if (!item) {
+        hidden.value = "";
+        ocultarSugestoes("listaIncisosBaseLegal");
+        return;
+    }
+
+    selecionarIncisoBaseLegal(item);
+    ocultarSugestoes("listaIncisosBaseLegal");
+}
+
+function atualizarSugestoesIncisosBaseLegal(forcar = false) {
+    const termo = el("alineaBaseLegalIncisoBusca").value.trim();
+    if (!forcar && termo.length < 1) {
+        ocultarSugestoes("listaIncisosBaseLegal");
+        return;
+    }
+
+    const itens = filtrarSugestoesLocais(incisosBaseLegalCache, termo, {
+        limite: 12,
+        campos: ["label", "referencia", "numero", "descricao", "lei_nome", "artigo_numero"]
+    });
+    preencherDatalist("listaIncisosBaseLegal", mapaBuscaIncisosBaseLegal, itens, {
+        onSelect: selecionarIncisoBaseLegal,
+        textoVazio: incisosBaseLegalCache.length === 0
+            ? "Cadastre um inciso para continuar."
+            : "Nenhum inciso encontrado."
     });
 }
 
@@ -1810,7 +2730,8 @@ async function carregarRegimentoItens(idsSelecionados = null) {
     opcoesOcorrencias.regimento_itens = Array.isArray(regimentoItensCache)
         ? regimentoItensCache.map((item) => ({
             ...item,
-            label: item.artigo || `Item ${item.id}`
+            label: item.artigo || `Item ${item.id}`,
+            ativo: true
         }))
         : [];
     popularSugestoesRegimento();
@@ -1819,52 +2740,262 @@ async function carregarRegimentoItens(idsSelecionados = null) {
     atualizarPreviewOcorrencia();
 }
 
-function limparFormularioRegimento() {
-    regimentoItemEmEdicao = null;
-    el("formRegimento").reset();
-    el("tituloFormRegimento").innerText = "Cadastrar base legal";
-    el("btnCancelarEdicaoRegimento").style.display = "none";
-}
-
-function iniciarEdicaoRegimento(item) {
-    regimentoItemEmEdicao = item;
-    el("regimentoArtigo").value = item.artigo || "";
-    el("regimentoDescricao").value = item.descricao || "";
-    el("tituloFormRegimento").innerText = "Editar base legal";
-    el("btnCancelarEdicaoRegimento").style.display = "inline-block";
-    ativarAbaCoordenacao("regimento");
-}
-
-async function salvarRegimento(event) {
+async function salvarLeiBaseLegal(event) {
     event.preventDefault();
     const idsSelecionados = obterIdsRegimentoSelecionadosFormulario();
     const payload = {
-        artigo: el("regimentoArtigo").value.trim(),
-        descricao: el("regimentoDescricao").value.trim()
+        nome: el("leiBaseLegalNome").value.trim()
     };
 
     try {
-        if (regimentoItemEmEdicao) {
-            await fetchJson(`/regimento-itens/${regimentoItemEmEdicao.id}`, {
+        if (leiBaseLegalEmEdicao) {
+            await fetchJson(`/leis/${leiBaseLegalEmEdicao.id}`, {
                 method: "PUT",
                 headers: headersJson,
-                body: JSON.stringify({
-                    ...payload,
-                    ativo: Boolean(regimentoItemEmEdicao.ativo)
-                })
+                body: JSON.stringify(payload)
             });
-            setMensagemRegimento("Base legal atualizada com sucesso.");
+            setMensagemRegimento("Lei atualizada com sucesso.");
         } else {
-            await fetchJson("/regimento-itens", {
+            await fetchJson("/leis", {
                 method: "POST",
                 headers: headersJson,
                 body: JSON.stringify(payload)
             });
-            setMensagemRegimento("Base legal cadastrada com sucesso.");
+            setMensagemRegimento("Lei cadastrada com sucesso.");
         }
 
-        limparFormularioRegimento();
-        await carregarRegimentoItens(idsSelecionados);
+        limparFormularioLeiBaseLegal();
+        await Promise.all([carregarCatalogosBaseLegal(), carregarRegimentoItens(idsSelecionados)]);
+    } catch (err) {
+        setMensagemRegimento(err.message, true);
+    }
+}
+
+async function salvarArtigoBaseLegal(event) {
+    event.preventDefault();
+    aplicarSelecaoLeiBaseLegalPorTexto();
+    const leiId = Number(el("artigoBaseLegalLeiId").value || 0);
+    if (leiId <= 0) {
+        setMensagemRegimento("Selecione uma lei cadastrada para salvar o artigo.", true);
+        return;
+    }
+
+    const idsSelecionados = obterIdsRegimentoSelecionadosFormulario();
+    const payload = {
+        lei_id: leiId,
+        numero: el("artigoBaseLegalNumero").value.trim(),
+        descricao: el("artigoBaseLegalDescricao").value.trim()
+    };
+
+    try {
+        if (artigoBaseLegalEmEdicao) {
+            await fetchJson(`/artigos/${artigoBaseLegalEmEdicao.id}`, {
+                method: "PUT",
+                headers: headersJson,
+                body: JSON.stringify(payload)
+            });
+            setMensagemRegimento("Artigo atualizado com sucesso.");
+        } else {
+            await fetchJson("/artigos", {
+                method: "POST",
+                headers: headersJson,
+                body: JSON.stringify(payload)
+            });
+            setMensagemRegimento("Artigo cadastrado com sucesso.");
+        }
+
+        limparFormularioArtigoBaseLegal();
+        await Promise.all([carregarCatalogosBaseLegal(), carregarRegimentoItens(idsSelecionados)]);
+    } catch (err) {
+        setMensagemRegimento(err.message, true);
+    }
+}
+
+async function salvarIncisoBaseLegal(event) {
+    event.preventDefault();
+    aplicarSelecaoArtigoBaseLegalPorTexto();
+    const artigoId = Number(el("incisoBaseLegalArtigoId").value || 0);
+    if (artigoId <= 0) {
+        setMensagemRegimento("Selecione um artigo cadastrado para salvar o inciso.", true);
+        return;
+    }
+
+    const idsSelecionados = obterIdsRegimentoSelecionadosFormulario();
+    const payload = {
+        artigo_id: artigoId,
+        numero: el("incisoBaseLegalNumero").value.trim(),
+        descricao: el("incisoBaseLegalDescricao").value.trim()
+    };
+
+    try {
+        if (incisoBaseLegalEmEdicao) {
+            await fetchJson(`/incisos/${incisoBaseLegalEmEdicao.id}`, {
+                method: "PUT",
+                headers: headersJson,
+                body: JSON.stringify(payload)
+            });
+            setMensagemRegimento("Inciso atualizado com sucesso.");
+        } else {
+            await fetchJson("/incisos", {
+                method: "POST",
+                headers: headersJson,
+                body: JSON.stringify(payload)
+            });
+            setMensagemRegimento("Inciso cadastrado com sucesso.");
+        }
+
+        limparFormularioIncisoBaseLegal();
+        await Promise.all([carregarCatalogosBaseLegal(), carregarRegimentoItens(idsSelecionados)]);
+    } catch (err) {
+        setMensagemRegimento(err.message, true);
+    }
+}
+
+async function salvarAlineaBaseLegal(event) {
+    event.preventDefault();
+    aplicarSelecaoIncisoBaseLegalPorTexto();
+    const incisoId = Number(el("alineaBaseLegalIncisoId").value || 0);
+    if (incisoId <= 0) {
+        setMensagemRegimento("Selecione um inciso cadastrado para salvar a alinea.", true);
+        return;
+    }
+
+    const idsSelecionados = obterIdsRegimentoSelecionadosFormulario();
+    const payload = {
+        inciso_id: incisoId,
+        identificador: el("alineaBaseLegalIdentificador").value.trim(),
+        descricao: el("alineaBaseLegalDescricao").value.trim()
+    };
+
+    try {
+        if (alineaBaseLegalEmEdicao) {
+            await fetchJson(`/alineas/${alineaBaseLegalEmEdicao.id}`, {
+                method: "PUT",
+                headers: headersJson,
+                body: JSON.stringify(payload)
+            });
+            setMensagemRegimento("Alinea atualizada com sucesso.");
+        } else {
+            await fetchJson("/alineas", {
+                method: "POST",
+                headers: headersJson,
+                body: JSON.stringify(payload)
+            });
+            setMensagemRegimento("Alinea cadastrada com sucesso.");
+        }
+
+        limparFormularioAlineaBaseLegal();
+        await Promise.all([carregarCatalogosBaseLegal(), carregarRegimentoItens(idsSelecionados)]);
+    } catch (err) {
+        setMensagemRegimento(err.message, true);
+    }
+}
+
+function limparFormularioRegimento() {
+    limparFormularioLeiBaseLegal();
+    limparFormularioArtigoBaseLegal();
+    limparFormularioIncisoBaseLegal();
+    limparFormularioAlineaBaseLegal();
+    el("tituloFormRegimento").innerText = "Cadastrar base legal";
+}
+
+function iniciarEdicaoRegimento(item) {
+    iniciarEdicaoBaseLegal(item);
+}
+
+async function salvarRegimento(event) {
+    if (event && typeof event.preventDefault === "function") {
+        event.preventDefault();
+    }
+    setMensagemRegimento("Use os formularios separados de lei, artigo, inciso ou alinea.", true);
+}
+
+function limparSelecaoLeiBaseLegalSeNecessario(leiId) {
+    if (Number(leiBaseLegalEmEdicao?.id || 0) === Number(leiId || 0)) {
+        limparFormularioLeiBaseLegal();
+    }
+    if (Number(el("artigoBaseLegalLeiId")?.value || 0) === Number(leiId || 0)) {
+        el("artigoBaseLegalLeiId").value = "";
+        el("artigoBaseLegalLeiBusca").value = "";
+    }
+}
+
+function limparSelecaoArtigoBaseLegalSeNecessario(artigoId) {
+    if (Number(artigoBaseLegalEmEdicao?.id || 0) === Number(artigoId || 0)) {
+        limparFormularioArtigoBaseLegal();
+    }
+    if (Number(el("incisoBaseLegalArtigoId")?.value || 0) === Number(artigoId || 0)) {
+        el("incisoBaseLegalArtigoId").value = "";
+        el("incisoBaseLegalArtigoBusca").value = "";
+    }
+}
+
+function limparSelecaoIncisoBaseLegalSeNecessario(incisoId) {
+    if (Number(incisoBaseLegalEmEdicao?.id || 0) === Number(incisoId || 0)) {
+        limparFormularioIncisoBaseLegal();
+    }
+    if (Number(el("alineaBaseLegalIncisoId")?.value || 0) === Number(incisoId || 0)) {
+        el("alineaBaseLegalIncisoId").value = "";
+        el("alineaBaseLegalIncisoBusca").value = "";
+    }
+}
+
+function limparSelecaoAlineaBaseLegalSeNecessario(alineaId) {
+    if (Number(alineaBaseLegalEmEdicao?.id || 0) === Number(alineaId || 0)) {
+        limparFormularioAlineaBaseLegal();
+    }
+}
+
+async function excluirLeiBaseLegal(lei) {
+    const nomeLei = String(lei?.nome || "esta lei").trim();
+    const confirmou = window.confirm(
+        `Excluir ${nomeLei}? A exclusao so sera permitida se nao houver artigos vinculados.`
+    );
+    if (!confirmou) return;
+
+    try {
+        const resposta = await requisitarExclusao(
+            `/leis/${lei.id}`,
+            `/leis/${lei.id}/excluir`
+        );
+        limparSelecaoLeiBaseLegalSeNecessario(lei.id);
+        await Promise.all([
+            carregarCatalogosBaseLegal(),
+            carregarRegimentoItens(obterIdsRegimentoSelecionadosFormulario())
+        ]);
+        setMensagemRegimento(resposta?.mensagem || "Lei excluida com sucesso.");
+    } catch (err) {
+        setMensagemRegimento(err.message, true);
+    }
+}
+
+async function excluirBaseLegal(item) {
+    const tipo = rotuloTipoBaseLegal(item?.tipo).toLowerCase();
+    const referencia = String(item?.artigo || item?.label || `este ${tipo}`).trim();
+    const confirmou = window.confirm(
+        `Excluir ${referencia}? A exclusao so sera permitida se nao houver dependencias ou ocorrencias vinculadas.`
+    );
+    if (!confirmou) return;
+
+    try {
+        const resposta = await requisitarExclusao(
+            `/regimento-itens/${item.id}`,
+            `/regimento-itens/${item.id}/excluir`
+        );
+
+        if (item?.tipo === "artigo") {
+            limparSelecaoArtigoBaseLegalSeNecessario(item.artigo_id || item.id);
+        } else if (item?.tipo === "inciso") {
+            limparSelecaoIncisoBaseLegalSeNecessario(item.inciso_id);
+        } else if (item?.tipo === "alinea") {
+            limparSelecaoAlineaBaseLegalSeNecessario(item.alinea_id);
+        }
+
+        await Promise.all([
+            carregarCatalogosBaseLegal(),
+            carregarRegimentoItens(obterIdsRegimentoSelecionadosFormulario())
+        ]);
+        setMensagemRegimento(resposta?.mensagem || "Item da base legal excluido com sucesso.");
     } catch (err) {
         setMensagemRegimento(err.message, true);
     }
@@ -2266,7 +3397,7 @@ async function importarRegimentoCsv(event) {
     event.preventDefault();
     const arquivo = el("arquivoCsvRegimento")?.files?.[0];
     if (!arquivo) {
-        setMensagemRegimento("Selecione um arquivo CSV para importar.", true);
+        setMensagemRegimento("Selecione um arquivo JSON ou CSV para importar.", true);
         return;
     }
 
@@ -2275,14 +3406,14 @@ async function importarRegimentoCsv(event) {
     formData.append("arquivo", arquivo);
 
     try {
-        const resposta = await fetchJson("/regimento-itens/importar-csv", {
+        const resposta = await fetchJson("/regimento-itens/importar", {
             method: "POST",
             headers,
             body: formData
         });
         setMensagemRegimento(comporMensagemImportacaoCsv(resposta), houveFalhaImportacao(resposta));
         el("formImportarRegimentoCsv").reset();
-        await carregarRegimentoItens(idsSelecionados);
+        await Promise.all([carregarCatalogosBaseLegal(), carregarRegimentoItens(idsSelecionados)]);
     } catch (err) {
         setMensagemRegimento(err.message, true);
     }
@@ -2293,7 +3424,7 @@ function baixarModeloEstudantesCsv() {
 }
 
 function baixarModeloRegimentoCsv() {
-    baixarArquivoTexto("modelo_base_legal.csv", MODELO_CSV_BASE_LEGAL);
+    baixarArquivoTexto("modelo_base_legal.json", MODELO_JSON_BASE_LEGAL, "application/json;charset=utf-8");
 }
 
 async function filtrarEstudantes(event) {
@@ -2420,10 +3551,43 @@ function registrarEventosEstudantes() {
 }
 
 function registrarEventosRegimento() {
-    el("formRegimento").addEventListener("submit", salvarRegimento);
+    el("formLeiBaseLegal").addEventListener("submit", salvarLeiBaseLegal);
+    el("formArtigoBaseLegal").addEventListener("submit", salvarArtigoBaseLegal);
+    el("formIncisoBaseLegal").addEventListener("submit", salvarIncisoBaseLegal);
+    el("formAlineaBaseLegal").addEventListener("submit", salvarAlineaBaseLegal);
     el("formImportarRegimentoCsv").addEventListener("submit", importarRegimentoCsv);
-    el("btnCancelarEdicaoRegimento").addEventListener("click", limparFormularioRegimento);
+    el("btnCancelarEdicaoLeiBaseLegal").addEventListener("click", limparFormularioLeiBaseLegal);
+    el("btnCancelarEdicaoArtigoBaseLegal").addEventListener("click", limparFormularioArtigoBaseLegal);
+    el("btnCancelarEdicaoIncisoBaseLegal").addEventListener("click", limparFormularioIncisoBaseLegal);
+    el("btnCancelarEdicaoAlineaBaseLegal").addEventListener("click", limparFormularioAlineaBaseLegal);
     el("btnBaixarModeloRegimentoCsv").addEventListener("click", baixarModeloRegimentoCsv);
+
+    el("artigoBaseLegalLeiBusca").addEventListener("input", () => {
+        atualizarSugestoesLeisBaseLegal();
+    });
+    el("artigoBaseLegalLeiBusca").addEventListener("change", aplicarSelecaoLeiBaseLegalPorTexto);
+    el("artigoBaseLegalLeiBusca").addEventListener("blur", aplicarSelecaoLeiBaseLegalPorTexto);
+    el("artigoBaseLegalLeiBusca").addEventListener("focus", () => {
+        atualizarSugestoesLeisBaseLegal(true);
+    });
+
+    el("incisoBaseLegalArtigoBusca").addEventListener("input", () => {
+        atualizarSugestoesArtigosBaseLegal();
+    });
+    el("incisoBaseLegalArtigoBusca").addEventListener("change", aplicarSelecaoArtigoBaseLegalPorTexto);
+    el("incisoBaseLegalArtigoBusca").addEventListener("blur", aplicarSelecaoArtigoBaseLegalPorTexto);
+    el("incisoBaseLegalArtigoBusca").addEventListener("focus", () => {
+        atualizarSugestoesArtigosBaseLegal(true);
+    });
+
+    el("alineaBaseLegalIncisoBusca").addEventListener("input", () => {
+        atualizarSugestoesIncisosBaseLegal();
+    });
+    el("alineaBaseLegalIncisoBusca").addEventListener("change", aplicarSelecaoIncisoBaseLegalPorTexto);
+    el("alineaBaseLegalIncisoBusca").addEventListener("blur", aplicarSelecaoIncisoBaseLegalPorTexto);
+    el("alineaBaseLegalIncisoBusca").addEventListener("focus", () => {
+        atualizarSugestoesIncisosBaseLegal(true);
+    });
 }
 
 function registrarEventosGerais() {
@@ -2467,6 +3631,7 @@ async function init() {
         await Promise.all([
             carregarOcorrencias(),
             carregarEstudantes(),
+            carregarCatalogosBaseLegal(),
             carregarRegimentoItens()
         ]);
     } catch (err) {

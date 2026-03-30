@@ -112,14 +112,116 @@ class RegrasCotaIn(BaseModel):
     cota_mensal_escola: int
 
 
-class RegimentoItemCreateIn(BaseModel):
-    artigo: str
+class LeiCreateIn(BaseModel):
+    nome: str
+
+
+class LeiUpdateIn(BaseModel):
+    nome: str
+
+
+class LeiOut(BaseModel):
+    id: int
+    nome: str
+    label: str = ""
+
+
+class ArtigoCreateIn(BaseModel):
+    lei_id: int
+    numero: str
     descricao: str
+
+
+class ArtigoUpdateIn(BaseModel):
+    lei_id: int
+    numero: str
+    descricao: str
+
+
+class ArtigoOut(BaseModel):
+    id: int
+    lei_id: int
+    lei_nome: str = ""
+    numero: str
+    descricao: str
+    referencia: str = ""
+    label: str = ""
+
+
+class IncisoCreateIn(BaseModel):
+    artigo_id: int
+    numero: str
+    descricao: str
+
+
+class IncisoUpdateIn(BaseModel):
+    artigo_id: int
+    numero: str
+    descricao: str
+
+
+class IncisoOut(BaseModel):
+    id: int
+    artigo_id: int
+    lei_id: int | None = None
+    lei_nome: str = ""
+    artigo_numero: str = ""
+    artigo_descricao: str = ""
+    numero: str
+    descricao: str
+    referencia: str = ""
+    label: str = ""
+
+
+class AlineaCreateIn(BaseModel):
+    inciso_id: int
+    identificador: str
+    descricao: str
+
+
+class AlineaUpdateIn(BaseModel):
+    inciso_id: int
+    identificador: str
+    descricao: str
+
+
+class AlineaOut(BaseModel):
+    id: int
+    inciso_id: int
+    artigo_id: int | None = None
+    lei_id: int | None = None
+    lei_nome: str = ""
+    artigo_numero: str = ""
+    inciso_numero: str = ""
+    inciso_descricao: str = ""
+    identificador: str
+    descricao: str
+    referencia: str = ""
+    label: str = ""
+
+
+class RegimentoItemCreateIn(BaseModel):
+    lei_nome: str | None = None
+    artigo_numero: str | None = None
+    artigo_descricao: str | None = None
+    inciso_numero: str | None = None
+    inciso_descricao: str | None = None
+    alinea_identificador: str | None = None
+    alinea_descricao: str | None = None
+    artigo: str | None = None
+    descricao: str | None = None
 
 
 class RegimentoItemUpdateIn(BaseModel):
-    artigo: str
-    descricao: str
+    lei_nome: str | None = None
+    artigo_numero: str | None = None
+    artigo_descricao: str | None = None
+    inciso_numero: str | None = None
+    inciso_descricao: str | None = None
+    alinea_identificador: str | None = None
+    alinea_descricao: str | None = None
+    artigo: str | None = None
+    descricao: str | None = None
     ativo: bool = True
 
 
@@ -129,20 +231,48 @@ class RegimentoItemStatusIn(BaseModel):
 
 class RegimentoItemOut(BaseModel):
     id: int
+    tipo: str | None = None
+    lei_id: int | None = None
+    lei_nome: str | None = None
+    artigo_id: int | None = None
+    artigo_numero: str | None = None
+    artigo_descricao: str | None = None
+    inciso_id: int | None = None
+    inciso_numero: str | None = None
+    inciso_descricao: str | None = None
+    alinea_id: int | None = None
+    alinea_identificador: str | None = None
+    alinea_descricao: str | None = None
     artigo: str
     descricao: str
-    ativo: int | bool
-    criado_em: str
-    atualizado_em: str
+    ativo: int | bool = True
+    criado_em: str = ""
+    atualizado_em: str = ""
 
 
 class RegimentoItemOcorrenciaOut(BaseModel):
     regimento_item_id: int | None = None
+    artigo_id: int | None = None
+    inciso_id: int | None = None
+    alinea_id: int | None = None
+    lei_nome: str | None = None
+    artigo_numero: str | None = None
+    artigo_descricao: str | None = None
+    inciso_numero: str | None = None
+    inciso_descricao: str | None = None
+    alinea_identificador: str | None = None
+    alinea_descricao: str | None = None
     artigo: str
     descricao: str
     ordem: int = 0
 
 AcaoAplicadaOcorrencia = Literal[
+    "advertencia_verbal",
+    "retirada_sala_orientacao",
+    "suspensao_extracurricular",
+    "suspensao_orientada_2_dias",
+    "suspensao_aulas_3_dias",
+    "transferencia_compulsoria",
     "orientacao_verbal",
     "advertencia",
     "chamada_responsavel",

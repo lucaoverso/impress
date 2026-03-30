@@ -66,7 +66,7 @@ class CsvImportServiceTest(unittest.TestCase):
             self.assertEqual(int(estudante_ana["ativo"]), 0)
             self.assertEqual(int(estudante_bruno["ativo"]), 1)
 
-    def test_importa_base_legal_csv_com_aliases_e_atualiza_item_existente(self):
+    def test_importa_base_legal_csv_hierarquica_e_atualiza_item_existente(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")
             database, csv_import_service = _reload_modulos(db_path)
@@ -74,8 +74,8 @@ class CsvImportServiceTest(unittest.TestCase):
 
             resultado_inicial = csv_import_service.importar_base_legal_csv(
                 (
-                    "referencia;texto;status\n"
-                    "Art. 76 - VII;Integrar-se ao processo pedagogico desenvolvido pela unidade escolar.;ativo\n"
+                    "lei;artigo_numero;artigo_descricao;inciso_numero;inciso_descricao\n"
+                    "Regimento Interno;76;Dos deveres do estudante.;VII;Integrar-se ao processo pedagogico desenvolvido pela unidade escolar.\n"
                 ).encode("utf-8")
             )
 
@@ -85,8 +85,8 @@ class CsvImportServiceTest(unittest.TestCase):
 
             resultado_reenvio = csv_import_service.importar_base_legal_csv(
                 (
-                    "artigo,descricao,ativo\n"
-                    "\"Art. 76 - VII\",\"Descricao atualizada para o item legal.\",inativo\n"
+                    "lei,artigo_numero,artigo_descricao,inciso_numero,inciso_descricao\n"
+                    "\"Regimento Interno\",76,\"Dos deveres do estudante.\",VII,\"Descricao atualizada para o inciso.\"\n"
                 ).encode("utf-8")
             )
 
@@ -95,10 +95,67 @@ class CsvImportServiceTest(unittest.TestCase):
             self.assertEqual(resultado_reenvio["erros"], 0)
 
             itens = database.listar_regimento_itens(incluir_inativos=True)
-            self.assertEqual(len(itens), 1)
-            self.assertEqual(itens[0]["artigo"], "Art. 76 - VII")
-            self.assertEqual(itens[0]["descricao"], "Descricao atualizada para o item legal.")
-            self.assertEqual(int(itens[0]["ativo"]), 0)
+            self.assertEqual(len(itens), 2)
+            inciso = next(item for item in itens if item["tipo"] == "inciso")
+            self.assertEqual(inciso["lei_nome"], "Regimento Interno")
+            self.assertEqual(inciso["artigo"], "Regimento Interno - Art. 76, inciso VII")
+            self.assertEqual(inciso["descricao"], "Descricao atualizada para o inciso.")
+
+    def test_importa_base_legal_json_hierarquico_sem_repetir_lei_em_cada_item(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, csv_import_service = _reload_modulos(db_path)
+            database.criar_tabelas()
+
+            resultado = csv_import_service.importar_base_legal_arquivo(
+                (
+                    "{"
+                    "\"lei\": \"Regimento Escolar\","
+                    "\"artigos\": ["
+                    "  {"
+                    "    \"numero\": 76,"
+                    "    \"descricao\": \"Sao deveres do estudante.\","
+                    "    \"incisos\": ["
+                    "      {"
+                    "        \"numero\": \"I\","
+                    "        \"descricao\": \"Comparecer pontualmente.\""
+                    "      },"
+                    "      {"
+                    "        \"numero\": \"IV\","
+                    "        \"descricao\": \"Apresentar-se adequadamente trajado.\","
+                    "        \"alineas\": ["
+                    "          {"
+                    "            \"identificador\": \"a\","
+                    "            \"descricao\": \"Short e bermuda.\""
+                    "          },"
+                    "          {"
+                    "            \"identificador\": \"b\","
+                    "            \"descricao\": \"Oculos escuros, salvo recomendacao medica.\""
+                    "          }"
+                    "        ]"
+                    "      }"
+                    "    ]"
+                    "  }"
+                    "]"
+                    "}"
+                ).encode("utf-8"),
+                nome_arquivo="base_legal.json",
+                tipo_conteudo="application/json",
+            )
+
+            self.assertEqual(resultado["criados"], 5)
+            self.assertEqual(resultado["atualizados"], 0)
+            self.assertEqual(resultado["erros"], 0)
+
+            itens = database.listar_regimento_itens(incluir_inativos=True)
+            self.assertEqual(len(itens), 5)
+            artigo = next(item for item in itens if item["tipo"] == "artigo")
+            inciso = next(item for item in itens if item["tipo"] == "inciso" and item["inciso_numero"] == "IV")
+            alinea = next(item for item in itens if item["tipo"] == "alinea" and item["alinea_identificador"] == "b")
+            self.assertEqual(artigo["lei_nome"], "Regimento Escolar")
+            self.assertEqual(inciso["artigo"], "Regimento Escolar - Art. 76, inciso IV")
+            self.assertEqual(alinea["artigo"], "Regimento Escolar - Art. 76, inciso IV, alinea b")
+            self.assertEqual(alinea["descricao"], "Oculos escuros, salvo recomendacao medica.")
 
     def test_importa_estudantes_csv_com_sucesso_parcial(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

@@ -7,6 +7,7 @@ import shutil
 import unicodedata
 from pathlib import Path
 from security.nt_hash import generate_nt_hash
+from services.ocorrencia_disciplina_service import ACAO_OCORRENCIA_VALIDAS
 
 STATUS_CONCLUIDO = "CONCLUIDO"
 STATUS_FINALIZADO_LEGADO = "FINALIZADO"
@@ -22,18 +23,13 @@ STATUS_OCORRENCIA_VALIDOS = (
     STATUS_OCORRENCIA_AGUARDANDO_RESPONSAVEL,
     STATUS_OCORRENCIA_RESOLVIDO,
 )
-ACAO_OCORRENCIA_ORIENTACAO_VERBAL = "orientacao_verbal"
-ACAO_OCORRENCIA_ADVERTENCIA = "advertencia"
-ACAO_OCORRENCIA_CHAMADA_RESPONSAVEL = "chamada_responsavel"
-ACAO_OCORRENCIA_ENCAMINHAMENTO_DIRECAO = "encaminhamento_direcao"
-ACAO_OCORRENCIA_REGISTRO_INFORMATIVO = "registro_informativo"
-ACAO_OCORRENCIA_VALIDAS = (
-    ACAO_OCORRENCIA_ORIENTACAO_VERBAL,
-    ACAO_OCORRENCIA_ADVERTENCIA,
-    ACAO_OCORRENCIA_CHAMADA_RESPONSAVEL,
-    ACAO_OCORRENCIA_ENCAMINHAMENTO_DIRECAO,
-    ACAO_OCORRENCIA_REGISTRO_INFORMATIVO,
-)
+TIPO_BASE_LEGAL_ARTIGO = "artigo"
+TIPO_BASE_LEGAL_INCISO = "inciso"
+TIPO_BASE_LEGAL_ALINEA = "alinea"
+BASE_LEGAL_ITEM_INCISO_OFFSET = 1_000_000_000
+BASE_LEGAL_ITEM_ALINEA_OFFSET = 2_000_000_000
+LEI_PADRAO_IMPORTACAO = "Base legal"
+LEI_PADRAO_MIGRACAO = "Base legal migrada"
 CARGO_ADMIN = "ADMIN"
 CARGO_PROFESSOR = "PROFESSOR"
 CARGO_COORDENADOR = "COORDENADOR"
@@ -138,6 +134,7 @@ def get_connection():
     _garantir_banco_preparado()
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 def criar_job(
@@ -413,13 +410,42 @@ def criar_tabelas():
     """)
 
     cursor.execute("""
-        CREATE TABLE IF NOT EXISTS regimento_itens (
+        CREATE TABLE IF NOT EXISTS leis (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            artigo TEXT NOT NULL,
+            nome TEXT NOT NULL UNIQUE
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS artigos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            lei_id INTEGER NOT NULL,
+            numero TEXT NOT NULL,
             descricao TEXT NOT NULL,
-            ativo INTEGER NOT NULL DEFAULT 1,
-            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
-            atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
+            FOREIGN KEY(lei_id) REFERENCES leis(id),
+            UNIQUE(lei_id, numero)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS incisos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            artigo_id INTEGER NOT NULL,
+            numero TEXT NOT NULL,
+            descricao TEXT NOT NULL,
+            FOREIGN KEY(artigo_id) REFERENCES artigos(id),
+            UNIQUE(artigo_id, numero)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS alineas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            inciso_id INTEGER NOT NULL,
+            identificador TEXT NOT NULL,
+            descricao TEXT NOT NULL,
+            FOREIGN KEY(inciso_id) REFERENCES incisos(id),
+            UNIQUE(inciso_id, identificador)
         )
     """)
 
@@ -428,12 +454,24 @@ def criar_tabelas():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             ocorrencia_id INTEGER NOT NULL,
             regimento_item_id INTEGER,
+            artigo_id INTEGER,
+            inciso_id INTEGER,
+            alinea_id INTEGER,
+            lei_nome TEXT,
+            artigo_numero TEXT,
+            artigo_descricao TEXT,
+            inciso_numero TEXT,
+            inciso_descricao TEXT,
+            alinea_identificador TEXT,
+            alinea_descricao TEXT,
             artigo TEXT NOT NULL,
             descricao TEXT NOT NULL,
             ordem INTEGER NOT NULL DEFAULT 0,
             criado_em TEXT NOT NULL DEFAULT (datetime('now')),
             FOREIGN KEY(ocorrencia_id) REFERENCES ocorrencias(id),
-            FOREIGN KEY(regimento_item_id) REFERENCES regimento_itens(id)
+            FOREIGN KEY(artigo_id) REFERENCES artigos(id),
+            FOREIGN KEY(inciso_id) REFERENCES incisos(id),
+            FOREIGN KEY(alinea_id) REFERENCES alineas(id)
         )
     """)
 
@@ -448,6 +486,8 @@ def criar_tabelas():
     _garantir_colunas_disciplinas(cursor)
     _garantir_colunas_estudantes(cursor)
     _garantir_colunas_ocorrencias(cursor)
+    _garantir_colunas_ocorrencia_regimento_itens(cursor)
+    _migrar_base_legal_legado(cursor)
     _garantir_view_radcheck(cursor)
     _seed_catalogos_academicos(cursor)
     _migrar_catalogos_academicos(cursor)
@@ -533,13 +573,23 @@ def criar_tabelas():
     """)
 
     cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_regimento_itens_ativo
-        ON regimento_itens(ativo)
+        CREATE INDEX IF NOT EXISTS idx_leis_nome
+        ON leis(nome)
     """)
 
     cursor.execute("""
-        CREATE INDEX IF NOT EXISTS idx_regimento_itens_artigo
-        ON regimento_itens(artigo)
+        CREATE INDEX IF NOT EXISTS idx_artigos_lei_id
+        ON artigos(lei_id, id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_incisos_artigo_id
+        ON incisos(artigo_id, id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_alineas_inciso_id
+        ON alineas(inciso_id, id)
     """)
 
     cursor.execute("""
@@ -550,6 +600,21 @@ def criar_tabelas():
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_ocorrencia_regimento_item
         ON ocorrencia_regimento_itens(regimento_item_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ocorrencia_regimento_artigo_id
+        ON ocorrencia_regimento_itens(artigo_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ocorrencia_regimento_inciso_id
+        ON ocorrencia_regimento_itens(inciso_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ocorrencia_regimento_alinea_id
+        ON ocorrencia_regimento_itens(alinea_id)
     """)
 
     cursor.execute("""
@@ -963,6 +1028,560 @@ def _garantir_colunas_ocorrencias(cursor):
         WHERE TRIM(COALESCE(atualizado_em, '')) = ''
     """)
 
+    _recriar_tabela_ocorrencias_se_necessario(cursor)
+
+
+def _recriar_tabela_ocorrencias_se_necessario(cursor):
+    cursor.execute("""
+        SELECT sql
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'ocorrencias'
+    """)
+    row = cursor.fetchone()
+    if not row:
+        return
+
+    sql_tabela = str(row["sql"] or "")
+    if sql_tabela and all(acao in sql_tabela for acao in ACAO_OCORRENCIA_VALIDAS):
+        return
+
+    cursor.execute("PRAGMA foreign_keys = OFF")
+    cursor.execute("DROP TABLE IF EXISTS ocorrencias__tmp")
+    cursor.execute(f"""
+        CREATE TABLE ocorrencias__tmp (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome_estudante TEXT NOT NULL,
+            estudante_id INTEGER,
+            turma_id INTEGER NOT NULL,
+            professor_requerente TEXT NOT NULL,
+            professor_requerente_id INTEGER,
+            disciplina TEXT NOT NULL,
+            data_ocorrencia TEXT NOT NULL,
+            aula TEXT NOT NULL,
+            horario_ocorrencia TEXT NOT NULL,
+            descricao TEXT NOT NULL,
+            acao_aplicada TEXT NOT NULL CHECK (acao_aplicada IN {ACAO_OCORRENCIA_VALIDAS}),
+            status TEXT NOT NULL DEFAULT '{STATUS_OCORRENCIA_REGISTRADO}' CHECK (status IN {STATUS_OCORRENCIA_VALIDOS}),
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(estudante_id) REFERENCES estudantes(id),
+            FOREIGN KEY(turma_id) REFERENCES turmas(id),
+            FOREIGN KEY(professor_requerente_id) REFERENCES usuarios(id)
+        )
+    """)
+    cursor.execute("""
+        INSERT INTO ocorrencias__tmp (
+            id,
+            nome_estudante,
+            estudante_id,
+            turma_id,
+            professor_requerente,
+            professor_requerente_id,
+            disciplina,
+            data_ocorrencia,
+            aula,
+            horario_ocorrencia,
+            descricao,
+            acao_aplicada,
+            status,
+            criado_em,
+            atualizado_em
+        )
+        SELECT
+            id,
+            COALESCE(nome_estudante, ''),
+            estudante_id,
+            COALESCE(turma_id, 0),
+            COALESCE(professor_requerente, ''),
+            professor_requerente_id,
+            COALESCE(disciplina, ''),
+            COALESCE(data_ocorrencia, ''),
+            COALESCE(aula, ''),
+            COALESCE(horario_ocorrencia, ''),
+            COALESCE(descricao, ''),
+            CASE
+                WHEN TRIM(COALESCE(acao_aplicada, '')) = '' THEN 'registro_informativo'
+                ELSE TRIM(acao_aplicada)
+            END,
+            COALESCE(status, ?),
+            COALESCE(criado_em, datetime('now')),
+            COALESCE(atualizado_em, datetime('now'))
+        FROM ocorrencias
+    """, (STATUS_OCORRENCIA_REGISTRADO,))
+    cursor.execute("DROP TABLE ocorrencias")
+    cursor.execute("ALTER TABLE ocorrencias__tmp RENAME TO ocorrencias")
+    cursor.execute("PRAGMA foreign_keys = ON")
+
+
+def _codificar_regimento_item_id(tipo: str, entidade_id: int) -> int:
+    entidade_id_valor = int(entidade_id or 0)
+    if entidade_id_valor <= 0:
+        raise ValueError("Item de base legal invalido.")
+    if tipo == TIPO_BASE_LEGAL_ARTIGO:
+        return entidade_id_valor
+    if tipo == TIPO_BASE_LEGAL_INCISO:
+        return BASE_LEGAL_ITEM_INCISO_OFFSET + entidade_id_valor
+    if tipo == TIPO_BASE_LEGAL_ALINEA:
+        return BASE_LEGAL_ITEM_ALINEA_OFFSET + entidade_id_valor
+    raise ValueError("Tipo de base legal invalido.")
+
+
+def _decodificar_regimento_item_id(regimento_item_id: int) -> tuple[str, int]:
+    item_id = int(regimento_item_id or 0)
+    if item_id <= 0:
+        raise ValueError("Item de base legal invalido.")
+    if item_id >= BASE_LEGAL_ITEM_ALINEA_OFFSET:
+        return TIPO_BASE_LEGAL_ALINEA, item_id - BASE_LEGAL_ITEM_ALINEA_OFFSET
+    if item_id >= BASE_LEGAL_ITEM_INCISO_OFFSET:
+        return TIPO_BASE_LEGAL_INCISO, item_id - BASE_LEGAL_ITEM_INCISO_OFFSET
+    return TIPO_BASE_LEGAL_ARTIGO, item_id
+
+
+def _formatar_numero_artigo(numero: str) -> str:
+    texto = str(numero or "").strip()
+    if not texto:
+        return "Sem artigo"
+    if texto.lower().startswith("art"):
+        return texto
+    return f"Art. {texto}"
+
+
+def _montar_rotulo_base_legal(
+    lei_nome: str,
+    artigo_numero: str,
+    inciso_numero: str | None = None,
+    alinea_identificador: str | None = None,
+) -> str:
+    lei_limpa = str(lei_nome or "").strip()
+    referencia = _formatar_numero_artigo(artigo_numero)
+    if lei_limpa and lei_limpa != LEI_PADRAO_IMPORTACAO:
+        referencia = f"{lei_limpa} - {referencia}"
+    if str(inciso_numero or "").strip():
+        referencia += f", inciso {str(inciso_numero).strip()}"
+    if str(alinea_identificador or "").strip():
+        referencia += f", alinea {str(alinea_identificador).strip()}"
+    return referencia
+
+
+def _descricao_item_base_legal(dados: dict | sqlite3.Row) -> str:
+    dados_norm = dict(dados)
+    if str(dados_norm.get("alinea_descricao") or "").strip():
+        return str(dados_norm.get("alinea_descricao") or "").strip()
+    if str(dados_norm.get("inciso_descricao") or "").strip():
+        return str(dados_norm.get("inciso_descricao") or "").strip()
+    return str(dados_norm.get("artigo_descricao") or "").strip()
+
+
+def _montar_item_base_legal(row: sqlite3.Row | dict) -> dict:
+    dados = dict(row)
+    tipo = str(dados.get("tipo") or TIPO_BASE_LEGAL_ARTIGO).strip()
+    entidade_id = int(dados.get("entidade_id") or 0)
+    artigo_id = int(dados.get("artigo_id") or 0)
+    inciso_id = int(dados["inciso_id"]) if dados.get("inciso_id") is not None else None
+    alinea_id = int(dados["alinea_id"]) if dados.get("alinea_id") is not None else None
+    referencia = _montar_rotulo_base_legal(
+        dados.get("lei_nome") or "",
+        dados.get("artigo_numero") or "",
+        dados.get("inciso_numero"),
+        dados.get("alinea_identificador"),
+    )
+    descricao = _descricao_item_base_legal(dados)
+    return {
+        "id": _codificar_regimento_item_id(tipo, entidade_id),
+        "tipo": tipo,
+        "lei_id": int(dados.get("lei_id") or 0),
+        "lei_nome": str(dados.get("lei_nome") or "").strip(),
+        "artigo_id": artigo_id if artigo_id > 0 else None,
+        "artigo_numero": str(dados.get("artigo_numero") or "").strip(),
+        "artigo_descricao": str(dados.get("artigo_descricao") or "").strip(),
+        "inciso_id": inciso_id,
+        "inciso_numero": str(dados.get("inciso_numero") or "").strip() or None,
+        "inciso_descricao": str(dados.get("inciso_descricao") or "").strip() or None,
+        "alinea_id": alinea_id,
+        "alinea_identificador": str(dados.get("alinea_identificador") or "").strip() or None,
+        "alinea_descricao": str(dados.get("alinea_descricao") or "").strip() or None,
+        "artigo": referencia,
+        "descricao": descricao,
+        "ativo": 1,
+        "criado_em": "",
+        "atualizado_em": "",
+    }
+
+
+def _normalizar_campos_base_legal(
+    *,
+    lei_nome: str | None,
+    artigo_numero: str | None,
+    artigo_descricao: str | None,
+    inciso_numero: str | None = None,
+    inciso_descricao: str | None = None,
+    alinea_identificador: str | None = None,
+    alinea_descricao: str | None = None,
+) -> dict:
+    dados = {
+        "lei_nome": str(lei_nome or "").strip() or LEI_PADRAO_IMPORTACAO,
+        "artigo_numero": str(artigo_numero or "").strip(),
+        "artigo_descricao": str(artigo_descricao or "").strip(),
+        "inciso_numero": str(inciso_numero or "").strip(),
+        "inciso_descricao": str(inciso_descricao or "").strip(),
+        "alinea_identificador": str(alinea_identificador or "").strip(),
+        "alinea_descricao": str(alinea_descricao or "").strip(),
+    }
+    if not dados["artigo_numero"]:
+        raise ValueError("Numero do artigo e obrigatorio.")
+    if not dados["artigo_descricao"]:
+        raise ValueError("Descricao do artigo e obrigatoria.")
+    if bool(dados["inciso_numero"]) != bool(dados["inciso_descricao"]):
+        raise ValueError("Inciso e descricao do inciso devem ser informados juntos.")
+    if dados["alinea_identificador"] and not dados["inciso_numero"]:
+        raise ValueError("Informe um inciso antes de cadastrar uma alinea.")
+    if bool(dados["alinea_identificador"]) != bool(dados["alinea_descricao"]):
+        raise ValueError("Alinea e descricao da alinea devem ser informadas juntas.")
+    return dados
+
+
+def _obter_ou_criar_lei_cursor(cursor, nome: str) -> tuple[int, bool]:
+    nome_limpo = str(nome or "").strip() or LEI_PADRAO_IMPORTACAO
+    cursor.execute("SELECT id FROM leis WHERE nome = ? COLLATE NOCASE LIMIT 1", (nome_limpo,))
+    row = cursor.fetchone()
+    if row:
+        return int(row["id"]), False
+    cursor.execute("INSERT INTO leis (nome) VALUES (?)", (nome_limpo,))
+    return int(cursor.lastrowid), True
+
+
+def _obter_ou_criar_artigo_cursor(
+    cursor,
+    *,
+    lei_id: int,
+    numero: str,
+    descricao: str,
+) -> tuple[int, bool]:
+    numero_limpo = str(numero or "").strip()
+    descricao_limpa = str(descricao or "").strip()
+    cursor.execute("""
+        SELECT id
+        FROM artigos
+        WHERE lei_id = ?
+          AND numero = ? COLLATE NOCASE
+        LIMIT 1
+    """, (int(lei_id), numero_limpo))
+    row = cursor.fetchone()
+    if row:
+        artigo_id = int(row["id"])
+        cursor.execute(
+            "UPDATE artigos SET descricao = ? WHERE id = ?",
+            (descricao_limpa, artigo_id),
+        )
+        return artigo_id, False
+    cursor.execute("""
+        INSERT INTO artigos (lei_id, numero, descricao)
+        VALUES (?, ?, ?)
+    """, (int(lei_id), numero_limpo, descricao_limpa))
+    return int(cursor.lastrowid), True
+
+
+def _obter_ou_criar_inciso_cursor(
+    cursor,
+    *,
+    artigo_id: int,
+    numero: str,
+    descricao: str,
+) -> tuple[int, bool]:
+    numero_limpo = str(numero or "").strip()
+    descricao_limpa = str(descricao or "").strip()
+    cursor.execute("""
+        SELECT id
+        FROM incisos
+        WHERE artigo_id = ?
+          AND numero = ? COLLATE NOCASE
+        LIMIT 1
+    """, (int(artigo_id), numero_limpo))
+    row = cursor.fetchone()
+    if row:
+        inciso_id = int(row["id"])
+        cursor.execute(
+            "UPDATE incisos SET descricao = ? WHERE id = ?",
+            (descricao_limpa, inciso_id),
+        )
+        return inciso_id, False
+    cursor.execute("""
+        INSERT INTO incisos (artigo_id, numero, descricao)
+        VALUES (?, ?, ?)
+    """, (int(artigo_id), numero_limpo, descricao_limpa))
+    return int(cursor.lastrowid), True
+
+
+def _obter_ou_criar_alinea_cursor(
+    cursor,
+    *,
+    inciso_id: int,
+    identificador: str,
+    descricao: str,
+) -> tuple[int, bool]:
+    identificador_limpo = str(identificador or "").strip()
+    descricao_limpa = str(descricao or "").strip()
+    cursor.execute("""
+        SELECT id
+        FROM alineas
+        WHERE inciso_id = ?
+          AND identificador = ? COLLATE NOCASE
+        LIMIT 1
+    """, (int(inciso_id), identificador_limpo))
+    row = cursor.fetchone()
+    if row:
+        alinea_id = int(row["id"])
+        cursor.execute(
+            "UPDATE alineas SET descricao = ? WHERE id = ?",
+            (descricao_limpa, alinea_id),
+        )
+        return alinea_id, False
+    cursor.execute("""
+        INSERT INTO alineas (inciso_id, identificador, descricao)
+        VALUES (?, ?, ?)
+    """, (int(inciso_id), identificador_limpo, descricao_limpa))
+    return int(cursor.lastrowid), True
+
+
+def _buscar_item_base_legal_por_tipo_cursor(cursor, tipo: str, entidade_id: int) -> dict | None:
+    entidade_id_valor = int(entidade_id or 0)
+    if entidade_id_valor <= 0:
+        return None
+
+    if tipo == TIPO_BASE_LEGAL_ARTIGO:
+        cursor.execute("""
+            SELECT
+                ? AS tipo,
+                l.id AS lei_id,
+                l.nome AS lei_nome,
+                a.id AS entidade_id,
+                a.id AS artigo_id,
+                a.numero AS artigo_numero,
+                a.descricao AS artigo_descricao,
+                NULL AS inciso_id,
+                NULL AS inciso_numero,
+                NULL AS inciso_descricao,
+                NULL AS alinea_id,
+                NULL AS alinea_identificador,
+                NULL AS alinea_descricao
+            FROM artigos a
+            INNER JOIN leis l ON l.id = a.lei_id
+            WHERE a.id = ?
+        """, (TIPO_BASE_LEGAL_ARTIGO, entidade_id_valor))
+    elif tipo == TIPO_BASE_LEGAL_INCISO:
+        cursor.execute("""
+            SELECT
+                ? AS tipo,
+                l.id AS lei_id,
+                l.nome AS lei_nome,
+                i.id AS entidade_id,
+                a.id AS artigo_id,
+                a.numero AS artigo_numero,
+                a.descricao AS artigo_descricao,
+                i.id AS inciso_id,
+                i.numero AS inciso_numero,
+                i.descricao AS inciso_descricao,
+                NULL AS alinea_id,
+                NULL AS alinea_identificador,
+                NULL AS alinea_descricao
+            FROM incisos i
+            INNER JOIN artigos a ON a.id = i.artigo_id
+            INNER JOIN leis l ON l.id = a.lei_id
+            WHERE i.id = ?
+        """, (TIPO_BASE_LEGAL_INCISO, entidade_id_valor))
+    elif tipo == TIPO_BASE_LEGAL_ALINEA:
+        cursor.execute("""
+            SELECT
+                ? AS tipo,
+                l.id AS lei_id,
+                l.nome AS lei_nome,
+                al.id AS entidade_id,
+                a.id AS artigo_id,
+                a.numero AS artigo_numero,
+                a.descricao AS artigo_descricao,
+                i.id AS inciso_id,
+                i.numero AS inciso_numero,
+                i.descricao AS inciso_descricao,
+                al.id AS alinea_id,
+                al.identificador AS alinea_identificador,
+                al.descricao AS alinea_descricao
+            FROM alineas al
+            INNER JOIN incisos i ON i.id = al.inciso_id
+            INNER JOIN artigos a ON a.id = i.artigo_id
+            INNER JOIN leis l ON l.id = a.lei_id
+            WHERE al.id = ?
+        """, (TIPO_BASE_LEGAL_ALINEA, entidade_id_valor))
+    else:
+        return None
+
+    row = cursor.fetchone()
+    return _montar_item_base_legal(row) if row else None
+
+
+def _listar_itens_base_legal_cursor(cursor) -> list[dict]:
+    itens = []
+
+    cursor.execute("""
+        SELECT
+            ? AS tipo,
+            l.id AS lei_id,
+            l.nome AS lei_nome,
+            a.id AS entidade_id,
+            a.id AS artigo_id,
+            a.numero AS artigo_numero,
+            a.descricao AS artigo_descricao,
+            NULL AS inciso_id,
+            NULL AS inciso_numero,
+            NULL AS inciso_descricao,
+            NULL AS alinea_id,
+            NULL AS alinea_identificador,
+            NULL AS alinea_descricao
+        FROM artigos a
+        INNER JOIN leis l ON l.id = a.lei_id
+        ORDER BY LOWER(l.nome), a.id
+    """, (TIPO_BASE_LEGAL_ARTIGO,))
+    itens.extend(_montar_item_base_legal(row) for row in cursor.fetchall())
+
+    cursor.execute("""
+        SELECT
+            ? AS tipo,
+            l.id AS lei_id,
+            l.nome AS lei_nome,
+            i.id AS entidade_id,
+            a.id AS artigo_id,
+            a.numero AS artigo_numero,
+            a.descricao AS artigo_descricao,
+            i.id AS inciso_id,
+            i.numero AS inciso_numero,
+            i.descricao AS inciso_descricao,
+            NULL AS alinea_id,
+            NULL AS alinea_identificador,
+            NULL AS alinea_descricao
+        FROM incisos i
+        INNER JOIN artigos a ON a.id = i.artigo_id
+        INNER JOIN leis l ON l.id = a.lei_id
+        ORDER BY LOWER(l.nome), a.id, i.id
+    """, (TIPO_BASE_LEGAL_INCISO,))
+    itens.extend(_montar_item_base_legal(row) for row in cursor.fetchall())
+
+    cursor.execute("""
+        SELECT
+            ? AS tipo,
+            l.id AS lei_id,
+            l.nome AS lei_nome,
+            al.id AS entidade_id,
+            a.id AS artigo_id,
+            a.numero AS artigo_numero,
+            a.descricao AS artigo_descricao,
+            i.id AS inciso_id,
+            i.numero AS inciso_numero,
+            i.descricao AS inciso_descricao,
+            al.id AS alinea_id,
+            al.identificador AS alinea_identificador,
+            al.descricao AS alinea_descricao
+        FROM alineas al
+        INNER JOIN incisos i ON i.id = al.inciso_id
+        INNER JOIN artigos a ON a.id = i.artigo_id
+        INNER JOIN leis l ON l.id = a.lei_id
+        ORDER BY LOWER(l.nome), a.id, i.id, al.id
+    """, (TIPO_BASE_LEGAL_ALINEA,))
+    itens.extend(_montar_item_base_legal(row) for row in cursor.fetchall())
+
+    ordem_tipo = {
+        TIPO_BASE_LEGAL_ARTIGO: 0,
+        TIPO_BASE_LEGAL_INCISO: 1,
+        TIPO_BASE_LEGAL_ALINEA: 2,
+    }
+    itens.sort(
+        key=lambda item: (
+            str(item.get("lei_nome") or "").lower(),
+            int(item.get("artigo_id") or 0),
+            int(item.get("inciso_id") or 0),
+            int(item.get("alinea_id") or 0),
+            ordem_tipo.get(str(item.get("tipo") or ""), 9),
+            int(item.get("id") or 0),
+        )
+    )
+    return itens
+
+
+def _garantir_colunas_ocorrencia_regimento_itens(cursor):
+    cursor.execute("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'ocorrencia_regimento_itens'
+    """)
+    if not cursor.fetchone():
+        return
+
+    cursor.execute("PRAGMA table_info(ocorrencia_regimento_itens)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+    if "artigo_id" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencia_regimento_itens ADD COLUMN artigo_id INTEGER")
+    if "inciso_id" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencia_regimento_itens ADD COLUMN inciso_id INTEGER")
+    if "alinea_id" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencia_regimento_itens ADD COLUMN alinea_id INTEGER")
+    if "lei_nome" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencia_regimento_itens ADD COLUMN lei_nome TEXT")
+    if "artigo_numero" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencia_regimento_itens ADD COLUMN artigo_numero TEXT")
+    if "artigo_descricao" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencia_regimento_itens ADD COLUMN artigo_descricao TEXT")
+    if "inciso_numero" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencia_regimento_itens ADD COLUMN inciso_numero TEXT")
+    if "inciso_descricao" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencia_regimento_itens ADD COLUMN inciso_descricao TEXT")
+    if "alinea_identificador" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencia_regimento_itens ADD COLUMN alinea_identificador TEXT")
+    if "alinea_descricao" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencia_regimento_itens ADD COLUMN alinea_descricao TEXT")
+
+
+def _migrar_base_legal_legado(cursor):
+    cursor.execute("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'regimento_itens'
+    """)
+    if not cursor.fetchone():
+        return
+
+    cursor.execute("""
+        SELECT id, artigo, descricao
+        FROM regimento_itens
+        ORDER BY id ASC
+    """)
+    itens_legados = cursor.fetchall()
+    if not itens_legados:
+        return
+
+    lei_id, _ = _obter_ou_criar_lei_cursor(cursor, LEI_PADRAO_MIGRACAO)
+    mapa_ids_legados: dict[int, tuple[int, int]] = {}
+    for row in itens_legados:
+        artigo_id, _ = _obter_ou_criar_artigo_cursor(
+            cursor,
+            lei_id=lei_id,
+            numero=str(row["artigo"] or "").strip() or f"Item {int(row['id'])}",
+            descricao=str(row["descricao"] or "").strip() or "Sem descricao.",
+        )
+        mapa_ids_legados[int(row["id"])] = (
+            _codificar_regimento_item_id(TIPO_BASE_LEGAL_ARTIGO, artigo_id),
+            artigo_id,
+        )
+
+    for regimento_item_id_legado, (item_id_novo, artigo_id_novo) in mapa_ids_legados.items():
+        cursor.execute("""
+            UPDATE ocorrencia_regimento_itens
+            SET regimento_item_id = ?,
+                artigo_id = COALESCE(artigo_id, ?)
+            WHERE regimento_item_id = ?
+              AND (artigo_id IS NULL OR artigo_id <= 0)
+        """, (item_id_novo, artigo_id_novo, regimento_item_id_legado))
+
 
 def _mapear_regimento_itens_por_ocorrencia(cursor, ocorrencia_ids: list[int]) -> dict[int, list[dict]]:
     ids_validos = [int(ocorrencia_id) for ocorrencia_id in ocorrencia_ids if int(ocorrencia_id) > 0]
@@ -972,14 +1591,28 @@ def _mapear_regimento_itens_por_ocorrencia(cursor, ocorrencia_ids: list[int]) ->
     placeholders = ",".join(["?"] * len(ids_validos))
     cursor.execute(f"""
         SELECT
-            ocorrencia_id,
-            regimento_item_id,
-            artigo,
-            descricao,
-            ordem
-        FROM ocorrencia_regimento_itens
-        WHERE ocorrencia_id IN ({placeholders})
-        ORDER BY ocorrencia_id ASC, ordem ASC, id ASC
+            ori.ocorrencia_id,
+            ori.regimento_item_id,
+            COALESCE(ori.artigo_id, a.id) AS artigo_id,
+            COALESCE(ori.inciso_id, i.id) AS inciso_id,
+            COALESCE(ori.alinea_id, al.id) AS alinea_id,
+            COALESCE(NULLIF(TRIM(COALESCE(ori.lei_nome, '')), ''), l.nome, '') AS lei_nome,
+            COALESCE(NULLIF(TRIM(COALESCE(ori.artigo_numero, '')), ''), a.numero, '') AS artigo_numero,
+            COALESCE(NULLIF(TRIM(COALESCE(ori.artigo_descricao, '')), ''), a.descricao, '') AS artigo_descricao,
+            COALESCE(NULLIF(TRIM(COALESCE(ori.inciso_numero, '')), ''), i.numero, '') AS inciso_numero,
+            COALESCE(NULLIF(TRIM(COALESCE(ori.inciso_descricao, '')), ''), i.descricao, '') AS inciso_descricao,
+            COALESCE(NULLIF(TRIM(COALESCE(ori.alinea_identificador, '')), ''), al.identificador, '') AS alinea_identificador,
+            COALESCE(NULLIF(TRIM(COALESCE(ori.alinea_descricao, '')), ''), al.descricao, '') AS alinea_descricao,
+            ori.artigo,
+            ori.descricao,
+            ori.ordem
+        FROM ocorrencia_regimento_itens ori
+        LEFT JOIN alineas al ON al.id = ori.alinea_id
+        LEFT JOIN incisos i ON i.id = COALESCE(ori.inciso_id, al.inciso_id)
+        LEFT JOIN artigos a ON a.id = COALESCE(ori.artigo_id, i.artigo_id)
+        LEFT JOIN leis l ON l.id = a.lei_id
+        WHERE ori.ocorrencia_id IN ({placeholders})
+        ORDER BY ori.ocorrencia_id ASC, ori.ordem ASC, ori.id ASC
     """, ids_validos)
 
     mapa: dict[int, list[dict]] = {}
@@ -988,6 +1621,16 @@ def _mapear_regimento_itens_por_ocorrencia(cursor, ocorrencia_ids: list[int]) ->
         mapa.setdefault(ocorrencia_id, []).append(
             {
                 "regimento_item_id": int(row["regimento_item_id"]) if row["regimento_item_id"] is not None else None,
+                "artigo_id": int(row["artigo_id"]) if row["artigo_id"] is not None else None,
+                "inciso_id": int(row["inciso_id"]) if row["inciso_id"] is not None else None,
+                "alinea_id": int(row["alinea_id"]) if row["alinea_id"] is not None else None,
+                "lei_nome": str(row["lei_nome"] or "").strip() or None,
+                "artigo_numero": str(row["artigo_numero"] or "").strip() or None,
+                "artigo_descricao": str(row["artigo_descricao"] or "").strip() or None,
+                "inciso_numero": str(row["inciso_numero"] or "").strip() or None,
+                "inciso_descricao": str(row["inciso_descricao"] or "").strip() or None,
+                "alinea_identificador": str(row["alinea_identificador"] or "").strip() or None,
+                "alinea_descricao": str(row["alinea_descricao"] or "").strip() or None,
                 "artigo": str(row["artigo"] or "").strip(),
                 "descricao": str(row["descricao"] or "").strip(),
                 "ordem": int(row["ordem"] or 0),
@@ -2705,44 +3348,647 @@ def buscar_recurso_por_id(recurso_id: int):
 def listar_regimento_itens(incluir_inativos: bool = True):
     conn = get_connection()
     cursor = conn.cursor()
-
-    query = """
-        SELECT
-            id,
-            artigo,
-            descricao,
-            ativo,
-            criado_em,
-            atualizado_em
-        FROM regimento_itens
-    """
-    if not incluir_inativos:
-        query += " WHERE ativo = 1"
-    query += " ORDER BY artigo COLLATE NOCASE ASC, id ASC"
-
-    cursor.execute(query)
-    rows = cursor.fetchall()
+    rows = _listar_itens_base_legal_cursor(cursor)
     conn.close()
-    return [dict(row) for row in rows]
+    return rows
+
+
+def _montar_lei_base_legal(row: sqlite3.Row | dict) -> dict:
+    dados = dict(row)
+    nome = str(dados.get("nome") or "").strip()
+    return {
+        "id": int(dados.get("id") or 0),
+        "nome": nome,
+        "label": nome,
+    }
+
+
+def _montar_artigo_base_legal(row: sqlite3.Row | dict) -> dict:
+    dados = dict(row)
+    lei_nome = str(dados.get("lei_nome") or "").strip()
+    numero = str(dados.get("numero") or "").strip()
+    descricao = str(dados.get("descricao") or "").strip()
+    referencia = _montar_rotulo_base_legal(lei_nome, numero)
+    return {
+        "id": int(dados.get("id") or 0),
+        "lei_id": int(dados.get("lei_id") or 0),
+        "lei_nome": lei_nome,
+        "numero": numero,
+        "descricao": descricao,
+        "referencia": referencia,
+        "label": referencia,
+    }
+
+
+def _montar_inciso_base_legal(row: sqlite3.Row | dict) -> dict:
+    dados = dict(row)
+    lei_nome = str(dados.get("lei_nome") or "").strip()
+    artigo_numero = str(dados.get("artigo_numero") or "").strip()
+    artigo_descricao = str(dados.get("artigo_descricao") or "").strip()
+    numero = str(dados.get("numero") or "").strip()
+    descricao = str(dados.get("descricao") or "").strip()
+    referencia = _montar_rotulo_base_legal(lei_nome, artigo_numero, numero)
+    return {
+        "id": int(dados.get("id") or 0),
+        "artigo_id": int(dados.get("artigo_id") or 0),
+        "lei_id": int(dados.get("lei_id") or 0),
+        "lei_nome": lei_nome,
+        "artigo_numero": artigo_numero,
+        "artigo_descricao": artigo_descricao,
+        "numero": numero,
+        "descricao": descricao,
+        "referencia": referencia,
+        "label": referencia,
+    }
+
+
+def _montar_alinea_base_legal(row: sqlite3.Row | dict) -> dict:
+    dados = dict(row)
+    lei_nome = str(dados.get("lei_nome") or "").strip()
+    artigo_numero = str(dados.get("artigo_numero") or "").strip()
+    inciso_numero = str(dados.get("inciso_numero") or "").strip()
+    inciso_descricao = str(dados.get("inciso_descricao") or "").strip()
+    identificador = str(dados.get("identificador") or "").strip()
+    descricao = str(dados.get("descricao") or "").strip()
+    referencia = _montar_rotulo_base_legal(lei_nome, artigo_numero, inciso_numero, identificador)
+    return {
+        "id": int(dados.get("id") or 0),
+        "inciso_id": int(dados.get("inciso_id") or 0),
+        "artigo_id": int(dados.get("artigo_id") or 0),
+        "lei_id": int(dados.get("lei_id") or 0),
+        "lei_nome": lei_nome,
+        "artigo_numero": artigo_numero,
+        "inciso_numero": inciso_numero,
+        "inciso_descricao": inciso_descricao,
+        "identificador": identificador,
+        "descricao": descricao,
+        "referencia": referencia,
+        "label": referencia,
+    }
+
+
+def listar_leis():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, nome
+        FROM leis
+        ORDER BY LOWER(nome), id
+    """)
+    rows = [_montar_lei_base_legal(row) for row in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def buscar_lei_por_id(lei_id: int):
+    lei_id_valor = int(lei_id or 0)
+    if lei_id_valor <= 0:
+        return None
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT id, nome
+        FROM leis
+        WHERE id = ?
+    """, (lei_id_valor,))
+    row = cursor.fetchone()
+    conn.close()
+    return _montar_lei_base_legal(row) if row else None
+
+
+def criar_lei(nome: str):
+    nome_limpo = _normalizar_nome_catalogo(nome)
+    if not nome_limpo:
+        raise ValueError("Nome da lei e obrigatorio.")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("INSERT INTO leis (nome) VALUES (?)", (nome_limpo,))
+    except sqlite3.IntegrityError as exc:
+        conn.close()
+        raise ValueError("Ja existe uma lei com este nome.") from exc
+    conn.commit()
+    lei_id = int(cursor.lastrowid)
+    conn.close()
+    return lei_id
+
+
+def atualizar_lei(lei_id: int, nome: str):
+    lei_id_valor = int(lei_id or 0)
+    if lei_id_valor <= 0:
+        return False
+    nome_limpo = _normalizar_nome_catalogo(nome)
+    if not nome_limpo:
+        raise ValueError("Nome da lei e obrigatorio.")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "UPDATE leis SET nome = ? WHERE id = ?",
+            (nome_limpo, lei_id_valor),
+        )
+    except sqlite3.IntegrityError as exc:
+        conn.close()
+        raise ValueError("Ja existe uma lei com este nome.") from exc
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def listar_artigos(lei_id: int | None = None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    params: list[int] = []
+    sql = """
+        SELECT
+            a.id,
+            a.lei_id,
+            l.nome AS lei_nome,
+            a.numero,
+            a.descricao
+        FROM artigos a
+        INNER JOIN leis l ON l.id = a.lei_id
+    """
+    if lei_id is not None:
+        sql += "\nWHERE a.lei_id = ?"
+        params.append(int(lei_id))
+    sql += "\nORDER BY LOWER(l.nome), a.id"
+    cursor.execute(sql, tuple(params))
+    rows = [_montar_artigo_base_legal(row) for row in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def buscar_artigo_por_id(artigo_id: int):
+    artigo_id_valor = int(artigo_id or 0)
+    if artigo_id_valor <= 0:
+        return None
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT
+            a.id,
+            a.lei_id,
+            l.nome AS lei_nome,
+            a.numero,
+            a.descricao
+        FROM artigos a
+        INNER JOIN leis l ON l.id = a.lei_id
+        WHERE a.id = ?
+    """, (artigo_id_valor,))
+    row = cursor.fetchone()
+    conn.close()
+    return _montar_artigo_base_legal(row) if row else None
+
+
+def criar_artigo(*, lei_id: int, numero: str, descricao: str):
+    lei_id_valor = int(lei_id or 0)
+    numero_limpo = _normalizar_nome_catalogo(numero)
+    descricao_limpa = _normalizar_nome_catalogo(descricao)
+    if lei_id_valor <= 0:
+        raise ValueError("Lei invalida.")
+    if not numero_limpo:
+        raise ValueError("Numero do artigo e obrigatorio.")
+    if not descricao_limpa:
+        raise ValueError("Descricao do artigo e obrigatoria.")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM leis WHERE id = ?", (lei_id_valor,))
+    if not cursor.fetchone():
+        conn.close()
+        raise ValueError("Lei nao encontrada.")
+    try:
+        cursor.execute("""
+            INSERT INTO artigos (lei_id, numero, descricao)
+            VALUES (?, ?, ?)
+        """, (lei_id_valor, numero_limpo, descricao_limpa))
+    except sqlite3.IntegrityError as exc:
+        conn.close()
+        raise ValueError("Ja existe um artigo com este numero para a lei informada.") from exc
+    conn.commit()
+    artigo_id = int(cursor.lastrowid)
+    conn.close()
+    return artigo_id
+
+
+def atualizar_artigo(*, artigo_id: int, lei_id: int, numero: str, descricao: str):
+    artigo_id_valor = int(artigo_id or 0)
+    lei_id_valor = int(lei_id or 0)
+    numero_limpo = _normalizar_nome_catalogo(numero)
+    descricao_limpa = _normalizar_nome_catalogo(descricao)
+    if artigo_id_valor <= 0:
+        return False
+    if lei_id_valor <= 0:
+        raise ValueError("Lei invalida.")
+    if not numero_limpo:
+        raise ValueError("Numero do artigo e obrigatorio.")
+    if not descricao_limpa:
+        raise ValueError("Descricao do artigo e obrigatoria.")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM leis WHERE id = ?", (lei_id_valor,))
+    if not cursor.fetchone():
+        conn.close()
+        raise ValueError("Lei nao encontrada.")
+    try:
+        cursor.execute("""
+            UPDATE artigos
+            SET lei_id = ?, numero = ?, descricao = ?
+            WHERE id = ?
+        """, (lei_id_valor, numero_limpo, descricao_limpa, artigo_id_valor))
+    except sqlite3.IntegrityError as exc:
+        conn.close()
+        raise ValueError("Ja existe um artigo com este numero para a lei informada.") from exc
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def listar_incisos(artigo_id: int | None = None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    params: list[int] = []
+    sql = """
+        SELECT
+            i.id,
+            i.artigo_id,
+            a.lei_id,
+            l.nome AS lei_nome,
+            a.numero AS artigo_numero,
+            a.descricao AS artigo_descricao,
+            i.numero,
+            i.descricao
+        FROM incisos i
+        INNER JOIN artigos a ON a.id = i.artigo_id
+        INNER JOIN leis l ON l.id = a.lei_id
+    """
+    if artigo_id is not None:
+        sql += "\nWHERE i.artigo_id = ?"
+        params.append(int(artigo_id))
+    sql += "\nORDER BY LOWER(l.nome), a.id, i.id"
+    cursor.execute(sql, tuple(params))
+    rows = [_montar_inciso_base_legal(row) for row in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def buscar_inciso_por_id(inciso_id: int):
+    inciso_id_valor = int(inciso_id or 0)
+    if inciso_id_valor <= 0:
+        return None
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT
+            i.id,
+            i.artigo_id,
+            a.lei_id,
+            l.nome AS lei_nome,
+            a.numero AS artigo_numero,
+            a.descricao AS artigo_descricao,
+            i.numero,
+            i.descricao
+        FROM incisos i
+        INNER JOIN artigos a ON a.id = i.artigo_id
+        INNER JOIN leis l ON l.id = a.lei_id
+        WHERE i.id = ?
+    """, (inciso_id_valor,))
+    row = cursor.fetchone()
+    conn.close()
+    return _montar_inciso_base_legal(row) if row else None
+
+
+def criar_inciso(*, artigo_id: int, numero: str, descricao: str):
+    artigo_id_valor = int(artigo_id or 0)
+    numero_limpo = _normalizar_nome_catalogo(numero)
+    descricao_limpa = _normalizar_nome_catalogo(descricao)
+    if artigo_id_valor <= 0:
+        raise ValueError("Artigo invalido.")
+    if not numero_limpo:
+        raise ValueError("Numero do inciso e obrigatorio.")
+    if not descricao_limpa:
+        raise ValueError("Descricao do inciso e obrigatoria.")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM artigos WHERE id = ?", (artigo_id_valor,))
+    if not cursor.fetchone():
+        conn.close()
+        raise ValueError("Artigo nao encontrado.")
+    try:
+        cursor.execute("""
+            INSERT INTO incisos (artigo_id, numero, descricao)
+            VALUES (?, ?, ?)
+        """, (artigo_id_valor, numero_limpo, descricao_limpa))
+    except sqlite3.IntegrityError as exc:
+        conn.close()
+        raise ValueError("Ja existe um inciso com este numero para o artigo informado.") from exc
+    conn.commit()
+    inciso_id = int(cursor.lastrowid)
+    conn.close()
+    return inciso_id
+
+
+def atualizar_inciso(*, inciso_id: int, artigo_id: int, numero: str, descricao: str):
+    inciso_id_valor = int(inciso_id or 0)
+    artigo_id_valor = int(artigo_id or 0)
+    numero_limpo = _normalizar_nome_catalogo(numero)
+    descricao_limpa = _normalizar_nome_catalogo(descricao)
+    if inciso_id_valor <= 0:
+        return False
+    if artigo_id_valor <= 0:
+        raise ValueError("Artigo invalido.")
+    if not numero_limpo:
+        raise ValueError("Numero do inciso e obrigatorio.")
+    if not descricao_limpa:
+        raise ValueError("Descricao do inciso e obrigatoria.")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM artigos WHERE id = ?", (artigo_id_valor,))
+    if not cursor.fetchone():
+        conn.close()
+        raise ValueError("Artigo nao encontrado.")
+    try:
+        cursor.execute("""
+            UPDATE incisos
+            SET artigo_id = ?, numero = ?, descricao = ?
+            WHERE id = ?
+        """, (artigo_id_valor, numero_limpo, descricao_limpa, inciso_id_valor))
+    except sqlite3.IntegrityError as exc:
+        conn.close()
+        raise ValueError("Ja existe um inciso com este numero para o artigo informado.") from exc
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def listar_alineas(inciso_id: int | None = None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    params: list[int] = []
+    sql = """
+        SELECT
+            al.id,
+            al.inciso_id,
+            i.artigo_id,
+            a.lei_id,
+            l.nome AS lei_nome,
+            a.numero AS artigo_numero,
+            i.numero AS inciso_numero,
+            i.descricao AS inciso_descricao,
+            al.identificador,
+            al.descricao
+        FROM alineas al
+        INNER JOIN incisos i ON i.id = al.inciso_id
+        INNER JOIN artigos a ON a.id = i.artigo_id
+        INNER JOIN leis l ON l.id = a.lei_id
+    """
+    if inciso_id is not None:
+        sql += "\nWHERE al.inciso_id = ?"
+        params.append(int(inciso_id))
+    sql += "\nORDER BY LOWER(l.nome), a.id, i.id, al.id"
+    cursor.execute(sql, tuple(params))
+    rows = [_montar_alinea_base_legal(row) for row in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def buscar_alinea_por_id(alinea_id: int):
+    alinea_id_valor = int(alinea_id or 0)
+    if alinea_id_valor <= 0:
+        return None
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT
+            al.id,
+            al.inciso_id,
+            i.artigo_id,
+            a.lei_id,
+            l.nome AS lei_nome,
+            a.numero AS artigo_numero,
+            i.numero AS inciso_numero,
+            i.descricao AS inciso_descricao,
+            al.identificador,
+            al.descricao
+        FROM alineas al
+        INNER JOIN incisos i ON i.id = al.inciso_id
+        INNER JOIN artigos a ON a.id = i.artigo_id
+        INNER JOIN leis l ON l.id = a.lei_id
+        WHERE al.id = ?
+    """, (alinea_id_valor,))
+    row = cursor.fetchone()
+    conn.close()
+    return _montar_alinea_base_legal(row) if row else None
+
+
+def criar_alinea(*, inciso_id: int, identificador: str, descricao: str):
+    inciso_id_valor = int(inciso_id or 0)
+    identificador_limpo = _normalizar_nome_catalogo(identificador)
+    descricao_limpa = _normalizar_nome_catalogo(descricao)
+    if inciso_id_valor <= 0:
+        raise ValueError("Inciso invalido.")
+    if not identificador_limpo:
+        raise ValueError("Identificador da alinea e obrigatorio.")
+    if not descricao_limpa:
+        raise ValueError("Descricao da alinea e obrigatoria.")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM incisos WHERE id = ?", (inciso_id_valor,))
+    if not cursor.fetchone():
+        conn.close()
+        raise ValueError("Inciso nao encontrado.")
+    try:
+        cursor.execute("""
+            INSERT INTO alineas (inciso_id, identificador, descricao)
+            VALUES (?, ?, ?)
+        """, (inciso_id_valor, identificador_limpo, descricao_limpa))
+    except sqlite3.IntegrityError as exc:
+        conn.close()
+        raise ValueError("Ja existe uma alinea com este identificador para o inciso informado.") from exc
+    conn.commit()
+    alinea_id = int(cursor.lastrowid)
+    conn.close()
+    return alinea_id
+
+
+def atualizar_alinea(*, alinea_id: int, inciso_id: int, identificador: str, descricao: str):
+    alinea_id_valor = int(alinea_id or 0)
+    inciso_id_valor = int(inciso_id or 0)
+    identificador_limpo = _normalizar_nome_catalogo(identificador)
+    descricao_limpa = _normalizar_nome_catalogo(descricao)
+    if alinea_id_valor <= 0:
+        return False
+    if inciso_id_valor <= 0:
+        raise ValueError("Inciso invalido.")
+    if not identificador_limpo:
+        raise ValueError("Identificador da alinea e obrigatorio.")
+    if not descricao_limpa:
+        raise ValueError("Descricao da alinea e obrigatoria.")
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM incisos WHERE id = ?", (inciso_id_valor,))
+    if not cursor.fetchone():
+        conn.close()
+        raise ValueError("Inciso nao encontrado.")
+    try:
+        cursor.execute("""
+            UPDATE alineas
+            SET inciso_id = ?, identificador = ?, descricao = ?
+            WHERE id = ?
+        """, (inciso_id_valor, identificador_limpo, descricao_limpa, alinea_id_valor))
+    except sqlite3.IntegrityError as exc:
+        conn.close()
+        raise ValueError("Ja existe uma alinea com este identificador para o inciso informado.") from exc
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def _contar_relacoes_base_legal(cursor, tabela: str, coluna: str, valor_id: int) -> int:
+    cursor.execute(
+        f"SELECT COUNT(*) AS total FROM {tabela} WHERE {coluna} = ?",
+        (int(valor_id),),
+    )
+    row = cursor.fetchone()
+    return int(row["total"] or 0) if row else 0
+
+
+def remover_lei(lei_id: int):
+    lei_id_valor = int(lei_id or 0)
+    if lei_id_valor <= 0:
+        return False
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM leis WHERE id = ?", (lei_id_valor,))
+    if not cursor.fetchone():
+        conn.close()
+        return False
+
+    if _contar_relacoes_base_legal(cursor, "artigos", "lei_id", lei_id_valor) > 0:
+        conn.close()
+        raise ValueError("Nao e possivel excluir a lei porque existem artigos vinculados.")
+
+    cursor.execute("DELETE FROM leis WHERE id = ?", (lei_id_valor,))
+    removido = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return removido
+
+
+def remover_artigo(artigo_id: int):
+    artigo_id_valor = int(artigo_id or 0)
+    if artigo_id_valor <= 0:
+        return False
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM artigos WHERE id = ?", (artigo_id_valor,))
+    if not cursor.fetchone():
+        conn.close()
+        return False
+
+    if _contar_relacoes_base_legal(cursor, "incisos", "artigo_id", artigo_id_valor) > 0:
+        conn.close()
+        raise ValueError("Nao e possivel excluir o artigo porque existem incisos vinculados.")
+    if _contar_relacoes_base_legal(cursor, "ocorrencia_regimento_itens", "artigo_id", artigo_id_valor) > 0:
+        conn.close()
+        raise ValueError("Nao e possivel excluir o artigo porque ele ja foi vinculado a ocorrencias.")
+
+    cursor.execute("DELETE FROM artigos WHERE id = ?", (artigo_id_valor,))
+    removido = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return removido
+
+
+def remover_inciso(inciso_id: int):
+    inciso_id_valor = int(inciso_id or 0)
+    if inciso_id_valor <= 0:
+        return False
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM incisos WHERE id = ?", (inciso_id_valor,))
+    if not cursor.fetchone():
+        conn.close()
+        return False
+
+    if _contar_relacoes_base_legal(cursor, "alineas", "inciso_id", inciso_id_valor) > 0:
+        conn.close()
+        raise ValueError("Nao e possivel excluir o inciso porque existem alineas vinculadas.")
+    if _contar_relacoes_base_legal(cursor, "ocorrencia_regimento_itens", "inciso_id", inciso_id_valor) > 0:
+        conn.close()
+        raise ValueError("Nao e possivel excluir o inciso porque ele ja foi vinculado a ocorrencias.")
+
+    cursor.execute("DELETE FROM incisos WHERE id = ?", (inciso_id_valor,))
+    removido = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return removido
+
+
+def remover_alinea(alinea_id: int):
+    alinea_id_valor = int(alinea_id or 0)
+    if alinea_id_valor <= 0:
+        return False
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT 1 FROM alineas WHERE id = ?", (alinea_id_valor,))
+    if not cursor.fetchone():
+        conn.close()
+        return False
+
+    if _contar_relacoes_base_legal(cursor, "ocorrencia_regimento_itens", "alinea_id", alinea_id_valor) > 0:
+        conn.close()
+        raise ValueError("Nao e possivel excluir a alinea porque ela ja foi vinculada a ocorrencias.")
+
+    cursor.execute("DELETE FROM alineas WHERE id = ?", (alinea_id_valor,))
+    removido = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return removido
+
+
+def remover_regimento_item(regimento_item_id: int):
+    try:
+        tipo, entidade_id = _decodificar_regimento_item_id(regimento_item_id)
+    except ValueError:
+        return False
+
+    if tipo == TIPO_BASE_LEGAL_ARTIGO:
+        return remover_artigo(entidade_id)
+    if tipo == TIPO_BASE_LEGAL_INCISO:
+        return remover_inciso(entidade_id)
+    if tipo == TIPO_BASE_LEGAL_ALINEA:
+        return remover_alinea(entidade_id)
+    return False
 
 
 def buscar_regimento_item_por_id(regimento_item_id: int):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
-        SELECT
-            id,
-            artigo,
-            descricao,
-            ativo,
-            criado_em,
-            atualizado_em
-        FROM regimento_itens
-        WHERE id = ?
-    """, (int(regimento_item_id),))
-    row = cursor.fetchone()
+    try:
+        tipo, entidade_id = _decodificar_regimento_item_id(regimento_item_id)
+    except ValueError:
+        conn.close()
+        return None
+    row = _buscar_item_base_legal_por_tipo_cursor(cursor, tipo, entidade_id)
     conn.close()
-    return dict(row) if row else None
+    return row
 
 def buscar_regimento_item_por_artigo(artigo: str):
     artigo_limpo = _normalizar_nome_catalogo(artigo)
@@ -2753,20 +3999,17 @@ def buscar_regimento_item_por_artigo(artigo: str):
     cursor = conn.cursor()
     cursor.execute("""
         SELECT
-            id,
-            artigo,
-            descricao,
-            ativo,
-            criado_em,
-            atualizado_em
-        FROM regimento_itens
-        WHERE artigo = ? COLLATE NOCASE
-        ORDER BY id ASC
+            a.id AS artigo_id
+        FROM artigos a
+        WHERE a.numero = ? COLLATE NOCASE
+        ORDER BY a.id ASC
         LIMIT 1
     """, (artigo_limpo,))
     row = cursor.fetchone()
     conn.close()
-    return dict(row) if row else None
+    if not row:
+        return None
+    return buscar_regimento_item_por_id(_codificar_regimento_item_id(TIPO_BASE_LEGAL_ARTIGO, int(row["artigo_id"])))
 
 
 def buscar_regimento_itens_por_ids(regimento_item_ids: list[int]):
@@ -2782,48 +4025,97 @@ def buscar_regimento_itens_por_ids(regimento_item_ids: list[int]):
     if not ids_validos:
         return []
 
-    placeholders = ",".join(["?"] * len(ids_validos))
+    itens = []
+    for regimento_item_id in ids_validos:
+        item = buscar_regimento_item_por_id(regimento_item_id)
+        if item:
+            itens.append(item)
+    return itens
+
+
+def criar_ou_atualizar_regimento_item(
+    *,
+    lei_nome: str,
+    artigo_numero: str,
+    artigo_descricao: str,
+    inciso_numero: str | None = None,
+    inciso_descricao: str | None = None,
+    alinea_identificador: str | None = None,
+    alinea_descricao: str | None = None,
+) -> tuple[int, bool]:
+    dados = _normalizar_campos_base_legal(
+        lei_nome=lei_nome,
+        artigo_numero=artigo_numero,
+        artigo_descricao=artigo_descricao,
+        inciso_numero=inciso_numero,
+        inciso_descricao=inciso_descricao,
+        alinea_identificador=alinea_identificador,
+        alinea_descricao=alinea_descricao,
+    )
+
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute(f"""
-        SELECT
-            id,
-            artigo,
-            descricao,
-            ativo,
-            criado_em,
-            atualizado_em
-        FROM regimento_itens
-        WHERE id IN ({placeholders})
-    """, ids_validos)
-    rows = {int(row["id"]): dict(row) for row in cursor.fetchall()}
-    conn.close()
-    return [rows[regimento_item_id] for regimento_item_id in ids_validos if regimento_item_id in rows]
+    lei_id, lei_criada = _obter_ou_criar_lei_cursor(cursor, dados["lei_nome"])
+    artigo_id, artigo_criado = _obter_ou_criar_artigo_cursor(
+        cursor,
+        lei_id=lei_id,
+        numero=dados["artigo_numero"],
+        descricao=dados["artigo_descricao"],
+    )
 
+    tipo = TIPO_BASE_LEGAL_ARTIGO
+    entidade_id = artigo_id
+    criado = lei_criada or artigo_criado
 
-def criar_regimento_item(artigo: str, descricao: str, ativo: bool = True):
-    artigo_limpo = _normalizar_nome_catalogo(artigo)
-    descricao_limpa = str(descricao or "").strip()
-    if not artigo_limpo:
-        raise ValueError("Artigo do regimento e obrigatorio.")
-    if not descricao_limpa:
-        raise ValueError("Descricao do regimento e obrigatoria.")
-
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO regimento_itens (
-            artigo,
-            descricao,
-            ativo,
-            criado_em,
-            atualizado_em
+    if dados["inciso_numero"]:
+        inciso_id, inciso_criado = _obter_ou_criar_inciso_cursor(
+            cursor,
+            artigo_id=artigo_id,
+            numero=dados["inciso_numero"],
+            descricao=dados["inciso_descricao"],
         )
-        VALUES (?, ?, ?, datetime('now'), datetime('now'))
-    """, (artigo_limpo, descricao_limpa, int(bool(ativo))))
-    regimento_item_id = cursor.lastrowid
+        tipo = TIPO_BASE_LEGAL_INCISO
+        entidade_id = inciso_id
+        criado = criado or inciso_criado
+
+        if dados["alinea_identificador"]:
+            alinea_id, alinea_criada = _obter_ou_criar_alinea_cursor(
+                cursor,
+                inciso_id=inciso_id,
+                identificador=dados["alinea_identificador"],
+                descricao=dados["alinea_descricao"],
+            )
+            tipo = TIPO_BASE_LEGAL_ALINEA
+            entidade_id = alinea_id
+            criado = criado or alinea_criada
+
     conn.commit()
     conn.close()
+    return _codificar_regimento_item_id(tipo, entidade_id), bool(criado)
+
+
+def criar_regimento_item(
+    artigo: str | None = None,
+    descricao: str | None = None,
+    ativo: bool = True,
+    *,
+    lei_nome: str | None = None,
+    artigo_numero: str | None = None,
+    artigo_descricao: str | None = None,
+    inciso_numero: str | None = None,
+    inciso_descricao: str | None = None,
+    alinea_identificador: str | None = None,
+    alinea_descricao: str | None = None,
+):
+    regimento_item_id, _criado = criar_ou_atualizar_regimento_item(
+        lei_nome=lei_nome or LEI_PADRAO_IMPORTACAO,
+        artigo_numero=artigo_numero or artigo or "",
+        artigo_descricao=artigo_descricao or descricao or "",
+        inciso_numero=inciso_numero,
+        inciso_descricao=inciso_descricao,
+        alinea_identificador=alinea_identificador,
+        alinea_descricao=alinea_descricao,
+    )
     return regimento_item_id
 
 def criar_ou_atualizar_regimento_item_por_artigo(
@@ -2831,62 +4123,110 @@ def criar_ou_atualizar_regimento_item_por_artigo(
     descricao: str,
     ativo: bool = True,
 ):
-    existente = buscar_regimento_item_por_artigo(artigo)
-    if existente:
-        atualizar_regimento_item(
-            regimento_item_id=int(existente["id"]),
-            artigo=artigo,
-            descricao=descricao,
-            ativo=ativo,
-        )
-        return int(existente["id"]), False
-
-    regimento_item_id = criar_regimento_item(
-        artigo=artigo,
-        descricao=descricao,
-        ativo=ativo,
+    return criar_ou_atualizar_regimento_item(
+        lei_nome=LEI_PADRAO_IMPORTACAO,
+        artigo_numero=artigo,
+        artigo_descricao=descricao,
     )
-    return int(regimento_item_id), True
 
 
 def atualizar_regimento_item(
     regimento_item_id: int,
-    artigo: str,
-    descricao: str,
+    artigo: str | None = None,
+    descricao: str | None = None,
     ativo: bool = True,
+    *,
+    lei_nome: str | None = None,
+    artigo_numero: str | None = None,
+    artigo_descricao: str | None = None,
+    inciso_numero: str | None = None,
+    inciso_descricao: str | None = None,
+    alinea_identificador: str | None = None,
+    alinea_descricao: str | None = None,
 ):
-    artigo_limpo = _normalizar_nome_catalogo(artigo)
-    descricao_limpa = str(descricao or "").strip()
-    if not artigo_limpo:
-        raise ValueError("Artigo do regimento e obrigatorio.")
-    if not descricao_limpa:
-        raise ValueError("Descricao do regimento e obrigatoria.")
+    atual = buscar_regimento_item_por_id(regimento_item_id)
+    if not atual:
+        return False
+
+    lei_nome_valor = lei_nome or atual.get("lei_nome") or LEI_PADRAO_IMPORTACAO
+    artigo_numero_valor = artigo_numero or artigo or atual.get("artigo_numero") or ""
+    artigo_descricao_valor = artigo_descricao or descricao or atual.get("artigo_descricao") or ""
+
+    if atual.get("tipo") == TIPO_BASE_LEGAL_ARTIGO:
+        inciso_numero_valor = None
+        inciso_descricao_valor = None
+        alinea_identificador_valor = None
+        alinea_descricao_valor = None
+    elif atual.get("tipo") == TIPO_BASE_LEGAL_INCISO:
+        inciso_numero_valor = inciso_numero or atual.get("inciso_numero") or ""
+        inciso_descricao_valor = inciso_descricao or atual.get("inciso_descricao") or ""
+        alinea_identificador_valor = None
+        alinea_descricao_valor = None
+    else:
+        inciso_numero_valor = inciso_numero or atual.get("inciso_numero") or ""
+        inciso_descricao_valor = inciso_descricao or atual.get("inciso_descricao") or ""
+        alinea_identificador_valor = alinea_identificador or atual.get("alinea_identificador") or ""
+        alinea_descricao_valor = alinea_descricao or atual.get("alinea_descricao") or ""
+
+    dados = _normalizar_campos_base_legal(
+        lei_nome=lei_nome_valor,
+        artigo_numero=artigo_numero_valor,
+        artigo_descricao=artigo_descricao_valor,
+        inciso_numero=inciso_numero_valor,
+        inciso_descricao=inciso_descricao_valor,
+        alinea_identificador=alinea_identificador_valor,
+        alinea_descricao=alinea_descricao_valor,
+    )
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE regimento_itens
-        SET artigo = ?, descricao = ?, ativo = ?, atualizado_em = datetime('now')
-        WHERE id = ?
-    """, (artigo_limpo, descricao_limpa, int(bool(ativo)), int(regimento_item_id)))
-    alterado = cursor.rowcount > 0
+    try:
+        cursor.execute(
+            "UPDATE leis SET nome = ? WHERE id = ?",
+            (dados["lei_nome"], int(atual.get("lei_id") or 0)),
+        )
+        cursor.execute("""
+            UPDATE artigos
+            SET numero = ?, descricao = ?
+            WHERE id = ?
+        """, (
+            dados["artigo_numero"],
+            dados["artigo_descricao"],
+            int(atual.get("artigo_id") or 0),
+        ))
+
+        if atual.get("tipo") in {TIPO_BASE_LEGAL_INCISO, TIPO_BASE_LEGAL_ALINEA}:
+            cursor.execute("""
+                UPDATE incisos
+                SET numero = ?, descricao = ?
+                WHERE id = ?
+            """, (
+                dados["inciso_numero"],
+                dados["inciso_descricao"],
+                int(atual.get("inciso_id") or 0),
+            ))
+
+        if atual.get("tipo") == TIPO_BASE_LEGAL_ALINEA:
+            cursor.execute("""
+                UPDATE alineas
+                SET identificador = ?, descricao = ?
+                WHERE id = ?
+            """, (
+                dados["alinea_identificador"],
+                dados["alinea_descricao"],
+                int(atual.get("alinea_id") or 0),
+            ))
+    except sqlite3.IntegrityError as exc:
+        conn.close()
+        raise ValueError("Ja existe um item de base legal com esta referencia.") from exc
+
     conn.commit()
     conn.close()
-    return alterado
+    return True
 
 
 def atualizar_status_regimento_item(regimento_item_id: int, ativo: bool):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("""
-        UPDATE regimento_itens
-        SET ativo = ?, atualizado_em = datetime('now')
-        WHERE id = ?
-    """, (int(bool(ativo)), int(regimento_item_id)))
-    alterado = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
-    return alterado
+    return buscar_regimento_item_por_id(regimento_item_id) is not None
 
 
 def salvar_regimento_itens_ocorrencia(ocorrencia_id: int, regimento_item_ids: list[int] | None):
@@ -2916,17 +4256,11 @@ def salvar_regimento_itens_ocorrencia(ocorrencia_id: int, regimento_item_ids: li
     )
 
     if ids_norm:
-        placeholders = ",".join(["?"] * len(ids_norm))
-        cursor.execute(f"""
-            SELECT
-                id,
-                artigo,
-                descricao
-            FROM regimento_itens
-            WHERE id IN ({placeholders})
-        """, ids_norm)
-        itens = {int(row["id"]): dict(row) for row in cursor.fetchall()}
-        faltantes = [regimento_item_id for regimento_item_id in ids_norm if regimento_item_id not in itens]
+        itens = {int(item["id"]): item for item in buscar_regimento_itens_por_ids(ids_norm)}
+        faltantes = [
+            regimento_item_id for regimento_item_id in ids_norm
+            if regimento_item_id not in itens
+        ]
         if faltantes:
             conn.close()
             raise ValueError("Um ou mais itens do regimento nao foram encontrados.")
@@ -2935,16 +4269,36 @@ def salvar_regimento_itens_ocorrencia(ocorrencia_id: int, regimento_item_ids: li
             INSERT INTO ocorrencia_regimento_itens (
                 ocorrencia_id,
                 regimento_item_id,
+                artigo_id,
+                inciso_id,
+                alinea_id,
+                lei_nome,
+                artigo_numero,
+                artigo_descricao,
+                inciso_numero,
+                inciso_descricao,
+                alinea_identificador,
+                alinea_descricao,
                 artigo,
                 descricao,
                 ordem,
                 criado_em
             )
-            VALUES (?, ?, ?, ?, ?, datetime('now'))
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
         """, [
             (
                 ocorrencia_id_valor,
                 regimento_item_id,
+                int(itens[regimento_item_id]["artigo_id"]) if itens[regimento_item_id].get("artigo_id") is not None else None,
+                int(itens[regimento_item_id]["inciso_id"]) if itens[regimento_item_id].get("inciso_id") is not None else None,
+                int(itens[regimento_item_id]["alinea_id"]) if itens[regimento_item_id].get("alinea_id") is not None else None,
+                str(itens[regimento_item_id].get("lei_nome") or "").strip() or None,
+                str(itens[regimento_item_id].get("artigo_numero") or "").strip() or None,
+                str(itens[regimento_item_id].get("artigo_descricao") or "").strip() or None,
+                str(itens[regimento_item_id].get("inciso_numero") or "").strip() or None,
+                str(itens[regimento_item_id].get("inciso_descricao") or "").strip() or None,
+                str(itens[regimento_item_id].get("alinea_identificador") or "").strip() or None,
+                str(itens[regimento_item_id].get("alinea_descricao") or "").strip() or None,
                 str(itens[regimento_item_id]["artigo"] or "").strip(),
                 str(itens[regimento_item_id]["descricao"] or "").strip(),
                 ordem,

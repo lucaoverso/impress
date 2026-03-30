@@ -3,7 +3,12 @@ import unittest
 
 from pypdf import PdfReader
 
-from services.ocorrencia_pdf_service import gerar_pdf_ocorrencia_registro
+from services.ocorrencia_pdf_service import (
+    _montar_blocos_base_legal,
+    _obter_gravidade_ocorrencia,
+    _obter_titulo_documento,
+    gerar_pdf_ocorrencia_registro,
+)
 
 
 def _ocorrencia_base(descricao: str) -> dict:
@@ -27,6 +32,179 @@ def _ocorrencia_base(descricao: str) -> dict:
 
 
 class OcorrenciaPdfServiceTest(unittest.TestCase):
+    def test_obtem_titulo_do_documento_a_partir_da_acao_aplicada(self):
+        ocorrencia = _ocorrencia_base("Descricao qualquer.")
+        ocorrencia["acao_aplicada"] = "suspensao_orientada_2_dias"
+        self.assertEqual(
+            _obter_titulo_documento(ocorrencia),
+            "SUSPENSAO ORIENTADA DAS AULAS (ATE 2 DIAS LETIVOS)",
+        )
+
+    def test_obtem_gravidade_a_partir_da_base_legal(self):
+        ocorrencia = _ocorrencia_base("Descricao qualquer.")
+        ocorrencia["regimento_itens"] = [
+            {
+                "regimento_item_id": 1,
+                "artigo_numero": "77",
+                "inciso_numero": "XII",
+                "artigo": "Regimento Escolar - Art. 77, inciso XII",
+                "descricao": "Descricao qualquer.",
+                "ordem": 1,
+                "tipo": "inciso",
+            }
+        ]
+        self.assertEqual(_obter_gravidade_ocorrencia(ocorrencia), "grave")
+
+    def test_monta_blocos_base_legal_agrupa_itens_legados_por_artigo(self):
+        blocos = _montar_blocos_base_legal(
+            [
+                {
+                    "regimento_item_id": 2,
+                    "artigo": "Art. 76 - VII",
+                    "descricao": "Integrar-se ao processo pedagogico desenvolvido pela unidade escolar.",
+                    "ordem": 1,
+                },
+                {
+                    "regimento_item_id": 3,
+                    "artigo": "Art. 76 - X",
+                    "descricao": "Atender convocacao da Direcao Escolar e Coordenacao Pedagogica.",
+                    "ordem": 2,
+                },
+            ]
+        )
+
+        self.assertEqual(
+            blocos,
+            [
+                {
+                    "tipo": "artigo",
+                    "texto": "Art. 76.",
+                },
+                {
+                    "tipo": "inciso",
+                    "texto": "VII - Integrar-se ao processo pedagogico desenvolvido pela unidade escolar.",
+                },
+                {
+                    "tipo": "inciso",
+                    "texto": "X - Atender convocacao da Direcao Escolar e Coordenacao Pedagogica.",
+                },
+            ],
+        )
+
+    def test_monta_blocos_base_legal_agrupando_incisos_do_mesmo_artigo(self):
+        blocos = _montar_blocos_base_legal(
+            [
+                {
+                    "regimento_item_id": 10,
+                    "lei_nome": "Regimento Escolar",
+                    "artigo_id": 76,
+                    "artigo_numero": "76",
+                    "artigo_descricao": "Sao deveres do estudante, alem daqueles previstos na legislacao vigente, os seguintes:",
+                    "inciso_id": 1,
+                    "inciso_numero": "I",
+                    "inciso_descricao": "comparecer, pontualmente, as aulas, provas e outras atividades preparadas e programadas pelo professor;",
+                    "artigo": "Regimento Escolar - Art. 76, inciso I",
+                    "descricao": "comparecer, pontualmente, as aulas, provas e outras atividades preparadas e programadas pelo professor;",
+                    "ordem": 1,
+                    "tipo": "inciso",
+                },
+                {
+                    "regimento_item_id": 11,
+                    "lei_nome": "Regimento Escolar",
+                    "artigo_id": 76,
+                    "artigo_numero": "76",
+                    "artigo_descricao": "Sao deveres do estudante, alem daqueles previstos na legislacao vigente, os seguintes:",
+                    "inciso_id": 2,
+                    "inciso_numero": "III",
+                    "inciso_descricao": "respeitar a decisao da Direcao Escolar, do Colegiado Escolar e da APM referente ao uso do uniforme na unidade escolar;",
+                    "artigo": "Regimento Escolar - Art. 76, inciso III",
+                    "descricao": "respeitar a decisao da Direcao Escolar, do Colegiado Escolar e da APM referente ao uso do uniforme na unidade escolar;",
+                    "ordem": 2,
+                    "tipo": "inciso",
+                },
+            ]
+        )
+
+        self.assertEqual(
+            blocos,
+            [
+                {
+                    "tipo": "artigo",
+                    "texto": "Art. 76. Sao deveres do estudante, alem daqueles previstos na legislacao vigente, os seguintes:",
+                },
+                {
+                    "tipo": "inciso",
+                    "texto": "I - comparecer, pontualmente, as aulas, provas e outras atividades preparadas e programadas pelo professor;",
+                },
+                {
+                    "tipo": "inciso",
+                    "texto": "III - respeitar a decisao da Direcao Escolar, do Colegiado Escolar e da APM referente ao uso do uniforme na unidade escolar;",
+                },
+            ],
+        )
+
+    def test_monta_blocos_base_legal_incluindo_inciso_e_alineas(self):
+        blocos = _montar_blocos_base_legal(
+            [
+                {
+                    "regimento_item_id": 12,
+                    "lei_nome": "Regimento Escolar",
+                    "artigo_id": 76,
+                    "artigo_numero": "76",
+                    "artigo_descricao": "Sao deveres do estudante, alem daqueles previstos na legislacao vigente, os seguintes:",
+                    "inciso_id": 4,
+                    "inciso_numero": "IV",
+                    "inciso_descricao": "apresentar-se, adequadamente, trajado para as aulas...",
+                    "alinea_id": 20,
+                    "alinea_identificador": "a",
+                    "alinea_descricao": "short e bermuda (5 (cinco) centimetros acima do joelho);",
+                    "artigo": "Regimento Escolar - Art. 76, inciso IV, alinea a",
+                    "descricao": "short e bermuda (5 (cinco) centimetros acima do joelho);",
+                    "ordem": 1,
+                    "tipo": "alinea",
+                },
+                {
+                    "regimento_item_id": 13,
+                    "lei_nome": "Regimento Escolar",
+                    "artigo_id": 76,
+                    "artigo_numero": "76",
+                    "artigo_descricao": "Sao deveres do estudante, alem daqueles previstos na legislacao vigente, os seguintes:",
+                    "inciso_id": 4,
+                    "inciso_numero": "IV",
+                    "inciso_descricao": "apresentar-se, adequadamente, trajado para as aulas...",
+                    "alinea_id": 21,
+                    "alinea_identificador": "b",
+                    "alinea_descricao": "oculos escuros, salvo se recomendacao medica;",
+                    "artigo": "Regimento Escolar - Art. 76, inciso IV, alinea b",
+                    "descricao": "oculos escuros, salvo se recomendacao medica;",
+                    "ordem": 2,
+                    "tipo": "alinea",
+                },
+            ]
+        )
+
+        self.assertEqual(
+            blocos,
+            [
+                {
+                    "tipo": "artigo",
+                    "texto": "Art. 76. Sao deveres do estudante, alem daqueles previstos na legislacao vigente, os seguintes:",
+                },
+                {
+                    "tipo": "inciso",
+                    "texto": "IV - apresentar-se, adequadamente, trajado para as aulas...",
+                },
+                {
+                    "tipo": "alinea",
+                    "texto": "a) short e bermuda (5 (cinco) centimetros acima do joelho);",
+                },
+                {
+                    "tipo": "alinea",
+                    "texto": "b) oculos escuros, salvo se recomendacao medica;",
+                },
+            ],
+        )
+
     def test_gera_pdf_valido_para_impressao(self):
         pdf_bytes = gerar_pdf_ocorrencia_registro(
             _ocorrencia_base(
