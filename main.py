@@ -32,6 +32,7 @@ from fastapi.templating import Jinja2Templates
 # ===== ROTAS / AUTENTICAÇÃO =====
 from auth import router as auth_router, get_usuario_logado
 from ocorrencias_router import router as ocorrencias_router
+from pcpi_router import router as pcpi_router
 from services.auth_service import hash_senha
 from security.nt_hash import generate_nt_hash
 from models import (
@@ -208,6 +209,7 @@ app = FastAPI(
 # Rotas
 app.include_router(auth_router)
 app.include_router(ocorrencias_router)
+app.include_router(pcpi_router)
 
 # Static / Templates
 app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
@@ -230,9 +232,9 @@ CARGO_ADMIN = "ADMIN"
 CARGO_PROFESSOR = "PROFESSOR"
 CARGO_COORDENADOR = "COORDENADOR"
 MODULOS_POR_CARGO = {
-    CARGO_ADMIN: ["impressao", "agendamento", "gestao", "coordenacao"],
+    CARGO_ADMIN: ["impressao", "agendamento", "gestao", "coordenacao", "pcpi"],
     CARGO_PROFESSOR: ["impressao", "agendamento"],
-    CARGO_COORDENADOR: ["coordenacao"],
+    CARGO_COORDENADOR: ["coordenacao", "pcpi"],
 }
 
 def obter_nomes_turmas_ativas() -> list[str]:
@@ -1089,7 +1091,15 @@ def login_page(request: Request):
 
 @app.get("/servicos")
 def servicos_page(request: Request):
-    return templates.TemplateResponse("servicos.html", {"request": request})
+    response = templates.TemplateResponse(
+        "servicos.html",
+        {
+            "request": request,
+            "asset_version": ASSET_VERSION,
+        }
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
 
 
 @app.get("/impressao")
@@ -1115,6 +1125,19 @@ def professor_redirect():
 def agendamento_page(request: Request):
     response = templates.TemplateResponse(
         "agendamento.html",
+        {
+            "request": request,
+            "asset_version": ASSET_VERSION,
+        }
+    )
+    response.headers["Cache-Control"] = "no-store"
+    return response
+
+
+@app.get("/pcpi")
+def pcpi_page(request: Request):
+    response = templates.TemplateResponse(
+        "pcpi.html",
         {
             "request": request,
             "asset_version": ASSET_VERSION,

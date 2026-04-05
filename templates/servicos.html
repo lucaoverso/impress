@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Suíte Escolar - Serviços</title>
-    <link rel="stylesheet" href="{{ request.url_for('static', path='css/style.css') }}">
+    <link rel="stylesheet" href="{{ request.url_for('static', path='css/style.css') }}?v={{ asset_version | default('1') }}">
 </head>
 
 <body>
@@ -49,6 +49,13 @@
                 <p>Registre, acompanhe e consulte ocorrências disciplinares e pedagógicas em um único fluxo.</p>
                 <button id="btnIrCoordenacao" class="btn-destaque" type="button">Ir para ocorrências</button>
             </article>
+
+            <article id="cardPcpi" class="service-card" data-modulo="pcpi" hidden>
+                <img class="service-img" src="/static/img/coordenacao.png" alt="pcpi">
+                <h2>Registro PCPI</h2>
+                <p>Importe agendamentos do turno, registre acoes manuais e gere o texto administrativo do PCPI.</p>
+                <button id="btnIrPcpi" class="btn-destaque" type="button">Ir para PCPI</button>
+            </article>
         </section>
     </main>
 
@@ -57,7 +64,7 @@
         <p>2026</p>
     </footer>
 
-    <script src="{{ request.url_for('static', path='js/servicos.js') }}"></script>
+    <script src="{{ request.url_for('static', path='js/servicos.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>
 
 </html>

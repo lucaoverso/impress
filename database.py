@@ -387,6 +387,26 @@ def criar_tabelas():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pcpi_registros_manuais (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            data TEXT NOT NULL,
+            turno TEXT NOT NULL,
+            tipo_acao TEXT NOT NULL,
+            professor_nome TEXT,
+            componente TEXT,
+            turma TEXT,
+            descricao_curta TEXT NOT NULL,
+            observacoes TEXT,
+            criado_por_usuario_id INTEGER,
+            atualizado_por_usuario_id INTEGER,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(criado_por_usuario_id) REFERENCES usuarios(id),
+            FOREIGN KEY(atualizado_por_usuario_id) REFERENCES usuarios(id)
+        )
+    """)
+
     cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS ocorrencias (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -536,6 +556,21 @@ def criar_tabelas():
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_agendamentos_usuario_data
         ON agendamentos(usuario_id, data)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_pcpi_registros_manuais_data_turno
+        ON pcpi_registros_manuais(data, turno)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_pcpi_registros_manuais_tipo_acao
+        ON pcpi_registros_manuais(tipo_acao)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_pcpi_registros_manuais_criado_por
+        ON pcpi_registros_manuais(criado_por_usuario_id)
     """)
 
     cursor.execute("""
@@ -2401,6 +2436,44 @@ def listar_professores_agendamento():
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+def listar_cargas_professores_por_usuario_ids(usuario_ids: list[int]):
+    ids_unicos = []
+    for usuario_id in usuario_ids or []:
+        try:
+            valor = int(usuario_id)
+        except (TypeError, ValueError):
+            continue
+        if valor > 0 and valor not in ids_unicos:
+            ids_unicos.append(valor)
+
+    if not ids_unicos:
+        return {}
+
+    placeholders = ",".join("?" for _ in ids_unicos)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(f"""
+        SELECT
+            usuario_id,
+            COALESCE(turmas, '[]') AS turmas,
+            COALESCE(disciplinas, '[]') AS disciplinas
+        FROM professores_carga
+        WHERE usuario_id IN ({placeholders})
+    """, ids_unicos)
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    cargas = {}
+    for row in rows:
+        item = dict(row)
+        cargas[int(item["usuario_id"])] = {
+            "turmas": _desserializar_lista_texto(item.get("turmas")),
+            "disciplinas": _desserializar_lista_texto(item.get("disciplinas")),
+        }
+    return cargas
 
 def buscar_professor_por_id_ocorrencia(usuario_id: int):
     conn = get_connection()
@@ -4855,3 +4928,129 @@ def cancelar_agendamento(agendamento_id: int):
     conn.commit()
     conn.close()
     return alterados > 0
+
+def criar_registro_pcpi_manual(
+    data: str,
+    turno: str,
+    tipo_acao: str,
+    descricao_curta: str,
+    *,
+    professor_nome: str = "",
+    componente: str = "",
+    turma: str = "",
+    observacoes: str = "",
+    criado_por_usuario_id: int | None = None,
+    atualizado_por_usuario_id: int | None = None,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO pcpi_registros_manuais (
+            data,
+            turno,
+            tipo_acao,
+            professor_nome,
+            componente,
+            turma,
+            descricao_curta,
+            observacoes,
+            criado_por_usuario_id,
+            atualizado_por_usuario_id,
+            criado_em,
+            atualizado_em
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    """, (
+        data,
+        turno,
+        tipo_acao,
+        professor_nome or None,
+        componente or None,
+        turma or None,
+        descricao_curta,
+        observacoes or None,
+        criado_por_usuario_id,
+        atualizado_por_usuario_id,
+    ))
+
+    registro_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return registro_id
+
+def listar_registros_pcpi_manuais(
+    *,
+    data: str | None = None,
+    turno: str | None = None,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT
+            id,
+            data,
+            turno,
+            tipo_acao,
+            COALESCE(professor_nome, '') AS professor_nome,
+            COALESCE(componente, '') AS componente,
+            COALESCE(turma, '') AS turma,
+            descricao_curta,
+            COALESCE(observacoes, '') AS observacoes,
+            criado_por_usuario_id,
+            atualizado_por_usuario_id,
+            criado_em,
+            atualizado_em
+        FROM pcpi_registros_manuais
+        WHERE 1 = 1
+    """
+    params = []
+
+    if data:
+        query += " AND data = ?"
+        params.append(data)
+
+    if turno:
+        query += " AND turno = ?"
+        params.append(turno)
+
+    query += """
+        ORDER BY
+            data ASC,
+            turno ASC,
+            criado_em ASC,
+            id ASC
+    """
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+def buscar_registro_pcpi_manual_por_id(registro_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            id,
+            data,
+            turno,
+            tipo_acao,
+            COALESCE(professor_nome, '') AS professor_nome,
+            COALESCE(componente, '') AS componente,
+            COALESCE(turma, '') AS turma,
+            descricao_curta,
+            COALESCE(observacoes, '') AS observacoes,
+            criado_por_usuario_id,
+            atualizado_por_usuario_id,
+            criado_em,
+            atualizado_em
+        FROM pcpi_registros_manuais
+        WHERE id = ?
+    """, (int(registro_id),))
+
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None

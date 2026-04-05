@@ -26,8 +26,8 @@ function modulosPermitidos(usuario = {}) {
     }
 
     const cargo = normalizarCargoUsuario(usuario);
-    if (cargo === "ADMIN") return new Set(["impressao", "agendamento", "gestao", "coordenacao"]);
-    if (cargo === "COORDENADOR") return new Set(["coordenacao"]);
+    if (cargo === "ADMIN") return new Set(["impressao", "agendamento", "gestao", "coordenacao", "pcpi"]);
+    if (cargo === "COORDENADOR") return new Set(["coordenacao", "pcpi"]);
     return new Set(["impressao", "agendamento"]);
 }
 
@@ -76,6 +76,13 @@ function registrarEventos() {
     if (btnIrCoordenacao) {
         btnIrCoordenacao.addEventListener("click", () => {
             window.location.href = "/coordenacao";
+        });
+    }
+
+    const btnIrPcpi = document.getElementById("btnIrPcpi");
+    if (btnIrPcpi) {
+        btnIrPcpi.addEventListener("click", () => {
+            window.location.href = "/pcpi";
         });
     }
 
