@@ -72,5 +72,19 @@ class OcorrenciasRouterTest(unittest.TestCase):
             )
             self.assertEqual(resposta["regimento_itens"][0]["tipo"], "inciso")
 
+            conn = database.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT regimento_item_id
+                FROM ocorrencia_regimento_itens
+                WHERE ocorrencia_id = ?
+                ORDER BY ordem
+                """,
+                (int(resposta["id"]),),
+            )
+            self.assertEqual([row["regimento_item_id"] for row in cursor.fetchall()], [item_id])
+            conn.close()
+
 if __name__ == "__main__":
     unittest.main()

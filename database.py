@@ -4367,11 +4367,7 @@ def atualizar_status_regimento_item(regimento_item_id: int, ativo: bool):
     return buscar_regimento_item_por_id(regimento_item_id) is not None
 
 
-def salvar_regimento_itens_ocorrencia(ocorrencia_id: int, regimento_item_ids: list[int] | None):
-    ocorrencia_id_valor = int(ocorrencia_id or 0)
-    if ocorrencia_id_valor <= 0:
-        raise ValueError("Ocorrencia invalida.")
-
+def _normalizar_regimento_item_ids_banco(regimento_item_ids: list[int] | None) -> list[int]:
     ids_norm = []
     vistos = set()
     for regimento_item_id in regimento_item_ids or []:
@@ -4380,28 +4376,33 @@ def salvar_regimento_itens_ocorrencia(ocorrencia_id: int, regimento_item_ids: li
             continue
         vistos.add(valor)
         ids_norm.append(valor)
+    return ids_norm
 
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute("SELECT 1 FROM ocorrencias WHERE id = ?", (ocorrencia_id_valor,))
-    if not cursor.fetchone():
-        conn.close()
-        raise ValueError("Ocorrencia nao encontrada.")
 
+def _mapear_regimento_itens_por_ids_para_snapshot(ids_norm: list[int]) -> dict[int, dict]:
+    itens = {int(item["id"]): item for item in buscar_regimento_itens_por_ids(ids_norm)}
+    faltantes = [
+        regimento_item_id for regimento_item_id in ids_norm
+        if regimento_item_id not in itens
+    ]
+    if faltantes:
+        raise ValueError("Um ou mais itens do regimento nao foram encontrados.")
+    return itens
+
+
+def _salvar_regimento_itens_ocorrencia_cursor(
+    cursor,
+    ocorrencia_id_valor: int,
+    ids_norm: list[int],
+    itens: dict[int, dict] | None = None,
+):
     cursor.execute(
         "DELETE FROM ocorrencia_regimento_itens WHERE ocorrencia_id = ?",
         (ocorrencia_id_valor,),
     )
 
     if ids_norm:
-        itens = {int(item["id"]): item for item in buscar_regimento_itens_por_ids(ids_norm)}
-        faltantes = [
-            regimento_item_id for regimento_item_id in ids_norm
-            if regimento_item_id not in itens
-        ]
-        if faltantes:
-            conn.close()
-            raise ValueError("Um ou mais itens do regimento nao foram encontrados.")
+        itens = itens or _mapear_regimento_itens_por_ids_para_snapshot(ids_norm)
 
         cursor.executemany("""
             INSERT INTO ocorrencia_regimento_itens (
@@ -4444,8 +4445,28 @@ def salvar_regimento_itens_ocorrencia(ocorrencia_id: int, regimento_item_ids: li
             for ordem, regimento_item_id in enumerate(ids_norm, start=1)
         ])
 
-    conn.commit()
-    conn.close()
+
+def salvar_regimento_itens_ocorrencia(ocorrencia_id: int, regimento_item_ids: list[int] | None):
+    ocorrencia_id_valor = int(ocorrencia_id or 0)
+    if ocorrencia_id_valor <= 0:
+        raise ValueError("Ocorrencia invalida.")
+
+    ids_norm = _normalizar_regimento_item_ids_banco(regimento_item_ids)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT 1 FROM ocorrencias WHERE id = ?", (ocorrencia_id_valor,))
+        if not cursor.fetchone():
+            raise ValueError("Ocorrencia nao encontrada.")
+
+        _salvar_regimento_itens_ocorrencia_cursor(cursor, ocorrencia_id_valor, ids_norm)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
     return True
 
 def criar_ocorrencia(
@@ -4461,6 +4482,7 @@ def criar_ocorrencia(
     descricao: str,
     acao_aplicada: str,
     status: str = STATUS_OCORRENCIA_REGISTRADO,
+    regimento_item_ids: list[int] | None = None,
 ):
     nome_estudante_limpo = _normalizar_nome_catalogo(nome_estudante)
     professor_requerente_limpo = _normalizar_nome_catalogo(professor_requerente)
@@ -4502,45 +4524,65 @@ def criar_ocorrencia(
     if status_limpo not in STATUS_OCORRENCIA_VALIDOS:
         raise ValueError("Status inválido.")
 
+    ids_regimento_norm = None
+    itens_regimento_snapshot = None
+    if regimento_item_ids is not None:
+        ids_regimento_norm = _normalizar_regimento_item_ids_banco(regimento_item_ids)
+        if ids_regimento_norm:
+            itens_regimento_snapshot = _mapear_regimento_itens_por_ids_para_snapshot(ids_regimento_norm)
+
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
-        INSERT INTO ocorrencias (
-            nome_estudante,
-            estudante_id,
-            turma_id,
-            professor_requerente,
-            professor_requerente_id,
-            disciplina,
-            data_ocorrencia,
-            aula,
-            horario_ocorrencia,
-            descricao,
-            acao_aplicada,
-            status,
-            criado_em,
-            atualizado_em
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-    """, (
-        nome_estudante_limpo,
-        estudante_id_valor,
-        turma_id_valor,
-        professor_requerente_limpo,
-        professor_requerente_id_valor,
-        disciplina_limpa,
-        data_ocorrencia_limpa,
-        aula_limpa,
-        horario_ocorrencia_limpo,
-        descricao_limpa,
-        acao_aplicada_limpa,
-        status_limpo,
-    ))
+    try:
+        cursor.execute("""
+            INSERT INTO ocorrencias (
+                nome_estudante,
+                estudante_id,
+                turma_id,
+                professor_requerente,
+                professor_requerente_id,
+                disciplina,
+                data_ocorrencia,
+                aula,
+                horario_ocorrencia,
+                descricao,
+                acao_aplicada,
+                status,
+                criado_em,
+                atualizado_em
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        """, (
+            nome_estudante_limpo,
+            estudante_id_valor,
+            turma_id_valor,
+            professor_requerente_limpo,
+            professor_requerente_id_valor,
+            disciplina_limpa,
+            data_ocorrencia_limpa,
+            aula_limpa,
+            horario_ocorrencia_limpo,
+            descricao_limpa,
+            acao_aplicada_limpa,
+            status_limpo,
+        ))
 
-    ocorrencia_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
+        ocorrencia_id = cursor.lastrowid
+        if ids_regimento_norm is not None:
+            _salvar_regimento_itens_ocorrencia_cursor(
+                cursor,
+                int(ocorrencia_id),
+                ids_regimento_norm,
+                itens_regimento_snapshot,
+            )
+
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
     return ocorrencia_id
 
 def listar_ocorrencias(

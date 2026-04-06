@@ -675,11 +675,8 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
             descricao=descricao,
             acao_aplicada=acao_aplicada,
             status=status,
+            regimento_item_ids=regimento_item_ids,
         )
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
-    try:
-        salvar_regimento_itens_ocorrencia(ocorrencia_id, regimento_item_ids)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     return _montar_resposta_ocorrencia(ocorrencia_id)
