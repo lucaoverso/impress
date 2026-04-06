@@ -25,7 +25,7 @@ class OcorrenciasRouterTest(unittest.TestCase):
         else:
             os.environ["DB_PATH"] = self._old_db_path
 
-    def test_criar_ocorrencia_persiste_base_legal_e_descricao_formatada(self):
+    def test_criar_ocorrencia_persiste_base_legal(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")
             database, ocorrencias_router = _reload_modulos(db_path)
@@ -71,10 +71,6 @@ class OcorrenciasRouterTest(unittest.TestCase):
                 [item_id],
             )
             self.assertEqual(resposta["regimento_itens"][0]["tipo"], "inciso")
-            self.assertIn("<strong>Descricao</strong>", resposta["descricao_formatada"])
-            self.assertIn("background-color: #fff3a3", resposta["descricao_formatada"])
-            self.assertNotIn("<script", resposta["descricao_formatada"])
-
 
 if __name__ == "__main__":
     unittest.main()

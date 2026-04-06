@@ -1,8 +1,6 @@
 import re
 import unicodedata
 from datetime import datetime
-from html import escape
-from html.parser import HTMLParser
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 
@@ -96,14 +94,6 @@ from services.ocorrencia_pdf_service import gerar_pdf_ocorrencia_registro
 router = APIRouter()
 
 _HORARIO_REGEX = re.compile(r"^\d{1,2}:\d{2}(:\d{2})?$")
-_DESCRICAO_FORMATADA_TAGS_INLINE = {
-    "b": "strong",
-    "strong": "strong",
-    "i": "em",
-    "em": "em",
-    "mark": "mark",
-}
-_DESCRICAO_FORMATADA_TAGS_BLOCO = {"div", "p"}
 _ACOES_ROTULOS = {
     "orientacao_verbal": "Orientação verbal",
     "advertencia": "Advertência verbal",
@@ -112,168 +102,6 @@ _ACOES_ROTULOS = {
     "encaminhamento_direcao": "Encaminhamento à direção",
     "registro_informativo": "Registro informativo",
 }
-
-
-def _normalizar_cor_fundo_descricao(valor: str | None) -> str:
-    texto = str(valor or "").strip()
-    if not texto:
-        return ""
-
-    match_hex = re.fullmatch(r"#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})", texto)
-    if match_hex:
-        cor = match_hex.group(1)
-        if len(cor) == 3:
-            cor = "".join(caractere * 2 for caractere in cor)
-        return f"#{cor.lower()}"
-
-    match_rgb = re.fullmatch(
-        r"rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)",
-        texto,
-        flags=re.IGNORECASE,
-    )
-    if not match_rgb:
-        return ""
-
-    componentes = [int(match_rgb.group(indice)) for indice in range(1, 4)]
-    if any(componente < 0 or componente > 255 for componente in componentes):
-        return ""
-    return "#{:02x}{:02x}{:02x}".format(*componentes)
-
-
-def _extrair_cor_fundo_descricao(style: str | None) -> str:
-    for declaracao in str(style or "").split(";"):
-        propriedade, separador, valor = declaracao.partition(":")
-        if not separador:
-            continue
-        if propriedade.strip().lower() == "background-color":
-            return _normalizar_cor_fundo_descricao(valor)
-    return ""
-
-
-class _DescricaoFormatadaSanitizer(HTMLParser):
-    def __init__(self):
-        super().__init__(convert_charrefs=True)
-        self.partes: list[str] = []
-        self.pilha: list[tuple[str, str | None]] = []
-        self.skip_depth = 0
-
-    def _abrir_tag(self, tag_original: str, tag_saida: str, atributos: str = ""):
-        self.partes.append(f"<{tag_saida}{atributos}>")
-        self.pilha.append((tag_original, tag_saida))
-
-    def handle_starttag(self, tag: str, attrs):
-        tag_norm = tag.lower()
-        if tag_norm in {"script", "style"}:
-            self.skip_depth += 1
-            return
-        if self.skip_depth:
-            return
-
-        attrs_dict = {str(nome).lower(): str(valor or "") for nome, valor in attrs}
-
-        if tag_norm in _DESCRICAO_FORMATADA_TAGS_INLINE:
-            tag_saida = _DESCRICAO_FORMATADA_TAGS_INLINE[tag_norm]
-            if tag_saida == "mark":
-                cor = _extrair_cor_fundo_descricao(attrs_dict.get("style")) or "#fff3a3"
-                self._abrir_tag(tag_norm, "mark", f' style="background-color: {cor};"')
-                return
-            self._abrir_tag(tag_norm, tag_saida)
-            return
-
-        if tag_norm == "span":
-            cor = _extrair_cor_fundo_descricao(attrs_dict.get("style"))
-            if cor:
-                self._abrir_tag(tag_norm, "span", f' style="background-color: {cor};"')
-            return
-
-        if tag_norm == "br":
-            self.partes.append("<br>")
-            return
-
-        if tag_norm in _DESCRICAO_FORMATADA_TAGS_BLOCO:
-            self._abrir_tag(tag_norm, "p")
-
-    def handle_endtag(self, tag: str):
-        tag_norm = tag.lower()
-        if tag_norm in {"script", "style"} and self.skip_depth:
-            self.skip_depth -= 1
-            return
-        if self.skip_depth:
-            return
-
-        for indice in range(len(self.pilha) - 1, -1, -1):
-            tag_original, _tag_saida = self.pilha[indice]
-            if tag_original != tag_norm:
-                continue
-
-            for _original, tag_saida in reversed(self.pilha[indice:]):
-                if tag_saida:
-                    self.partes.append(f"</{tag_saida}>")
-            del self.pilha[indice:]
-            return
-
-    def handle_data(self, data: str):
-        if self.skip_depth:
-            return
-        self.partes.append(escape(data, quote=False))
-
-    def get_html(self) -> str:
-        while self.pilha:
-            _original, tag_saida = self.pilha.pop()
-            if tag_saida:
-                self.partes.append(f"</{tag_saida}>")
-        return "".join(self.partes).strip()
-
-
-class _DescricaoFormatadaTextoParser(HTMLParser):
-    def __init__(self):
-        super().__init__(convert_charrefs=True)
-        self.partes: list[str] = []
-
-    def handle_starttag(self, tag: str, attrs):
-        if tag.lower() == "br":
-            self.partes.append("\n")
-
-    def handle_endtag(self, tag: str):
-        if tag.lower() in _DESCRICAO_FORMATADA_TAGS_BLOCO:
-            self.partes.append("\n")
-
-    def handle_data(self, data: str):
-        self.partes.append(data)
-
-    def get_texto(self) -> str:
-        texto = "".join(self.partes).replace("\r", "")
-        linhas = [re.sub(r"[ \t]+", " ", linha).strip() for linha in texto.split("\n")]
-        return "\n".join(linha for linha in linhas if linha).strip()
-
-
-def _sanitizar_descricao_formatada(html_bruto: str | None) -> str:
-    html = str(html_bruto or "").strip()
-    if not html:
-        return ""
-    parser = _DescricaoFormatadaSanitizer()
-    parser.feed(html)
-    parser.close()
-    return parser.get_html()
-
-
-def _extrair_texto_descricao_formatada(html: str | None) -> str:
-    parser = _DescricaoFormatadaTextoParser()
-    parser.feed(str(html or ""))
-    parser.close()
-    return parser.get_texto()
-
-
-def _normalizar_descricao_formatada(html_bruto: str | None, descricao_texto: str) -> str:
-    html = _sanitizar_descricao_formatada(html_bruto)
-    if not html:
-        return ""
-    texto_formatado = _extrair_texto_descricao_formatada(html)
-    if not texto_formatado:
-        return ""
-    if not str(descricao_texto or "").strip():
-        return ""
-    return html
 _STATUS_ROTULOS = {
     "registrado": "Registrado",
     "em_acompanhamento": "Em acompanhamento",
@@ -822,7 +650,6 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
     regimento_itens = buscar_regimento_itens_por_ids(regimento_item_ids) if regimento_item_ids else []
     _validar_acao_compativel_com_base_legal(acao_aplicada, regimento_itens)
     descricao = _texto_obrigatorio(payload.descricao, "Descricao", max_len=5000)
-    descricao_formatada = _normalizar_descricao_formatada(payload.descricao_formatada, descricao)
 
     nome_estudante, estudante_id = _resolver_dados_estudante(
         nome_estudante=payload.nome_estudante,
@@ -846,7 +673,6 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
             aula=faixa_aula,
             horario_ocorrencia=_validar_horario_ocorrencia(payload.horario_ocorrencia),
             descricao=descricao,
-            descricao_formatada=descricao_formatada,
             acao_aplicada=acao_aplicada,
             status=status,
         )
@@ -989,14 +815,6 @@ def atualizar_ocorrencia_parcial_api(
             "Descricao",
             max_len=5000,
         )
-    if "descricao_formatada" in dados_brutos:
-        descricao_referencia = dados_validados.get("descricao", atual.get("descricao") or "")
-        dados_validados["descricao_formatada"] = _normalizar_descricao_formatada(
-            dados_brutos.get("descricao_formatada"),
-            descricao_referencia,
-        )
-    elif "descricao" in dados_brutos:
-        dados_validados["descricao_formatada"] = ""
     if "regimento_item_ids" in dados_brutos:
         regimento_item_ids_validados = _normalizar_regimento_item_ids(
             dados_brutos.get("regimento_item_ids")

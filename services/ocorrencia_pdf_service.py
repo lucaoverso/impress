@@ -1204,8 +1204,6 @@ class _RenderizadorRegistroOcorrencia:
         acao = _rotulo_acao(self.ocorrencia.get("acao_aplicada"))
         status = _rotulo_status(self.ocorrencia.get("status"))
         descricao = _texto_seguro(self.ocorrencia.get("descricao"), padrao="")
-        descricao_formatada = str(self.ocorrencia.get("descricao_formatada") or "").strip()
-        runs_descricao_formatada = _obter_runs_descricao_formatada(descricao_formatada)
         regimento_itens = _obter_itens_regimento_ocorrencia(self.ocorrencia)
 
         self._adicionar_rotulo_valor("Estudante(s)", estudante)
@@ -1220,10 +1218,7 @@ class _RenderizadorRegistroOcorrencia:
 
         self._adicionar_espaco(6)
         self._adicionar_titulo_secao(SECAO_DESCRICAO)
-        if runs_descricao_formatada and "".join(run.texto for run in runs_descricao_formatada).strip():
-            self._adicionar_runs_formatados(runs_descricao_formatada)
-        else:
-            self._adicionar_paragrafos(descricao, fonte=self.fontes.corpo)
+        self._adicionar_paragrafos(descricao, fonte=self.fontes.corpo)
         self._desenhar_linha()
         if regimento_itens:
             self._adicionar_secao_regimento(regimento_itens)

@@ -3490,7 +3490,6 @@ function montarPayloadOcorrencia() {
         aula: String(el("ocorrenciaAula").value || "").trim(),
         horario_ocorrencia: el("ocorrenciaHorario").value.trim(),
         descricao: el("ocorrenciaDescricao").value.trim(),
-        descricao_formatada: el("ocorrenciaDescricaoFormatada").value.trim(),
         regimento_item_ids: obterIdsRegimentoSelecionadosFormulario(),
         acao_aplicada: el("ocorrenciaAcaoAplicada").value,
         status: el("ocorrenciaStatus").value || opcoesOcorrencias.status_padrao || "registrado"
