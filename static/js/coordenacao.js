@@ -30,6 +30,7 @@ let incisosBaseLegalCache = [];
 let alineasBaseLegalCache = [];
 let relatorioOcorrenciasCache = [];
 let relatorioOcorrenciasCarregado = false;
+let selecaoDescricaoEditor = null;
 let opcoesOcorrencias = {
     turmas: [],
     professores: [],
@@ -921,6 +922,214 @@ function obterTextoOuPadrao(valor, padrao = "Nao informado") {
     return texto || padrao;
 }
 
+function obterEditorDescricao() {
+    return el("ocorrenciaDescricaoEditor");
+}
+
+function normalizarCorFundoDescricao(valor) {
+    const texto = String(valor || "").trim();
+    if (!texto) return "";
+
+    const hex = texto.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+    if (hex) {
+        const cor = hex[1].length === 3
+            ? hex[1].split("").map((caractere) => caractere + caractere).join("")
+            : hex[1];
+        return `#${cor.toLowerCase()}`;
+    }
+
+    const rgb = texto.match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)$/i);
+    if (!rgb) return "";
+    const componentes = rgb.slice(1, 4).map((item) => Number(item));
+    if (componentes.some((item) => !Number.isInteger(item) || item < 0 || item > 255)) {
+        return "";
+    }
+    return `#${componentes.map((item) => item.toString(16).padStart(2, "0")).join("")}`;
+}
+
+function obterCorFundoElementoDescricao(elemento) {
+    if (!elemento || !elemento.style) return "";
+    return normalizarCorFundoDescricao(elemento.style.backgroundColor);
+}
+
+function criarFragmentoDescricaoComFilhos(node, elementoDestino) {
+    node.childNodes.forEach((filho) => {
+        elementoDestino.appendChild(sanitizarNoDescricao(filho));
+    });
+    return elementoDestino;
+}
+
+function sanitizarNoDescricao(node) {
+    if (node.nodeType === Node.TEXT_NODE) {
+        return document.createTextNode(node.textContent || "");
+    }
+
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+        return document.createDocumentFragment();
+    }
+
+    const tag = node.tagName.toLowerCase();
+    if (tag === "script" || tag === "style") {
+        return document.createDocumentFragment();
+    }
+
+    if (tag === "br") {
+        return document.createElement("br");
+    }
+
+    if (tag === "b" || tag === "strong") {
+        return criarFragmentoDescricaoComFilhos(node, document.createElement("strong"));
+    }
+
+    if (tag === "i" || tag === "em") {
+        return criarFragmentoDescricaoComFilhos(node, document.createElement("em"));
+    }
+
+    if (tag === "mark") {
+        const mark = document.createElement("mark");
+        mark.style.backgroundColor = obterCorFundoElementoDescricao(node) || "#fff3a3";
+        return criarFragmentoDescricaoComFilhos(node, mark);
+    }
+
+    if (tag === "span") {
+        const cor = obterCorFundoElementoDescricao(node);
+        if (cor) {
+            const span = document.createElement("span");
+            span.style.backgroundColor = cor;
+            return criarFragmentoDescricaoComFilhos(node, span);
+        }
+    }
+
+    if (tag === "div" || tag === "p") {
+        return criarFragmentoDescricaoComFilhos(node, document.createElement("p"));
+    }
+
+    const fragmento = document.createDocumentFragment();
+    node.childNodes.forEach((filho) => {
+        fragmento.appendChild(sanitizarNoDescricao(filho));
+    });
+    return fragmento;
+}
+
+function sanitizarHtmlDescricao(html) {
+    const template = document.createElement("template");
+    template.innerHTML = String(html || "");
+
+    const container = document.createElement("div");
+    template.content.childNodes.forEach((node) => {
+        container.appendChild(sanitizarNoDescricao(node));
+    });
+    return container.innerHTML.trim();
+}
+
+function obterTextoDescricaoEditor() {
+    const editor = obterEditorDescricao();
+    return String(editor?.innerText || "")
+        .replace(/\u00a0/g, " ")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim();
+}
+
+function sincronizarDescricaoEditor() {
+    const editor = obterEditorDescricao();
+    const textarea = el("ocorrenciaDescricao");
+    const hiddenFormatado = el("ocorrenciaDescricaoFormatada");
+    if (!editor || !textarea || !hiddenFormatado) return;
+
+    const texto = obterTextoDescricaoEditor();
+    const html = texto ? sanitizarHtmlDescricao(editor.innerHTML) : "";
+    textarea.value = texto;
+    hiddenFormatado.value = html;
+}
+
+function definirDescricaoEditor({ texto = "", html = "" } = {}) {
+    const editor = obterEditorDescricao();
+    if (!editor) return;
+
+    const htmlSeguro = sanitizarHtmlDescricao(html);
+    if (htmlSeguro) {
+        editor.innerHTML = htmlSeguro;
+    } else {
+        editor.innerText = String(texto || "");
+    }
+    sincronizarDescricaoEditor();
+}
+
+function renderizarDescricaoFormatada(container, html, texto, fallback) {
+    if (!container) return;
+    const textoLimpo = obterTextoOuPadrao(texto, fallback);
+    const htmlSeguro = String(texto || "").trim() ? sanitizarHtmlDescricao(html) : "";
+    container.innerHTML = "";
+    if (htmlSeguro) {
+        container.innerHTML = htmlSeguro;
+        return;
+    }
+    container.innerText = textoLimpo;
+}
+
+function selecaoPertenceAoEditorDescricao(range) {
+    const editor = obterEditorDescricao();
+    if (!editor || !range) return false;
+    const ancestral = range.commonAncestorContainer;
+    return ancestral === editor || editor.contains(ancestral);
+}
+
+function salvarSelecaoDescricaoEditor() {
+    const selecao = window.getSelection();
+    if (!selecao || selecao.rangeCount === 0) return;
+    const range = selecao.getRangeAt(0);
+    if (selecaoPertenceAoEditorDescricao(range)) {
+        selecaoDescricaoEditor = range.cloneRange();
+    }
+}
+
+function restaurarSelecaoDescricaoEditor() {
+    const editor = obterEditorDescricao();
+    if (!editor) return;
+    const selecao = window.getSelection();
+    if (!selecao) return;
+
+    selecao.removeAllRanges();
+    if (selecaoDescricaoEditor && selecaoPertenceAoEditorDescricao(selecaoDescricaoEditor)) {
+        selecao.addRange(selecaoDescricaoEditor);
+        return;
+    }
+
+    const range = document.createRange();
+    range.selectNodeContents(editor);
+    range.collapse(false);
+    selecao.addRange(range);
+}
+
+function aplicarComandoDescricao(command) {
+    const editor = obterEditorDescricao();
+    if (!editor) return;
+
+    editor.focus();
+    restaurarSelecaoDescricaoEditor();
+
+    if (command === "bold") {
+        document.execCommand("styleWithCSS", false, false);
+        document.execCommand("bold", false);
+    } else if (command === "italic") {
+        document.execCommand("styleWithCSS", false, false);
+        document.execCommand("italic", false);
+    } else if (command === "highlight") {
+        document.execCommand("styleWithCSS", false, true);
+        const cor = normalizarCorFundoDescricao(el("ocorrenciaDescricaoCorFundo")?.value) || "#fff3a3";
+        if (!document.execCommand("hiliteColor", false, cor)) {
+            document.execCommand("backColor", false, cor);
+        }
+    } else if (command === "removeFormat") {
+        document.execCommand("styleWithCSS", false, false);
+        document.execCommand("removeFormat", false);
+    }
+
+    sincronizarDescricaoEditor();
+    salvarSelecaoDescricaoEditor();
+    atualizarPreviewOcorrencia();
+}
+
 function normalizarIdBaseLegal(valor) {
     const numero = Number(valor || 0);
     return Number.isInteger(numero) && numero > 0 ? numero : null;
@@ -1492,12 +1701,14 @@ function renderizarBaseLegalPreview(itens) {
 
 function atualizarPreviewOcorrencia() {
     if (!el("ocorrenciaPreviewPdf")) return;
+    sincronizarDescricaoEditor();
 
     const ocorrenciaAtual = obterOcorrenciaEmEdicaoAtual();
     const estudante = el("ocorrenciaBuscaEstudante")?.value;
     const professor = el("ocorrenciaBuscaProfessor")?.value;
     const disciplina = el("ocorrenciaDisciplina")?.value;
     const descricao = el("ocorrenciaDescricao")?.value;
+    const descricaoFormatada = el("ocorrenciaDescricaoFormatada")?.value;
     const dataOcorrencia = el("ocorrenciaData")?.value;
     const acaoAplicada = el("ocorrenciaAcaoAplicada")?.value;
     const status = el("ocorrenciaStatus")?.value;
@@ -1517,7 +1728,9 @@ function atualizarPreviewOcorrencia() {
 
     const descricaoPreview = el("previewDescricao");
     if (descricaoPreview) {
-        descricaoPreview.innerText = obterTextoOuPadrao(
+        renderizarDescricaoFormatada(
+            descricaoPreview,
+            descricaoFormatada,
             descricao,
             "A descricao digitada no formulario aparecera aqui automaticamente."
         );
@@ -1594,6 +1807,7 @@ function atualizarSelectAulasPorTurma(turmaId, faixaSelecionada = null) {
 
 function limparFormularioOcorrencia({ manterAberto = false } = {}) {
     el("formOcorrencia").reset();
+    definirDescricaoEditor();
     ocorrenciaEmEdicaoId = null;
     el("ocorrenciaEstudanteId").value = "";
     el("ocorrenciaProfessorRequerenteId").value = "";
@@ -1651,7 +1865,10 @@ function preencherFormularioOcorrencia(ocorrencia) {
     el("ocorrenciaDisciplina").value = ocorrencia.disciplina || "";
     el("ocorrenciaData").value = ocorrencia.data_ocorrencia || "";
     el("ocorrenciaHorario").value = ocorrencia.horario_ocorrencia || "";
-    el("ocorrenciaDescricao").value = ocorrencia.descricao || "";
+    definirDescricaoEditor({
+        texto: ocorrencia.descricao || "",
+        html: ocorrencia.descricao_formatada || ""
+    });
     renderSelecionadorRegimento(obterIdsRegimentoSelecionadosOcorrencia(ocorrencia));
     atualizarAcaoAplicadaPorGravidade({
         gravidade: inferirGravidadeOcorrenciaBaseLegal(obterItensRegimentoSelecionadosPreview()),
@@ -1809,12 +2026,21 @@ function renderDetalhesOcorrencia(ocorrencia) {
     ];
 
     campos.forEach(([rotulo, valor]) => {
-        const linha = document.createElement("p");
+        const linha = document.createElement(rotulo === "Descricao" ? "div" : "p");
         linha.className = "coordenacao-detail-line";
         const strong = document.createElement("strong");
         strong.innerText = `${rotulo}: `;
         const span = document.createElement("span");
-        span.innerText = valor || "Nao informado";
+        if (rotulo === "Descricao") {
+            renderizarDescricaoFormatada(
+                span,
+                ocorrencia.descricao_formatada || "",
+                ocorrencia.descricao || "",
+                "Nao informado"
+            );
+        } else {
+            span.innerText = valor || "Nao informado";
+        }
         linha.appendChild(strong);
         linha.appendChild(span);
         container.appendChild(linha);
@@ -3195,6 +3421,7 @@ function atualizarSugestoesDisciplinasBusca(forcar = false) {
 }
 
 function montarPayloadOcorrencia() {
+    sincronizarDescricaoEditor();
     const textoEstudante = el("ocorrenciaBuscaEstudante").value.trim();
     const itemEstudante = obterItemSugestaoPorTexto(mapaBuscaEstudantes, textoEstudante);
     const textoProfessor = el("ocorrenciaBuscaProfessor").value.trim();
@@ -3220,6 +3447,7 @@ function montarPayloadOcorrencia() {
         aula: String(el("ocorrenciaAula").value || "").trim(),
         horario_ocorrencia: el("ocorrenciaHorario").value.trim(),
         descricao: el("ocorrenciaDescricao").value.trim(),
+        descricao_formatada: el("ocorrenciaDescricaoFormatada").value.trim(),
         regimento_item_ids: obterIdsRegimentoSelecionadosFormulario(),
         acao_aplicada: el("ocorrenciaAcaoAplicada").value,
         status: el("ocorrenciaStatus").value || opcoesOcorrencias.status_padrao || "registrado"
@@ -3229,6 +3457,11 @@ function montarPayloadOcorrencia() {
 async function salvarOcorrencia(event) {
     event.preventDefault();
     const payload = montarPayloadOcorrencia();
+    if (!payload.descricao) {
+        setMensagemOcorrencias("Descricao e obrigatoria.", true);
+        obterEditorDescricao()?.focus();
+        return;
+    }
 
     try {
         let ocorrencia;
@@ -3251,7 +3484,10 @@ async function salvarOcorrencia(event) {
         limparFormularioOcorrencia();
         invalidarRelatorioOcorrencias();
         await carregarOcorrencias();
-        selecionarOcorrencia(ocorrencia);
+        const ocorrenciaAtualizada = ocorrenciasCache.find(
+            (item) => Number(item.id) === Number(ocorrencia?.id)
+        ) || ocorrencia;
+        selecionarOcorrencia(ocorrenciaAtualizada);
     } catch (err) {
         setMensagemOcorrencias(err.message, true);
     }
@@ -3486,11 +3722,33 @@ function registrarEventosAbas() {
     });
 }
 
+function registrarEventosEditorDescricao() {
+    const editor = obterEditorDescricao();
+    if (!editor) return;
+
+    editor.addEventListener("input", () => {
+        sincronizarDescricaoEditor();
+    });
+    editor.addEventListener("keyup", salvarSelecaoDescricaoEditor);
+    editor.addEventListener("mouseup", salvarSelecaoDescricaoEditor);
+    editor.addEventListener("focus", salvarSelecaoDescricaoEditor);
+
+    document.querySelectorAll("[data-rich-command]").forEach((botao) => {
+        botao.addEventListener("mousedown", (event) => {
+            event.preventDefault();
+        });
+        botao.addEventListener("click", () => {
+            aplicarComandoDescricao(botao.dataset.richCommand);
+        });
+    });
+}
+
 function registrarEventosOcorrencias() {
     el("formFiltrosOcorrencias").addEventListener("submit", filtrarOcorrencias);
     el("formOcorrencia").addEventListener("submit", salvarOcorrencia);
     el("formOcorrencia").addEventListener("input", atualizarPreviewOcorrencia);
     el("formOcorrencia").addEventListener("change", atualizarPreviewOcorrencia);
+    registrarEventosEditorDescricao();
     el("btnLimparFiltros").addEventListener("click", limparFiltrosOcorrencias);
     el("btnNovaOcorrencia").addEventListener("click", () => {
         const painelAberto = painelFormularioOcorrenciaAberto();

@@ -420,6 +420,7 @@ def criar_tabelas():
             aula TEXT NOT NULL,
             horario_ocorrencia TEXT NOT NULL,
             descricao TEXT NOT NULL,
+            descricao_formatada TEXT NOT NULL DEFAULT '',
             acao_aplicada TEXT NOT NULL CHECK (acao_aplicada IN {ACAO_OCORRENCIA_VALIDAS}),
             status TEXT NOT NULL DEFAULT '{STATUS_OCORRENCIA_REGISTRADO}' CHECK (status IN {STATUS_OCORRENCIA_VALIDOS}),
             criado_em TEXT NOT NULL DEFAULT (datetime('now')),
@@ -1057,6 +1058,8 @@ def _garantir_colunas_ocorrencias(cursor):
         cursor.execute("ALTER TABLE ocorrencias ADD COLUMN horario_ocorrencia TEXT NOT NULL DEFAULT ''")
     if "descricao" not in colunas:
         cursor.execute("ALTER TABLE ocorrencias ADD COLUMN descricao TEXT NOT NULL DEFAULT ''")
+    if "descricao_formatada" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN descricao_formatada TEXT NOT NULL DEFAULT ''")
     if "acao_aplicada" not in colunas:
         cursor.execute("ALTER TABLE ocorrencias ADD COLUMN acao_aplicada TEXT NOT NULL DEFAULT ''")
     if "status" not in colunas:
@@ -1117,6 +1120,7 @@ def _recriar_tabela_ocorrencias_se_necessario(cursor):
             aula TEXT NOT NULL,
             horario_ocorrencia TEXT NOT NULL,
             descricao TEXT NOT NULL,
+            descricao_formatada TEXT NOT NULL DEFAULT '',
             acao_aplicada TEXT NOT NULL CHECK (acao_aplicada IN {ACAO_OCORRENCIA_VALIDAS}),
             status TEXT NOT NULL DEFAULT '{STATUS_OCORRENCIA_REGISTRADO}' CHECK (status IN {STATUS_OCORRENCIA_VALIDOS}),
             criado_em TEXT NOT NULL DEFAULT (datetime('now')),
@@ -1139,6 +1143,7 @@ def _recriar_tabela_ocorrencias_se_necessario(cursor):
             aula,
             horario_ocorrencia,
             descricao,
+            descricao_formatada,
             acao_aplicada,
             status,
             criado_em,
@@ -1156,6 +1161,7 @@ def _recriar_tabela_ocorrencias_se_necessario(cursor):
             COALESCE(aula, ''),
             COALESCE(horario_ocorrencia, ''),
             COALESCE(descricao, ''),
+            COALESCE(descricao_formatada, ''),
             CASE
                 WHEN TRIM(COALESCE(acao_aplicada, '')) = '' THEN 'registro_informativo'
                 ELSE TRIM(acao_aplicada)
@@ -1652,6 +1658,11 @@ def _mapear_regimento_itens_por_ocorrencia(cursor, ocorrencia_ids: list[int]) ->
             COALESCE(ori.artigo_id, a.id) AS artigo_id,
             COALESCE(ori.inciso_id, i.id) AS inciso_id,
             COALESCE(ori.alinea_id, al.id) AS alinea_id,
+            CASE
+                WHEN COALESCE(ori.alinea_id, al.id) IS NOT NULL THEN ?
+                WHEN COALESCE(ori.inciso_id, i.id) IS NOT NULL THEN ?
+                ELSE ?
+            END AS tipo,
             COALESCE(NULLIF(TRIM(COALESCE(ori.lei_nome, '')), ''), l.nome, '') AS lei_nome,
             COALESCE(NULLIF(TRIM(COALESCE(ori.artigo_numero, '')), ''), a.numero, '') AS artigo_numero,
             COALESCE(NULLIF(TRIM(COALESCE(ori.artigo_descricao, '')), ''), a.descricao, '') AS artigo_descricao,
@@ -1669,7 +1680,7 @@ def _mapear_regimento_itens_por_ocorrencia(cursor, ocorrencia_ids: list[int]) ->
         LEFT JOIN leis l ON l.id = a.lei_id
         WHERE ori.ocorrencia_id IN ({placeholders})
         ORDER BY ori.ocorrencia_id ASC, ori.ordem ASC, ori.id ASC
-    """, ids_validos)
+    """, [TIPO_BASE_LEGAL_ALINEA, TIPO_BASE_LEGAL_INCISO, TIPO_BASE_LEGAL_ARTIGO, *ids_validos])
 
     mapa: dict[int, list[dict]] = {}
     for row in cursor.fetchall():
@@ -1677,6 +1688,7 @@ def _mapear_regimento_itens_por_ocorrencia(cursor, ocorrencia_ids: list[int]) ->
         mapa.setdefault(ocorrencia_id, []).append(
             {
                 "regimento_item_id": int(row["regimento_item_id"]) if row["regimento_item_id"] is not None else None,
+                "tipo": str(row["tipo"] or "").strip() or None,
                 "artigo_id": int(row["artigo_id"]) if row["artigo_id"] is not None else None,
                 "inciso_id": int(row["inciso_id"]) if row["inciso_id"] is not None else None,
                 "alinea_id": int(row["alinea_id"]) if row["alinea_id"] is not None else None,
@@ -4455,6 +4467,7 @@ def criar_ocorrencia(
     descricao: str,
     acao_aplicada: str,
     status: str = STATUS_OCORRENCIA_REGISTRADO,
+    descricao_formatada: str | None = "",
 ):
     nome_estudante_limpo = _normalizar_nome_catalogo(nome_estudante)
     professor_requerente_limpo = _normalizar_nome_catalogo(professor_requerente)
@@ -4463,6 +4476,7 @@ def criar_ocorrencia(
     aula_limpa = _normalizar_nome_catalogo(aula)
     horario_ocorrencia_limpo = _normalizar_nome_catalogo(horario_ocorrencia)
     descricao_limpa = str(descricao or "").strip()
+    descricao_formatada_limpa = str(descricao_formatada or "").strip()
     acao_aplicada_limpa = _normalizar_nome_catalogo(acao_aplicada)
     status_limpo = _normalizar_nome_catalogo(status) or STATUS_OCORRENCIA_REGISTRADO
     turma_id_valor = int(turma_id or 0)
@@ -4511,12 +4525,13 @@ def criar_ocorrencia(
             aula,
             horario_ocorrencia,
             descricao,
+            descricao_formatada,
             acao_aplicada,
             status,
             criado_em,
             atualizado_em
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     """, (
         nome_estudante_limpo,
         estudante_id_valor,
@@ -4528,6 +4543,7 @@ def criar_ocorrencia(
         aula_limpa,
         horario_ocorrencia_limpo,
         descricao_limpa,
+        descricao_formatada_limpa,
         acao_aplicada_limpa,
         status_limpo,
     ))
@@ -4561,6 +4577,7 @@ def listar_ocorrencias(
             o.aula,
             o.horario_ocorrencia,
             o.descricao,
+            COALESCE(o.descricao_formatada, '') AS descricao_formatada,
             o.acao_aplicada,
             o.status,
             o.criado_em,
@@ -4628,6 +4645,7 @@ def buscar_ocorrencia_por_id(ocorrencia_id: int):
             o.aula,
             o.horario_ocorrencia,
             o.descricao,
+            COALESCE(o.descricao_formatada, '') AS descricao_formatada,
             o.acao_aplicada,
             o.status,
             o.criado_em,
@@ -4656,6 +4674,7 @@ def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
         "aula",
         "horario_ocorrencia",
         "descricao",
+        "descricao_formatada",
         "acao_aplicada",
         "status",
     }
@@ -4715,6 +4734,11 @@ def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
                 raise ValueError("Descrição é obrigatória.")
             atualizacoes.append("descricao = ?")
             parametros.append(valor_descricao)
+            continue
+
+        if campo == "descricao_formatada":
+            atualizacoes.append("descricao_formatada = ?")
+            parametros.append(str(valor or "").strip())
             continue
 
         valor_texto = _normalizar_nome_catalogo(valor)

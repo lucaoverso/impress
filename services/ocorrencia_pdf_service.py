@@ -4,6 +4,7 @@ import io
 import re
 from dataclasses import dataclass
 from datetime import datetime
+from html.parser import HTMLParser
 from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
@@ -83,6 +84,12 @@ FONTES_ITALIC = (
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-Oblique.ttf",
     "/usr/share/fonts/truetype/liberation2/LiberationSans-Italic.ttf",
 )
+FONTES_BOLD_ITALIC = (
+    "C:/Windows/Fonts/arialbi.ttf",
+    "C:/Windows/Fonts/calibriz.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf",
+    "/usr/share/fonts/truetype/liberation2/LiberationSans-BoldItalic.ttf",
+)
 
 
 @dataclass
@@ -93,10 +100,27 @@ class _FontPack:
     secao: ImageFont.ImageFont
     corpo: ImageFont.ImageFont
     corpo_bold: ImageFont.ImageFont
+    corpo_italico: ImageFont.ImageFont
+    corpo_bold_italico: ImageFont.ImageFont
     pequeno: ImageFont.ImageFont
     pequeno_bold: ImageFont.ImageFont
     rodape: ImageFont.ImageFont
     rodape_italico: ImageFont.ImageFont
+
+
+@dataclass
+class _TextoFormatadoRun:
+    texto: str
+    negrito: bool = False
+    italico: bool = False
+    cor_fundo: tuple[int, int, int] | None = None
+
+
+@dataclass
+class _EstiloTextoFormatado:
+    negrito: bool = False
+    italico: bool = False
+    cor_fundo: tuple[int, int, int] | None = None
 
 
 def _carregar_fonte(candidatos: tuple[str, ...], tamanho: int) -> ImageFont.ImageFont:
@@ -114,6 +138,8 @@ def _carregar_fontes() -> _FontPack:
         secao=_carregar_fonte(FONTES_BOLD, 46),
         corpo=_carregar_fonte(FONTES_REGULARES, 40),
         corpo_bold=_carregar_fonte(FONTES_BOLD, 40),
+        corpo_italico=_carregar_fonte(FONTES_ITALIC, 40),
+        corpo_bold_italico=_carregar_fonte(FONTES_BOLD_ITALIC, 40),
         pequeno=_carregar_fonte(FONTES_REGULARES, 34),
         pequeno_bold=_carregar_fonte(FONTES_BOLD, 34),
         rodape=_carregar_fonte(FONTES_REGULARES, 32),
@@ -124,6 +150,126 @@ def _carregar_fontes() -> _FontPack:
 def _texto_seguro(valor, padrao: str = "Nao informado") -> str:
     texto = str(valor or "").strip()
     return texto or padrao
+
+
+def _normalizar_cor_fundo_descricao(valor: str | None) -> tuple[int, int, int] | None:
+    texto = str(valor or "").strip()
+    if not texto:
+        return None
+
+    match_hex = re.fullmatch(r"#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})", texto)
+    if match_hex:
+        cor = match_hex.group(1)
+        if len(cor) == 3:
+            cor = "".join(caractere * 2 for caractere in cor)
+        return tuple(int(cor[indice:indice + 2], 16) for indice in (0, 2, 4))
+
+    match_rgb = re.fullmatch(
+        r"rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)",
+        texto,
+        flags=re.IGNORECASE,
+    )
+    if not match_rgb:
+        return None
+    componentes = tuple(int(match_rgb.group(indice)) for indice in range(1, 4))
+    if any(componente < 0 or componente > 255 for componente in componentes):
+        return None
+    return componentes
+
+
+def _extrair_cor_fundo_descricao(style: str | None) -> tuple[int, int, int] | None:
+    for declaracao in str(style or "").split(";"):
+        propriedade, separador, valor = declaracao.partition(":")
+        if not separador:
+            continue
+        if propriedade.strip().lower() == "background-color":
+            return _normalizar_cor_fundo_descricao(valor)
+    return None
+
+
+class _DescricaoFormatadaParser(HTMLParser):
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.runs: list[_TextoFormatadoRun] = []
+        self.estilos: list[_EstiloTextoFormatado] = [_EstiloTextoFormatado()]
+
+    def _estilo_atual(self) -> _EstiloTextoFormatado:
+        return self.estilos[-1]
+
+    def _adicionar_texto(self, texto: str):
+        if not texto:
+            return
+        estilo = self._estilo_atual()
+        self.runs.append(
+            _TextoFormatadoRun(
+                texto=texto,
+                negrito=estilo.negrito,
+                italico=estilo.italico,
+                cor_fundo=estilo.cor_fundo,
+            )
+        )
+
+    def _adicionar_quebra(self):
+        if self.runs and self.runs[-1].texto.endswith("\n"):
+            return
+        self._adicionar_texto("\n")
+
+    def _empilhar_estilo(self, **alteracoes):
+        atual = self._estilo_atual()
+        proximo = _EstiloTextoFormatado(
+            negrito=alteracoes.get("negrito", atual.negrito),
+            italico=alteracoes.get("italico", atual.italico),
+            cor_fundo=alteracoes.get("cor_fundo", atual.cor_fundo),
+        )
+        self.estilos.append(proximo)
+
+    def _desempilhar_estilo(self):
+        if len(self.estilos) > 1:
+            self.estilos.pop()
+
+    def handle_starttag(self, tag: str, attrs):
+        tag_norm = tag.lower()
+        attrs_dict = {str(nome).lower(): str(valor or "") for nome, valor in attrs}
+
+        if tag_norm in {"p", "div"}:
+            self._adicionar_quebra()
+            return
+        if tag_norm == "br":
+            self._adicionar_quebra()
+            return
+        if tag_norm in {"b", "strong"}:
+            self._empilhar_estilo(negrito=True)
+            return
+        if tag_norm in {"i", "em"}:
+            self._empilhar_estilo(italico=True)
+            return
+        if tag_norm == "mark":
+            self._empilhar_estilo(
+                cor_fundo=_extrair_cor_fundo_descricao(attrs_dict.get("style")) or (255, 243, 163)
+            )
+            return
+        if tag_norm == "span":
+            cor_fundo = _extrair_cor_fundo_descricao(attrs_dict.get("style"))
+            if cor_fundo:
+                self._empilhar_estilo(cor_fundo=cor_fundo)
+
+    def handle_endtag(self, tag: str):
+        tag_norm = tag.lower()
+        if tag_norm in {"b", "strong", "i", "em", "mark", "span"}:
+            self._desempilhar_estilo()
+            return
+        if tag_norm in {"p", "div"}:
+            self._adicionar_quebra()
+
+    def handle_data(self, data: str):
+        self._adicionar_texto(data)
+
+
+def _obter_runs_descricao_formatada(html: str | None) -> list[_TextoFormatadoRun]:
+    parser = _DescricaoFormatadaParser()
+    parser.feed(str(html or ""))
+    parser.close()
+    return [run for run in parser.runs if run.texto]
 
 
 def _formatar_data_br(valor: str | None) -> str:
@@ -405,6 +551,10 @@ def _montar_chave_alinea(item: dict, chave_inciso: str | int, ordem: int) -> str
 
 
 def _montar_blocos_base_legal(itens: list[dict]) -> list[dict]:
+    if not itens:
+        return []
+
+    itens = _obter_itens_regimento_ocorrencia({"regimento_itens": itens})
     if not itens:
         return []
 
@@ -883,6 +1033,108 @@ class _RenderizadorRegistroOcorrencia:
 
         self.y += max(0, int(espaco_final))
 
+    def _fonte_run_formatado(self, run: _TextoFormatadoRun) -> ImageFont.ImageFont:
+        if run.negrito and run.italico:
+            return self.fontes.corpo_bold_italico
+        if run.negrito:
+            return self.fontes.corpo_bold
+        if run.italico:
+            return self.fontes.corpo_italico
+        return self.fontes.corpo
+
+    def _largura_run_formatado(self, run: _TextoFormatadoRun) -> int:
+        largura, _altura = self._medir_texto(run.texto, self._fonte_run_formatado(run))
+        return largura
+
+    def _quebrar_runs_formatados(
+        self,
+        runs: list[_TextoFormatadoRun],
+        largura_disponivel: int,
+    ) -> list[list[_TextoFormatadoRun]]:
+        linhas: list[list[_TextoFormatadoRun]] = []
+        linha_atual: list[_TextoFormatadoRun] = []
+        largura_atual = 0
+        espaco_pendente = False
+
+        def fechar_linha():
+            nonlocal linha_atual, largura_atual
+            if linha_atual:
+                linhas.append(linha_atual)
+            linha_atual = []
+            largura_atual = 0
+
+        for run in runs:
+            tokens = re.findall(r"\n|[^\S\n]+|[^\s]+", run.texto)
+            for token in tokens:
+                if token == "\n":
+                    fechar_linha()
+                    espaco_pendente = False
+                    continue
+                if token.isspace():
+                    if linha_atual:
+                        espaco_pendente = True
+                    continue
+
+                texto_token = f" {token}" if espaco_pendente and linha_atual else token
+                token_run = _TextoFormatadoRun(
+                    texto=texto_token,
+                    negrito=run.negrito,
+                    italico=run.italico,
+                    cor_fundo=run.cor_fundo,
+                )
+                largura_token = self._largura_run_formatado(token_run)
+
+                if linha_atual and largura_atual + largura_token > largura_disponivel:
+                    fechar_linha()
+                    token_run = _TextoFormatadoRun(
+                        texto=token,
+                        negrito=run.negrito,
+                        italico=run.italico,
+                        cor_fundo=run.cor_fundo,
+                    )
+                    largura_token = self._largura_run_formatado(token_run)
+
+                linha_atual.append(token_run)
+                largura_atual += largura_token
+                espaco_pendente = False
+
+        fechar_linha()
+        return linhas
+
+    def _adicionar_runs_formatados(
+        self,
+        runs: list[_TextoFormatadoRun],
+        *,
+        recuo: int = 0,
+        espaco_final: int = 8,
+    ):
+        x_inicio = self.esquerda + max(0, int(recuo))
+        largura_disponivel = self.direita - x_inicio
+        altura_linha = self._altura_linha(self.fontes.corpo, fator=1.15)
+        linhas = self._quebrar_runs_formatados(runs, largura_disponivel)
+
+        for linha in linhas:
+            self._garantir_espaco(altura_linha + 3)
+            x_atual = x_inicio
+            for run in linha:
+                fonte = self._fonte_run_formatado(run)
+                largura_run, _altura_run = self._medir_texto(run.texto, fonte)
+                if run.cor_fundo:
+                    self.draw.rectangle(
+                        (
+                            x_atual,
+                            self.y,
+                            x_atual + largura_run,
+                            self.y + altura_linha,
+                        ),
+                        fill=run.cor_fundo,
+                    )
+                self.draw.text((x_atual, self.y), run.texto, fill=COR_TEXTO, font=fonte)
+                x_atual += largura_run
+            self.y += altura_linha
+
+        self.y += max(0, int(espaco_final))
+
     def _desenhar_rodape(self):
         altura_bloco = 220
         if self.y + altura_bloco > self.altura - MARGEM_BASE:
@@ -952,6 +1204,8 @@ class _RenderizadorRegistroOcorrencia:
         acao = _rotulo_acao(self.ocorrencia.get("acao_aplicada"))
         status = _rotulo_status(self.ocorrencia.get("status"))
         descricao = _texto_seguro(self.ocorrencia.get("descricao"), padrao="")
+        descricao_formatada = str(self.ocorrencia.get("descricao_formatada") or "").strip()
+        runs_descricao_formatada = _obter_runs_descricao_formatada(descricao_formatada)
         regimento_itens = _obter_itens_regimento_ocorrencia(self.ocorrencia)
 
         self._adicionar_rotulo_valor("Estudante(s)", estudante)
@@ -966,7 +1220,10 @@ class _RenderizadorRegistroOcorrencia:
 
         self._adicionar_espaco(6)
         self._adicionar_titulo_secao(SECAO_DESCRICAO)
-        self._adicionar_paragrafos(descricao, fonte=self.fontes.corpo)
+        if runs_descricao_formatada and "".join(run.texto for run in runs_descricao_formatada).strip():
+            self._adicionar_runs_formatados(runs_descricao_formatada)
+        else:
+            self._adicionar_paragrafos(descricao, fonte=self.fontes.corpo)
         self._desenhar_linha()
         if regimento_itens:
             self._adicionar_secao_regimento(regimento_itens)

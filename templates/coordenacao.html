@@ -233,11 +233,35 @@
                                             maxlength="30" required>
                                     </label>
 
-                                    <label class="coordenacao-field coordenacao-field-wide" for="ocorrenciaDescricao">
-                                        <span>Descricao</span>
-                                        <textarea id="ocorrenciaDescricao" rows="5"
-                                            placeholder="Descricao da ocorrencia" required></textarea>
-                                    </label>
+                                    <div class="coordenacao-field coordenacao-field-wide">
+                                        <span id="ocorrenciaDescricaoLabel">Descricao</span>
+                                        <div class="coordenacao-rich-editor" data-rich-editor>
+                                            <div class="coordenacao-rich-editor-toolbar"
+                                                aria-label="Formatacao da descricao">
+                                                <button type="button" data-rich-command="bold"
+                                                    aria-label="Aplicar negrito"><strong>B</strong></button>
+                                                <button type="button" data-rich-command="italic"
+                                                    aria-label="Aplicar italico"><em>I</em></button>
+                                                <label class="coordenacao-rich-editor-color"
+                                                    for="ocorrenciaDescricaoCorFundo">
+                                                    <span>Fundo</span>
+                                                    <input id="ocorrenciaDescricaoCorFundo" type="color"
+                                                        value="#fff3a3">
+                                                </label>
+                                                <button type="button" data-rich-command="highlight"
+                                                    aria-label="Aplicar cor de fundo">Marcar</button>
+                                                <button type="button" data-rich-command="removeFormat"
+                                                    aria-label="Remover formatacao">Limpar formatacao</button>
+                                            </div>
+                                            <div id="ocorrenciaDescricaoEditor"
+                                                class="coordenacao-rich-editor-area" contenteditable="true"
+                                                role="textbox" aria-multiline="true"
+                                                aria-labelledby="ocorrenciaDescricaoLabel"
+                                                data-placeholder="Descricao da ocorrencia"></div>
+                                            <textarea id="ocorrenciaDescricao" rows="5" required hidden></textarea>
+                                            <input id="ocorrenciaDescricaoFormatada" type="hidden">
+                                        </div>
+                                    </div>
 
                                     <div class="coordenacao-field coordenacao-field-wide">
                                         <span>Base legal vinculada</span>

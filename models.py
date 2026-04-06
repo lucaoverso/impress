@@ -348,6 +348,7 @@ class RegimentoItemOut(BaseModel):
 
 class RegimentoItemOcorrenciaOut(BaseModel):
     regimento_item_id: int | None = None
+    tipo: str | None = None
     artigo_id: int | None = None
     inciso_id: int | None = None
     alinea_id: int | None = None
@@ -394,6 +395,7 @@ class OcorrenciaCreateIn(BaseModel):
     aula: str
     horario_ocorrencia: str
     descricao: str
+    descricao_formatada: str | None = None
     regimento_item_ids: list[int] = Field(default_factory=list)
     acao_aplicada: AcaoAplicadaOcorrencia
     status: StatusOcorrencia | None = None
@@ -409,6 +411,7 @@ class OcorrenciaUpdateIn(BaseModel):
     aula: str | None = None
     horario_ocorrencia: str | None = None
     descricao: str | None = None
+    descricao_formatada: str | None = None
     regimento_item_ids: list[int] | None = None
     acao_aplicada: AcaoAplicadaOcorrencia | None = None
     status: StatusOcorrencia | None = None
@@ -426,6 +429,7 @@ class OcorrenciaOut(BaseModel):
     aula: str
     horario_ocorrencia: str
     descricao: str
+    descricao_formatada: str = ""
     regimento_itens: list[RegimentoItemOcorrenciaOut] = Field(default_factory=list)
     acao_aplicada: str
     status: str
