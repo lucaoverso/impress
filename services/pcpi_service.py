@@ -4,10 +4,13 @@ import unicodedata
 
 
 TURNOS_PCPI_CONFIG = {
-    "INTEGRAL": {"nome": "Periodo integral", "aulas": 8},
     "MATUTINO": {"nome": "Matutino", "aulas": 5},
-    "VESPERTINO": {"nome": "Vespertino", "aulas": 5},
-    "VESPERTINO_EM": {"nome": "Vespertino E.M.", "aulas": 6},
+    "VESPERTINO": {"nome": "Vespertino", "aulas": 6},
+}
+
+TURNOS_AGENDAMENTO_POR_TURNO_PCPI = {
+    "MATUTINO": {"MATUTINO", "INTEGRAL"},
+    "VESPERTINO": {"VESPERTINO", "VESPERTINO_EM", "INTEGRAL"},
 }
 
 TIPOS_ACAO_PCPI = (
@@ -31,8 +34,8 @@ GRUPO_AUTOMATICO_AUDIOVISUAL = "recurso_audiovisual"
 GRUPO_AUTOMATICO_APOIO = "apoio_pedagogico"
 
 FECHAMENTO_PCPI_PADRAO = (
-    "Acompanhamento continuo das demandas do turno, com suporte pedagogico e tecnologico "
-    "as acoes planejadas pela unidade escolar."
+    "Acompanhamento contínuo das demandas do turno, com suporte pedagógico e tecnológico "
+    "às ações planejadas pela unidade escolar."
 )
 
 
@@ -40,8 +43,15 @@ def nome_turno_pcpi(turno: str) -> str:
     turno_norm = str(turno or "").strip().upper()
     config = TURNOS_PCPI_CONFIG.get(turno_norm)
     if not config:
-        return turno_norm or "Turno nao informado"
+        return turno_norm or "Turno não informado"
     return str(config["nome"])
+
+
+def turno_agendamento_pertence_ao_turno_pcpi(turno_agendamento: str, turno_pcpi: str) -> bool:
+    turno_pcpi_norm = str(turno_pcpi or "").strip().upper()
+    turno_agendamento_norm = str(turno_agendamento or "").strip().upper()
+    turnos_equivalentes = TURNOS_AGENDAMENTO_POR_TURNO_PCPI.get(turno_pcpi_norm, {turno_pcpi_norm})
+    return turno_agendamento_norm in turnos_equivalentes
 
 
 def _texto_limpo(valor) -> str:
@@ -171,7 +181,7 @@ def _formatar_aulas_referencia(itens: list[dict]) -> str:
     if not aulas:
         return ""
 
-    rotulos = [f"{aula}a" for aula in sorted(aulas)]
+    rotulos = [f"{aula}ª" for aula in sorted(aulas)]
     if len(rotulos) == 1:
         return f" durante a {rotulos[0]} aula"
     return f" durante a(s) {_formatar_lista_pt_br(rotulos)} aulas"
@@ -182,10 +192,10 @@ def _formatar_turmas_referencia(itens: list[dict]) -> str:
     if not turmas:
         return ""
     if len(turmas) == 1:
-        return f" com atendimento a turma {turmas[0]}"
+        return f" com atendimento à turma {turmas[0]}"
     resumo = "demais turmas atendidas" if len(turmas) > 3 else ""
     lista = _formatar_lista_resumida(turmas, limite=3, resumo=resumo)
-    return f" com atendimento as turmas {lista}"
+    return f" com atendimento às turmas {lista}"
 
 
 def _formatar_recursos_referencia(itens: list[dict]) -> str:
@@ -215,9 +225,9 @@ def _frase_automatica_ste(itens: list[dict]) -> str:
     aulas = _formatar_aulas_referencia(itens)
     turmas = _formatar_turmas_referencia(itens)
     frase = (
-        "Disponibilizacao e acompanhamento na Sala de Tecnologia Educacional (STE), "
-        f"auxiliando {docentes}{aulas}{turmas}, oferecendo suporte tecnico e pedagogico "
-        "na execucao das atividades digitais"
+        "Disponibilização e acompanhamento na Sala de Tecnologia Educacional (STE), "
+        f"auxiliando {docentes}{aulas}{turmas}, oferecendo suporte técnico e pedagógico "
+        "na execução das atividades digitais"
     )
     return _garantir_ponto_final(frase)
 
@@ -227,9 +237,9 @@ def _frase_automatica_tecnologia(itens: list[dict]) -> str:
     aulas = _formatar_aulas_referencia(itens)
     turmas = _formatar_turmas_referencia(itens)
     frase = (
-        "Disponibilizacao e acompanhamento de recursos de tecnologia educacional, "
-        f"auxiliando {docentes}{aulas}{turmas}, com suporte tecnico e pedagogico "
-        "na execucao das atividades digitais"
+        "Disponibilização e acompanhamento de recursos de tecnologia educacional, "
+        f"auxiliando {docentes}{aulas}{turmas}, com suporte técnico e pedagógico "
+        "na execução das atividades digitais"
     )
     return _garantir_ponto_final(frase)
 
@@ -238,10 +248,10 @@ def _frase_automatica_audiovisual(itens: list[dict]) -> str:
     destinatarios = _formatar_docentes_destinatarios(itens)
     recursos = _formatar_recursos_referencia(itens)
     turmas = _formatar_turmas_referencia(itens)
-    recursos_txt = f", com organizacao do uso de {recursos}" if recursos else ""
+    recursos_txt = f", com organização do uso de {recursos}" if recursos else ""
     frase = (
-        "Entrega e recebimento de equipamentos tecnologicos "
-        f"{destinatarios}, para utilizacao em sala de aula{turmas}{recursos_txt}, "
+        "Entrega e recebimento de equipamentos tecnológicos "
+        f"{destinatarios}, para utilização em sala de aula{turmas}{recursos_txt}, "
         "garantindo suporte ao uso adequado dos recursos audiovisuais"
     )
     return _garantir_ponto_final(frase)
@@ -250,11 +260,11 @@ def _frase_automatica_audiovisual(itens: list[dict]) -> str:
 def _frase_automatica_apoio(itens: list[dict]) -> str:
     recursos = _formatar_recursos_referencia(itens)
     turmas = _formatar_turmas_referencia(itens)
-    complemento_recursos = f", com organizacao do uso de {recursos}" if recursos else ""
+    complemento_recursos = f", com organização do uso de {recursos}" if recursos else ""
     frase = (
-        "Atendimento e organizacao de recursos de apoio pedagogico no turno"
-        f"{turmas}{complemento_recursos}, assegurando disponibilidade e suporte tecnico "
-        "as demandas apresentadas"
+        "Atendimento e organização de recursos de apoio pedagógico no turno"
+        f"{turmas}{complemento_recursos}, assegurando disponibilidade e suporte técnico "
+        "às demandas apresentadas"
     )
     return _garantir_ponto_final(frase)
 
@@ -270,7 +280,11 @@ def classificar_categoria_uso(recurso_nome: str, recurso_tipo: str) -> str:
     return GRUPO_AUTOMATICO_APOIO
 
 
-def normalizar_agendamento_pcpi(agendamento: dict, carga_professor: dict | None = None) -> dict:
+def normalizar_agendamento_pcpi(
+    agendamento: dict,
+    carga_professor: dict | None = None,
+    turno_pcpi: str | None = None,
+) -> dict:
     carga = carga_professor or {}
     componentes = [
         _texto_limpo(item)
@@ -280,7 +294,7 @@ def normalizar_agendamento_pcpi(agendamento: dict, carga_professor: dict | None 
 
     recurso_nome = _texto_limpo(agendamento.get("recurso_nome"))
     recurso_tipo = _texto_limpo(agendamento.get("recurso_tipo"))
-    turno = _texto_limpo(agendamento.get("turno")).upper()
+    turno = _texto_limpo(turno_pcpi or agendamento.get("turno")).upper()
 
     return {
         "agendamento_id": int(agendamento["id"]),
@@ -341,8 +355,8 @@ def _frases_reuniao(registros: list[dict]) -> list[str]:
         finalidade = _texto_limpo(registro.get("descricao_curta")) or "alinhamento de demandas institucionais"
         observacoes = _complemento_observacoes(registro.get("observacoes"))
         frase = (
-            f"Participacao em reuniao com {participantes}, para {finalidade}, "
-            f"com organizacao das acoes pedagogicas e tecnologicas da unidade escolar{observacoes}"
+            f"Participação em reunião com {participantes}, para {finalidade}, "
+            f"com organização das ações pedagógicas e tecnológicas da unidade escolar{observacoes}"
         )
         frases.append(_garantir_ponto_final(frase))
     return frases
@@ -363,13 +377,13 @@ def _frases_orientacao(registros: list[dict]) -> list[str]:
 
         if professor:
             frase = (
-                f"Orientacao ao(à) professor(a) {professor} quanto ao uso de {recurso}"
-                f"{complemento_finalidade}, com foco na aplicacao pedagogica do recurso{observacoes}"
+                f"Orientação ao(à) professor(a) {professor} quanto ao uso de {recurso}"
+                f"{complemento_finalidade}, com foco na aplicação pedagógica do recurso{observacoes}"
             )
         else:
             frase = (
-                f"Orientacao quanto ao uso de {recurso}{complemento_finalidade}, "
-                f"com foco na aplicacao pedagogica do recurso{observacoes}"
+                f"Orientação quanto ao uso de {recurso}{complemento_finalidade}, "
+                f"com foco na aplicação pedagógica do recurso{observacoes}"
             )
         frases.append(_garantir_ponto_final(frase))
     return frases
@@ -379,8 +393,8 @@ def _frases_registro(registros: list[dict]) -> list[str]:
     descricoes = _coletar_descricoes_registros(registros)
     observacoes = _coletar_observacoes_registros(registros)
     frase = (
-        "Registro e sistematizacao das demandas do turno, com atualizacao de informacoes "
-        "e acompanhamento administrativo e pedagogico"
+        "Registro e sistematização das demandas do turno, com atualização de informações "
+        "e acompanhamento administrativo e pedagógico"
     )
     if descricoes:
         frase += f", contemplando {descricoes}"
@@ -393,8 +407,8 @@ def _frases_impressao(registros: list[dict]) -> list[str]:
     descricoes = _coletar_descricoes_registros(registros)
     observacoes = _coletar_observacoes_registros(registros)
     frase = (
-        "Producao e organizacao de impressoes de materiais pedagogicos, conforme demandas "
-        "apresentadas pelos docentes, visando subsidiar o planejamento e a execucao das aulas"
+        "Produção e organização de impressões de materiais pedagógicos, conforme demandas "
+        "apresentadas pelos docentes, visando subsidiar o planejamento e a execução das aulas"
     )
     if descricoes:
         frase += f", contemplando {descricoes}"
@@ -407,8 +421,8 @@ def _frases_adequacao_impressao(registros: list[dict]) -> list[str]:
     descricoes = _coletar_descricoes_registros(registros)
     observacoes = _coletar_observacoes_registros(registros)
     frase = (
-        "Producao e adequacao de materiais impressos, considerando as necessidades "
-        "pedagogicas especificas apresentadas no turno"
+        "Produção e adequação de materiais impressos, considerando as necessidades "
+        "pedagógicas específicas apresentadas no turno"
     )
     if descricoes:
         frase += f", com atendimento a {descricoes}"
@@ -421,8 +435,8 @@ def _frases_rede_social(registros: list[dict]) -> list[str]:
     descricoes = _coletar_descricoes_registros(registros)
     observacoes = _coletar_observacoes_registros(registros)
     frase = (
-        "Criacao e elaboracao de conteudos digitais para divulgacao institucional "
-        "das acoes pedagogicas desenvolvidas pela escola"
+        "Criação e elaboração de conteúdos digitais para divulgação institucional "
+        "das ações pedagógicas desenvolvidas pela escola"
     )
     if descricoes:
         frase += f", com destaque para {descricoes}"
@@ -436,11 +450,11 @@ def _frases_projeto(registros: list[dict]) -> list[str]:
     for registro in registros:
         nome_projeto = _texto_limpo(registro.get("componente")) or _texto_limpo(registro.get("descricao_curta"))
         if not nome_projeto:
-            nome_projeto = "acoes do turno"
+            nome_projeto = "ações do turno"
         observacoes = _complemento_observacoes(registro.get("observacoes"))
         frase = (
-            f"Elaboracao e acompanhamento de acoes referentes ao projeto {nome_projeto}, "
-            f"com organizacao de materiais, orientacoes e encaminhamentos pedagogicos{observacoes}"
+            f"Elaboração e acompanhamento de ações referentes ao projeto {nome_projeto}, "
+            f"com organização de materiais, orientações e encaminhamentos pedagógicos{observacoes}"
         )
         frases.append(_garantir_ponto_final(frase))
     return frases
@@ -450,7 +464,7 @@ def _frases_gremio(registros: list[dict]) -> list[str]:
     descricoes = _coletar_descricoes_registros(registros)
     observacoes = _coletar_observacoes_registros(registros)
     frase = (
-        "Acompanhamento e organizacao de acoes relacionadas ao Gremio Estudantil, "
+        "Acompanhamento e organização de ações relacionadas ao Grêmio Estudantil, "
         "com apoio aos encaminhamentos e registros do processo"
     )
     if descricoes:
@@ -467,12 +481,12 @@ def _frases_colaboracao(registros: list[dict]) -> list[str]:
         observacoes = _complemento_observacoes(registro.get("observacoes"))
         if referencia:
             frase = (
-                f"Colaboracao com {referencia}, visando ao desenvolvimento de acoes "
-                f"pedagogicas e tecnologicas no turno{observacoes}"
+                f"Colaboração com {referencia}, visando ao desenvolvimento de ações "
+                f"pedagógicas e tecnológicas no turno{observacoes}"
             )
         else:
             frase = (
-                "Colaboracao no desenvolvimento de acoes pedagogicas e tecnologicas "
+                "Colaboração no desenvolvimento de ações pedagógicas e tecnológicas "
                 f"do turno{observacoes}"
             )
         frases.append(_garantir_ponto_final(frase))
@@ -487,8 +501,8 @@ def _frases_evento(registros: list[dict]) -> list[str]:
             evento = "atividade institucional"
         observacoes = _complemento_observacoes(registro.get("observacoes"))
         frase = (
-            f"Organizacao e apoio as acoes relacionadas ao evento {evento}, "
-            f"com acompanhamento dos encaminhamentos pedagogicos e tecnologicos necessarios{observacoes}"
+            f"Organização e apoio às ações relacionadas ao evento {evento}, "
+            f"com acompanhamento dos encaminhamentos pedagógicos e tecnológicos necessários{observacoes}"
         )
         frases.append(_garantir_ponto_final(frase))
     return frases
@@ -498,7 +512,7 @@ def _frases_planejamento(registros: list[dict]) -> list[str]:
     descricoes = _coletar_descricoes_registros(registros)
     observacoes = _coletar_observacoes_registros(registros)
     frase = (
-        "Planejamento e organizacao das acoes pedagogicas e tecnologicas do turno, "
+        "Planejamento e organização das ações pedagógicas e tecnológicas do turno, "
         "voltados ao atendimento das demandas institucionais apresentadas"
     )
     if descricoes:
@@ -513,11 +527,11 @@ def _frases_formulario2(registros: list[dict]) -> list[str]:
     for registro in registros:
         projeto = _texto_limpo(registro.get("descricao_curta")) or _texto_limpo(registro.get("componente"))
         if not projeto:
-            projeto = "atividade pedagogica em desenvolvimento"
+            projeto = "atividade pedagógica em desenvolvimento"
         observacoes = _complemento_observacoes(registro.get("observacoes"))
         frase = (
-            f"Elaboracao do Formulario II referente ao projeto {projeto}, com estruturacao "
-            f"de objetivos, metodologia, estrategias e criterios de avaliacao{observacoes}"
+            f"Elaboração do Formulário II referente ao projeto {projeto}, com estruturação "
+            f"de objetivos, metodologia, estratégias e critérios de avaliação{observacoes}"
         )
         frases.append(_garantir_ponto_final(frase))
     return frases
@@ -529,8 +543,8 @@ def _frases_genericas(registros: list[dict]) -> list[str]:
         descricao = _texto_limpo(registro.get("descricao_curta")) or "demanda do turno"
         observacoes = _complemento_observacoes(registro.get("observacoes"))
         frase = (
-            f"Atendimento e organizacao de demanda relacionada a {descricao}, "
-            f"com suporte pedagogico e tecnologico no turno{observacoes}"
+            f"Atendimento e organização de demanda relacionada a {descricao}, "
+            f"com suporte pedagógico e tecnológico no turno{observacoes}"
         )
         frases.append(_garantir_ponto_final(frase))
     return frases
@@ -592,8 +606,8 @@ def gerar_texto_pcpi(
     frase_fechamento = ""
     if not frases_automaticas and not frases_manuais:
         frase_fechamento = (
-            f"Registro do turno {nome_turno_pcpi(turno)} de {_formatar_data_br(data)} sem acoes "
-            "automaticas ou lancamentos manuais para composicao textual."
+            f"Registro do turno {nome_turno_pcpi(turno)} de {_formatar_data_br(data)} sem ações "
+            "automáticas ou lançamentos manuais para composição textual."
         )
     elif _precisa_fechamento(frases_automaticas, frases_manuais):
         frase_fechamento = FECHAMENTO_PCPI_PADRAO
@@ -643,7 +657,7 @@ def montar_sugestoes_pcpi(
         ),
     ):
         usuario_id = int(agendamento.get("usuario_id") or 0)
-        itens.append(normalizar_agendamento_pcpi(agendamento, cargas.get(usuario_id)))
+        itens.append(normalizar_agendamento_pcpi(agendamento, cargas.get(usuario_id), turno))
 
     return {
         "data": data,

@@ -126,7 +126,7 @@ class PcpiRegistroTest(unittest.TestCase):
             self.assertEqual(item["tema_aula"], "Exploracao de planilhas")
             self.assertEqual(item["categoria_uso"], "tecnologia_educacional")
             self.assertEqual(item["componentes"], ["Matematica", "Fisica"])
-            self.assertIn("Disponibilizacao e acompanhamento", resposta["texto_base"])
+            self.assertIn("Disponibilização e acompanhamento", resposta["texto_base"])
 
     def test_criar_e_listar_registros_manuais_pcpi(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -239,8 +239,8 @@ class PcpiRegistroTest(unittest.TestCase):
 
             self.assertEqual(resposta["total_agendamentos"], 1)
             self.assertEqual(resposta["total_registros_manuais"], 1)
-            self.assertIn("Entrega e recebimento de equipamentos tecnologicos", resposta["texto"])
-            self.assertIn("Planejamento e organizacao", resposta["texto"])
+            self.assertIn("Entrega e recebimento de equipamentos tecnológicos", resposta["texto"])
+            self.assertIn("Planejamento e organização", resposta["texto"])
 
     def test_preview_texto_pcpi_respeita_agendamentos_selecionados(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -308,8 +308,56 @@ class PcpiRegistroTest(unittest.TestCase):
             )
 
             self.assertEqual(resposta["total_agendamentos"], 1)
-            self.assertIn("Disponibilizacao e acompanhamento", resposta["texto"])
-            self.assertNotIn("Entrega e recebimento de equipamentos tecnologicos", resposta["texto"])
+            self.assertIn("Disponibilização e acompanhamento", resposta["texto"])
+            self.assertNotIn("Entrega e recebimento de equipamentos tecnológicos", resposta["texto"])
+
+    def test_sugestoes_pcpi_agrupa_vespertino_em_no_turno_vespertino(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, pcpi_router, _models = _reload_modules(db_path)
+            database.criar_tabelas()
+            database.seed_recursos_padrao()
+
+            professor_id = database.criar_professor(
+                nome="Professor Vespertino",
+                email="vespertino.prof@escola.local",
+                senha_hash=database.hash_senha("Senha@123"),
+                data_nascimento="1990-10-01",
+                aulas_semanais=12,
+                turmas_quantidade=1,
+                turmas=["1A EM"],
+                disciplinas=["Fisica"],
+            )
+            database.criar_turma("1A EM", "VESPERTINO_EM", 30)
+
+            recurso = next(
+                item
+                for item in database.listar_recursos_ativos()
+                if "Projetor" in str(item.get("nome") or "")
+            )
+
+            database.criar_agendamento(
+                recurso_id=int(recurso["id"]),
+                usuario_id=professor_id,
+                data="2026-04-03",
+                turno="VESPERTINO_EM",
+                aula="1",
+                faixa_global=6,
+                turma="1A EM",
+                tema_aula="Seminario",
+                observacao="Uso de projetor.",
+            )
+
+            resposta = pcpi_router.listar_sugestoes_pcpi_api(
+                data="2026-04-03",
+                turno="VESPERTINO",
+                usuario={"id": 1, "cargo": "ADMIN"},
+            )
+
+            self.assertEqual(resposta["turno"], "VESPERTINO")
+            self.assertEqual(resposta["turno_nome"], "Vespertino")
+            self.assertEqual(resposta["resumo"]["total_agendamentos"], 1)
+            self.assertEqual(resposta["itens"][0]["turno"], "VESPERTINO")
 
     def test_criar_registro_manual_pcpi_valida_turno_invalido(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -331,7 +379,7 @@ class PcpiRegistroTest(unittest.TestCase):
                 )
 
             self.assertEqual(contexto.exception.status_code, 400)
-            self.assertIn("Turno invalido", str(contexto.exception.detail))
+            self.assertIn("Turno inválido", str(contexto.exception.detail))
 
 
 if __name__ == "__main__":

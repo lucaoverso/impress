@@ -14,84 +14,84 @@ const headersJson = {
 };
 
 const TURNOS_FALLBACK = [
-    { id: "INTEGRAL", nome: "Periodo integral" },
     { id: "MATUTINO", nome: "Matutino" },
-    { id: "VESPERTINO", nome: "Vespertino" },
-    { id: "VESPERTINO_EM", nome: "Vespertino E.M." }
+    { id: "VESPERTINO", nome: "Vespertino" }
 ];
+
+const TURNOS_PCPI_PERMITIDOS = new Set(["MATUTINO", "VESPERTINO"]);
 
 const TIPOS_ACAO_PCPI = [
     {
         id: "reuniao",
-        nome: "Reuniao",
-        descricaoExemplo: "Alinhamento de demandas institucionais e organizacao das acoes do turno.",
-        observacoesExemplo: "Participacao com equipe gestora, coordenacao ou setores da escola."
+        nome: "Reunião",
+        descricaoExemplo: "Alinhamento de demandas institucionais e organização das ações do turno.",
+        observacoesExemplo: "Participação com equipe gestora, coordenação ou setores da escola."
     },
     {
         id: "orientacao",
-        nome: "Orientacao",
-        descricaoExemplo: "Orientacao para uso pedagogico de recurso ou ferramenta digital.",
+        nome: "Orientação",
+        descricaoExemplo: "Orientação para uso pedagógico de recurso ou ferramenta digital.",
         observacoesExemplo: "Ex.: apoio ao uso de Canva, planilhas, projetor ou ambiente virtual."
     },
     {
         id: "rede_social",
         nome: "Rede social",
-        descricaoExemplo: "Elaboracao de conteudos digitais para divulgacao institucional.",
+        descricaoExemplo: "Elaboração de conteúdos digitais para divulgação institucional.",
         observacoesExemplo: "Registrar campanha, card, postagem ou cobertura de atividade escolar."
     },
     {
         id: "registro",
         nome: "Registro",
-        descricaoExemplo: "Atualizacao e sistematizacao dos registros administrativos do turno.",
-        observacoesExemplo: "Use para lancamentos, conferencias ou organizacao documental."
+        descricaoExemplo: "Atualização e sistematização dos registros administrativos do turno.",
+        observacoesExemplo: "Use para lançamentos, conferências ou organização documental."
     },
     {
         id: "impressao",
-        nome: "Impressao",
-        descricaoExemplo: "Organizacao de impressoes de materiais pedagogicos solicitados no turno.",
-        observacoesExemplo: "Informe, se necessario, volume, finalidade ou docentes atendidos."
+        nome: "Impressão",
+        descricaoExemplo: "Organização de impressões de materiais pedagógicos solicitados no turno.",
+        observacoesExemplo: "Informe, se necessário, volume, finalidade ou docentes atendidos."
     },
     {
         id: "adequacao_impressao",
-        nome: "Adequacao de impressao",
-        descricaoExemplo: "Adequacao de materiais impressos conforme necessidades pedagogicas especificas.",
-        observacoesExemplo: "Detalhe a adaptacao realizada ou o publico atendido."
+        nome: "Adequação de impressão",
+        descricaoExemplo: "Adequação de materiais impressos conforme necessidades pedagógicas específicas.",
+        observacoesExemplo: "Detalhe a adaptação realizada ou o público atendido."
     },
     {
         id: "projeto",
         nome: "Projeto",
-        descricaoExemplo: "Acompanhamento e organizacao de acoes relacionadas a projeto pedagogico.",
+        descricaoExemplo: "Acompanhamento e organização de ações relacionadas a projeto pedagógico.",
         observacoesExemplo: "Informe nome do projeto, etapa ou encaminhamento principal."
     },
     {
         id: "gremio",
-        nome: "Gremio",
-        descricaoExemplo: "Acompanhamento de demandas e registros do Gremio Estudantil.",
-        observacoesExemplo: "Ex.: organizacao de reuniao, pauta ou atividade de representacao estudantil."
+        nome: "Grêmio",
+        descricaoExemplo: "Acompanhamento de demandas e registros do Grêmio Estudantil.",
+        observacoesExemplo: "Ex.: organização de reunião, pauta ou atividade de representação estudantil."
     },
     {
         id: "colaboracao",
-        nome: "Colaboracao",
-        descricaoExemplo: "Colaboracao em acao pedagogica ou tecnologica desenvolvida no turno.",
+        nome: "Colaboração",
+        descricaoExemplo: "Colaboração em ação pedagógica ou tecnológica desenvolvida no turno.",
         observacoesExemplo: "Informe a equipe, setor ou atividade apoiada."
     },
     {
         id: "evento",
         nome: "Evento",
-        descricaoExemplo: "Organizacao e apoio as acoes relacionadas a evento institucional.",
-        observacoesExemplo: "Ex.: mostra, culminancia, palestra, recepcao ou atividade coletiva."
+        descricaoExemplo: "Organização e apoio às ações relacionadas a evento institucional.",
+        observacoesExemplo: "Ex.: mostra, culminância, palestra, recepção ou atividade coletiva."
     },
     {
         id: "planejamento",
         nome: "Planejamento",
-        descricaoExemplo: "Planejamento das atividades e organizacao dos recursos do turno.",
-        observacoesExemplo: "Use para registrar definicao de demandas, materiais e prioridades."
+        descricaoExemplo: "Planejamento das atividades e organização dos recursos do turno.",
+        observacoesExemplo: "Use para registrar definição de demandas, materiais e prioridades."
     },
     {
         id: "formulario2",
-        nome: "Formulario II",
-        descricaoExemplo: "Elaboracao do Formulario II referente a projeto ou atividade pedagogica.",
-        observacoesExemplo: "Informe objetivos, metodologia, avaliacao ou etapa do documento."
+        nome: "Formulário II",
+        descricaoExemplo: "Elaboração do Formulário II referente a projeto ou atividade pedagógica.",
+        observacoesExemplo: "Informe objetivos, metodologia, avaliação ou etapa do documento."
     }
 ];
 
@@ -99,7 +99,7 @@ const CATEGORIAS_AUTOMATICAS = {
     ste: "STE",
     tecnologia_educacional: "Tecnologia educacional",
     recurso_audiovisual: "Recurso audiovisual",
-    apoio_pedagogico: "Apoio pedagogico"
+    apoio_pedagogico: "Apoio pedagógico"
 };
 
 let usuarioAtual = null;
@@ -121,7 +121,7 @@ async function fetchComAuth(url, options = {}) {
     const resposta = await fetch(url, options);
     if (resposta.status === 401) {
         encerrarSessao();
-        throw new Error("Sessao expirada.");
+        throw new Error("Sessão expirada.");
     }
     return resposta;
 }
@@ -154,7 +154,7 @@ function nomeTurno(turnoId) {
 
 function tipoAcaoLabel(tipoAcao) {
     const tipo = TIPOS_ACAO_PCPI.find((item) => item.id === String(tipoAcao || "").trim());
-    return tipo ? tipo.nome : "Acao manual";
+    return tipo ? tipo.nome : "Ação manual";
 }
 
 function obterConfigTipoAcao(tipoAcao) {
@@ -163,7 +163,7 @@ function obterConfigTipoAcao(tipoAcao) {
 
 function categoriaUsoLabel(categoria) {
     const chave = String(categoria || "").trim();
-    return CATEGORIAS_AUTOMATICAS[chave] || "Agendamento automatico";
+    return CATEGORIAS_AUTOMATICAS[chave] || "Agendamento automático";
 }
 
 function escaparHtml(valor) {
@@ -198,7 +198,7 @@ async function obterMensagemErroResposta(resposta, fallback) {
             return dados.mensagem.trim();
         }
     } catch (_erro) {
-        // Resposta sem JSON util.
+        // Resposta sem JSON útil.
     }
     return fallback;
 }
@@ -225,14 +225,17 @@ function preencherTurnosSelect() {
     const select = el("pcpiTurno");
     select.innerHTML = "";
 
-    turnos.forEach((turno) => {
+    const turnosPcpi = turnos.filter((turno) => TURNOS_PCPI_PERMITIDOS.has(normalizarTurnoId(turno.id)));
+    const opcoesTurno = turnosPcpi.length > 0 ? turnosPcpi : TURNOS_FALLBACK;
+
+    opcoesTurno.forEach((turno) => {
         const option = document.createElement("option");
         option.value = turno.id;
         option.textContent = turno.nome;
         select.appendChild(option);
     });
 
-    const turnoPadrao = turnos.find((turno) => normalizarTurnoId(turno.id) === "MATUTINO");
+    const turnoPadrao = opcoesTurno.find((turno) => normalizarTurnoId(turno.id) === "MATUTINO");
     if (turnoPadrao) {
         select.value = turnoPadrao.id;
     }
@@ -254,15 +257,15 @@ function preencherTiposAcao() {
 
 function componentesFormatados(item) {
     const componentes = Array.isArray(item?.componentes) ? item.componentes.filter(Boolean) : [];
-    return componentes.length > 0 ? componentes.join(", ") : "Componente nao informado";
+    return componentes.length > 0 ? componentes.join(", ") : "Componente não informado";
 }
 
 function aulaFormatada(aula) {
     const valor = String(aula || "").trim();
     if (!valor) {
-        return "Aula nao informada";
+        return "Aula não informada";
     }
-    return `${valor}a aula`;
+    return `${valor}ª aula`;
 }
 
 function criarEstadoVazio(mensagem) {
@@ -284,9 +287,9 @@ function renderizarAgendamentosAutomaticos() {
         const componentes = componentesFormatados(item);
         const tema = String(item.tema_aula || "").trim();
         const observacao = String(item.observacao || "").trim();
-        const turma = String(item.turma || "").trim() || "Turma nao informada";
-        const professor = String(item.professor_nome || "").trim() || "Professor nao informado";
-        const recurso = String(item.recurso_nome || "").trim() || "Recurso nao informado";
+        const turma = String(item.turma || "").trim() || "Turma não informada";
+        const professor = String(item.professor_nome || "").trim() || "Professor não informado";
+        const recurso = String(item.recurso_nome || "").trim() || "Recurso não informado";
         const categoria = categoriaUsoLabel(item.categoria_uso);
 
         return `
@@ -302,7 +305,7 @@ function renderizarAgendamentosAutomaticos() {
                         <div class="pcpi-item-top">
                             <strong>${escaparHtml(recurso)}</strong>
                             <div class="pcpi-tag-group">
-                                <span class="pcpi-chip pcpi-chip-automatico">Automatico</span>
+                                <span class="pcpi-chip pcpi-chip-automatico">Automático</span>
                                 <span class="pcpi-chip">${escaparHtml(categoria)}</span>
                             </div>
                         </div>
@@ -403,8 +406,8 @@ function atualizarResumoTexto() {
 
 function aplicarAjudaTipoAcao() {
     const config = obterConfigTipoAcao(el("pcpiTipoAcao").value);
-    const descricao = config?.descricaoExemplo || "Descreva objetivamente a acao realizada pelo PCPI no turno.";
-    const observacoes = config?.observacoesExemplo || "Use observacoes para complementar contexto, publico atendido ou encaminhamentos.";
+    const descricao = config?.descricaoExemplo || "Descreva objetivamente a ação realizada pelo PCPI no turno.";
+    const observacoes = config?.observacoesExemplo || "Use observações para complementar contexto, público atendido ou encaminhamentos.";
 
     el("pcpiAjudaManual").textContent = `Exemplo: ${descricao} ${observacoes}`;
     el("pcpiDescricaoCurta").placeholder = descricao;
@@ -434,8 +437,8 @@ async function carregarUsuario() {
         return false;
     }
 
-    const primeiroNome = String(usuarioAtual.nome || "").trim().split(" ")[0] || "Usuario";
-    el("pcpiUsuario").textContent = `${primeiroNome} | modulo PCPI`;
+    const primeiroNome = String(usuarioAtual.nome || "").trim().split(" ")[0] || "Usuário";
+    el("pcpiUsuario").textContent = `${primeiroNome} | módulo PCPI`;
     return true;
 }
 
@@ -443,7 +446,7 @@ async function carregarTurnos() {
     try {
         const resposta = await fetchComAuth("/agendamento/opcoes", { headers });
         if (!resposta.ok) {
-            throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel carregar os turnos."));
+            throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível carregar os turnos."));
         }
 
         const dados = await resposta.json();
@@ -476,10 +479,10 @@ async function carregarContextoPcpi({ gerarTextoAutomaticamente = true } = {}) {
         ]);
 
         if (!resSugestoes.ok) {
-            throw new Error(await obterMensagemErroResposta(resSugestoes, "Nao foi possivel carregar os agendamentos do PCPI."));
+            throw new Error(await obterMensagemErroResposta(resSugestoes, "Não foi possível carregar os agendamentos do PCPI."));
         }
         if (!resRegistros.ok) {
-            throw new Error(await obterMensagemErroResposta(resRegistros, "Nao foi possivel carregar os registros manuais do PCPI."));
+            throw new Error(await obterMensagemErroResposta(resRegistros, "Não foi possível carregar os registros manuais do PCPI."));
         }
 
         sugestoesAtuais = await resSugestoes.json();
@@ -497,14 +500,14 @@ async function carregarContextoPcpi({ gerarTextoAutomaticamente = true } = {}) {
     } catch (erro) {
         sugestoesAtuais = null;
         registrosManuaisAtuais = null;
-        el("listaAgendamentosPcpi").innerHTML = criarEstadoVazio("Nao foi possivel carregar os agendamentos.");
-        el("listaRegistrosManuaisPcpi").innerHTML = criarEstadoVazio("Nao foi possivel carregar os registros manuais.");
+        el("listaAgendamentosPcpi").innerHTML = criarEstadoVazio("Não foi possível carregar os agendamentos.");
+        el("listaRegistrosManuaisPcpi").innerHTML = criarEstadoVazio("Não foi possível carregar os registros manuais.");
         el("pcpiTextoFinal").value = "";
         el("pcpiResumoTurno").textContent = "";
         el("pcpiResumoAutomatico").textContent = "0 de 0 agendamento(s) marcados | 0 professor(es) | 0 turma(s).";
         el("pcpiResumoManual").textContent = "0 registros";
         atualizarResumoTexto();
-        definirMensagem("msgPcpiGeral", erro.message || "Erro ao carregar o modulo PCPI.", true);
+        definirMensagem("msgPcpiGeral", erro.message || "Erro ao carregar o módulo PCPI.", true);
     }
 }
 
@@ -531,7 +534,7 @@ async function gerarTextoPcpi() {
         });
 
         if (!resposta.ok) {
-            throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel gerar o texto do PCPI."));
+            throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível gerar o texto do PCPI."));
         }
 
         const dados = await resposta.json();
@@ -556,7 +559,7 @@ async function salvarRegistroManualPcpi(event) {
 
     const descricaoCurta = String(el("pcpiDescricaoCurta").value || "").trim();
     if (!descricaoCurta) {
-        definirMensagem("msgPcpiManual", "Informe a descricao curta da acao manual.", true);
+        definirMensagem("msgPcpiManual", "Informe a descrição curta da ação manual.", true);
         el("pcpiDescricaoCurta").focus();
         return;
     }
@@ -580,14 +583,14 @@ async function salvarRegistroManualPcpi(event) {
         });
 
         if (!resposta.ok) {
-            throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel salvar a acao manual."));
+            throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível salvar a ação manual."));
         }
 
         limparFormularioManual();
-        definirMensagem("msgPcpiManual", "Acao manual salva com sucesso.");
+        definirMensagem("msgPcpiManual", "Ação manual salva com sucesso.");
         await carregarContextoPcpi({ gerarTextoAutomaticamente: true });
     } catch (erro) {
-        definirMensagem("msgPcpiManual", erro.message || "Erro ao salvar a acao manual.", true);
+        definirMensagem("msgPcpiManual", erro.message || "Erro ao salvar a ação manual.", true);
     }
 }
 
@@ -595,7 +598,7 @@ async function copiarTextoPcpi() {
     limparMensagem("msgPcpiGeral");
     const texto = String(el("pcpiTextoFinal").value || "").trim();
     if (!texto) {
-        definirMensagem("msgPcpiGeral", "Nao ha texto para copiar.", true);
+        definirMensagem("msgPcpiGeral", "Não há texto para copiar.", true);
         return;
     }
 
@@ -606,9 +609,9 @@ async function copiarTextoPcpi() {
             el("pcpiTextoFinal").select();
             document.execCommand("copy");
         }
-        definirMensagem("msgPcpiGeral", "Texto copiado para a area de transferencia.");
+        definirMensagem("msgPcpiGeral", "Texto copiado para a área de transferência.");
     } catch (_erro) {
-        definirMensagem("msgPcpiGeral", "Nao foi possivel copiar o texto.", true);
+        definirMensagem("msgPcpiGeral", "Não foi possível copiar o texto.", true);
     }
 }
 
