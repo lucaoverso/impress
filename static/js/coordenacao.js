@@ -31,6 +31,7 @@ let alineasBaseLegalCache = [];
 let relatorioOcorrenciasCache = [];
 let relatorioOcorrenciasCarregado = false;
 let selecaoDescricaoEditor = null;
+let regimentoSelecionadoIds = [];
 let opcoesOcorrencias = {
     turmas: [],
     professores: [],
@@ -590,10 +591,14 @@ function normalizarIdsRegimento(valores) {
 }
 
 function obterIdsRegimentoSelecionadosFormulario() {
-    return normalizarIdsRegimento(
+    const idsDom = normalizarIdsRegimento(
         Array.from(document.querySelectorAll("#ocorrenciaRegimentoSelecionados [data-regimento-item-id]"))
             .map((item) => item.dataset.regimentoItemId)
     );
+    return normalizarIdsRegimento([
+        ...regimentoSelecionadoIds,
+        ...idsDom
+    ]);
 }
 
 function obterIdsRegimentoSelecionadosOcorrencia(ocorrencia) {
@@ -619,6 +624,7 @@ function renderSelecionadorRegimento(idsSelecionados = null) {
             ? obterIdsRegimentoSelecionadosFormulario()
             : normalizarIdsRegimento(idsSelecionados)
     );
+    regimentoSelecionadoIds = normalizarIdsRegimento(Array.from(idsAtivos));
     container.innerHTML = "";
 
     const itens = Array.isArray(opcoesOcorrencias.regimento_itens)
@@ -798,6 +804,21 @@ function correspondeTextoRegimento(item, termo) {
     ].some((valor) => String(valor || "").trim().toLowerCase() === termoNormalizado);
 }
 
+function buscarItemRegimentoPorTexto(termo) {
+    const texto = String(termo || "").trim();
+    if (!texto) return null;
+
+    const itensDisponiveis = obterItensDisponiveisRegimento();
+    const itemExato = itensDisponiveis.find((candidato) => correspondeTextoRegimento(candidato, texto));
+    if (itemExato) return itemExato;
+
+    const itensFiltrados = filtrarSugestoesLocais(itensDisponiveis, texto, {
+        limite: 2,
+        campos: ["artigo", "descricao", "label"]
+    });
+    return itensFiltrados.length === 1 ? itensFiltrados[0] : null;
+}
+
 function selecionarSugestaoRegimento(item) {
     const id = Number(item?.id || 0);
     if (id <= 0) return;
@@ -811,7 +832,7 @@ function selecionarSugestaoRegimento(item) {
     ocultarSugestoes("listaRegimentoBusca");
 }
 
-function aplicarSelecaoRegimentoPorTexto() {
+function aplicarSelecaoRegimentoPorTexto({ limparQuandoInvalido = false } = {}) {
     const input = el("ocorrenciaBuscaRegimento");
     const texto = input.value.trim();
     if (!texto) {
@@ -819,14 +840,36 @@ function aplicarSelecaoRegimentoPorTexto() {
         return;
     }
 
-    const item = obterItensDisponiveisRegimento().find((candidato) => correspondeTextoRegimento(candidato, texto));
+    const item = buscarItemRegimentoPorTexto(texto);
     if (item) {
         selecionarSugestaoRegimento(item);
         return;
     }
 
-    input.value = "";
+    if (limparQuandoInvalido) {
+        input.value = "";
+    }
     ocultarSugestoes("listaRegimentoBusca");
+}
+
+function sincronizarRegimentoPendenteAntesSalvar() {
+    const input = el("ocorrenciaBuscaRegimento");
+    const texto = String(input?.value || "").trim();
+    if (!texto) return true;
+
+    const item = buscarItemRegimentoPorTexto(texto);
+    if (item) {
+        selecionarSugestaoRegimento(item);
+        return true;
+    }
+
+    setMensagemOcorrencias(
+        "Selecione uma opcao da base legal na lista antes de salvar a ocorrencia.",
+        true
+    );
+    input.focus();
+    atualizarSugestoesRegimentoBusca(true);
+    return false;
 }
 
 function atualizarSugestoesRegimentoBusca(forcar = false) {
@@ -3456,6 +3499,10 @@ function montarPayloadOcorrencia() {
 
 async function salvarOcorrencia(event) {
     event.preventDefault();
+    if (!sincronizarRegimentoPendenteAntesSalvar()) {
+        return;
+    }
+
     const payload = montarPayloadOcorrencia();
     if (!payload.descricao) {
         setMensagemOcorrencias("Descricao e obrigatoria.", true);
