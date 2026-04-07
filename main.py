@@ -629,6 +629,19 @@ def health():
 # IMPRESSÃO (PROFESSOR)
 # =========================================================
 
+@app.get("/impressao/turmas")
+def turmas_impressao(_usuario = Depends(get_usuario_logado)):
+    turmas = []
+    for turma in listar_turmas_ativas():
+        turmas.append({
+            "id": int(turma["id"]),
+            "nome": turma["nome"],
+            "turno": str(turma.get("turno") or "").strip().upper(),
+            "quantidade_estudantes": max(int(turma.get("quantidade_estudantes") or 0), 0),
+        })
+    return turmas
+
+
 @app.post("/imprimir")
 def imprimir(
     copias: int = Form(...),

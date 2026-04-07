@@ -46,6 +46,7 @@ let envioEmAndamento = false;
 let filaPollingTimer = null;
 let usuarioAtual = null;
 let professoresImpressao = [];
+let turmasImpressao = [];
 let arquivoSelecionadoAtual = null;
 const QUALIDADE_MAX_DPR = 1.4;
 const FOLHA_PADDING = 8;
@@ -212,6 +213,123 @@ async function carregarProfessoresImpressaoAdmin() {
     });
     select.disabled = false;
     atualizarTitulosContextoImpressao();
+}
+
+function obterTurmaImpressaoSelecionadaId() {
+    return Number(el("turmaImpressao")?.value || 0);
+}
+
+function obterTurmaImpressaoSelecionada() {
+    const turmaId = obterTurmaImpressaoSelecionadaId();
+    return turmasImpressao.find((turma) => Number(turma.id) === turmaId) || null;
+}
+
+function obterQuantidadeCopiasTurma(turma) {
+    const quantidade = Number(turma?.quantidade_estudantes || 0);
+    if (!Number.isFinite(quantidade) || quantidade <= 0) {
+        return 0;
+    }
+    return Math.floor(quantidade);
+}
+
+function atualizarResumoTurmaImpressao() {
+    const resumo = el("resumoTurmaImpressao");
+    if (!resumo) {
+        return;
+    }
+
+    const turma = obterTurmaImpressaoSelecionada();
+    if (!turma) {
+        resumo.innerText = "Selecione uma turma para preencher as cópias automaticamente.";
+        return;
+    }
+
+    const quantidade = obterQuantidadeCopiasTurma(turma);
+    if (quantidade <= 0) {
+        resumo.innerText = `${turma.nome} está sem quantidade de estudantes cadastrada. Ajuste as cópias manualmente.`;
+        return;
+    }
+
+    const copiasAtuais = Number(el("copias")?.value || 0);
+    if (copiasAtuais === quantidade) {
+        resumo.innerText = `${turma.nome} possui ${quantidade} estudante(s). Serão feitas ${quantidade} cópia(s).`;
+        return;
+    }
+
+    if (copiasAtuais > 0) {
+        resumo.innerText = `${turma.nome} possui ${quantidade} estudante(s). Cópias ajustadas manualmente para ${copiasAtuais}.`;
+        return;
+    }
+
+    resumo.innerText = `${turma.nome} possui ${quantidade} estudante(s).`;
+}
+
+function aplicarTurmaImpressaoSelecionada() {
+    const turma = obterTurmaImpressaoSelecionada();
+    const inputCopias = el("copias");
+    const quantidade = obterQuantidadeCopiasTurma(turma);
+
+    if (inputCopias && quantidade > 0) {
+        inputCopias.value = String(quantidade);
+    }
+
+    atualizarResumoTurmaImpressao();
+    calcularConsumo();
+}
+
+async function carregarTurmasImpressao() {
+    const select = el("turmaImpressao");
+    const resumo = el("resumoTurmaImpressao");
+    if (!select) {
+        return;
+    }
+
+    select.disabled = true;
+    select.innerHTML = "";
+    turmasImpressao = [];
+
+    const optionCarregando = document.createElement("option");
+    optionCarregando.value = "";
+    optionCarregando.innerText = "Carregando turmas...";
+    select.appendChild(optionCarregando);
+    if (resumo) {
+        resumo.innerText = "Carregando turmas cadastradas...";
+    }
+
+    const res = await fetchComAuth("/impressao/turmas", { headers });
+    if (!res.ok) {
+        throw new Error("Não foi possível carregar as turmas para impressão.");
+    }
+
+    const data = await res.json();
+    turmasImpressao = Array.isArray(data) ? data : [];
+
+    select.innerHTML = "";
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.innerText = turmasImpressao.length > 0
+        ? "Selecione uma turma"
+        : "Nenhuma turma ativa cadastrada";
+    placeholder.selected = true;
+    select.appendChild(placeholder);
+
+    turmasImpressao.forEach((turma) => {
+        const option = document.createElement("option");
+        const quantidade = obterQuantidadeCopiasTurma(turma);
+        option.value = String(turma.id);
+        option.innerText = quantidade > 0
+            ? `${turma.nome} (${quantidade} estudante(s))`
+            : `${turma.nome} (sem quantidade)`;
+        select.appendChild(option);
+    });
+
+    select.disabled = turmasImpressao.length === 0;
+    if (turmasImpressao.length === 0 && resumo) {
+        resumo.innerText = "Nenhuma turma ativa cadastrada para preenchimento automático.";
+        return;
+    }
+
+    atualizarResumoTurmaImpressao();
 }
 
 function obterExtensaoArquivo(nomeArquivo) {
@@ -1497,7 +1615,11 @@ function registrarEventos() {
     });
 
     el("orientacao").addEventListener("change", atualizarPreview);
-    el("copias").addEventListener("input", calcularConsumo);
+    el("copias").addEventListener("input", () => {
+        atualizarResumoTurmaImpressao();
+        calcularConsumo();
+    });
+    el("turmaImpressao").addEventListener("change", aplicarTurmaImpressaoSelecionada);
     el("duplex").addEventListener("change", atualizarPreview);
     el("paginasPorFolha").addEventListener("change", () => {
         folhaAtual = 1;
@@ -1571,6 +1693,7 @@ async function inicializarPagina() {
     try {
         await carregarUsuario();
         await carregarProfessoresImpressaoAdmin();
+        await carregarTurmasImpressao();
         await carregarCota();
         await carregarFila();
     } catch (err) {
