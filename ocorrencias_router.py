@@ -400,6 +400,12 @@ def _normalizar_regimento_item_ids(valores: list[int] | None) -> list[int]:
     return ids_norm
 
 
+def _exigir_regimento_item_ids(ids_norm: list[int]) -> list[int]:
+    if not ids_norm:
+        raise HTTPException(400, "Selecione ao menos uma base legal para vincular a ocorrencia.")
+    return ids_norm
+
+
 def _montar_resposta_regimento_item(regimento_item_id: int) -> dict:
     item = buscar_regimento_item_por_id(regimento_item_id)
     if not item:
@@ -646,7 +652,9 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
     faixa_aula = _validar_faixa_aula_por_turma(payload.aula, turma_id)
     status = _validar_status(payload.status or STATUS_OCORRENCIA_REGISTRADO)
     acao_aplicada = _validar_acao_aplicada(payload.acao_aplicada)
-    regimento_item_ids = _normalizar_regimento_item_ids(payload.regimento_item_ids)
+    regimento_item_ids = _exigir_regimento_item_ids(
+        _normalizar_regimento_item_ids(payload.regimento_item_ids)
+    )
     regimento_itens = buscar_regimento_itens_por_ids(regimento_item_ids) if regimento_item_ids else []
     _validar_acao_compativel_com_base_legal(acao_aplicada, regimento_itens)
     descricao = _texto_obrigatorio(payload.descricao, "Descricao", max_len=5000)
@@ -813,8 +821,8 @@ def atualizar_ocorrencia_parcial_api(
             max_len=5000,
         )
     if "regimento_item_ids" in dados_brutos:
-        regimento_item_ids_validados = _normalizar_regimento_item_ids(
-            dados_brutos.get("regimento_item_ids")
+        regimento_item_ids_validados = _exigir_regimento_item_ids(
+            _normalizar_regimento_item_ids(dados_brutos.get("regimento_item_ids"))
         )
     if "acao_aplicada" in dados_brutos:
         dados_validados["acao_aplicada"] = _validar_acao_aplicada(dados_brutos["acao_aplicada"])

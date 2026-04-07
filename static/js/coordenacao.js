@@ -601,6 +601,18 @@ function obterIdsRegimentoSelecionadosFormulario() {
     ]);
 }
 
+function validarBaseLegalSelecionadaAntesSalvar() {
+    const idsSelecionados = obterIdsRegimentoSelecionadosFormulario();
+    if (idsSelecionados.length > 0) {
+        return idsSelecionados;
+    }
+
+    setMensagemOcorrencias("Selecione ao menos uma base legal para vincular a ocorrencia.", true);
+    el("ocorrenciaBuscaRegimento")?.focus();
+    atualizarSugestoesRegimentoBusca(true);
+    return [];
+}
+
 function obterIdsRegimentoSelecionadosOcorrencia(ocorrencia) {
     return normalizarIdsRegimento(
         Array.isArray(ocorrencia?.regimento_itens)
@@ -3501,8 +3513,13 @@ async function salvarOcorrencia(event) {
     if (!sincronizarRegimentoPendenteAntesSalvar()) {
         return;
     }
+    const idsRegimentoSelecionados = validarBaseLegalSelecionadaAntesSalvar();
+    if (idsRegimentoSelecionados.length === 0) {
+        return;
+    }
 
     const payload = montarPayloadOcorrencia();
+    payload.regimento_item_ids = idsRegimentoSelecionados;
     if (!payload.descricao) {
         setMensagemOcorrencias("Descricao e obrigatoria.", true);
         obterEditorDescricao()?.focus();
