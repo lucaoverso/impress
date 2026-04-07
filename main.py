@@ -509,6 +509,9 @@ def usuario_eh_admin(usuario: dict) -> bool:
 def usuario_eh_gestor(usuario: dict) -> bool:
     return normalizar_cargo_usuario(usuario) in {CARGO_ADMIN, CARGO_COORDENADOR}
 
+def usuario_tem_cota_ilimitada(usuario: dict) -> bool:
+    return usuario_eh_admin(usuario)
+
 def exigir_admin(usuario):
     if not usuario_eh_admin(usuario):
         raise HTTPException(403, "Acesso negado")
@@ -729,22 +732,25 @@ def imprimir(
         folhas_por_copia = ceil(folhas_por_copia / 2)
     paginas_totais = folhas_por_copia * copias
 
-    try:
-        autorizado, restante = validar_e_consumir_cota(
-            usuario_id=usuario_responsavel["id"],
-            paginas=paginas_totais
-        )
-    except Exception:
-        remover_arquivo_se_existir(caminho_arquivo)
-        raise
+    cota_ilimitada = usuario_tem_cota_ilimitada(usuario_responsavel)
+    restante = None
+    if not cota_ilimitada:
+        try:
+            autorizado, restante = validar_e_consumir_cota(
+                usuario_id=usuario_responsavel["id"],
+                paginas=paginas_totais
+            )
+        except Exception:
+            remover_arquivo_se_existir(caminho_arquivo)
+            raise
 
-    if not autorizado:
-        remover_arquivo_se_existir(caminho_arquivo)
-        raise HTTPException(
-            403,
-            f"Cota insuficiente. Documento consome {paginas_totais} páginas. "
-            f"Restam {restante}."
-        )
+        if not autorizado:
+            remover_arquivo_se_existir(caminho_arquivo)
+            raise HTTPException(
+                403,
+                f"Cota insuficiente. Documento consome {paginas_totais} páginas. "
+                f"Restam {restante}."
+            )
 
     opcoes_cups = montar_opcoes_cups(
         paginas_por_folha=paginas_por_folha,
@@ -777,7 +783,8 @@ def imprimir(
         "paginas_selecionadas": paginas_selecionadas,
         "copias": copias,
         "paginas_consumidas": paginas_totais,
-        "paginas_restantes": restante
+        "paginas_restantes": restante,
+        "cota_ilimitada": cota_ilimitada
     }
 
 @app.post("/impressao/preview")
@@ -858,12 +865,15 @@ def cancelar(job_id: int, usuario = Depends(get_usuario_logado)):
     if not eh_gestor and not eh_dono:
         raise HTTPException(403, "Você não pode cancelar este job.")
 
-    resultado = cancelar_job(job_id)
+    usuario_job = buscar_usuario_por_id(usuario_job_id, incluir_inativos=True) if usuario_job_id is not None else None
+    cota_ilimitada = bool(usuario_job and usuario_tem_cota_ilimitada(usuario_job))
+
+    resultado = cancelar_job(job_id, estornar_cota=not cota_ilimitada)
     if not resultado.get("cancelado"):
         raise HTTPException(409, "Este job não pode mais ser cancelado (já está em impressão ou finalizado).")
 
     paginas_restantes = None
-    if usuario_job_id is not None:
+    if usuario_job_id is not None and not cota_ilimitada:
         cota = obter_cota_atual(usuario_job_id)
         paginas_restantes = int(cota["restante"])
 
@@ -871,6 +881,7 @@ def cancelar(job_id: int, usuario = Depends(get_usuario_logado)):
         "mensagem": "Job cancelado com sucesso.",
         "paginas_estornadas": int(resultado.get("paginas_estornadas") or 0),
         "paginas_restantes": paginas_restantes,
+        "cota_ilimitada": cota_ilimitada,
     }
 
 
@@ -912,7 +923,17 @@ def minha_cota(
         professor_id,
         contexto="na impressão"
     )
-    return obter_cota_atual(usuario_consulta["id"])
+    if usuario_tem_cota_ilimitada(usuario_consulta):
+        return {
+            "limite": None,
+            "usadas": 0,
+            "restante": None,
+            "ilimitada": True,
+        }
+
+    cota = obter_cota_atual(usuario_consulta["id"])
+    cota["ilimitada"] = False
+    return cota
 
 
 @app.get("/me")

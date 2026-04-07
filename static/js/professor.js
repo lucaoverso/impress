@@ -100,10 +100,6 @@ function obterProfessorSelecionado() {
     return professoresImpressao.find((professor) => Number(professor.id) === professorId) || null;
 }
 
-function adminPrecisaSelecionarProfessor() {
-    return usuarioEhAdmin() && !obterProfessorSolicitanteSelecionadoId();
-}
-
 function montarUrlConsultaImpressao(urlBase) {
     const professorId = obterProfessorSolicitanteSelecionadoId();
     if (!(usuarioEhAdmin() && professorId > 0)) {
@@ -133,13 +129,13 @@ function atualizarTitulosContextoImpressao() {
     }
 
     const professor = obterProfessorSelecionado();
-    tituloCota.innerText = professor ? `Cota de ${professor.nome}` : "Cota do professor";
-    tituloJobs.innerText = professor ? `Pedidos de ${professor.nome}` : "Pedidos do professor";
+    tituloCota.innerText = professor ? `Cota de ${professor.nome}` : "Cota do admin";
+    tituloJobs.innerText = professor ? `Pedidos de ${professor.nome}` : "Pedidos do admin";
 
     if (contexto) {
         contexto.innerText = professor
             ? `A impressao sera contabilizada para ${professor.nome}.`
-            : "Selecione o professor solicitante para consultar cota, historico e imprimir.";
+            : "Sem professor selecionado, a impressao usa a cota ilimitada do admin.";
     }
 }
 
@@ -874,11 +870,6 @@ async function enviarImpressao() {
     const intervaloPaginas = el("intervaloPaginas").value.trim();
     const professorSolicitanteId = obterProfessorSolicitanteSelecionadoId();
 
-    if (usuarioEhAdmin() && !professorSolicitanteId) {
-        el("msg").innerText = "Selecione o professor solicitante da impressao.";
-        return;
-    }
-
     if (!arquivo || !copias || copias < 1) {
         el("msg").innerText = "Selecione um arquivo e informe uma quantidade válida de cópias.";
         return;
@@ -899,7 +890,13 @@ async function enviarImpressao() {
     }
 
     envioEmAndamento = true;
-    atualizarEstadoEnvio(true, "Enviando para fila e validando consumo da cota...");
+    const cotaIlimitadaAdmin = usuarioEhAdmin() && !professorSolicitanteId;
+    atualizarEstadoEnvio(
+        true,
+        cotaIlimitadaAdmin
+            ? "Enviando para fila com cota ilimitada do admin..."
+            : "Enviando para fila e validando consumo da cota..."
+    );
     el("msg").innerText = "";
 
     try {
@@ -930,7 +927,9 @@ async function enviarImpressao() {
 
         const professorSelecionado = obterProfessorSelecionado();
         const sufixoDestino = professorSelecionado ? ` para ${professorSelecionado.nome}` : "";
-        el("msg").innerText = `Enviado${sufixoDestino}! Restam ${data.paginas_restantes} páginas`;
+        el("msg").innerText = data.cota_ilimitada
+            ? `Enviado${sufixoDestino}! Cota ilimitada do admin.`
+            : `Enviado${sufixoDestino}! Restam ${data.paginas_restantes} páginas`;
         await carregarFila();
         await carregarCota();
         calcularConsumo();
@@ -945,17 +944,16 @@ async function enviarImpressao() {
 async function carregarCota() {
     atualizarTitulosContextoImpressao();
 
-    if (adminPrecisaSelecionarProfessor()) {
-        el("cota").innerText = "Selecione um professor solicitante.";
-        return;
-    }
-
     const res = await fetchComAuth(montarUrlConsultaImpressao("/minha-cota"), { headers });
     if (!res.ok) {
         throw new Error(await extrairMensagemErroResposta(res, "Nao foi possivel carregar a cota."));
     }
 
     const data = await res.json();
+    if (data.ilimitada) {
+        el("cota").innerText = "Cota ilimitada";
+        return;
+    }
     el("cota").innerText = `Restante: ${data.restante} páginas`;
 }
 
@@ -1059,11 +1057,6 @@ function criarItemJob(job) {
 
 async function carregarFila() {
     atualizarTitulosContextoImpressao();
-
-    if (adminPrecisaSelecionarProfessor()) {
-        renderFilaVazia("Selecione um professor solicitante para ver os pedidos.");
-        return;
-    }
 
     const res = await fetchComAuth(montarUrlConsultaImpressao("/meus-jobs"), { headers });
     if (!res.ok) {

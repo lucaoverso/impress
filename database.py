@@ -3086,7 +3086,7 @@ def buscar_job(job_id):
 
     return dict(row) if row else None
 
-def cancelar_job(job_id):
+def cancelar_job(job_id, estornar_cota: bool = True):
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -3113,7 +3113,7 @@ def cancelar_job(job_id):
     cancelado = cursor.rowcount > 0
 
     paginas_estornadas = 0
-    if cancelado:
+    if cancelado and estornar_cota:
         usuario_id_raw = job["usuario_id"]
         usuario_id = int(usuario_id_raw) if usuario_id_raw is not None else None
         paginas = max(int(job["paginas_totais"] or 0), 0)
