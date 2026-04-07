@@ -1595,6 +1595,94 @@ def _garantir_colunas_ocorrencia_regimento_itens(cursor):
     if "alinea_descricao" not in colunas:
         cursor.execute("ALTER TABLE ocorrencia_regimento_itens ADD COLUMN alinea_descricao TEXT")
 
+    # Bancos antigos vinculavam regimento_item_id a regimento_itens; os IDs atuais
+    # codificam artigos/incisos/alineas e precisam de um snapshot sem essa FK legada.
+    if _ocorrencia_regimento_itens_tem_fk_legada(cursor):
+        _recriar_tabela_ocorrencia_regimento_itens_sem_fk_legada(cursor)
+
+
+def _ocorrencia_regimento_itens_tem_fk_legada(cursor) -> bool:
+    cursor.execute("PRAGMA foreign_key_list(ocorrencia_regimento_itens)")
+    return any(
+        str(row["from"] or "") == "regimento_item_id"
+        and str(row["table"] or "") == "regimento_itens"
+        for row in cursor.fetchall()
+    )
+
+
+def _recriar_tabela_ocorrencia_regimento_itens_sem_fk_legada(cursor):
+    cursor.execute("DROP TABLE IF EXISTS ocorrencia_regimento_itens__tmp")
+    cursor.execute("""
+        CREATE TABLE ocorrencia_regimento_itens__tmp (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ocorrencia_id INTEGER NOT NULL,
+            regimento_item_id INTEGER,
+            artigo_id INTEGER,
+            inciso_id INTEGER,
+            alinea_id INTEGER,
+            lei_nome TEXT,
+            artigo_numero TEXT,
+            artigo_descricao TEXT,
+            inciso_numero TEXT,
+            inciso_descricao TEXT,
+            alinea_identificador TEXT,
+            alinea_descricao TEXT,
+            artigo TEXT NOT NULL,
+            descricao TEXT NOT NULL,
+            ordem INTEGER NOT NULL DEFAULT 0,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(ocorrencia_id) REFERENCES ocorrencias(id),
+            FOREIGN KEY(artigo_id) REFERENCES artigos(id),
+            FOREIGN KEY(inciso_id) REFERENCES incisos(id),
+            FOREIGN KEY(alinea_id) REFERENCES alineas(id)
+        )
+    """)
+    cursor.execute("""
+        INSERT INTO ocorrencia_regimento_itens__tmp (
+            id,
+            ocorrencia_id,
+            regimento_item_id,
+            artigo_id,
+            inciso_id,
+            alinea_id,
+            lei_nome,
+            artigo_numero,
+            artigo_descricao,
+            inciso_numero,
+            inciso_descricao,
+            alinea_identificador,
+            alinea_descricao,
+            artigo,
+            descricao,
+            ordem,
+            criado_em
+        )
+        SELECT
+            id,
+            ocorrencia_id,
+            regimento_item_id,
+            CASE WHEN artigo_id IN (SELECT id FROM artigos) THEN artigo_id ELSE NULL END,
+            CASE WHEN inciso_id IN (SELECT id FROM incisos) THEN inciso_id ELSE NULL END,
+            CASE WHEN alinea_id IN (SELECT id FROM alineas) THEN alinea_id ELSE NULL END,
+            lei_nome,
+            artigo_numero,
+            artigo_descricao,
+            inciso_numero,
+            inciso_descricao,
+            alinea_identificador,
+            alinea_descricao,
+            COALESCE(NULLIF(TRIM(COALESCE(artigo, '')), ''), 'Base legal'),
+            COALESCE(NULLIF(TRIM(COALESCE(descricao, '')), ''), 'Sem descricao.'),
+            COALESCE(ordem, 0),
+            COALESCE(NULLIF(TRIM(COALESCE(criado_em, '')), ''), datetime('now'))
+        FROM ocorrencia_regimento_itens
+        WHERE ocorrencia_id IN (SELECT id FROM ocorrencias)
+    """)
+    cursor.execute("DROP TABLE ocorrencia_regimento_itens")
+    cursor.execute(
+        "ALTER TABLE ocorrencia_regimento_itens__tmp RENAME TO ocorrencia_regimento_itens"
+    )
+
 
 def _migrar_base_legal_legado(cursor):
     cursor.execute("""

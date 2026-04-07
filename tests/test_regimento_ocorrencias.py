@@ -1,5 +1,6 @@
 import importlib
 import os
+import sqlite3
 import sys
 import tempfile
 import unittest
@@ -158,6 +159,75 @@ class RegimentoOcorrenciasTest(unittest.TestCase):
 
             with self.assertRaisesRegex(ValueError, "vinculado a ocorrencias"):
                 database.remover_regimento_item(item_id)
+
+    def test_migra_fk_legada_de_regimento_item(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            conn = sqlite3.connect(db_path)
+            conn.executescript("""
+                CREATE TABLE regimento_itens (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    artigo TEXT NOT NULL,
+                    descricao TEXT NOT NULL
+                );
+                CREATE TABLE ocorrencia_regimento_itens (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    ocorrencia_id INTEGER NOT NULL,
+                    regimento_item_id INTEGER,
+                    artigo TEXT NOT NULL,
+                    descricao TEXT NOT NULL,
+                    ordem INTEGER NOT NULL DEFAULT 0,
+                    criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+                    FOREIGN KEY(regimento_item_id) REFERENCES regimento_itens(id)
+                );
+            """)
+            conn.close()
+
+            database = _reload_database(db_path)
+            database.criar_tabelas()
+
+            conn = database.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("PRAGMA foreign_key_list(ocorrencia_regimento_itens)")
+            fks = [dict(row) for row in cursor.fetchall()]
+            self.assertFalse(
+                any(
+                    row["from"] == "regimento_item_id"
+                    and row["table"] == "regimento_itens"
+                    for row in fks
+                )
+            )
+            conn.close()
+
+            turma_id = int(database.listar_turmas_ativas()[0]["id"])
+            item_id = database.criar_regimento_item(
+                lei_nome="Regimento Interno",
+                artigo_numero="78",
+                artigo_descricao="Norma migrada sem FK legada.",
+                inciso_numero="I",
+                inciso_descricao="Descricao do inciso migrado.",
+            )
+            ocorrencia_id = database.criar_ocorrencia(
+                nome_estudante="Estudante Migracao",
+                estudante_id=None,
+                turma_id=turma_id,
+                professor_requerente="Professor Teste",
+                professor_requerente_id=None,
+                disciplina="Portugues",
+                data_ocorrencia="2026-03-23",
+                aula="2",
+                horario_ocorrencia="07:30",
+                descricao="Descricao protegida contra FK legada.",
+                acao_aplicada="orientacao_verbal",
+                status="registrado",
+                regimento_item_ids=[item_id],
+            )
+
+            ocorrencia = database.buscar_ocorrencia_por_id(ocorrencia_id)
+            self.assertEqual(
+                [item["regimento_item_id"] for item in ocorrencia["regimento_itens"]],
+                [item_id],
+            )
 
 
 if __name__ == "__main__":
