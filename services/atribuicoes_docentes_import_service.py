@@ -5,7 +5,6 @@ from database import (
     buscar_disciplina_por_nome,
     buscar_turma_por_id,
     buscar_turma_por_nome,
-    buscar_usuario_por_email,
     buscar_usuario_por_id,
     listar_professores_agendamento,
     sincronizar_atribuicoes_docentes_professor_disciplina,
@@ -66,22 +65,9 @@ def _eh_professor(usuario: dict | None) -> bool:
 
 
 def _resolver_professor(item: dict) -> dict:
-    professor_id = item.get("professor_id")
-    if professor_id not in (None, ""):
-        try:
-            professor = buscar_usuario_por_id(int(professor_id))
-        except (TypeError, ValueError) as exc:
-            raise ValueError("professor_id invalido.") from exc
-        if not _eh_professor(professor):
-            raise ValueError("Professor nao encontrado para o professor_id informado.")
-        return professor
-
     email = _normalizar_texto(item.get("professor_email") or item.get("email")).lower()
     if email:
-        professor = buscar_usuario_por_email(email)
-        if not _eh_professor(professor):
-            raise ValueError("Professor nao encontrado para o email informado.")
-        return professor
+        raise ValueError("Use professor_nome no JSON. A importacao por email nao e mais suportada.")
 
     nome = _normalizar_texto(item.get("professor_nome") or item.get("professor"))
     if nome:
@@ -94,10 +80,20 @@ def _resolver_professor(item: dict) -> dict:
             if _eh_professor(professor):
                 return professor
         if len(candidatos) > 1:
-            raise ValueError("Existe mais de um professor com esse nome. Use professor_email ou professor_id.")
+            raise ValueError("Existe mais de um professor com esse nome. Use professor_id para diferenciar.")
         raise ValueError("Professor nao encontrado para o nome informado.")
 
-    raise ValueError("Informe professor_id, professor_email ou professor.")
+    professor_id = item.get("professor_id")
+    if professor_id not in (None, ""):
+        try:
+            professor = buscar_usuario_por_id(int(professor_id))
+        except (TypeError, ValueError) as exc:
+            raise ValueError("professor_id invalido.") from exc
+        if not _eh_professor(professor):
+            raise ValueError("Professor nao encontrado para o professor_id informado.")
+        return professor
+
+    raise ValueError("Informe professor_nome, professor ou professor_id.")
 
 
 def _resolver_disciplina(item: dict) -> dict:

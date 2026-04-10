@@ -31,12 +31,12 @@ const MODELO_JSON_ATRIBUICOES_DOCENTES = JSON.stringify(
     {
         atribuicoes: [
             {
-                professor_email: "alex@escola.local",
+                professor_nome: "Professor Alex",
                 disciplina: "Geometria",
                 turmas: ["1 EM A", "1 EM B"]
             },
             {
-                professor_email: "alex@escola.local",
+                professor_nome: "Professor Alex",
                 disciplina: "Letramento e Raciocinio Matematico",
                 turmas: ["6 ano A"]
             }
