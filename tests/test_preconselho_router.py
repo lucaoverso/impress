@@ -234,6 +234,76 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertEqual(ctx.exception.status_code, 403)
             self.assertIn("Periodo fechado", str(ctx.exception.detail))
 
+    def test_atribuicao_docente_exata_restringe_combinacoes_do_preconselho(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, preconselho_router, models = _reload_modulos(db_path)
+            database.criar_tabelas()
+
+            turma_em_id = int(database.criar_turma("1 EM A", "VESPERTINO_EM", 30))
+            turma_fund_id = int(database.criar_turma("6 ano A", "MATUTINO", 28))
+            geometria_id = int(database.criar_disciplina("Geometria", 3))
+            letramento_id = int(database.criar_disciplina("Letramento e Raciocinio Matematico", 5))
+            estudante_em_id = int(database.criar_estudante("Joao", turma_em_id))
+            professor_id = int(
+                database.criar_professor(
+                    nome="Professor Alex",
+                    email="alex.preconselho@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1987-04-11",
+                    aulas_semanais=12,
+                    turmas_quantidade=2,
+                    turmas=["1 EM A", "6 ano A"],
+                    disciplinas=["Geometria", "Letramento e Raciocinio Matematico"],
+                )
+            )
+            periodo_id = int(
+                database.criar_periodo_pre_conselho(
+                    nome="1o Bimestre 2035",
+                    ano_letivo=2035,
+                    etapa=1,
+                    data_inicio="2035-01-20",
+                    data_fim="2035-04-30",
+                    status="ABERTO",
+                )
+            )
+
+            database.criar_atribuicao_docente(professor_id, turma_em_id, geometria_id)
+            database.criar_atribuicao_docente(professor_id, turma_fund_id, letramento_id)
+
+            minhas_turmas_disciplinas = preconselho_router.listar_minhas_turmas_disciplinas_preconselho_api(
+                periodo_id=periodo_id,
+                usuario=self._usuario_professor(professor_id, "Professor Alex"),
+            )
+            pares = {
+                (int(item["turma_id"]), int(item["disciplina_id"]))
+                for item in minhas_turmas_disciplinas
+            }
+            self.assertEqual(
+                pares,
+                {
+                    (turma_em_id, geometria_id),
+                    (turma_fund_id, letramento_id),
+                },
+            )
+
+            motivo_id = int(database.listar_motivos_pre_conselho()[0]["id"])
+            with self.assertRaises(preconselho_router.HTTPException) as ctx:
+                preconselho_router.salvar_registro_preconselho_api(
+                    payload=models.PreConselhoRegistroSaveIn(
+                        periodo_id=periodo_id,
+                        turma_id=turma_em_id,
+                        disciplina_id=letramento_id,
+                        estudante_id=estudante_em_id,
+                        sinalizar=True,
+                        motivo_ids=[motivo_id],
+                    ),
+                    usuario=self._usuario_professor(professor_id, "Professor Alex"),
+                )
+
+            self.assertEqual(ctx.exception.status_code, 403)
+            self.assertIn("atribuicao docente", str(ctx.exception.detail))
+
     def test_admin_cria_e_atualiza_periodos_e_motivos(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")

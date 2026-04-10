@@ -338,6 +338,26 @@ class ProfessorCargaIn(BaseModel):
     aulas_semanais: int
     turmas_quantidade: int
 
+class ProfessorTurmaDisciplinaCreateIn(BaseModel):
+    professor_id: int
+    turma_id: int
+    disciplina_id: int
+
+class ProfessorTurmaDisciplinaOut(BaseModel):
+    id: int
+    professor_id: int
+    professor_nome: str = ""
+    professor_email: str = ""
+    professor_ativo: bool = True
+    turma_id: int
+    turma_nome: str = ""
+    turno: str = ""
+    turma_ativa: bool = True
+    disciplina_id: int
+    disciplina_nome: str = ""
+    disciplina_ativa: bool = True
+    criado_em: str = ""
+
 class TurmaCreateIn(BaseModel):
     nome: str
     turno: str

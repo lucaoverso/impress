@@ -22,6 +22,7 @@ from database import (
     criar_ou_atualizar_registro_pre_conselho,
     criar_periodo_pre_conselho,
     excluir_registro_pre_conselho,
+    listar_atribuicoes_docentes_por_usuario_ids,
     listar_cargas_professores_por_usuario_ids,
     listar_disciplinas_ativas,
     listar_estudantes,
@@ -210,10 +211,14 @@ def _resolver_professor(usuario: dict, professor_id: int | None = None, *, permi
     return {"id": int(professor["id"]), "nome": professor["nome"]}
 
 
-def _opcoes_professor(usuario_id: int) -> tuple[list[dict], list[dict]]:
+def _escopo_professor_legado(usuario_id: int) -> dict:
     carga = listar_cargas_professores_por_usuario_ids([usuario_id]).get(usuario_id, {})
     nomes_turmas = {str(item).strip().casefold() for item in carga.get("turmas") or [] if str(item).strip()}
-    nomes_disciplinas = {str(item).strip().casefold() for item in carga.get("disciplinas") or [] if str(item).strip()}
+    nomes_disciplinas = {
+        str(item).strip().casefold()
+        for item in carga.get("disciplinas") or []
+        if str(item).strip()
+    }
 
     turmas = [
         dict(item)
@@ -225,18 +230,111 @@ def _opcoes_professor(usuario_id: int) -> tuple[list[dict], list[dict]]:
         for item in listar_disciplinas_ativas()
         if str(item.get("nome") or "").strip().casefold() in nomes_disciplinas
     ]
-    return turmas, disciplinas
+    combinacoes = []
+    for turma in turmas:
+        for disciplina in disciplinas:
+            combinacoes.append(
+                {
+                    "turma_id": int(turma["id"]),
+                    "turma_nome": turma.get("nome", "") or "",
+                    "turno": turma.get("turno", "") or "",
+                    "disciplina_id": int(disciplina["id"]),
+                    "disciplina_nome": disciplina.get("nome", "") or "",
+                }
+            )
+
+    return {
+        "usa_atribuicoes_exatas": False,
+        "turmas": turmas,
+        "disciplinas": disciplinas,
+        "combinacoes": combinacoes,
+    }
+
+
+def _escopo_professor(usuario_id: int) -> dict:
+    atribuicoes = listar_atribuicoes_docentes_por_usuario_ids(
+        [usuario_id],
+        incluir_inativos=False,
+    ).get(usuario_id, [])
+    if not atribuicoes:
+        return _escopo_professor_legado(usuario_id)
+
+    turmas_por_id = {}
+    disciplinas_por_id = {}
+    combinacoes = []
+    for atribuicao in atribuicoes:
+        turma_id = int(atribuicao["turma_id"])
+        disciplina_id = int(atribuicao["disciplina_id"])
+        if turma_id not in turmas_por_id:
+            turmas_por_id[turma_id] = {
+                "id": turma_id,
+                "nome": atribuicao.get("turma_nome", "") or "",
+                "turno": atribuicao.get("turno", "") or "",
+            }
+        if disciplina_id not in disciplinas_por_id:
+            disciplinas_por_id[disciplina_id] = {
+                "id": disciplina_id,
+                "nome": atribuicao.get("disciplina_nome", "") or "",
+            }
+        combinacoes.append(
+            {
+                "turma_id": turma_id,
+                "turma_nome": atribuicao.get("turma_nome", "") or "",
+                "turno": atribuicao.get("turno", "") or "",
+                "disciplina_id": disciplina_id,
+                "disciplina_nome": atribuicao.get("disciplina_nome", "") or "",
+            }
+        )
+
+    turmas = sorted(
+        turmas_por_id.values(),
+        key=lambda item: (str(item.get("nome") or "").casefold(), int(item.get("id") or 0)),
+    )
+    disciplinas = sorted(
+        disciplinas_por_id.values(),
+        key=lambda item: (str(item.get("nome") or "").casefold(), int(item.get("id") or 0)),
+    )
+    combinacoes.sort(
+        key=lambda item: (
+            str(item.get("turma_nome") or "").casefold(),
+            str(item.get("disciplina_nome") or "").casefold(),
+            int(item.get("turma_id") or 0),
+            int(item.get("disciplina_id") or 0),
+        )
+    )
+
+    return {
+        "usa_atribuicoes_exatas": True,
+        "turmas": turmas,
+        "disciplinas": disciplinas,
+        "combinacoes": combinacoes,
+    }
+
+
+def _opcoes_professor(usuario_id: int) -> tuple[list[dict], list[dict]]:
+    escopo = _escopo_professor(usuario_id)
+    return escopo["turmas"], escopo["disciplinas"]
 
 
 def _validar_escopo_professor(professor_id: int, turma_id: int, disciplina_id: int):
-    turmas, disciplinas = _opcoes_professor(professor_id)
-    turma_ids = {int(item["id"]) for item in turmas}
-    disciplina_ids = {int(item["id"]) for item in disciplinas}
-    if int(turma_id) not in turma_ids:
+    escopo = _escopo_professor(professor_id)
+    turma_ids = {int(item["id"]) for item in escopo["turmas"]}
+    disciplina_ids = {int(item["id"]) for item in escopo["disciplinas"]}
+    turma_id_valor = int(turma_id)
+    disciplina_id_valor = int(disciplina_id)
+
+    if turma_id_valor not in turma_ids:
         raise HTTPException(403, "Turma fora da carga do professor.")
-    if int(disciplina_id) not in disciplina_ids:
+    if disciplina_id_valor not in disciplina_ids:
         raise HTTPException(403, "Disciplina fora da carga do professor.")
-    return turmas, disciplinas
+    if escopo["usa_atribuicoes_exatas"]:
+        combinacoes = {
+            (int(item["turma_id"]), int(item["disciplina_id"]))
+            for item in escopo["combinacoes"]
+        }
+        if (turma_id_valor, disciplina_id_valor) not in combinacoes:
+            raise HTTPException(403, "Disciplina fora da atribuicao docente da turma selecionada.")
+    return escopo["turmas"], escopo["disciplinas"]
 
 
 def _validar_filtros_professor(
@@ -245,14 +343,25 @@ def _validar_filtros_professor(
     turma_id: int | None = None,
     disciplina_id: int | None = None,
 ):
-    turmas, disciplinas = _opcoes_professor(professor_id)
-    turma_ids = {int(item["id"]) for item in turmas}
-    disciplina_ids = {int(item["id"]) for item in disciplinas}
+    escopo = _escopo_professor(professor_id)
+    turma_ids = {int(item["id"]) for item in escopo["turmas"]}
+    disciplina_ids = {int(item["id"]) for item in escopo["disciplinas"]}
 
     if turma_id is not None and int(turma_id) not in turma_ids:
         raise HTTPException(403, "Turma fora da carga do professor.")
     if disciplina_id is not None and int(disciplina_id) not in disciplina_ids:
         raise HTTPException(403, "Disciplina fora da carga do professor.")
+    if (
+        escopo["usa_atribuicoes_exatas"]
+        and turma_id is not None
+        and disciplina_id is not None
+    ):
+        combinacoes = {
+            (int(item["turma_id"]), int(item["disciplina_id"]))
+            for item in escopo["combinacoes"]
+        }
+        if (int(turma_id), int(disciplina_id)) not in combinacoes:
+            raise HTTPException(403, "Disciplina fora da atribuicao docente da turma selecionada.")
 
 
 def _motivos_ativos_validos(motivo_ids: list[int]) -> list[dict]:
@@ -280,30 +389,31 @@ def _enriquecer_editavel(usuario: dict, itens: list[dict]) -> list[dict]:
 
 
 def _minhas_turmas_disciplinas(periodo_id: int, professor_id: int) -> list[dict]:
-    turmas, disciplinas = _opcoes_professor(professor_id)
+    escopo = _escopo_professor(professor_id)
     registros = contar_registros_pre_conselho_por_professor_periodo(periodo_id, professor_id)
     estudantes_por_turma = {
         int(turma["id"]): len(listar_estudantes(nome="", incluir_inativos=False, turma_id=int(turma["id"])))
-        for turma in turmas
+        for turma in escopo["turmas"]
     }
 
     itens = []
-    for turma in turmas:
-        total_estudantes = int(estudantes_por_turma.get(int(turma["id"]), 0))
-        for disciplina in disciplinas:
-            total_sinalizados = int(registros.get((int(turma["id"]), int(disciplina["id"])), 0))
-            itens.append(
-                {
-                    "turma_id": int(turma["id"]),
-                    "turma_nome": turma["nome"],
-                    "turno": turma.get("turno", "") or "",
-                    "disciplina_id": int(disciplina["id"]),
-                    "disciplina_nome": disciplina["nome"],
-                    "total_estudantes": total_estudantes,
-                    "total_sinalizados": total_sinalizados,
-                    "total_pendentes": max(total_estudantes - total_sinalizados, 0),
-                }
-            )
+    for combinacao in escopo["combinacoes"]:
+        turma_id = int(combinacao["turma_id"])
+        disciplina_id = int(combinacao["disciplina_id"])
+        total_estudantes = int(estudantes_por_turma.get(turma_id, 0))
+        total_sinalizados = int(registros.get((turma_id, disciplina_id), 0))
+        itens.append(
+            {
+                "turma_id": turma_id,
+                "turma_nome": combinacao["turma_nome"],
+                "turno": combinacao.get("turno", "") or "",
+                "disciplina_id": disciplina_id,
+                "disciplina_nome": combinacao["disciplina_nome"],
+                "total_estudantes": total_estudantes,
+                "total_sinalizados": total_sinalizados,
+                "total_pendentes": max(total_estudantes - total_sinalizados, 0),
+            }
+        )
     return itens
 
 

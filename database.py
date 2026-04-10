@@ -319,6 +319,20 @@ def criar_tabelas():
     """)
 
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS professores_turmas_disciplinas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            professor_usuario_id INTEGER NOT NULL,
+            turma_id INTEGER NOT NULL,
+            disciplina_id INTEGER NOT NULL,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(professor_usuario_id) REFERENCES usuarios(id),
+            FOREIGN KEY(turma_id) REFERENCES turmas(id),
+            FOREIGN KEY(disciplina_id) REFERENCES disciplinas(id),
+            UNIQUE(professor_usuario_id, turma_id, disciplina_id)
+        )
+    """)
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS cota_regras (
             id INTEGER PRIMARY KEY CHECK (id = 1),
             base_paginas INTEGER NOT NULL,
@@ -574,6 +588,7 @@ def criar_tabelas():
     _garantir_colunas_jobs(cursor)
     _garantir_colunas_agendamentos(cursor)
     _garantir_colunas_professores_carga(cursor)
+    _garantir_colunas_professores_turmas_disciplinas(cursor)
     _garantir_colunas_cota_regras(cursor)
     _garantir_colunas_recursos(cursor)
     _garantir_colunas_turmas(cursor)
@@ -601,6 +616,16 @@ def criar_tabelas():
     cursor.execute("""
         CREATE UNIQUE INDEX IF NOT EXISTS idx_cotas_usuario_mes
         ON cotas(usuario_id, mes)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_professores_turmas_disciplinas_professor
+        ON professores_turmas_disciplinas(professor_usuario_id, turma_id, disciplina_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_professores_turmas_disciplinas_turma
+        ON professores_turmas_disciplinas(turma_id, disciplina_id)
     """)
 
     cursor.execute("""
@@ -1190,6 +1215,37 @@ def _garantir_colunas_professores_carga(cursor):
         cursor.execute(
             "ALTER TABLE professores_carga ADD COLUMN disciplinas TEXT NOT NULL DEFAULT '[]'"
         )
+
+
+def _garantir_colunas_professores_turmas_disciplinas(cursor):
+    cursor.execute("PRAGMA table_info(professores_turmas_disciplinas)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+
+    if not colunas:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS professores_turmas_disciplinas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                professor_usuario_id INTEGER NOT NULL,
+                turma_id INTEGER NOT NULL,
+                disciplina_id INTEGER NOT NULL,
+                criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY(professor_usuario_id) REFERENCES usuarios(id),
+                FOREIGN KEY(turma_id) REFERENCES turmas(id),
+                FOREIGN KEY(disciplina_id) REFERENCES disciplinas(id),
+                UNIQUE(professor_usuario_id, turma_id, disciplina_id)
+            )
+        """)
+        return
+
+    if "criado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE professores_turmas_disciplinas ADD COLUMN criado_em TEXT NOT NULL DEFAULT ''"
+        )
+        cursor.execute("""
+            UPDATE professores_turmas_disciplinas
+            SET criado_em = datetime('now')
+            WHERE TRIM(COALESCE(criado_em, '')) = ''
+        """)
 
 
 def _garantir_colunas_cota_regras(cursor):
@@ -2693,6 +2749,268 @@ def salvar_carga_professor(usuario_id: int, aulas_semanais: int, turmas_quantida
     conn.commit()
     conn.close()
 
+def _mapear_atribuicao_docente(row) -> dict:
+    item = dict(row)
+    return {
+        "id": int(item["id"]),
+        "professor_id": int(item["professor_usuario_id"]),
+        "professor_nome": item.get("professor_nome", "") or "",
+        "professor_email": item.get("professor_email", "") or "",
+        "professor_ativo": bool(int(item.get("professor_ativo", 1) or 0)),
+        "turma_id": int(item["turma_id"]),
+        "turma_nome": item.get("turma_nome", "") or "",
+        "turno": item.get("turno", "") or "",
+        "turma_ativa": bool(int(item.get("turma_ativa", 1) or 0)),
+        "disciplina_id": int(item["disciplina_id"]),
+        "disciplina_nome": item.get("disciplina_nome", "") or "",
+        "disciplina_ativa": bool(int(item.get("disciplina_ativa", 1) or 0)),
+        "criado_em": item.get("criado_em", "") or "",
+    }
+
+
+def _consultar_atribuicoes_docentes(
+    cursor,
+    *,
+    filtros_sql: list[str] | None = None,
+    params: list | None = None,
+    incluir_inativos: bool = False,
+):
+    where = list(filtros_sql or [])
+    parametros = list(params or [])
+
+    if not incluir_inativos:
+        where.append("COALESCE(u.ativo, 1) = 1")
+        where.append("COALESCE(t.ativo, 1) = 1")
+        where.append("COALESCE(d.ativo, 1) = 1")
+
+    clausula_where = f"WHERE {' AND '.join(where)}" if where else ""
+    cursor.execute(
+        f"""
+        SELECT
+            ptd.id,
+            ptd.professor_usuario_id,
+            ptd.turma_id,
+            ptd.disciplina_id,
+            ptd.criado_em,
+            u.nome AS professor_nome,
+            u.email AS professor_email,
+            COALESCE(u.ativo, 1) AS professor_ativo,
+            t.nome AS turma_nome,
+            t.turno AS turno,
+            COALESCE(t.ativo, 1) AS turma_ativa,
+            d.nome AS disciplina_nome,
+            COALESCE(d.ativo, 1) AS disciplina_ativa
+        FROM professores_turmas_disciplinas ptd
+        JOIN usuarios u ON u.id = ptd.professor_usuario_id
+        JOIN turmas t ON t.id = ptd.turma_id
+        JOIN disciplinas d ON d.id = ptd.disciplina_id
+        {clausula_where}
+        ORDER BY
+            u.nome COLLATE NOCASE ASC,
+            t.nome COLLATE NOCASE ASC,
+            d.nome COLLATE NOCASE ASC,
+            ptd.id ASC
+        """,
+        parametros,
+    )
+    return [_mapear_atribuicao_docente(row) for row in cursor.fetchall()]
+
+
+def _sincronizar_resumo_carga_professor(cursor, usuario_id: int):
+    cursor.execute(
+        """
+        SELECT COALESCE(aulas_semanais, 0) AS aulas_semanais
+        FROM professores_carga
+        WHERE usuario_id = ?
+        """,
+        (int(usuario_id),),
+    )
+    row_carga = cursor.fetchone()
+    aulas_semanais = int((dict(row_carga).get("aulas_semanais") if row_carga else 0) or 0)
+
+    atribuicoes = _consultar_atribuicoes_docentes(
+        cursor,
+        filtros_sql=["ptd.professor_usuario_id = ?"],
+        params=[int(usuario_id)],
+        incluir_inativos=False,
+    )
+
+    turmas = []
+    disciplinas = []
+    for atribuicao in atribuicoes:
+        turma_nome = str(atribuicao.get("turma_nome") or "").strip()
+        disciplina_nome = str(atribuicao.get("disciplina_nome") or "").strip()
+        if turma_nome and turma_nome not in turmas:
+            turmas.append(turma_nome)
+        if disciplina_nome and disciplina_nome not in disciplinas:
+            disciplinas.append(disciplina_nome)
+
+    cursor.execute(
+        """
+        INSERT INTO professores_carga (
+            usuario_id,
+            aulas_semanais,
+            turmas_quantidade,
+            turmas,
+            disciplinas,
+            atualizado_em
+        )
+        VALUES (?, ?, ?, ?, ?, datetime('now'))
+        ON CONFLICT(usuario_id) DO UPDATE SET
+            aulas_semanais = excluded.aulas_semanais,
+            turmas_quantidade = excluded.turmas_quantidade,
+            turmas = excluded.turmas,
+            disciplinas = excluded.disciplinas,
+            atualizado_em = datetime('now')
+        """,
+        (
+            int(usuario_id),
+            aulas_semanais,
+            len(turmas),
+            json.dumps(turmas, ensure_ascii=False),
+            json.dumps(disciplinas, ensure_ascii=False),
+        ),
+    )
+
+
+def buscar_atribuicao_docente_por_id(atribuicao_id: int, incluir_inativos: bool = True):
+    conn = get_connection()
+    cursor = conn.cursor()
+    itens = _consultar_atribuicoes_docentes(
+        cursor,
+        filtros_sql=["ptd.id = ?"],
+        params=[int(atribuicao_id)],
+        incluir_inativos=incluir_inativos,
+    )
+    conn.close()
+    return itens[0] if itens else None
+
+
+def listar_atribuicoes_docentes(
+    professor_id: int | None = None,
+    turma_id: int | None = None,
+    disciplina_id: int | None = None,
+    *,
+    incluir_inativos: bool = True,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    filtros = []
+    params = []
+
+    if professor_id is not None:
+        filtros.append("ptd.professor_usuario_id = ?")
+        params.append(int(professor_id))
+    if turma_id is not None:
+        filtros.append("ptd.turma_id = ?")
+        params.append(int(turma_id))
+    if disciplina_id is not None:
+        filtros.append("ptd.disciplina_id = ?")
+        params.append(int(disciplina_id))
+
+    itens = _consultar_atribuicoes_docentes(
+        cursor,
+        filtros_sql=filtros,
+        params=params,
+        incluir_inativos=incluir_inativos,
+    )
+    conn.close()
+    return itens
+
+
+def listar_atribuicoes_docentes_por_usuario_ids(
+    usuario_ids: list[int],
+    *,
+    incluir_inativos: bool = False,
+):
+    ids_unicos = []
+    for usuario_id in usuario_ids or []:
+        try:
+            valor = int(usuario_id)
+        except (TypeError, ValueError):
+            continue
+        if valor > 0 and valor not in ids_unicos:
+            ids_unicos.append(valor)
+
+    if not ids_unicos:
+        return {}
+
+    placeholders = ",".join("?" for _ in ids_unicos)
+    conn = get_connection()
+    cursor = conn.cursor()
+    itens = _consultar_atribuicoes_docentes(
+        cursor,
+        filtros_sql=[f"ptd.professor_usuario_id IN ({placeholders})"],
+        params=ids_unicos,
+        incluir_inativos=incluir_inativos,
+    )
+    conn.close()
+
+    atribuicoes = {usuario_id: [] for usuario_id in ids_unicos}
+    for item in itens:
+        atribuicoes.setdefault(int(item["professor_id"]), []).append(item)
+    return atribuicoes
+
+
+def criar_atribuicao_docente(professor_id: int, turma_id: int, disciplina_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            INSERT INTO professores_turmas_disciplinas (
+                professor_usuario_id,
+                turma_id,
+                disciplina_id,
+                criado_em
+            )
+            VALUES (?, ?, ?, datetime('now'))
+            """,
+            (int(professor_id), int(turma_id), int(disciplina_id)),
+        )
+        atribuicao_id = int(cursor.lastrowid)
+        _sincronizar_resumo_carga_professor(cursor, int(professor_id))
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return buscar_atribuicao_docente_por_id(atribuicao_id, incluir_inativos=True)
+
+
+def excluir_atribuicao_docente(atribuicao_id: int) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT professor_usuario_id
+        FROM professores_turmas_disciplinas
+        WHERE id = ?
+        """,
+        (int(atribuicao_id),),
+    )
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return False
+
+    professor_id = int(row["professor_usuario_id"])
+    cursor.execute(
+        """
+        DELETE FROM professores_turmas_disciplinas
+        WHERE id = ?
+        """,
+        (int(atribuicao_id),),
+    )
+    alterado = cursor.rowcount > 0
+    if alterado:
+        _sincronizar_resumo_carga_professor(cursor, professor_id)
+
+    conn.commit()
+    conn.close()
+    return alterado
+
 def obter_regras_cota():
     conn = get_connection()
     cursor = conn.cursor()
@@ -2749,7 +3067,26 @@ def _calcular_peso_professor(
     professor: dict,
     alunos_por_turma: dict,
     aulas_por_disciplina: dict,
+    atribuicoes_docentes: list[dict] | None = None,
 ) -> float:
+    if atribuicoes_docentes:
+        peso_total = 0.0
+        for atribuicao in atribuicoes_docentes:
+            chave_turma = _normalizar_texto_chave(atribuicao.get("turma_nome"))
+            alunos_turma = max(int(alunos_por_turma.get(chave_turma, 0)), 0)
+            if alunos_turma <= 0:
+                continue
+
+            disciplina_nome = atribuicao.get("disciplina_nome")
+            chave_disciplina = _normalizar_texto_chave(disciplina_nome)
+            aulas_disciplina = max(int(aulas_por_disciplina.get(chave_disciplina, 0)), 0)
+            if aulas_disciplina <= 0:
+                continue
+
+            multiplicador = _obter_multiplicador_disciplina(disciplina_nome)
+            peso_total += aulas_disciplina * alunos_turma * multiplicador
+        return max(peso_total, 0.0)
+
     turmas_professor = _desserializar_lista_texto(professor.get("turmas"))
     disciplinas_professor = _desserializar_lista_texto(professor.get("disciplinas"))
 
@@ -2827,6 +3164,11 @@ def calcular_cotas_mensais_professores():
     if not professores_rows:
         return []
 
+    atribuicoes_por_usuario = listar_atribuicoes_docentes_por_usuario_ids(
+        [int(row["id"]) for row in professores_rows],
+        incluir_inativos=False,
+    )
+
     alunos_por_turma = {}
     for turma in turmas_rows:
         chave_turma = _normalizar_texto_chave(turma["nome"])
@@ -2846,6 +3188,7 @@ def calcular_cotas_mensais_professores():
             professor=professor,
             alunos_por_turma=alunos_por_turma,
             aulas_por_disciplina=aulas_por_disciplina,
+            atribuicoes_docentes=atribuicoes_por_usuario.get(int(professor["id"]), []),
         )
 
         calculos.append({
@@ -2944,10 +3287,31 @@ def listar_professores_admin(mes: str = None):
     cursor.execute(query)
     rows = cursor.fetchall()
     professores = [dict(row) for row in rows]
+    atribuicoes_por_usuario = listar_atribuicoes_docentes_por_usuario_ids(
+        [int(professor["id"]) for professor in professores],
+        incluir_inativos=True,
+    )
 
     for professor in professores:
         professor["turmas"] = _desserializar_lista_texto(professor.get("turmas"))
         professor["disciplinas"] = _desserializar_lista_texto(professor.get("disciplinas"))
+        atribuicoes = atribuicoes_por_usuario.get(int(professor["id"]), [])
+        professor["quantidade_atribuicoes_docentes"] = len(atribuicoes)
+        if atribuicoes:
+            turmas_operacionais = []
+            disciplinas_operacionais = []
+            for atribuicao in atribuicoes:
+                turma_nome = str(atribuicao.get("turma_nome") or "").strip()
+                disciplina_nome = str(atribuicao.get("disciplina_nome") or "").strip()
+                if turma_nome and turma_nome not in turmas_operacionais:
+                    turmas_operacionais.append(turma_nome)
+                if disciplina_nome and disciplina_nome not in disciplinas_operacionais:
+                    disciplinas_operacionais.append(disciplina_nome)
+            professor["turmas_operacionais"] = turmas_operacionais
+            professor["disciplinas_operacionais"] = disciplinas_operacionais
+        else:
+            professor["turmas_operacionais"] = list(professor["turmas"])
+            professor["disciplinas_operacionais"] = list(professor["disciplinas"])
 
     if mes:
         for professor in professores:

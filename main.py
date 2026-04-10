@@ -44,6 +44,8 @@ from models import (
     ProfessorRedefinirSenhaAdminIn,
     CoordenadorCreateIn,
     ProfessorCargaIn,
+    ProfessorTurmaDisciplinaCreateIn,
+    ProfessorTurmaDisciplinaOut,
     TurmaCreateIn,
     TurmaUpdateIn,
     DisciplinaCreateIn,
@@ -111,7 +113,10 @@ from database import (
     criar_professor,
     criar_coordenador,
     atualizar_professor,
+    criar_atribuicao_docente,
+    excluir_atribuicao_docente,
     listar_coordenadores_admin,
+    listar_atribuicoes_docentes,
     listar_professores_admin,
     listar_professores_agendamento,
     salvar_carga_professor,
@@ -300,6 +305,37 @@ def obter_opcoes_cadastro_professor():
     return {
         "turmas": obter_nomes_turmas_ativas(),
         "disciplinas": obter_nomes_disciplinas_ativas(),
+    }
+
+
+def validar_payload_atribuicao_docente(payload: ProfessorTurmaDisciplinaCreateIn):
+    professor_id = validar_numero_nao_negativo(payload.professor_id, "Professor")
+    turma_id = validar_numero_nao_negativo(payload.turma_id, "Turma")
+    disciplina_id = validar_numero_nao_negativo(payload.disciplina_id, "Disciplina")
+
+    if professor_id <= 0:
+        raise HTTPException(400, "Professor obrigatorio.")
+    if turma_id <= 0:
+        raise HTTPException(400, "Turma obrigatoria.")
+    if disciplina_id <= 0:
+        raise HTTPException(400, "Disciplina obrigatoria.")
+
+    professor = buscar_usuario_por_id(professor_id)
+    if not professor or normalizar_cargo_usuario(professor) != CARGO_PROFESSOR:
+        raise HTTPException(404, "Professor nao encontrado.")
+
+    turma = next((item for item in listar_turmas_ativas() if int(item["id"]) == turma_id), None)
+    if not turma:
+        raise HTTPException(404, "Turma nao encontrada ou inativa.")
+
+    disciplina = next((item for item in listar_disciplinas_ativas() if int(item["id"]) == disciplina_id), None)
+    if not disciplina:
+        raise HTTPException(404, "Disciplina nao encontrada ou inativa.")
+
+    return {
+        "professor_id": professor_id,
+        "turma_id": turma_id,
+        "disciplina_id": disciplina_id,
     }
 
 def _validar_dados_usuario_basicos(
@@ -1473,6 +1509,70 @@ def recuperar_senha_professor(payload: ProfessorRecuperarSenhaIn):
 def opcoes_professores_admin(usuario = Depends(get_usuario_logado)):
     exigir_admin(usuario)
     return obter_opcoes_cadastro_professor()
+
+@app.get("/admin/atribuicoes-docentes/contexto")
+def listar_contexto_atribuicoes_docentes_admin(usuario = Depends(get_usuario_logado)):
+    exigir_admin(usuario)
+    professores = listar_professores_agendamento()
+    return {
+        "professores": [
+            {
+                "id": int(item["id"]),
+                "nome": item["nome"],
+                "email": item.get("email", ""),
+                "label": (
+                    f'{item["nome"]} ({item.get("email", "")})'
+                    if str(item.get("email", "")).strip()
+                    else item["nome"]
+                ),
+            }
+            for item in professores
+        ],
+        "turmas": listar_turmas_ativas(),
+        "disciplinas": listar_disciplinas_ativas(),
+    }
+
+@app.get("/admin/atribuicoes-docentes", response_model=list[ProfessorTurmaDisciplinaOut])
+def listar_atribuicoes_docentes_admin_api(
+    professor_id: int | None = None,
+    turma_id: int | None = None,
+    disciplina_id: int | None = None,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    return listar_atribuicoes_docentes(
+        professor_id=professor_id,
+        turma_id=turma_id,
+        disciplina_id=disciplina_id,
+        incluir_inativos=True,
+    )
+
+@app.post("/admin/atribuicoes-docentes", response_model=ProfessorTurmaDisciplinaOut)
+def criar_atribuicao_docente_admin_api(
+    payload: ProfessorTurmaDisciplinaCreateIn,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    dados = validar_payload_atribuicao_docente(payload)
+    try:
+        return criar_atribuicao_docente(
+            professor_id=dados["professor_id"],
+            turma_id=dados["turma_id"],
+            disciplina_id=dados["disciplina_id"],
+        )
+    except sqlite3.IntegrityError as exc:
+        raise HTTPException(409, "Esta atribuicao docente ja esta cadastrada.") from exc
+
+@app.delete("/admin/atribuicoes-docentes/{atribuicao_id}")
+def excluir_atribuicao_docente_admin_api(
+    atribuicao_id: int,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    alterado = excluir_atribuicao_docente(atribuicao_id)
+    if not alterado:
+        raise HTTPException(404, "Atribuicao docente nao encontrada.")
+    return {"mensagem": "Atribuicao docente removida com sucesso."}
 
 @app.get("/admin/professores")
 def listar_professores_painel(

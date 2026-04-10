@@ -15,6 +15,7 @@ const headersJson = {
 
 const SENHA_FORTE_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
 let opcoesProfessor = { turmas: [], disciplinas: [] };
+let contextoAtribuicoesDocentes = { professores: [], turmas: [], disciplinas: [] };
 let professorEmEdicaoId = null;
 let recursoEmEdicaoId = null;
 const TURNO_LABEL = {
@@ -191,6 +192,14 @@ async function atualizarOpcoesProfessorSePermitido() {
     await carregarOpcoesProfessor();
 }
 
+async function atualizarAtribuicoesDocentesSePermitido() {
+    if (!usuarioEhAdmin) {
+        return;
+    }
+    await carregarContextoAtribuicoesDocentes();
+    await carregarAtribuicoesDocentes();
+}
+
 function validarSenhaForte(senha) {
     return SENHA_FORTE_REGEX.test(senha || "");
 }
@@ -263,6 +272,49 @@ function formatarDataBr(dataIso) {
 
 function nomeTurno(turno) {
     return TURNO_LABEL[turno] || turno || "Não informado";
+}
+
+function preencherSelectComItens(
+    selectId,
+    itens,
+    placeholder,
+    {
+        permitirVazio = false,
+        labelFn = (item) => item.nome || "",
+        valueFn = (item) => item.id
+    } = {}
+) {
+    const select = el(selectId);
+    if (!select) {
+        return;
+    }
+
+    const valorAtual = select.value;
+    select.innerHTML = "";
+
+    const optionPlaceholder = document.createElement("option");
+    optionPlaceholder.value = "";
+    optionPlaceholder.innerText = placeholder;
+    optionPlaceholder.disabled = !permitirVazio;
+    optionPlaceholder.selected = true;
+    select.appendChild(optionPlaceholder);
+
+    (Array.isArray(itens) ? itens : []).forEach((item) => {
+        const option = document.createElement("option");
+        option.value = String(valueFn(item));
+        option.innerText = labelFn(item);
+        select.appendChild(option);
+    });
+
+    if (valorAtual && Array.from(select.options).some((option) => option.value === valorAtual)) {
+        select.value = valorAtual;
+    } else if (permitirVazio) {
+        select.value = "";
+    } else if (select.options.length > 1) {
+        select.selectedIndex = 1;
+    } else {
+        select.selectedIndex = 0;
+    }
 }
 
 function aplicarModoFormularioProfessor(edicao = false) {
@@ -357,7 +409,7 @@ async function excluirProfessor(professor) {
             limparFormularioProfessor();
         }
         setMensagem("msgProfessor", `${nomeProfessor} excluido com sucesso.`);
-        await carregarProfessores();
+        await Promise.all([carregarProfessores(), atualizarAtribuicoesDocentesSePermitido()]);
     } catch (err) {
         setMensagem("msgProfessor", err.message, true);
     }
@@ -407,6 +459,153 @@ async function carregarOpcoesProfessor() {
 
     renderCheckboxes("profTurmasLista", opcoesProfessor.turmas, "turma");
     renderCheckboxes("profDisciplinasLista", opcoesProfessor.disciplinas, "disciplina");
+}
+
+async function carregarContextoAtribuicoesDocentes() {
+    const dados = await fetchJson("/admin/atribuicoes-docentes/contexto", { headers });
+    contextoAtribuicoesDocentes = {
+        professores: Array.isArray(dados.professores) ? dados.professores : [],
+        turmas: Array.isArray(dados.turmas) ? dados.turmas : [],
+        disciplinas: Array.isArray(dados.disciplinas) ? dados.disciplinas : []
+    };
+
+    preencherSelectComItens(
+        "atribuicaoProfessor",
+        contextoAtribuicoesDocentes.professores,
+        "Selecione o professor",
+        { labelFn: (item) => item.label || item.nome || "" }
+    );
+    preencherSelectComItens(
+        "atribuicaoTurma",
+        contextoAtribuicoesDocentes.turmas,
+        "Selecione a turma"
+    );
+    preencherSelectComItens(
+        "atribuicaoDisciplina",
+        contextoAtribuicoesDocentes.disciplinas,
+        "Selecione a disciplina"
+    );
+
+    preencherSelectComItens(
+        "filtroAtribuicaoProfessor",
+        contextoAtribuicoesDocentes.professores,
+        "Todos os professores",
+        { permitirVazio: true, labelFn: (item) => item.label || item.nome || "" }
+    );
+    preencherSelectComItens(
+        "filtroAtribuicaoTurma",
+        contextoAtribuicoesDocentes.turmas,
+        "Todas as turmas",
+        { permitirVazio: true }
+    );
+    preencherSelectComItens(
+        "filtroAtribuicaoDisciplina",
+        contextoAtribuicoesDocentes.disciplinas,
+        "Todas as disciplinas",
+        { permitirVazio: true }
+    );
+}
+
+function queryAtribuicoesDocentes() {
+    const params = new URLSearchParams();
+    const professorId = el("filtroAtribuicaoProfessor")?.value || "";
+    const turmaId = el("filtroAtribuicaoTurma")?.value || "";
+    const disciplinaId = el("filtroAtribuicaoDisciplina")?.value || "";
+    if (professorId) params.set("professor_id", professorId);
+    if (turmaId) params.set("turma_id", turmaId);
+    if (disciplinaId) params.set("disciplina_id", disciplinaId);
+    return params.toString() ? `?${params.toString()}` : "";
+}
+
+async function carregarAtribuicoesDocentes() {
+    const lista = await fetchJson(`/admin/atribuicoes-docentes${queryAtribuicoesDocentes()}`, { headers });
+    const ul = el("listaAtribuicoesDocentesAdmin");
+    if (!ul) {
+        return;
+    }
+    ul.innerHTML = "";
+
+    if (!Array.isArray(lista) || lista.length === 0) {
+        const vazio = document.createElement("li");
+        vazio.className = "booking-empty";
+        vazio.innerText = "Nenhuma atribuição docente encontrada para os filtros selecionados.";
+        ul.appendChild(vazio);
+        return;
+    }
+
+    lista.forEach((item) => {
+        const li = document.createElement("li");
+        li.className = "admin-list-item";
+
+        const titulo = document.createElement("p");
+        titulo.innerText = `${item.professor_nome} | ${item.turma_nome} | ${item.disciplina_nome}`;
+
+        const detalhe = document.createElement("p");
+        detalhe.className = "booking-detail";
+        detalhe.innerText = `Turno: ${nomeTurno(item.turno)} | Status: ${
+            item.professor_ativo && item.turma_ativa && item.disciplina_ativa ? "Ativo" : "Vínculo com item inativo"
+        }`;
+
+        const linha = document.createElement("div");
+        linha.className = "admin-inline";
+
+        const btnExcluir = document.createElement("button");
+        btnExcluir.type = "button";
+        btnExcluir.innerText = "Remover atribuição";
+        btnExcluir.addEventListener("click", async () => {
+            const confirmado = window.confirm(
+                `Remover a atribuição de ${item.professor_nome} em ${item.disciplina_nome} para ${item.turma_nome}?`
+            );
+            if (!confirmado) {
+                return;
+            }
+            try {
+                await fetchJson(`/admin/atribuicoes-docentes/${item.id}`, {
+                    method: "DELETE",
+                    headers
+                });
+                setMensagem("msgAtribuicoesDocentes", "Atribuição docente removida com sucesso.");
+                await Promise.all([carregarProfessores(), carregarContextoAtribuicoesDocentes(), carregarAtribuicoesDocentes()]);
+            } catch (err) {
+                setMensagem("msgAtribuicoesDocentes", err.message, true);
+            }
+        });
+
+        linha.appendChild(btnExcluir);
+        li.appendChild(titulo);
+        li.appendChild(detalhe);
+        li.appendChild(linha);
+        ul.appendChild(li);
+    });
+}
+
+async function cadastrarAtribuicaoDocente(event) {
+    event.preventDefault();
+    try {
+        await fetchJson("/admin/atribuicoes-docentes", {
+            method: "POST",
+            headers: headersJson,
+            body: JSON.stringify({
+                professor_id: Number(el("atribuicaoProfessor").value),
+                turma_id: Number(el("atribuicaoTurma").value),
+                disciplina_id: Number(el("atribuicaoDisciplina").value)
+            })
+        });
+        setMensagem("msgAtribuicoesDocentes", "Atribuição docente cadastrada com sucesso.");
+        el("formAtribuicaoDocente").reset();
+        await Promise.all([carregarProfessores(), carregarContextoAtribuicoesDocentes(), carregarAtribuicoesDocentes()]);
+    } catch (err) {
+        setMensagem("msgAtribuicoesDocentes", err.message, true);
+    }
+}
+
+function limparFiltrosAtribuicoesDocentes() {
+    if (el("filtroAtribuicaoProfessor")) el("filtroAtribuicaoProfessor").value = "";
+    if (el("filtroAtribuicaoTurma")) el("filtroAtribuicaoTurma").value = "";
+    if (el("filtroAtribuicaoDisciplina")) el("filtroAtribuicaoDisciplina").value = "";
+    carregarAtribuicoesDocentes().catch((err) => {
+        setMensagem("msgAtribuicoesDocentes", err.message, true);
+    });
 }
 
 async function carregarTurmasAdmin() {
@@ -465,7 +664,7 @@ async function carregarTurmasAdmin() {
                     })
                 });
                 setMensagem("msgTurma", `Dados da turma ${turma.nome} atualizados.`);
-                await carregarTurmasAdmin();
+                await Promise.all([carregarTurmasAdmin(), atualizarAtribuicoesDocentesSePermitido()]);
             } catch (err) {
                 setMensagem("msgTurma", err.message, true);
             }
@@ -481,7 +680,11 @@ async function carregarTurmasAdmin() {
                     headers: headersJson,
                     body: JSON.stringify({ ativo: !Boolean(turma.ativo) })
                 });
-                await Promise.all([carregarTurmasAdmin(), atualizarOpcoesProfessorSePermitido()]);
+                await Promise.all([
+                    carregarTurmasAdmin(),
+                    atualizarOpcoesProfessorSePermitido(),
+                    atualizarAtribuicoesDocentesSePermitido()
+                ]);
             } catch (err) {
                 setMensagem("msgTurma", err.message, true);
             }
@@ -516,7 +719,11 @@ async function cadastrarTurma(event) {
         el("formTurma").reset();
         el("turmaTurno").value = "MATUTINO";
         el("turmaQuantidadeEstudantes").value = "0";
-        await Promise.all([carregarTurmasAdmin(), atualizarOpcoesProfessorSePermitido()]);
+        await Promise.all([
+            carregarTurmasAdmin(),
+            atualizarOpcoesProfessorSePermitido(),
+            atualizarAtribuicoesDocentesSePermitido()
+        ]);
     } catch (err) {
         setMensagem("msgTurma", err.message, true);
     }
@@ -568,7 +775,7 @@ async function carregarDisciplinasAdmin() {
                     })
                 });
                 setMensagem("msgDisciplina", `Aulas da disciplina ${disciplina.nome} atualizadas.`);
-                await carregarDisciplinasAdmin();
+                await Promise.all([carregarDisciplinasAdmin(), atualizarAtribuicoesDocentesSePermitido()]);
             } catch (err) {
                 setMensagem("msgDisciplina", err.message, true);
             }
@@ -584,7 +791,11 @@ async function carregarDisciplinasAdmin() {
                     headers: headersJson,
                     body: JSON.stringify({ ativo: !Boolean(disciplina.ativo) })
                 });
-                await Promise.all([carregarDisciplinasAdmin(), atualizarOpcoesProfessorSePermitido()]);
+                await Promise.all([
+                    carregarDisciplinasAdmin(),
+                    atualizarOpcoesProfessorSePermitido(),
+                    atualizarAtribuicoesDocentesSePermitido()
+                ]);
             } catch (err) {
                 setMensagem("msgDisciplina", err.message, true);
             }
@@ -616,7 +827,11 @@ async function cadastrarDisciplina(event) {
         setMensagem("msgDisciplina", "Disciplina cadastrada com sucesso.");
         el("formDisciplina").reset();
         el("disciplinaAulasSemanais").value = "0";
-        await Promise.all([carregarDisciplinasAdmin(), atualizarOpcoesProfessorSePermitido()]);
+        await Promise.all([
+            carregarDisciplinasAdmin(),
+            atualizarOpcoesProfessorSePermitido(),
+            atualizarAtribuicoesDocentesSePermitido()
+        ]);
     } catch (err) {
         setMensagem("msgDisciplina", err.message, true);
     }
@@ -734,7 +949,7 @@ async function carregarProfessores() {
 
         const cadastro = document.createElement("p");
         cadastro.className = "booking-detail";
-        cadastro.innerText = `Nascimento: ${formatarDataBr(prof.data_nascimento)} | Turmas: ${resumoLista(prof.turmas)} | Disciplinas: ${resumoLista(prof.disciplinas)}`;
+        cadastro.innerText = `Nascimento: ${formatarDataBr(prof.data_nascimento)} | Turmas operacionais: ${resumoLista(prof.turmas_operacionais || prof.turmas)} | Disciplinas operacionais: ${resumoLista(prof.disciplinas_operacionais || prof.disciplinas)}`;
 
         const meta = document.createElement("p");
         const limiteMes = prof.cota_mes ? prof.cota_mes.limite_paginas : "-";
@@ -962,7 +1177,7 @@ async function cadastrarProfessor(event) {
         if (ehCoordenador) {
             await carregarCoordenadores();
         } else {
-            await carregarProfessores();
+            await Promise.all([carregarProfessores(), atualizarAtribuicoesDocentesSePermitido()]);
         }
     } catch (err) {
         setMensagem("msgProfessor", err.message, true);
@@ -1181,6 +1396,7 @@ function registrarEventos() {
 
     if (usuarioEhAdmin) {
         el("formProfessor").addEventListener("submit", cadastrarProfessor);
+        el("formAtribuicaoDocente").addEventListener("submit", cadastrarAtribuicaoDocente);
         el("formCotaRegras").addEventListener("submit", salvarRegrasCota);
         el("profSenha").addEventListener("input", atualizarHintSenha);
         el("profCargo").addEventListener("change", () => {
@@ -1188,6 +1404,10 @@ function registrarEventos() {
                 aplicarModoFormularioProfessor(false);
             }
         });
+        el("filtroAtribuicaoProfessor").addEventListener("change", carregarAtribuicoesDocentes);
+        el("filtroAtribuicaoTurma").addEventListener("change", carregarAtribuicoesDocentes);
+        el("filtroAtribuicaoDisciplina").addEventListener("change", carregarAtribuicoesDocentes);
+        el("btnLimparFiltrosAtribuicoes").addEventListener("click", limparFiltrosAtribuicoesDocentes);
         el("btnCancelarEdicaoProfessor").addEventListener("click", limparFormularioProfessor);
         el("btnRecalcularCotas").addEventListener("click", recalcularCotasMes);
         el("mesReferenciaCota").addEventListener("change", carregarProfessores);
@@ -1216,6 +1436,7 @@ async function init() {
         if (usuarioEhAdmin) {
             el("mesReferenciaCota").value = mesAtualIso();
             await carregarOpcoesProfessor();
+            await carregarContextoAtribuicoesDocentes();
             limparFormularioProfessor();
         }
         limparFormularioRecurso();
@@ -1233,7 +1454,7 @@ async function init() {
             carregarDisciplinasAdmin()
         ];
         if (usuarioEhAdmin) {
-            tarefas.push(carregarProfessores(), carregarCoordenadores());
+            tarefas.push(carregarProfessores(), carregarCoordenadores(), carregarAtribuicoesDocentes());
         }
         await Promise.all(tarefas);
     } catch (err) {

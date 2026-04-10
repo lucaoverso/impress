@@ -25,6 +25,9 @@
             <button class="admin-tab-btn is-active admin-only" data-admin-only="true" data-admin-tab-trigger="professores" aria-controls="tab-professores" aria-selected="true" type="button">
                 Professores
             </button>
+            <button class="admin-tab-btn admin-only" data-admin-only="true" data-admin-tab-trigger="atribuicoes" aria-controls="tab-atribuicoes" aria-selected="false" type="button">
+                Atribuições docentes
+            </button>
             <button class="admin-tab-btn" data-admin-tab-trigger="turmas" aria-controls="tab-turmas" aria-selected="false" type="button">
                 Turmas e disciplinas
             </button>
@@ -142,6 +145,37 @@
                     <article class="admin-card">
                         <h2>Disciplinas cadastradas</h2>
                         <ul id="listaDisciplinasAdmin" class="admin-list"></ul>
+                    </article>
+                </div>
+            </section>
+
+            <section id="tab-atribuicoes" class="admin-tab-panel admin-only" data-admin-only="true" data-admin-tab-panel="atribuicoes" hidden>
+                <div class="admin-grid">
+                    <article class="admin-card">
+                        <h2>Nova atribuição</h2>
+                        <p class="booking-detail">Defina exatamente qual professor atende cada disciplina em cada turma. Esse vínculo passa a orientar os módulos operacionais.</p>
+                        <form id="formAtribuicaoDocente" class="admin-form">
+                            <select id="atribuicaoProfessor" required></select>
+                            <select id="atribuicaoTurma" required></select>
+                            <select id="atribuicaoDisciplina" required></select>
+                            <button class="btn-destaque" type="submit">Adicionar atribuição</button>
+                        </form>
+                        <p id="msgAtribuicoesDocentes"></p>
+                    </article>
+
+                    <article class="admin-card">
+                        <h2>Filtros</h2>
+                        <div class="admin-form">
+                            <select id="filtroAtribuicaoProfessor"></select>
+                            <select id="filtroAtribuicaoTurma"></select>
+                            <select id="filtroAtribuicaoDisciplina"></select>
+                            <button id="btnLimparFiltrosAtribuicoes" type="button">Limpar filtros</button>
+                        </div>
+                    </article>
+
+                    <article class="admin-card admin-card-wide">
+                        <h2>Atribuições cadastradas</h2>
+                        <ul id="listaAtribuicoesDocentesAdmin" class="admin-list"></ul>
                     </article>
                 </div>
             </section>
