@@ -363,6 +363,35 @@ class ProfessorTurmaDisciplinaOut(BaseModel):
     disciplina_ativa: bool = True
     criado_em: str = ""
 
+class TurmaDisciplinaCreateIn(BaseModel):
+    turma_id: int
+    disciplina_id: int | None = None
+    disciplina_nome: str = ""
+    carga_horaria: int = 0
+    professor_id: int | None = None
+
+class TurmaDisciplinaUpdateIn(BaseModel):
+    carga_horaria: int
+    professor_id: int | None = None
+
+class TurmaDisciplinaOut(BaseModel):
+    id: int
+    turma_id: int
+    turma_nome: str = ""
+    turno: str = ""
+    turma_ativa: bool = True
+    disciplina_id: int
+    disciplina_nome: str = ""
+    disciplina_ativa: bool = True
+    carga_horaria: int = 0
+    carga_horaria_padrao: int = 0
+    professor_id: int | None = None
+    professor_nome: str = ""
+    professor_email: str = ""
+    professor_ativo: bool = True
+    criado_em: str = ""
+    atualizado_em: str = ""
+
 class TurmaCreateIn(BaseModel):
     nome: str
     turno: str

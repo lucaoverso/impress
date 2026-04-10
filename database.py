@@ -376,6 +376,22 @@ def criar_tabelas():
     """)
 
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS turmas_disciplinas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            turma_id INTEGER NOT NULL,
+            disciplina_id INTEGER NOT NULL,
+            carga_horaria INTEGER NOT NULL DEFAULT 0,
+            professor_usuario_id INTEGER,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(turma_id) REFERENCES turmas(id),
+            FOREIGN KEY(disciplina_id) REFERENCES disciplinas(id),
+            FOREIGN KEY(professor_usuario_id) REFERENCES usuarios(id),
+            UNIQUE(turma_id, disciplina_id)
+        )
+    """)
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS estudantes (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL,
@@ -593,6 +609,7 @@ def criar_tabelas():
     _garantir_colunas_recursos(cursor)
     _garantir_colunas_turmas(cursor)
     _garantir_colunas_disciplinas(cursor)
+    _garantir_colunas_turmas_disciplinas(cursor)
     _garantir_colunas_estudantes(cursor)
     _garantir_colunas_pre_conselho_periodos(cursor)
     _garantir_colunas_pre_conselho_motivos(cursor)
@@ -604,6 +621,7 @@ def criar_tabelas():
     _garantir_view_radcheck(cursor)
     _seed_catalogos_academicos(cursor)
     _migrar_catalogos_academicos(cursor)
+    _migrar_turmas_disciplinas_legado(cursor)
     _seed_pre_conselho_periodos(cursor)
     _seed_pre_conselho_motivos(cursor)
     _migrar_registros_pre_conselho_legado(cursor)
@@ -626,6 +644,16 @@ def criar_tabelas():
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_professores_turmas_disciplinas_turma
         ON professores_turmas_disciplinas(turma_id, disciplina_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_turmas_disciplinas_turma
+        ON turmas_disciplinas(turma_id, disciplina_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_turmas_disciplinas_professor
+        ON turmas_disciplinas(professor_usuario_id, disciplina_id, turma_id)
     """)
 
     cursor.execute("""
@@ -880,6 +908,68 @@ def _migrar_catalogos_academicos(cursor):
                 INSERT OR IGNORE INTO turmas (nome, turno, quantidade_estudantes, ativo, criado_em)
                 VALUES (?, '', 0, 1, datetime('now'))
             """, (nome,))
+
+
+def _migrar_turmas_disciplinas_legado(cursor):
+    cursor.execute("""
+        SELECT
+            ptd.turma_id,
+            ptd.disciplina_id,
+            ptd.professor_usuario_id,
+            COALESCE(d.aulas_semanais, 0) AS carga_horaria_padrao
+        FROM professores_turmas_disciplinas ptd
+        INNER JOIN disciplinas d ON d.id = ptd.disciplina_id
+        ORDER BY ptd.id ASC
+    """)
+    for row in cursor.fetchall():
+        turma_id = int(row["turma_id"] or 0)
+        disciplina_id = int(row["disciplina_id"] or 0)
+        professor_id = int(row["professor_usuario_id"] or 0)
+        carga_horaria = int(row["carga_horaria_padrao"] or 0)
+
+        cursor.execute("""
+            SELECT id, professor_usuario_id, carga_horaria
+            FROM turmas_disciplinas
+            WHERE turma_id = ? AND disciplina_id = ?
+            LIMIT 1
+        """, (turma_id, disciplina_id))
+        existente = cursor.fetchone()
+
+        if not existente:
+            cursor.execute("""
+                INSERT INTO turmas_disciplinas (
+                    turma_id,
+                    disciplina_id,
+                    carga_horaria,
+                    professor_usuario_id,
+                    criado_em,
+                    atualizado_em
+                )
+                VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+            """, (
+                turma_id,
+                disciplina_id,
+                carga_horaria,
+                professor_id if professor_id > 0 else None,
+            ))
+            continue
+
+        professor_existente = int(existente["professor_usuario_id"] or 0)
+        carga_existente = int(existente["carga_horaria"] or 0)
+        if professor_existente <= 0 and professor_id > 0:
+            cursor.execute("""
+                UPDATE turmas_disciplinas
+                SET professor_usuario_id = ?,
+                    atualizado_em = datetime('now')
+                WHERE id = ?
+            """, (professor_id, int(existente["id"])))
+        if carga_existente <= 0 and carga_horaria > 0:
+            cursor.execute("""
+                UPDATE turmas_disciplinas
+                SET carga_horaria = ?,
+                    atualizado_em = datetime('now')
+                WHERE id = ?
+            """, (carga_horaria, int(existente["id"])))
 
 def _seed_pre_conselho_periodos(cursor):
     for periodo in periodos_padrao_pre_conselho():
@@ -1293,6 +1383,63 @@ def _garantir_colunas_disciplinas(cursor):
         cursor.execute(
             "ALTER TABLE disciplinas ADD COLUMN aulas_semanais INTEGER NOT NULL DEFAULT 0"
         )
+
+
+def _garantir_colunas_turmas_disciplinas(cursor):
+    cursor.execute("PRAGMA table_info(turmas_disciplinas)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+
+    if not colunas:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS turmas_disciplinas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                turma_id INTEGER NOT NULL,
+                disciplina_id INTEGER NOT NULL,
+                carga_horaria INTEGER NOT NULL DEFAULT 0,
+                professor_usuario_id INTEGER,
+                criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+                atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY(turma_id) REFERENCES turmas(id),
+                FOREIGN KEY(disciplina_id) REFERENCES disciplinas(id),
+                FOREIGN KEY(professor_usuario_id) REFERENCES usuarios(id),
+                UNIQUE(turma_id, disciplina_id)
+            )
+        """)
+        return
+
+    if "carga_horaria" not in colunas:
+        cursor.execute(
+            "ALTER TABLE turmas_disciplinas ADD COLUMN carga_horaria INTEGER NOT NULL DEFAULT 0"
+        )
+    if "professor_usuario_id" not in colunas:
+        cursor.execute(
+            "ALTER TABLE turmas_disciplinas ADD COLUMN professor_usuario_id INTEGER"
+        )
+    if "criado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE turmas_disciplinas ADD COLUMN criado_em TEXT NOT NULL DEFAULT ''"
+        )
+        cursor.execute("""
+            UPDATE turmas_disciplinas
+            SET criado_em = datetime('now')
+            WHERE TRIM(COALESCE(criado_em, '')) = ''
+        """)
+    if "atualizado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE turmas_disciplinas ADD COLUMN atualizado_em TEXT NOT NULL DEFAULT ''"
+        )
+        cursor.execute("""
+            UPDATE turmas_disciplinas
+            SET atualizado_em = datetime('now')
+            WHERE TRIM(COALESCE(atualizado_em, '')) = ''
+        """)
+
+    cursor.execute("""
+        UPDATE turmas_disciplinas
+        SET professor_usuario_id = NULL
+        WHERE COALESCE(professor_usuario_id, 0) <= 0
+    """)
+
 
 def _garantir_colunas_estudantes(cursor):
     cursor.execute("""
@@ -2749,6 +2896,209 @@ def salvar_carga_professor(usuario_id: int, aulas_semanais: int, turmas_quantida
     conn.commit()
     conn.close()
 
+
+def _normalizar_professor_usuario_id(valor) -> int | None:
+    try:
+        professor_id = int(valor or 0)
+    except (TypeError, ValueError):
+        return None
+    return professor_id if professor_id > 0 else None
+
+
+def _obter_carga_horaria_base_disciplina(cursor, disciplina_id: int) -> int:
+    cursor.execute("""
+        SELECT COALESCE(aulas_semanais, 0) AS aulas_semanais
+        FROM disciplinas
+        WHERE id = ?
+    """, (int(disciplina_id),))
+    row = cursor.fetchone()
+    return int((row["aulas_semanais"] if row else 0) or 0)
+
+
+def _sincronizar_atribuicoes_docentes_por_turma_disciplina(
+    cursor,
+    *,
+    turma_id: int,
+    disciplina_id: int,
+    professor_usuario_id: int | None,
+):
+    turma_id_valor = int(turma_id)
+    disciplina_id_valor = int(disciplina_id)
+    professor_id_valor = _normalizar_professor_usuario_id(professor_usuario_id)
+
+    cursor.execute("""
+        SELECT DISTINCT professor_usuario_id
+        FROM professores_turmas_disciplinas
+        WHERE turma_id = ?
+          AND disciplina_id = ?
+    """, (turma_id_valor, disciplina_id_valor))
+    professores_afetados = {
+        int(row["professor_usuario_id"])
+        for row in cursor.fetchall()
+        if int(row["professor_usuario_id"] or 0) > 0
+    }
+
+    cursor.execute("""
+        DELETE FROM professores_turmas_disciplinas
+        WHERE turma_id = ?
+          AND disciplina_id = ?
+    """, (turma_id_valor, disciplina_id_valor))
+
+    if professor_id_valor is not None:
+        cursor.execute("""
+            INSERT OR IGNORE INTO professores_turmas_disciplinas (
+                professor_usuario_id,
+                turma_id,
+                disciplina_id,
+                criado_em
+            )
+            VALUES (?, ?, ?, datetime('now'))
+        """, (professor_id_valor, turma_id_valor, disciplina_id_valor))
+        professores_afetados.add(professor_id_valor)
+
+    for usuario_id in sorted(professores_afetados):
+        _sincronizar_resumo_carga_professor(cursor, int(usuario_id))
+
+
+def _upsert_turma_disciplina_cursor(
+    cursor,
+    *,
+    turma_id: int,
+    disciplina_id: int,
+    carga_horaria: int | None = None,
+    professor_usuario_id: int | None = None,
+):
+    turma_id_valor = int(turma_id)
+    disciplina_id_valor = int(disciplina_id)
+    professor_id_valor = _normalizar_professor_usuario_id(professor_usuario_id)
+
+    cursor.execute("""
+        SELECT id, carga_horaria, professor_usuario_id
+        FROM turmas_disciplinas
+        WHERE turma_id = ?
+          AND disciplina_id = ?
+        LIMIT 1
+    """, (turma_id_valor, disciplina_id_valor))
+    existente = cursor.fetchone()
+
+    if existente:
+        carga_final = (
+            int(carga_horaria)
+            if carga_horaria is not None
+            else int(existente["carga_horaria"] or 0)
+        )
+        if carga_horaria is None and carga_final <= 0:
+            carga_final = _obter_carga_horaria_base_disciplina(cursor, disciplina_id_valor)
+        cursor.execute("""
+            UPDATE turmas_disciplinas
+            SET carga_horaria = ?,
+                professor_usuario_id = ?,
+                atualizado_em = datetime('now')
+            WHERE id = ?
+        """, (carga_final, professor_id_valor, int(existente["id"])))
+        turma_disciplina_id = int(existente["id"])
+        criado = False
+    else:
+        carga_final = (
+            int(carga_horaria)
+            if carga_horaria is not None
+            else _obter_carga_horaria_base_disciplina(cursor, disciplina_id_valor)
+        )
+        cursor.execute("""
+            INSERT INTO turmas_disciplinas (
+                turma_id,
+                disciplina_id,
+                carga_horaria,
+                professor_usuario_id,
+                criado_em,
+                atualizado_em
+            )
+            VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+        """, (turma_id_valor, disciplina_id_valor, carga_final, professor_id_valor))
+        turma_disciplina_id = int(cursor.lastrowid)
+        criado = True
+
+    _sincronizar_atribuicoes_docentes_por_turma_disciplina(
+        cursor,
+        turma_id=turma_id_valor,
+        disciplina_id=disciplina_id_valor,
+        professor_usuario_id=professor_id_valor,
+    )
+    return turma_disciplina_id, criado
+
+
+def _mapear_turma_disciplina_admin(row) -> dict:
+    item = dict(row)
+    professor_id = int(item.get("professor_usuario_id") or 0)
+    return {
+        "id": int(item["id"]),
+        "turma_id": int(item["turma_id"]),
+        "turma_nome": item.get("turma_nome", "") or "",
+        "turno": item.get("turno", "") or "",
+        "turma_ativa": bool(int(item.get("turma_ativa", 1) or 0)),
+        "disciplina_id": int(item["disciplina_id"]),
+        "disciplina_nome": item.get("disciplina_nome", "") or "",
+        "disciplina_ativa": bool(int(item.get("disciplina_ativa", 1) or 0)),
+        "carga_horaria": int(item.get("carga_horaria") or 0),
+        "carga_horaria_padrao": int(item.get("carga_horaria_padrao") or 0),
+        "professor_id": professor_id if professor_id > 0 else None,
+        "professor_nome": item.get("professor_nome", "") or "",
+        "professor_email": item.get("professor_email", "") or "",
+        "professor_ativo": bool(int(item.get("professor_ativo", 1) or 0)) if professor_id > 0 else True,
+        "criado_em": item.get("criado_em", "") or "",
+        "atualizado_em": item.get("atualizado_em", "") or "",
+    }
+
+
+def _consultar_turmas_disciplinas_admin(
+    cursor,
+    *,
+    filtros_sql: list[str] | None = None,
+    params: list | None = None,
+    incluir_inativos: bool = False,
+):
+    where = list(filtros_sql or [])
+    parametros = list(params or [])
+
+    if not incluir_inativos:
+        where.append("COALESCE(t.ativo, 1) = 1")
+        where.append("COALESCE(d.ativo, 1) = 1")
+
+    clausula_where = f"WHERE {' AND '.join(where)}" if where else ""
+    cursor.execute(
+        f"""
+        SELECT
+            td.id,
+            td.turma_id,
+            td.disciplina_id,
+            td.carga_horaria,
+            td.professor_usuario_id,
+            td.criado_em,
+            td.atualizado_em,
+            t.nome AS turma_nome,
+            t.turno AS turno,
+            COALESCE(t.ativo, 1) AS turma_ativa,
+            d.nome AS disciplina_nome,
+            COALESCE(d.aulas_semanais, 0) AS carga_horaria_padrao,
+            COALESCE(d.ativo, 1) AS disciplina_ativa,
+            COALESCE(u.nome, '') AS professor_nome,
+            COALESCE(u.email, '') AS professor_email,
+            COALESCE(u.ativo, 1) AS professor_ativo
+        FROM turmas_disciplinas td
+        INNER JOIN turmas t ON t.id = td.turma_id
+        INNER JOIN disciplinas d ON d.id = td.disciplina_id
+        LEFT JOIN usuarios u ON u.id = td.professor_usuario_id
+        {clausula_where}
+        ORDER BY
+            t.nome COLLATE NOCASE ASC,
+            d.nome COLLATE NOCASE ASC,
+            td.id ASC
+        """,
+        parametros,
+    )
+    return [_mapear_turma_disciplina_admin(row) for row in cursor.fetchall()]
+
+
 def _mapear_atribuicao_docente(row) -> dict:
     item = dict(row)
     return {
@@ -2952,31 +3302,195 @@ def listar_atribuicoes_docentes_por_usuario_ids(
     return atribuicoes
 
 
-def criar_atribuicao_docente(professor_id: int, turma_id: int, disciplina_id: int):
+def listar_turmas_disciplinas_admin(
+    *,
+    turma_id: int | None = None,
+    disciplina_id: int | None = None,
+    professor_id: int | None = None,
+    incluir_inativos: bool = True,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    filtros = []
+    params = []
+
+    if turma_id is not None:
+        filtros.append("td.turma_id = ?")
+        params.append(int(turma_id))
+    if disciplina_id is not None:
+        filtros.append("td.disciplina_id = ?")
+        params.append(int(disciplina_id))
+    if professor_id is not None:
+        filtros.append("COALESCE(td.professor_usuario_id, 0) = ?")
+        params.append(int(professor_id))
+
+    itens = _consultar_turmas_disciplinas_admin(
+        cursor,
+        filtros_sql=filtros,
+        params=params,
+        incluir_inativos=incluir_inativos,
+    )
+    conn.close()
+    return itens
+
+
+def buscar_turma_disciplina_por_id(turma_disciplina_id: int, *, incluir_inativos: bool = True):
+    conn = get_connection()
+    cursor = conn.cursor()
+    itens = _consultar_turmas_disciplinas_admin(
+        cursor,
+        filtros_sql=["td.id = ?"],
+        params=[int(turma_disciplina_id)],
+        incluir_inativos=incluir_inativos,
+    )
+    conn.close()
+    return itens[0] if itens else None
+
+
+def criar_ou_atualizar_turma_disciplina(
+    *,
+    turma_id: int,
+    disciplina_id: int,
+    carga_horaria: int,
+    professor_usuario_id: int | None = None,
+):
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute(
-            """
-            INSERT INTO professores_turmas_disciplinas (
-                professor_usuario_id,
-                turma_id,
-                disciplina_id,
-                criado_em
-            )
-            VALUES (?, ?, ?, datetime('now'))
-            """,
-            (int(professor_id), int(turma_id), int(disciplina_id)),
+        turma_disciplina_id, _ = _upsert_turma_disciplina_cursor(
+            cursor,
+            turma_id=int(turma_id),
+            disciplina_id=int(disciplina_id),
+            carga_horaria=int(carga_horaria),
+            professor_usuario_id=professor_usuario_id,
         )
-        atribuicao_id = int(cursor.lastrowid)
-        _sincronizar_resumo_carga_professor(cursor, int(professor_id))
         conn.commit()
     except Exception:
         conn.rollback()
         raise
     finally:
         conn.close()
-    return buscar_atribuicao_docente_por_id(atribuicao_id, incluir_inativos=True)
+    return buscar_turma_disciplina_por_id(turma_disciplina_id, incluir_inativos=True)
+
+
+def atualizar_turma_disciplina(
+    turma_disciplina_id: int,
+    *,
+    carga_horaria: int,
+    professor_usuario_id: int | None = None,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT turma_id, disciplina_id
+        FROM turmas_disciplinas
+        WHERE id = ?
+    """, (int(turma_disciplina_id),))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return None
+
+    try:
+        _upsert_turma_disciplina_cursor(
+            cursor,
+            turma_id=int(row["turma_id"]),
+            disciplina_id=int(row["disciplina_id"]),
+            carga_horaria=int(carga_horaria),
+            professor_usuario_id=professor_usuario_id,
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return buscar_turma_disciplina_por_id(int(turma_disciplina_id), incluir_inativos=True)
+
+
+def excluir_turma_disciplina(turma_disciplina_id: int) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT turma_id, disciplina_id
+        FROM turmas_disciplinas
+        WHERE id = ?
+    """, (int(turma_disciplina_id),))
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return False
+
+    turma_id = int(row["turma_id"])
+    disciplina_id = int(row["disciplina_id"])
+
+    cursor.execute("""
+        SELECT DISTINCT professor_usuario_id
+        FROM professores_turmas_disciplinas
+        WHERE turma_id = ?
+          AND disciplina_id = ?
+    """, (turma_id, disciplina_id))
+    professores_afetados = {
+        int(item["professor_usuario_id"])
+        for item in cursor.fetchall()
+        if int(item["professor_usuario_id"] or 0) > 0
+    }
+
+    cursor.execute("""
+        DELETE FROM turmas_disciplinas
+        WHERE id = ?
+    """, (int(turma_disciplina_id),))
+    alterado = cursor.rowcount > 0
+
+    if alterado:
+        cursor.execute("""
+            DELETE FROM professores_turmas_disciplinas
+            WHERE turma_id = ?
+              AND disciplina_id = ?
+        """, (turma_id, disciplina_id))
+        for professor_id in sorted(professores_afetados):
+            _sincronizar_resumo_carga_professor(cursor, professor_id)
+
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def criar_atribuicao_docente(professor_id: int, turma_id: int, disciplina_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT professor_usuario_id
+            FROM turmas_disciplinas
+            WHERE turma_id = ?
+              AND disciplina_id = ?
+            LIMIT 1
+        """, (int(turma_id), int(disciplina_id)))
+        row = cursor.fetchone()
+        if row and int(row["professor_usuario_id"] or 0) == int(professor_id):
+            raise sqlite3.IntegrityError("A atribuicao docente ja existe para esta turma e disciplina.")
+
+        _upsert_turma_disciplina_cursor(
+            cursor,
+            turma_id=int(turma_id),
+            disciplina_id=int(disciplina_id),
+            carga_horaria=None,
+            professor_usuario_id=int(professor_id),
+        )
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    itens = listar_atribuicoes_docentes(
+        professor_id=int(professor_id),
+        turma_id=int(turma_id),
+        disciplina_id=int(disciplina_id),
+        incluir_inativos=True,
+    )
+    return itens[0] if itens else None
 
 
 def sincronizar_atribuicoes_docentes_professor_disciplina(
@@ -3000,52 +3514,62 @@ def sincronizar_atribuicoes_docentes_professor_disciplina(
     try:
         cursor.execute(
             """
-            SELECT id, turma_id
-            FROM professores_turmas_disciplinas
+            SELECT turma_id
+            FROM turmas_disciplinas
             WHERE professor_usuario_id = ?
               AND disciplina_id = ?
             """,
             (professor_id_valor, disciplina_id_valor),
         )
-        atuais = cursor.fetchall()
         atuais_por_turma = {
-            int(row["turma_id"]): int(row["id"])
-            for row in atuais
+            int(row["turma_id"]): True
+            for row in cursor.fetchall()
         }
 
         novas_turmas = set(turma_ids_unicos)
         turmas_atuais = set(atuais_por_turma.keys())
-        turmas_para_inserir = sorted(novas_turmas - turmas_atuais)
         turmas_para_remover = sorted(turmas_atuais - novas_turmas)
 
         removidos = 0
         for turma_id in turmas_para_remover:
-            cursor.execute(
-                """
-                DELETE FROM professores_turmas_disciplinas
-                WHERE id = ?
-                """,
-                (atuais_por_turma[turma_id],),
-            )
-            removidos += max(int(cursor.rowcount or 0), 0)
+            cursor.execute("""
+                UPDATE turmas_disciplinas
+                SET professor_usuario_id = NULL,
+                    atualizado_em = datetime('now')
+                WHERE turma_id = ?
+                  AND disciplina_id = ?
+                  AND professor_usuario_id = ?
+            """, (int(turma_id), disciplina_id_valor, professor_id_valor))
+            alterado = max(int(cursor.rowcount or 0), 0)
+            if alterado > 0:
+                _sincronizar_atribuicoes_docentes_por_turma_disciplina(
+                    cursor,
+                    turma_id=int(turma_id),
+                    disciplina_id=disciplina_id_valor,
+                    professor_usuario_id=None,
+                )
+            removidos += alterado
 
         criados = 0
-        for turma_id in turmas_para_inserir:
-            cursor.execute(
-                """
-                INSERT INTO professores_turmas_disciplinas (
-                    professor_usuario_id,
-                    turma_id,
-                    disciplina_id,
-                    criado_em
-                )
-                VALUES (?, ?, ?, datetime('now'))
-                """,
-                (professor_id_valor, int(turma_id), disciplina_id_valor),
+        for turma_id in sorted(novas_turmas):
+            cursor.execute("""
+                SELECT professor_usuario_id
+                FROM turmas_disciplinas
+                WHERE turma_id = ?
+                  AND disciplina_id = ?
+                LIMIT 1
+            """, (int(turma_id), disciplina_id_valor))
+            row = cursor.fetchone()
+            professor_atual = int(row["professor_usuario_id"] or 0) if row else 0
+            if professor_atual != professor_id_valor:
+                criados += 1
+            _upsert_turma_disciplina_cursor(
+                cursor,
+                turma_id=int(turma_id),
+                disciplina_id=disciplina_id_valor,
+                carga_horaria=None,
+                professor_usuario_id=professor_id_valor,
             )
-            criados += 1
-
-        _sincronizar_resumo_carga_professor(cursor, professor_id_valor)
         conn.commit()
     except Exception:
         conn.rollback()
@@ -3074,7 +3598,7 @@ def excluir_atribuicao_docente(atribuicao_id: int) -> bool:
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT professor_usuario_id
+        SELECT professor_usuario_id, turma_id, disciplina_id
         FROM professores_turmas_disciplinas
         WHERE id = ?
         """,
@@ -3086,16 +3610,25 @@ def excluir_atribuicao_docente(atribuicao_id: int) -> bool:
         return False
 
     professor_id = int(row["professor_usuario_id"])
-    cursor.execute(
-        """
-        DELETE FROM professores_turmas_disciplinas
-        WHERE id = ?
-        """,
-        (int(atribuicao_id),),
-    )
+    turma_id = int(row["turma_id"])
+    disciplina_id = int(row["disciplina_id"])
+
+    cursor.execute("""
+        UPDATE turmas_disciplinas
+        SET professor_usuario_id = NULL,
+            atualizado_em = datetime('now')
+        WHERE turma_id = ?
+          AND disciplina_id = ?
+          AND professor_usuario_id = ?
+    """, (turma_id, disciplina_id, professor_id))
     alterado = cursor.rowcount > 0
     if alterado:
-        _sincronizar_resumo_carga_professor(cursor, professor_id)
+        _sincronizar_atribuicoes_docentes_por_turma_disciplina(
+            cursor,
+            turma_id=turma_id,
+            disciplina_id=disciplina_id,
+            professor_usuario_id=None,
+        )
 
     conn.commit()
     conn.close()

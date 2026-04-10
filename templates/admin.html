@@ -136,15 +136,22 @@
                         <h2>Cadastrar disciplina</h2>
                         <form id="formDisciplina" class="admin-form">
                             <input id="disciplinaNome" type="text" placeholder="Nome da disciplina" required>
-                            <input id="disciplinaAulasSemanais" type="number" min="0" placeholder="Aulas semanais" value="" required>
+                            <input id="disciplinaAulasSemanais" type="number" min="0" placeholder="Carga horária base" value="" required>
                             <button class="btn-destaque" type="submit">Cadastrar disciplina</button>
                         </form>
                         <p id="msgDisciplina"></p>
                     </article>
 
                     <article class="admin-card">
-                        <h2>Disciplinas cadastradas</h2>
+                        <h2>Catálogo de disciplinas</h2>
                         <ul id="listaDisciplinasAdmin" class="admin-list"></ul>
+                    </article>
+
+                    <article class="admin-card admin-card-wide admin-only" data-admin-only="true">
+                        <h2>Disciplinas por turma</h2>
+                        <p class="booking-detail">Abra a turma para ajustar as disciplinas ofertadas, a carga horária específica e o professor vinculado em cada uma.</p>
+                        <p id="msgTurmaDisciplina"></p>
+                        <div id="listaTurmasDisciplinasAdmin" class="admin-accordion-list"></div>
                     </article>
                 </div>
             </section>

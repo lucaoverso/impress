@@ -48,6 +48,9 @@ from models import (
     ProfessorDisciplinaTurmasSyncIn,
     ProfessorTurmaDisciplinaCreateIn,
     ProfessorTurmaDisciplinaOut,
+    TurmaDisciplinaCreateIn,
+    TurmaDisciplinaUpdateIn,
+    TurmaDisciplinaOut,
     TurmaCreateIn,
     TurmaUpdateIn,
     DisciplinaCreateIn,
@@ -100,6 +103,10 @@ from database import (
     criar_disciplina,
     atualizar_disciplina_dados,
     atualizar_status_disciplina,
+    listar_turmas_disciplinas_admin,
+    criar_ou_atualizar_turma_disciplina,
+    atualizar_turma_disciplina,
+    excluir_turma_disciplina,
     buscar_recurso_por_id,
     atualizar_recurso_dados,
     contar_agendamentos_ativos_faixa,
@@ -375,6 +382,95 @@ def validar_payload_atribuicao_docente_lote(payload: ProfessorDisciplinaTurmasSy
         "disciplina_id": disciplina_id,
         "turma_ids": turma_ids,
     }
+
+
+def _validar_professor_opcional_turma_disciplina(professor_id) -> int | None:
+    if professor_id in (None, ""):
+        return None
+
+    valor = validar_numero_nao_negativo(professor_id, "Professor")
+    if valor <= 0:
+        return None
+
+    professor = buscar_usuario_por_id(valor)
+    if not professor or normalizar_cargo_usuario(professor) != CARGO_PROFESSOR:
+        raise HTTPException(404, "Professor nao encontrado.")
+    if not bool(int(professor.get("ativo", 1) or 0)):
+        raise HTTPException(400, "Professor selecionado esta inativo.")
+    return valor
+
+
+def _buscar_turma_admin_por_id(turma_id: int):
+    return next((item for item in listar_turmas(incluir_inativas=True) if int(item["id"]) == int(turma_id)), None)
+
+
+def _buscar_disciplina_admin_por_id(disciplina_id: int):
+    return next(
+        (item for item in listar_disciplinas(incluir_inativas=True) if int(item["id"]) == int(disciplina_id)),
+        None,
+    )
+
+
+def _buscar_disciplina_admin_por_nome(nome: str):
+    nome_limpo = str(nome or "").strip().casefold()
+    if not nome_limpo:
+        return None
+    return next(
+        (item for item in listar_disciplinas(incluir_inativas=True) if str(item.get("nome") or "").strip().casefold() == nome_limpo),
+        None,
+    )
+
+
+def validar_payload_turma_disciplina_create(payload: TurmaDisciplinaCreateIn):
+    turma_id = validar_numero_nao_negativo(payload.turma_id, "Turma")
+    if turma_id <= 0:
+        raise HTTPException(400, "Turma obrigatoria.")
+
+    turma = _buscar_turma_admin_por_id(turma_id)
+    if not turma:
+        raise HTTPException(404, "Turma nao encontrada.")
+
+    carga_horaria = validar_numero_nao_negativo(payload.carga_horaria, "Carga horaria")
+    professor_id = _validar_professor_opcional_turma_disciplina(payload.professor_id)
+
+    disciplina = None
+    disciplina_id = None
+    if payload.disciplina_id not in (None, ""):
+        disciplina_id = validar_numero_nao_negativo(payload.disciplina_id, "Disciplina")
+        if disciplina_id <= 0:
+            raise HTTPException(400, "Disciplina obrigatoria.")
+        disciplina = _buscar_disciplina_admin_por_id(disciplina_id)
+        if not disciplina:
+            raise HTTPException(404, "Disciplina nao encontrada.")
+    else:
+        nome = str(payload.disciplina_nome or "").strip()
+        if not nome:
+            raise HTTPException(400, "Selecione uma disciplina existente ou informe o nome de uma nova.")
+        disciplina = _buscar_disciplina_admin_por_nome(nome)
+        if not disciplina:
+            try:
+                disciplina_id = int(criar_disciplina(nome=nome, aulas_semanais=carga_horaria))
+            except sqlite3.IntegrityError as exc:
+                disciplina = _buscar_disciplina_admin_por_nome(nome)
+                if not disciplina:
+                    raise HTTPException(409, "Ja existe uma disciplina com este nome.") from exc
+        if disciplina and disciplina_id is None:
+            disciplina_id = int(disciplina["id"])
+
+    return {
+        "turma_id": turma_id,
+        "disciplina_id": int(disciplina_id or disciplina["id"]),
+        "carga_horaria": carga_horaria,
+        "professor_id": professor_id,
+    }
+
+
+def validar_payload_turma_disciplina_update(payload: TurmaDisciplinaUpdateIn):
+    return {
+        "carga_horaria": validar_numero_nao_negativo(payload.carga_horaria, "Carga horaria"),
+        "professor_id": _validar_professor_opcional_turma_disciplina(payload.professor_id),
+    }
+
 
 def _validar_dados_usuario_basicos(
     nome: str,
@@ -1483,6 +1579,91 @@ def atualizar_status_disciplina_admin(
     if not alterado:
         raise HTTPException(404, "Disciplina não encontrada.")
     return {"mensagem": "Status da disciplina atualizado com sucesso."}
+
+@app.get("/admin/turmas-disciplinas/contexto")
+def listar_contexto_turmas_disciplinas_admin(usuario = Depends(get_usuario_logado)):
+    exigir_admin(usuario)
+    professores = listar_professores_agendamento()
+    return {
+        "professores": [
+            {
+                "id": int(item["id"]),
+                "nome": item["nome"],
+                "email": item.get("email", ""),
+                "label": (
+                    f'{item["nome"]} ({item.get("email", "")})'
+                    if str(item.get("email", "")).strip()
+                    else item["nome"]
+                ),
+            }
+            for item in professores
+        ],
+        "turmas": listar_turmas(incluir_inativas=True),
+        "disciplinas": listar_disciplinas(incluir_inativas=True),
+    }
+
+
+@app.get("/admin/turmas-disciplinas", response_model=list[TurmaDisciplinaOut])
+def listar_turmas_disciplinas_admin_api(
+    turma_id: int | None = None,
+    disciplina_id: int | None = None,
+    professor_id: int | None = None,
+    incluir_inativos: bool = True,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    return listar_turmas_disciplinas_admin(
+        turma_id=turma_id,
+        disciplina_id=disciplina_id,
+        professor_id=professor_id,
+        incluir_inativos=incluir_inativos,
+    )
+
+
+@app.post("/admin/turmas-disciplinas", response_model=TurmaDisciplinaOut)
+def criar_turma_disciplina_admin_api(
+    payload: TurmaDisciplinaCreateIn,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    dados = validar_payload_turma_disciplina_create(payload)
+    return criar_ou_atualizar_turma_disciplina(
+        turma_id=dados["turma_id"],
+        disciplina_id=dados["disciplina_id"],
+        carga_horaria=dados["carga_horaria"],
+        professor_usuario_id=dados["professor_id"],
+    )
+
+
+@app.put("/admin/turmas-disciplinas/{turma_disciplina_id}", response_model=TurmaDisciplinaOut)
+def atualizar_turma_disciplina_admin_api(
+    turma_disciplina_id: int,
+    payload: TurmaDisciplinaUpdateIn,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    dados = validar_payload_turma_disciplina_update(payload)
+    item = atualizar_turma_disciplina(
+        turma_disciplina_id,
+        carga_horaria=dados["carga_horaria"],
+        professor_usuario_id=dados["professor_id"],
+    )
+    if not item:
+        raise HTTPException(404, "Vinculo de turma e disciplina nao encontrado.")
+    return item
+
+
+@app.delete("/admin/turmas-disciplinas/{turma_disciplina_id}")
+def excluir_turma_disciplina_admin_api(
+    turma_disciplina_id: int,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    alterado = excluir_turma_disciplina(turma_disciplina_id)
+    if not alterado:
+        raise HTTPException(404, "Vinculo de turma e disciplina nao encontrado.")
+    return {"mensagem": "Disciplina removida da turma com sucesso."}
+
 
 @app.get("/professores/opcoes")
 def opcoes_professores_publico():
