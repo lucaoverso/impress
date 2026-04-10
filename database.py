@@ -8,6 +8,12 @@ import unicodedata
 from pathlib import Path
 from security.nt_hash import generate_nt_hash
 from services.ocorrencia_disciplina_service import ACAO_OCORRENCIA_VALIDAS
+from services.preconselho_service import (
+    STATUS_PERIODO_PRE_CONSELHO_ABERTO,
+    catalogo_motivos_iniciais_pre_conselho,
+    nome_periodo_pre_conselho,
+    periodos_padrao_pre_conselho,
+)
 
 STATUS_CONCLUIDO = "CONCLUIDO"
 STATUS_FINALIZADO_LEGADO = "FINALIZADO"
@@ -407,6 +413,73 @@ def criar_tabelas():
         )
     """)
 
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pre_conselho_periodos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            nome TEXT NOT NULL,
+            ano_letivo INTEGER NOT NULL,
+            etapa INTEGER NOT NULL,
+            data_inicio TEXT NOT NULL,
+            data_fim TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'FECHADO',
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(ano_letivo, etapa)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pre_conselho_motivos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            categoria TEXT NOT NULL,
+            codigo TEXT NOT NULL UNIQUE,
+            descricao TEXT NOT NULL,
+            ativo INTEGER NOT NULL DEFAULT 1,
+            ordem INTEGER NOT NULL DEFAULT 0,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pre_conselho_registros (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            periodo_id INTEGER,
+            disciplina_id INTEGER,
+            professor_usuario_id INTEGER NOT NULL,
+            turma_id INTEGER NOT NULL,
+            estudante_id INTEGER NOT NULL,
+            nivel_atencao TEXT,
+            disciplina TEXT NOT NULL DEFAULT '',
+            ano_letivo INTEGER NOT NULL DEFAULT 0,
+            bimestre INTEGER NOT NULL DEFAULT 0,
+            motivos TEXT NOT NULL DEFAULT '[]',
+            observacoes TEXT NOT NULL DEFAULT '',
+            observacao_professor TEXT NOT NULL DEFAULT '',
+            texto_gerado TEXT NOT NULL DEFAULT '',
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(periodo_id) REFERENCES pre_conselho_periodos(id),
+            FOREIGN KEY(disciplina_id) REFERENCES disciplinas(id),
+            FOREIGN KEY(professor_usuario_id) REFERENCES usuarios(id),
+            FOREIGN KEY(turma_id) REFERENCES turmas(id),
+            FOREIGN KEY(estudante_id) REFERENCES estudantes(id),
+            UNIQUE(professor_usuario_id, estudante_id, disciplina, ano_letivo, bimestre)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pre_conselho_registro_motivos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            registro_id INTEGER NOT NULL,
+            motivo_id INTEGER NOT NULL,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(registro_id) REFERENCES pre_conselho_registros(id) ON DELETE CASCADE,
+            FOREIGN KEY(motivo_id) REFERENCES pre_conselho_motivos(id),
+            UNIQUE(registro_id, motivo_id)
+        )
+    """)
+
     cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS ocorrencias (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -506,12 +579,19 @@ def criar_tabelas():
     _garantir_colunas_turmas(cursor)
     _garantir_colunas_disciplinas(cursor)
     _garantir_colunas_estudantes(cursor)
+    _garantir_colunas_pre_conselho_periodos(cursor)
+    _garantir_colunas_pre_conselho_motivos(cursor)
+    _garantir_colunas_pre_conselho_registros(cursor)
+    _garantir_colunas_pre_conselho_registro_motivos(cursor)
     _garantir_colunas_ocorrencias(cursor)
     _garantir_colunas_ocorrencia_regimento_itens(cursor)
     _migrar_base_legal_legado(cursor)
     _garantir_view_radcheck(cursor)
     _seed_catalogos_academicos(cursor)
     _migrar_catalogos_academicos(cursor)
+    _seed_pre_conselho_periodos(cursor)
+    _seed_pre_conselho_motivos(cursor)
+    _migrar_registros_pre_conselho_legado(cursor)
 
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_jobs_status_prioridade_criado_em
@@ -571,6 +651,42 @@ def criar_tabelas():
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_pcpi_registros_manuais_criado_por
         ON pcpi_registros_manuais(criado_por_usuario_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_pre_conselho_periodos_ano_etapa
+        ON pre_conselho_periodos(ano_letivo, etapa, status)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_pre_conselho_motivos_categoria_ordem
+        ON pre_conselho_motivos(categoria, ativo, ordem)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_pre_conselho_professor_periodo
+        ON pre_conselho_registros(professor_usuario_id, periodo_id, turma_id, disciplina_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_pre_conselho_turma_disciplina
+        ON pre_conselho_registros(periodo_id, turma_id, disciplina_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_pre_conselho_estudante
+        ON pre_conselho_registros(estudante_id)
+    """)
+
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_pre_conselho_registro_unico
+        ON pre_conselho_registros(periodo_id, turma_id, disciplina_id, professor_usuario_id, estudante_id)
+        WHERE periodo_id IS NOT NULL AND disciplina_id IS NOT NULL
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_pre_conselho_registro_motivos_registro
+        ON pre_conselho_registro_motivos(registro_id, motivo_id)
     """)
 
     cursor.execute("""
@@ -739,6 +855,143 @@ def _migrar_catalogos_academicos(cursor):
                 INSERT OR IGNORE INTO turmas (nome, turno, quantidade_estudantes, ativo, criado_em)
                 VALUES (?, '', 0, 1, datetime('now'))
             """, (nome,))
+
+def _seed_pre_conselho_periodos(cursor):
+    for periodo in periodos_padrao_pre_conselho():
+        cursor.execute("""
+            INSERT OR IGNORE INTO pre_conselho_periodos (
+                nome,
+                ano_letivo,
+                etapa,
+                data_inicio,
+                data_fim,
+                status,
+                criado_em,
+                atualizado_em
+            )
+            VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        """, (
+            periodo["nome"],
+            int(periodo["ano_letivo"]),
+            int(periodo["etapa"]),
+            periodo["data_inicio"],
+            periodo["data_fim"],
+            periodo["status"],
+        ))
+
+
+def _seed_pre_conselho_motivos(cursor):
+    for motivo in catalogo_motivos_iniciais_pre_conselho():
+        cursor.execute("""
+            INSERT OR IGNORE INTO pre_conselho_motivos (
+                categoria,
+                codigo,
+                descricao,
+                ativo,
+                ordem,
+                criado_em,
+                atualizado_em
+            )
+            VALUES (?, ?, ?, 1, ?, datetime('now'), datetime('now'))
+        """, (
+            motivo["categoria"],
+            motivo["codigo"],
+            motivo["descricao"],
+            int(motivo.get("ordem") or 0),
+        ))
+
+
+def _migrar_registros_pre_conselho_legado(cursor):
+    cursor.execute("""
+        SELECT id, ano_letivo, bimestre, disciplina, observacoes, observacao_professor, motivos, periodo_id, disciplina_id
+        FROM pre_conselho_registros
+    """)
+    registros = cursor.fetchall()
+    if not registros:
+        return
+
+    cursor.execute("""
+        SELECT id, ano_letivo, etapa
+        FROM pre_conselho_periodos
+    """)
+    periodos_por_chave = {
+        (int(row["ano_letivo"] or 0), int(row["etapa"] or 0)): int(row["id"])
+        for row in cursor.fetchall()
+    }
+
+    cursor.execute("""
+        SELECT id, nome
+        FROM disciplinas
+    """)
+    disciplinas_por_nome = {
+        _normalizar_nome_catalogo(row["nome"]).casefold(): int(row["id"])
+        for row in cursor.fetchall()
+    }
+
+    cursor.execute("""
+        SELECT id, codigo
+        FROM pre_conselho_motivos
+    """)
+    motivos_por_codigo = {
+        _normalizar_nome_catalogo(row["codigo"]): int(row["id"])
+        for row in cursor.fetchall()
+    }
+
+    for registro in registros:
+        registro_id = int(registro["id"])
+        ano_letivo = int(registro["ano_letivo"] or 0)
+        etapa = int(registro["bimestre"] or 0)
+        periodo_id = int(registro["periodo_id"] or 0)
+        disciplina_id = int(registro["disciplina_id"] or 0)
+        disciplina = _normalizar_nome_catalogo(registro["disciplina"])
+        observacoes = _normalizar_nome_catalogo(registro["observacoes"])
+        observacao_professor = _normalizar_nome_catalogo(registro["observacao_professor"])
+
+        if periodo_id <= 0 and (ano_letivo, etapa) in periodos_por_chave:
+            periodo_id = int(periodos_por_chave[(ano_letivo, etapa)])
+            cursor.execute("""
+                UPDATE pre_conselho_registros
+                SET periodo_id = ?
+                WHERE id = ?
+            """, (periodo_id, registro_id))
+
+        if disciplina_id <= 0 and disciplina:
+            disciplina_id = int(disciplinas_por_nome.get(disciplina.casefold()) or 0)
+            if disciplina_id > 0:
+                cursor.execute("""
+                    UPDATE pre_conselho_registros
+                    SET disciplina_id = ?
+                    WHERE id = ?
+                """, (disciplina_id, registro_id))
+
+        if not observacao_professor and observacoes:
+            cursor.execute("""
+                UPDATE pre_conselho_registros
+                SET observacao_professor = ?
+                WHERE id = ?
+            """, (observacoes, registro_id))
+
+        cursor.execute("""
+            SELECT COUNT(*) AS total
+            FROM pre_conselho_registro_motivos
+            WHERE registro_id = ?
+        """, (registro_id,))
+        total_motivos = int(cursor.fetchone()["total"] or 0)
+        if total_motivos > 0:
+            continue
+
+        for codigo in _desserializar_lista_texto(registro["motivos"]):
+            motivo_id = int(motivos_por_codigo.get(_normalizar_nome_catalogo(codigo)) or 0)
+            if motivo_id <= 0:
+                continue
+            cursor.execute("""
+                INSERT OR IGNORE INTO pre_conselho_registro_motivos (
+                    registro_id,
+                    motivo_id,
+                    criado_em
+                )
+                VALUES (?, ?, datetime('now'))
+            """, (registro_id, motivo_id))
 
 def _garantir_colunas_usuarios(cursor):
     cursor.execute("PRAGMA table_info(usuarios)")
@@ -1023,6 +1276,209 @@ def _garantir_colunas_estudantes(cursor):
         SET ativo = 1
         WHERE ativo IS NULL
     """)
+
+def _garantir_colunas_pre_conselho_periodos(cursor):
+    cursor.execute("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'pre_conselho_periodos'
+    """)
+    if not cursor.fetchone():
+        return
+
+    cursor.execute("PRAGMA table_info(pre_conselho_periodos)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+
+    if "nome" not in colunas:
+        cursor.execute("ALTER TABLE pre_conselho_periodos ADD COLUMN nome TEXT NOT NULL DEFAULT ''")
+    if "ano_letivo" not in colunas:
+        cursor.execute("ALTER TABLE pre_conselho_periodos ADD COLUMN ano_letivo INTEGER NOT NULL DEFAULT 0")
+    if "etapa" not in colunas:
+        cursor.execute("ALTER TABLE pre_conselho_periodos ADD COLUMN etapa INTEGER NOT NULL DEFAULT 0")
+    if "data_inicio" not in colunas:
+        cursor.execute("ALTER TABLE pre_conselho_periodos ADD COLUMN data_inicio TEXT NOT NULL DEFAULT ''")
+    if "data_fim" not in colunas:
+        cursor.execute("ALTER TABLE pre_conselho_periodos ADD COLUMN data_fim TEXT NOT NULL DEFAULT ''")
+    if "status" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_periodos ADD COLUMN status TEXT NOT NULL DEFAULT 'FECHADO'"
+        )
+    if "criado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_periodos ADD COLUMN criado_em TEXT NOT NULL DEFAULT (datetime('now'))"
+        )
+    if "atualizado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_periodos ADD COLUMN atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))"
+        )
+
+
+def _garantir_colunas_pre_conselho_motivos(cursor):
+    cursor.execute("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'pre_conselho_motivos'
+    """)
+    if not cursor.fetchone():
+        return
+
+    cursor.execute("PRAGMA table_info(pre_conselho_motivos)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+
+    if "categoria" not in colunas:
+        cursor.execute("ALTER TABLE pre_conselho_motivos ADD COLUMN categoria TEXT NOT NULL DEFAULT ''")
+    if "codigo" not in colunas:
+        cursor.execute("ALTER TABLE pre_conselho_motivos ADD COLUMN codigo TEXT NOT NULL DEFAULT ''")
+    if "descricao" not in colunas:
+        cursor.execute("ALTER TABLE pre_conselho_motivos ADD COLUMN descricao TEXT NOT NULL DEFAULT ''")
+    if "ativo" not in colunas:
+        cursor.execute("ALTER TABLE pre_conselho_motivos ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1")
+    if "ordem" not in colunas:
+        cursor.execute("ALTER TABLE pre_conselho_motivos ADD COLUMN ordem INTEGER NOT NULL DEFAULT 0")
+    if "criado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_motivos ADD COLUMN criado_em TEXT NOT NULL DEFAULT (datetime('now'))"
+        )
+    if "atualizado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_motivos ADD COLUMN atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))"
+        )
+
+    cursor.execute("""
+        UPDATE pre_conselho_motivos
+        SET ativo = 1
+        WHERE ativo IS NULL
+    """)
+
+
+def _garantir_colunas_pre_conselho_registros(cursor):
+    cursor.execute("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'pre_conselho_registros'
+    """)
+    if not cursor.fetchone():
+        return
+
+    cursor.execute("PRAGMA table_info(pre_conselho_registros)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+
+    if "periodo_id" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN periodo_id INTEGER"
+        )
+    if "disciplina_id" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN disciplina_id INTEGER"
+        )
+    if "professor_usuario_id" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN professor_usuario_id INTEGER NOT NULL DEFAULT 0"
+        )
+    if "turma_id" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN turma_id INTEGER NOT NULL DEFAULT 0"
+        )
+    if "estudante_id" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN estudante_id INTEGER NOT NULL DEFAULT 0"
+        )
+    if "disciplina" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN disciplina TEXT NOT NULL DEFAULT ''"
+        )
+    if "ano_letivo" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN ano_letivo INTEGER NOT NULL DEFAULT 0"
+        )
+    if "bimestre" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN bimestre INTEGER NOT NULL DEFAULT 0"
+        )
+    if "nivel_atencao" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN nivel_atencao TEXT"
+        )
+    if "motivos" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN motivos TEXT NOT NULL DEFAULT '[]'"
+        )
+    if "observacoes" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN observacoes TEXT NOT NULL DEFAULT ''"
+        )
+    if "criado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN criado_em TEXT NOT NULL DEFAULT (datetime('now'))"
+        )
+    if "atualizado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))"
+        )
+    if "observacao_professor" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN observacao_professor TEXT NOT NULL DEFAULT ''"
+        )
+    if "texto_gerado" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN texto_gerado TEXT NOT NULL DEFAULT ''"
+        )
+
+    cursor.execute("""
+        UPDATE pre_conselho_registros
+        SET motivos = '[]'
+        WHERE TRIM(COALESCE(motivos, '')) = ''
+    """)
+    cursor.execute("""
+        UPDATE pre_conselho_registros
+        SET observacoes = ''
+        WHERE observacoes IS NULL
+    """)
+    cursor.execute("""
+        UPDATE pre_conselho_registros
+        SET observacao_professor = COALESCE(observacoes, '')
+        WHERE TRIM(COALESCE(observacao_professor, '')) = ''
+    """)
+    cursor.execute("""
+        UPDATE pre_conselho_registros
+        SET disciplina = ''
+        WHERE disciplina IS NULL
+    """)
+    cursor.execute("""
+        UPDATE pre_conselho_registros
+        SET atualizado_em = datetime('now')
+        WHERE TRIM(COALESCE(atualizado_em, '')) = ''
+    """)
+
+def _garantir_colunas_pre_conselho_registro_motivos(cursor):
+    cursor.execute("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'pre_conselho_registro_motivos'
+    """)
+    if not cursor.fetchone():
+        return
+
+    cursor.execute("PRAGMA table_info(pre_conselho_registro_motivos)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+
+    if "registro_id" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registro_motivos ADD COLUMN registro_id INTEGER NOT NULL DEFAULT 0"
+        )
+    if "motivo_id" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registro_motivos ADD COLUMN motivo_id INTEGER NOT NULL DEFAULT 0"
+        )
+    if "criado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registro_motivos ADD COLUMN criado_em TEXT NOT NULL DEFAULT (datetime('now'))"
+        )
+
 
 def _garantir_colunas_ocorrencias(cursor):
     cursor.execute("""
@@ -2998,6 +3454,44 @@ def listar_disciplinas(incluir_inativas: bool = False):
 
 def listar_disciplinas_ativas():
     return listar_disciplinas(incluir_inativas=False)
+
+def buscar_disciplina_por_id(disciplina_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, nome, aulas_semanais, ativo, criado_em
+        FROM disciplinas
+        WHERE id = ?
+    """, (int(disciplina_id),))
+
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def buscar_disciplina_por_nome(nome: str, incluir_inativas: bool = True):
+    nome_limpo = _normalizar_nome_catalogo(nome)
+    if not nome_limpo:
+        return None
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT id, nome, aulas_semanais, ativo, criado_em
+        FROM disciplinas
+        WHERE nome = ? COLLATE NOCASE
+    """
+    params = [nome_limpo]
+    if not incluir_inativas:
+        query += " AND ativo = 1"
+    query += " ORDER BY id ASC LIMIT 1"
+
+    cursor.execute(query, params)
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
 
 def criar_disciplina(nome: str, aulas_semanais: int = 0):
     nome_limpo = _normalizar_nome_catalogo(nome)
@@ -5190,3 +5684,881 @@ def buscar_registro_pcpi_manual_por_id(registro_id: int):
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
+
+
+def listar_periodos_pre_conselho():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            id,
+            nome,
+            ano_letivo,
+            etapa,
+            data_inicio,
+            data_fim,
+            status,
+            criado_em,
+            atualizado_em
+        FROM pre_conselho_periodos
+        ORDER BY ano_letivo DESC, etapa ASC, id ASC
+    """)
+
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def buscar_periodo_pre_conselho_por_id(periodo_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            id,
+            nome,
+            ano_letivo,
+            etapa,
+            data_inicio,
+            data_fim,
+            status,
+            criado_em,
+            atualizado_em
+        FROM pre_conselho_periodos
+        WHERE id = ?
+    """, (int(periodo_id),))
+
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def buscar_periodo_pre_conselho_por_ano_etapa(ano_letivo: int, etapa: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            id,
+            nome,
+            ano_letivo,
+            etapa,
+            data_inicio,
+            data_fim,
+            status,
+            criado_em,
+            atualizado_em
+        FROM pre_conselho_periodos
+        WHERE ano_letivo = ?
+          AND etapa = ?
+        LIMIT 1
+    """, (int(ano_letivo), int(etapa)))
+
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def criar_periodo_pre_conselho(
+    *,
+    nome: str,
+    ano_letivo: int,
+    etapa: int,
+    data_inicio: str,
+    data_fim: str,
+    status: str,
+):
+    nome_final = _normalizar_nome_catalogo(nome) or nome_periodo_pre_conselho(ano_letivo, etapa)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO pre_conselho_periodos (
+            nome,
+            ano_letivo,
+            etapa,
+            data_inicio,
+            data_fim,
+            status,
+            criado_em,
+            atualizado_em
+        )
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+    """, (
+        nome_final,
+        int(ano_letivo),
+        int(etapa),
+        data_inicio,
+        data_fim,
+        status,
+    ))
+
+    periodo_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return periodo_id
+
+
+def atualizar_periodo_pre_conselho_dados(
+    periodo_id: int,
+    *,
+    nome: str,
+    ano_letivo: int,
+    etapa: int,
+    data_inicio: str,
+    data_fim: str,
+):
+    nome_final = _normalizar_nome_catalogo(nome) or nome_periodo_pre_conselho(ano_letivo, etapa)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE pre_conselho_periodos
+        SET nome = ?,
+            ano_letivo = ?,
+            etapa = ?,
+            data_inicio = ?,
+            data_fim = ?,
+            atualizado_em = datetime('now')
+        WHERE id = ?
+    """, (
+        nome_final,
+        int(ano_letivo),
+        int(etapa),
+        data_inicio,
+        data_fim,
+        int(periodo_id),
+    ))
+
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def atualizar_status_periodo_pre_conselho(periodo_id: int, status: str):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    if status == STATUS_PERIODO_PRE_CONSELHO_ABERTO:
+        cursor.execute("""
+            UPDATE pre_conselho_periodos
+            SET status = 'FECHADO',
+                atualizado_em = datetime('now')
+            WHERE id <> ?
+              AND ano_letivo = (
+                  SELECT ano_letivo
+                  FROM pre_conselho_periodos
+                  WHERE id = ?
+                  LIMIT 1
+              )
+        """, (int(periodo_id), int(periodo_id)))
+
+    cursor.execute("""
+        UPDATE pre_conselho_periodos
+        SET status = ?,
+            atualizado_em = datetime('now')
+        WHERE id = ?
+    """, (status, int(periodo_id)))
+
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def listar_motivos_pre_conselho(*, incluir_inativos: bool = False):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT
+            id,
+            categoria,
+            codigo,
+            descricao,
+            ativo,
+            ordem,
+            criado_em,
+            atualizado_em
+        FROM pre_conselho_motivos
+    """
+    if not incluir_inativos:
+        query += " WHERE ativo = 1"
+    query += " ORDER BY categoria ASC, ordem ASC, descricao COLLATE NOCASE ASC"
+
+    cursor.execute(query)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def buscar_motivo_pre_conselho_por_id(motivo_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            id,
+            categoria,
+            codigo,
+            descricao,
+            ativo,
+            ordem,
+            criado_em,
+            atualizado_em
+        FROM pre_conselho_motivos
+        WHERE id = ?
+    """, (int(motivo_id),))
+
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def buscar_motivo_pre_conselho_por_codigo(codigo: str):
+    codigo_limpo = _normalizar_nome_catalogo(codigo)
+    if not codigo_limpo:
+        return None
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            id,
+            categoria,
+            codigo,
+            descricao,
+            ativo,
+            ordem,
+            criado_em,
+            atualizado_em
+        FROM pre_conselho_motivos
+        WHERE codigo = ? COLLATE NOCASE
+        LIMIT 1
+    """, (codigo_limpo,))
+
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def buscar_motivos_pre_conselho_por_ids(motivo_ids: list[int]):
+    ids_validos = []
+    for motivo_id in motivo_ids or []:
+        try:
+            valor = int(motivo_id)
+        except (TypeError, ValueError):
+            continue
+        if valor > 0 and valor not in ids_validos:
+            ids_validos.append(valor)
+
+    if not ids_validos:
+        return []
+
+    placeholders = ",".join("?" for _ in ids_validos)
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(f"""
+        SELECT
+            id,
+            categoria,
+            codigo,
+            descricao,
+            ativo,
+            ordem,
+            criado_em,
+            atualizado_em
+        FROM pre_conselho_motivos
+        WHERE id IN ({placeholders})
+        ORDER BY categoria ASC, ordem ASC, descricao COLLATE NOCASE ASC
+    """, ids_validos)
+
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def criar_motivo_pre_conselho(
+    *,
+    categoria: str,
+    codigo: str,
+    descricao: str,
+    ordem: int = 0,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO pre_conselho_motivos (
+            categoria,
+            codigo,
+            descricao,
+            ativo,
+            ordem,
+            criado_em,
+            atualizado_em
+        )
+        VALUES (?, ?, ?, 1, ?, datetime('now'), datetime('now'))
+    """, (
+        categoria,
+        codigo,
+        descricao,
+        int(ordem or 0),
+    ))
+
+    motivo_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    return motivo_id
+
+
+def atualizar_motivo_pre_conselho_dados(
+    motivo_id: int,
+    *,
+    categoria: str,
+    descricao: str,
+    ordem: int = 0,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE pre_conselho_motivos
+        SET categoria = ?,
+            descricao = ?,
+            ordem = ?,
+            atualizado_em = datetime('now')
+        WHERE id = ?
+    """, (
+        categoria,
+        descricao,
+        int(ordem or 0),
+        int(motivo_id),
+    ))
+
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def atualizar_status_motivo_pre_conselho(motivo_id: int, ativo: bool):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        UPDATE pre_conselho_motivos
+        SET ativo = ?,
+            atualizado_em = datetime('now')
+        WHERE id = ?
+    """, (1 if ativo else 0, int(motivo_id)))
+
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def contar_registros_pre_conselho_por_professor_periodo(periodo_id: int, professor_usuario_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            turma_id,
+            disciplina_id,
+            COUNT(*) AS total
+        FROM pre_conselho_registros
+        WHERE periodo_id = ?
+          AND professor_usuario_id = ?
+        GROUP BY turma_id, disciplina_id
+    """, (int(periodo_id), int(professor_usuario_id)))
+
+    rows = cursor.fetchall()
+    conn.close()
+    return {
+        (int(row["turma_id"]), int(row["disciplina_id"] or 0)): int(row["total"] or 0)
+        for row in rows
+    }
+
+
+def _buscar_registro_pre_conselho_unico(
+    cursor,
+    *,
+    periodo_id: int,
+    turma_id: int,
+    disciplina_id: int,
+    professor_usuario_id: int,
+    estudante_id: int,
+):
+    cursor.execute("""
+        SELECT id
+        FROM pre_conselho_registros
+        WHERE periodo_id = ?
+          AND turma_id = ?
+          AND disciplina_id = ?
+          AND professor_usuario_id = ?
+          AND estudante_id = ?
+        LIMIT 1
+    """, (
+        int(periodo_id),
+        int(turma_id),
+        int(disciplina_id),
+        int(professor_usuario_id),
+        int(estudante_id),
+    ))
+    row = cursor.fetchone()
+    return int(row["id"]) if row else None
+
+
+def _sincronizar_motivos_registro_pre_conselho(cursor, registro_id: int, motivo_ids: list[int]):
+    ids_validos = []
+    for motivo_id in motivo_ids or []:
+        try:
+            valor = int(motivo_id)
+        except (TypeError, ValueError):
+            continue
+        if valor > 0 and valor not in ids_validos:
+            ids_validos.append(valor)
+
+    cursor.execute("""
+        DELETE FROM pre_conselho_registro_motivos
+        WHERE registro_id = ?
+    """, (int(registro_id),))
+
+    for motivo_id in ids_validos:
+        cursor.execute("""
+            INSERT OR IGNORE INTO pre_conselho_registro_motivos (
+                registro_id,
+                motivo_id,
+                criado_em
+            )
+            VALUES (?, ?, datetime('now'))
+        """, (int(registro_id), motivo_id))
+
+
+def _carregar_motivos_pre_conselho_por_registro_ids(cursor, registro_ids: list[int]) -> dict[int, list[dict]]:
+    ids_validos = []
+    for registro_id in registro_ids or []:
+        try:
+            valor = int(registro_id)
+        except (TypeError, ValueError):
+            continue
+        if valor > 0 and valor not in ids_validos:
+            ids_validos.append(valor)
+
+    if not ids_validos:
+        return {}
+
+    placeholders = ",".join("?" for _ in ids_validos)
+    cursor.execute(f"""
+        SELECT
+            rm.registro_id,
+            m.id,
+            m.categoria,
+            m.codigo,
+            m.descricao,
+            m.ativo,
+            m.ordem,
+            m.criado_em,
+            m.atualizado_em
+        FROM pre_conselho_registro_motivos rm
+        INNER JOIN pre_conselho_motivos m ON m.id = rm.motivo_id
+        WHERE rm.registro_id IN ({placeholders})
+        ORDER BY m.categoria ASC, m.ordem ASC, m.descricao COLLATE NOCASE ASC
+    """, ids_validos)
+
+    mapa = {registro_id: [] for registro_id in ids_validos}
+    for row in cursor.fetchall():
+        item = dict(row)
+        registro_id = int(item.pop("registro_id"))
+        mapa.setdefault(registro_id, []).append(item)
+    return mapa
+
+
+def _normalizar_linha_registro_pre_conselho(item: dict, motivos_map: dict[int, list[dict]] | None = None) -> dict:
+    registro_id = int(item["id"])
+    motivos = list(motivos_map.get(registro_id, [])) if motivos_map else []
+    return {
+        "id": registro_id,
+        "periodo_id": int(item.get("periodo_id") or 0) or None,
+        "periodo_nome": item.get("periodo_nome", "") or "",
+        "ano_letivo": int(item.get("ano_letivo") or 0),
+        "etapa": int(item.get("etapa") or 0),
+        "professor_id": int(item.get("professor_id") or item.get("professor_usuario_id") or 0),
+        "professor_nome": item.get("professor_nome", "") or "",
+        "turma_id": int(item.get("turma_id") or 0),
+        "turma_nome": item.get("turma_nome", "") or "",
+        "disciplina_id": int(item.get("disciplina_id") or 0) or None,
+        "disciplina_nome": item.get("disciplina_nome", "") or "",
+        "estudante_id": int(item.get("estudante_id") or 0),
+        "estudante_nome": item.get("estudante_nome", "") or "",
+        "nivel_atencao": item.get("nivel_atencao", "") or "",
+        "observacao_professor": item.get("observacao_professor", "") or "",
+        "texto_gerado": item.get("texto_gerado", "") or "",
+        "criado_em": item.get("criado_em", "") or "",
+        "atualizado_em": item.get("atualizado_em", "") or "",
+        "motivo_ids": [int(motivo["id"]) for motivo in motivos],
+        "motivos": motivos,
+        "periodo_status": item.get("periodo_status", "") or "",
+    }
+
+
+def criar_ou_atualizar_registro_pre_conselho(
+    *,
+    periodo_id: int,
+    turma_id: int,
+    disciplina_id: int,
+    professor_usuario_id: int,
+    estudante_id: int,
+    ano_letivo: int,
+    etapa: int,
+    disciplina_nome: str,
+    motivo_ids: list[int],
+    texto_gerado: str,
+    observacao_professor: str = "",
+    nivel_atencao: str = "",
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    periodo_id_valor = int(periodo_id)
+    turma_id_valor = int(turma_id)
+    disciplina_id_valor = int(disciplina_id)
+    professor_usuario_id_valor = int(professor_usuario_id)
+    estudante_id_valor = int(estudante_id)
+    ano_letivo_valor = int(ano_letivo)
+    etapa_valor = int(etapa)
+    disciplina_nome_limpo = _normalizar_nome_catalogo(disciplina_nome)
+    observacao_limpa = _normalizar_nome_catalogo(observacao_professor)
+    nivel_atencao_limpo = _normalizar_nome_catalogo(nivel_atencao) or None
+    texto_gerado_limpo = str(texto_gerado or "").strip()
+
+    motivo_ids_validos = []
+    for motivo_id in motivo_ids or []:
+        try:
+            valor = int(motivo_id)
+        except (TypeError, ValueError):
+            continue
+        if valor > 0 and valor not in motivo_ids_validos:
+            motivo_ids_validos.append(valor)
+
+    motivos_json = _serializar_lista_texto(
+        [
+            str(motivo["codigo"])
+            for motivo in buscar_motivos_pre_conselho_por_ids(motivo_ids_validos)
+        ]
+    )
+
+    registro_id = _buscar_registro_pre_conselho_unico(
+        cursor,
+        periodo_id=periodo_id_valor,
+        turma_id=turma_id_valor,
+        disciplina_id=disciplina_id_valor,
+        professor_usuario_id=professor_usuario_id_valor,
+        estudante_id=estudante_id_valor,
+    )
+
+    if registro_id:
+        cursor.execute("""
+            UPDATE pre_conselho_registros
+            SET periodo_id = ?,
+                disciplina_id = ?,
+                professor_usuario_id = ?,
+                turma_id = ?,
+                estudante_id = ?,
+                nivel_atencao = ?,
+                disciplina = ?,
+                ano_letivo = ?,
+                bimestre = ?,
+                motivos = ?,
+                observacoes = ?,
+                observacao_professor = ?,
+                texto_gerado = ?,
+                atualizado_em = datetime('now')
+            WHERE id = ?
+        """, (
+            periodo_id_valor,
+            disciplina_id_valor,
+            professor_usuario_id_valor,
+            turma_id_valor,
+            estudante_id_valor,
+            nivel_atencao_limpo,
+            disciplina_nome_limpo,
+            ano_letivo_valor,
+            etapa_valor,
+            motivos_json,
+            observacao_limpa,
+            observacao_limpa,
+            texto_gerado_limpo,
+            int(registro_id),
+        ))
+    else:
+        cursor.execute("""
+            INSERT INTO pre_conselho_registros (
+                periodo_id,
+                disciplina_id,
+                professor_usuario_id,
+                turma_id,
+                estudante_id,
+                nivel_atencao,
+                disciplina,
+                ano_letivo,
+                bimestre,
+                motivos,
+                observacoes,
+                observacao_professor,
+                texto_gerado,
+                criado_em,
+                atualizado_em
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        """, (
+            periodo_id_valor,
+            disciplina_id_valor,
+            professor_usuario_id_valor,
+            turma_id_valor,
+            estudante_id_valor,
+            nivel_atencao_limpo,
+            disciplina_nome_limpo,
+            ano_letivo_valor,
+            etapa_valor,
+            motivos_json,
+            observacao_limpa,
+            observacao_limpa,
+            texto_gerado_limpo,
+        ))
+        registro_id = int(cursor.lastrowid)
+
+    _sincronizar_motivos_registro_pre_conselho(cursor, int(registro_id), motivo_ids_validos)
+    conn.commit()
+    conn.close()
+    return int(registro_id)
+
+
+def listar_registros_pre_conselho(
+    *,
+    periodo_id: int | None = None,
+    turma_id: int | None = None,
+    disciplina_id: int | None = None,
+    professor_usuario_id: int | None = None,
+    estudante_id: int | None = None,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT
+            r.id,
+            r.periodo_id,
+            COALESCE(p.nome, '') AS periodo_nome,
+            COALESCE(p.ano_letivo, r.ano_letivo, 0) AS ano_letivo,
+            COALESCE(p.etapa, r.bimestre, 0) AS etapa,
+            COALESCE(p.status, '') AS periodo_status,
+            r.professor_usuario_id AS professor_id,
+            COALESCE(u.nome, '') AS professor_nome,
+            r.turma_id,
+            COALESCE(t.nome, '') AS turma_nome,
+            r.disciplina_id,
+            COALESCE(d.nome, r.disciplina, '') AS disciplina_nome,
+            r.estudante_id,
+            COALESCE(e.nome, '') AS estudante_nome,
+            COALESCE(r.nivel_atencao, '') AS nivel_atencao,
+            COALESCE(r.observacao_professor, r.observacoes, '') AS observacao_professor,
+            COALESCE(r.texto_gerado, '') AS texto_gerado,
+            r.criado_em,
+            r.atualizado_em
+        FROM pre_conselho_registros r
+        LEFT JOIN pre_conselho_periodos p ON p.id = r.periodo_id
+        LEFT JOIN usuarios u ON u.id = r.professor_usuario_id
+        LEFT JOIN turmas t ON t.id = r.turma_id
+        LEFT JOIN disciplinas d ON d.id = r.disciplina_id
+        LEFT JOIN estudantes e ON e.id = r.estudante_id
+        WHERE 1 = 1
+    """
+    params = []
+
+    if periodo_id is not None and int(periodo_id or 0) > 0:
+        query += " AND r.periodo_id = ?"
+        params.append(int(periodo_id))
+    if turma_id is not None and int(turma_id or 0) > 0:
+        query += " AND r.turma_id = ?"
+        params.append(int(turma_id))
+    if disciplina_id is not None and int(disciplina_id or 0) > 0:
+        query += " AND r.disciplina_id = ?"
+        params.append(int(disciplina_id))
+    if professor_usuario_id is not None and int(professor_usuario_id or 0) > 0:
+        query += " AND r.professor_usuario_id = ?"
+        params.append(int(professor_usuario_id))
+    if estudante_id is not None and int(estudante_id or 0) > 0:
+        query += " AND r.estudante_id = ?"
+        params.append(int(estudante_id))
+
+    query += """
+        ORDER BY
+            t.nome COLLATE NOCASE ASC,
+            d.nome COLLATE NOCASE ASC,
+            e.nome COLLATE NOCASE ASC,
+            r.id ASC
+    """
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    motivos_map = _carregar_motivos_pre_conselho_por_registro_ids(
+        cursor,
+        [int(row["id"]) for row in rows],
+    )
+    itens = [
+        _normalizar_linha_registro_pre_conselho(dict(row), motivos_map)
+        for row in rows
+    ]
+    conn.close()
+    return itens
+
+
+def buscar_registro_pre_conselho_por_id(registro_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT
+            r.id,
+            r.periodo_id,
+            COALESCE(p.nome, '') AS periodo_nome,
+            COALESCE(p.ano_letivo, r.ano_letivo, 0) AS ano_letivo,
+            COALESCE(p.etapa, r.bimestre, 0) AS etapa,
+            COALESCE(p.status, '') AS periodo_status,
+            r.professor_usuario_id AS professor_id,
+            COALESCE(u.nome, '') AS professor_nome,
+            r.turma_id,
+            COALESCE(t.nome, '') AS turma_nome,
+            r.disciplina_id,
+            COALESCE(d.nome, r.disciplina, '') AS disciplina_nome,
+            r.estudante_id,
+            COALESCE(e.nome, '') AS estudante_nome,
+            COALESCE(r.nivel_atencao, '') AS nivel_atencao,
+            COALESCE(r.observacao_professor, r.observacoes, '') AS observacao_professor,
+            COALESCE(r.texto_gerado, '') AS texto_gerado,
+            r.criado_em,
+            r.atualizado_em
+        FROM pre_conselho_registros r
+        LEFT JOIN pre_conselho_periodos p ON p.id = r.periodo_id
+        LEFT JOIN usuarios u ON u.id = r.professor_usuario_id
+        LEFT JOIN turmas t ON t.id = r.turma_id
+        LEFT JOIN disciplinas d ON d.id = r.disciplina_id
+        LEFT JOIN estudantes e ON e.id = r.estudante_id
+        WHERE r.id = ?
+    """, (int(registro_id),))
+
+    row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return None
+
+    motivos_map = _carregar_motivos_pre_conselho_por_registro_ids(cursor, [int(registro_id)])
+    item = _normalizar_linha_registro_pre_conselho(dict(row), motivos_map)
+    conn.close()
+    return item
+
+
+def listar_estudantes_pre_conselho_painel(
+    *,
+    periodo_id: int,
+    turma_id: int,
+    disciplina_id: int,
+    professor_usuario_id: int,
+    busca_nome: str = "",
+    status: str = "todos",
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT
+            e.id AS estudante_id,
+            e.nome,
+            e.turma_id,
+            COALESCE(t.nome, '') AS turma_nome,
+            r.id AS registro_id,
+            COALESCE(r.nivel_atencao, '') AS nivel_atencao,
+            COALESCE(r.observacao_professor, r.observacoes, '') AS observacao_professor,
+            COALESCE(r.texto_gerado, '') AS texto_gerado
+        FROM estudantes e
+        LEFT JOIN turmas t ON t.id = e.turma_id
+        LEFT JOIN pre_conselho_registros r
+            ON r.estudante_id = e.id
+           AND r.periodo_id = ?
+           AND r.turma_id = e.turma_id
+           AND r.disciplina_id = ?
+           AND r.professor_usuario_id = ?
+        WHERE e.ativo = 1
+          AND e.turma_id = ?
+    """
+    params = [
+        int(periodo_id),
+        int(disciplina_id),
+        int(professor_usuario_id),
+        int(turma_id),
+    ]
+
+    nome_limpo = _normalizar_nome_catalogo(busca_nome).lower()
+    if nome_limpo:
+        query += " AND LOWER(COALESCE(e.nome, '')) LIKE ?"
+        params.append(f"%{nome_limpo}%")
+
+    status_limpo = _normalizar_nome_catalogo(status).lower()
+    if status_limpo == "sinalizados":
+        query += " AND r.id IS NOT NULL"
+    elif status_limpo == "nao_sinalizados":
+        query += " AND r.id IS NULL"
+
+    query += " ORDER BY e.nome COLLATE NOCASE ASC, e.id ASC"
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    registro_ids = [int(row["registro_id"]) for row in rows if row["registro_id"] is not None]
+    motivos_map = _carregar_motivos_pre_conselho_por_registro_ids(cursor, registro_ids)
+    conn.close()
+
+    itens = []
+    for row in rows:
+        item = dict(row)
+        registro_id = int(item["registro_id"]) if item["registro_id"] is not None else None
+        motivos = list(motivos_map.get(int(registro_id), [])) if registro_id else []
+        itens.append(
+            {
+                "estudante_id": int(item["estudante_id"]),
+                "nome": item["nome"],
+                "turma_id": int(item["turma_id"]),
+                "turma_nome": item["turma_nome"],
+                "sinalizado": registro_id is not None,
+                "registro_id": registro_id,
+                "nivel_atencao": item.get("nivel_atencao", "") or "",
+                "observacao_professor": item.get("observacao_professor", "") or "",
+                "texto_gerado": item.get("texto_gerado", "") or "",
+                "motivo_ids": [int(motivo["id"]) for motivo in motivos],
+                "motivos": motivos,
+            }
+        )
+    return itens
+
+
+def excluir_registro_pre_conselho(registro_id: int, *, professor_usuario_id: int | None = None):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = "DELETE FROM pre_conselho_registros WHERE id = ?"
+    params = [int(registro_id)]
+    if professor_usuario_id is not None:
+        query += " AND professor_usuario_id = ?"
+        params.append(int(professor_usuario_id))
+
+    cursor.execute(query, params)
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado

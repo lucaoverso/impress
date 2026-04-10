@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pré-Conselho</title>
+    <link rel="stylesheet"
+        href="{{ request.url_for('static', path='css/style.css') }}?v={{ asset_version | default('1') }}">
+</head>
+
+<body>
+    <main class="pcpi-page preconselho-page">
+        <header class="admin-header admin-header-shell">
+            <div class="admin-header-main">
+                <h1>Módulo de Pré-Conselho</h1>
+                <p>Organize os registros pedagógicos por período, acompanhe os estudantes sinalizados e mantenha a
+                    consolidação pronta para atas e relatórios institucionais.</p>
+                <p id="preconselhoUsuario" class="pcpi-user-copy"></p>
+            </div>
+            <div class="scheduler-actions">
+                <button id="btnIrAdmin" type="button" hidden>Painel de gestão</button>
+                <button id="btnVoltarServicos" type="button">Voltar aos serviços</button>
+                <button id="btnSair" type="button">Sair</button>
+            </div>
+        </header>
+
+        <nav id="preconselhoTabs" class="admin-tabs" aria-label="Abas do módulo de pré-conselho">
+            <button id="tabBtnDocente" class="admin-tab-btn" data-preconselho-tab-trigger="docente"
+                aria-controls="preconselho-tab-docente" aria-selected="false" type="button" hidden>
+                Meu preenchimento
+            </button>
+            <button id="tabBtnConsolidacao" class="admin-tab-btn" data-preconselho-tab-trigger="consolidacao"
+                aria-controls="preconselho-tab-consolidacao" aria-selected="false" type="button" hidden>
+                Consolidação
+            </button>
+            <button id="tabBtnConfiguracoes" class="admin-tab-btn" data-preconselho-tab-trigger="configuracoes"
+                aria-controls="preconselho-tab-configuracoes" aria-selected="false" type="button" hidden>
+                Configurações
+            </button>
+        </nav>
+
+        <section class="preconselho-tab-panels">
+            <section id="preconselho-tab-docente" class="admin-tab-panel" data-preconselho-tab-panel="docente" hidden>
+                <section class="preconselho-workspace-grid">
+                    <article class="calendar-card pcpi-card pcpi-card-full">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">Professor</p>
+                                <h2>Organize o período e a turma</h2>
+                                <p>Selecione o período do pré-conselho e escolha uma combinação de turma e disciplina
+                                    da sua carga para iniciar o preenchimento.</p>
+                            </div>
+                        </div>
+
+                        <form id="formPreconselhoDocentePeriodo" class="pcpi-filter-grid">
+                            <label class="pcpi-field" for="preconselhoPeriodoDocente">
+                                <span>Período</span>
+                                <select id="preconselhoPeriodoDocente" required></select>
+                            </label>
+
+                            <div class="pcpi-inline-actions pcpi-field">
+                                <button id="btnAtualizarDocente" class="btn-destaque" type="submit">Atualizar painel</button>
+                            </div>
+                        </form>
+
+                        <div class="preconselho-summary-grid">
+                            <article class="preconselho-summary-card">
+                                <span>Combinações na carga</span>
+                                <strong id="preconselhoResumoTotalTurmas">0</strong>
+                                <small>Turma e disciplina disponíveis no período.</small>
+                            </article>
+                            <article class="preconselho-summary-card">
+                                <span>Estudantes sinalizados</span>
+                                <strong id="preconselhoResumoTotalSinalizados">0</strong>
+                                <small>Total já registrado no período selecionado.</small>
+                            </article>
+                            <article class="preconselho-summary-card">
+                                <span>Pendências</span>
+                                <strong id="preconselhoResumoTotalPendentes">0</strong>
+                                <small>Estudantes ainda não sinalizados nas combinações disponíveis.</small>
+                            </article>
+                        </div>
+
+                        <p id="msgPreconselhoDocente" class="pcpi-status-copy"></p>
+                    </article>
+
+                    <article class="calendar-card pcpi-card">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">Carga docente</p>
+                                <h2>Minhas turmas e disciplinas</h2>
+                                <p>Escolha a combinação em que deseja registrar ou revisar os estudantes sinalizados.
+                                </p>
+                            </div>
+                        </div>
+
+                        <div id="listaMinhasTurmasDisciplinas" class="preconselho-selection-list"></div>
+                    </article>
+
+                    <article class="calendar-card pcpi-card">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">Turma</p>
+                                <h2>Lista de estudantes</h2>
+                                <p>Busque por nome, filtre por situação e abra rapidamente o formulário individual.</p>
+                            </div>
+                        </div>
+
+                        <form id="formFiltrosEstudantesDocente" class="pcpi-filter-grid">
+                            <label class="pcpi-field" for="preconselhoBuscaEstudante">
+                                <span>Buscar estudante</span>
+                                <input id="preconselhoBuscaEstudante" type="text" placeholder="Digite parte do nome">
+                            </label>
+
+                            <label class="pcpi-field" for="preconselhoStatusEstudante">
+                                <span>Filtro</span>
+                                <select id="preconselhoStatusEstudante">
+                                    <option value="todos">Todos</option>
+                                    <option value="sinalizados">Sinalizados</option>
+                                    <option value="nao_sinalizados">Não sinalizados</option>
+                                </select>
+                            </label>
+                        </form>
+
+                        <p id="preconselhoResumoEstudantesDocente" class="pcpi-hint"></p>
+                        <ul id="listaEstudantesDocente" class="pcpi-list" aria-live="polite"></ul>
+                    </article>
+
+                    <article class="calendar-card pcpi-card pcpi-card-full">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">Registro individual</p>
+                                <h2>Parecer por estudante</h2>
+                                <p>Selecione os motivos padronizados, complemente com uma observação e revise o texto
+                                    pedagógico antes de salvar.</p>
+                            </div>
+                        </div>
+
+                        <div class="preconselho-editor-grid">
+                            <form id="formRegistroDocente" class="pcpi-form-grid preconselho-form-shell">
+                                <input id="preconselhoRegistroAtualId" type="hidden">
+                                <input id="preconselhoEstudanteAtualId" type="hidden">
+
+                                <div class="preconselho-highlight-box pcpi-field pcpi-field-wide">
+                                    <span>Estudante selecionado</span>
+                                    <strong id="preconselhoEstudanteSelecionadoNome">Selecione um estudante para iniciar.</strong>
+                                    <small id="preconselhoEstudanteSelecionadoMeta">Os dados do registro aparecerão aqui.</small>
+                                </div>
+
+                                <label class="pcpi-field pcpi-field-wide preconselho-toggle-field" for="preconselhoSinalizarEstudante">
+                                    <span>Sinalização</span>
+                                    <span class="preconselho-toggle-row">
+                                        <input id="preconselhoSinalizarEstudante" type="checkbox">
+                                        <strong>Sinalizar estudante para o pré-conselho</strong>
+                                    </span>
+                                </label>
+
+                                <label class="pcpi-field" for="preconselhoNivelAtencao">
+                                    <span>Nível de atenção</span>
+                                    <select id="preconselhoNivelAtencao"></select>
+                                </label>
+
+                                <label class="pcpi-field" for="preconselhoObservacaoProfessor">
+                                    <span>Observação complementar</span>
+                                    <textarea id="preconselhoObservacaoProfessor" rows="4" maxlength="1000"
+                                        placeholder="Complemento opcional para enriquecer o parecer pedagógico."></textarea>
+                                </label>
+
+                                <div class="pcpi-field pcpi-field-wide">
+                                    <span>Motivos padronizados</span>
+                                    <div id="preconselhoMotivosDocente" class="preconselho-motivos-board"></div>
+                                </div>
+
+                                <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
+                                    <button id="btnSalvarRegistroDocente" class="btn-destaque" type="submit">Salvar registro</button>
+                                    <button id="btnLimparRegistroDocente" type="button">Limpar formulário</button>
+                                    <button id="btnExcluirRegistroDocente" type="button">Excluir registro</button>
+                                </div>
+
+                                <p id="msgPreconselhoRegistro" class="pcpi-status-copy pcpi-field-wide"></p>
+                            </form>
+
+                            <div class="preconselho-preview-stack">
+                                <article class="preconselho-preview-card">
+                                    <div class="pcpi-subsection-header">
+                                        <h3>Pré-visualização do parecer</h3>
+                                    </div>
+                                    <textarea id="preconselhoTextoPreview" class="pcpi-textarea" rows="10" readonly
+                                        placeholder="O parecer individual será gerado automaticamente com base nos motivos selecionados."></textarea>
+                                    <p id="preconselhoPreviewAjuda" class="pcpi-hint"></p>
+                                </article>
+
+                                <article class="preconselho-preview-card">
+                                    <div class="pcpi-subsection-header">
+                                        <h3>Registros da turma e disciplina</h3>
+                                        <span id="preconselhoResumoRegistrosDocente" class="pcpi-chip pcpi-chip-manual">0 registros</span>
+                                    </div>
+                                    <ul id="listaRegistrosDocente" class="pcpi-list" aria-live="polite"></ul>
+                                </article>
+                            </div>
+                        </div>
+                    </article>
+                </section>
+            </section>
+
+            <section id="preconselho-tab-consolidacao" class="admin-tab-panel" data-preconselho-tab-panel="consolidacao" hidden>
+                <section class="preconselho-workspace-grid">
+                    <article class="calendar-card pcpi-card pcpi-card-full">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">Coordenação</p>
+                                <h2>Consolidação por período</h2>
+                                <p>Filtre os registros do pré-conselho por período, turma, disciplina e professor para
+                                    acompanhar os apontamentos e produzir o texto consolidado.</p>
+                            </div>
+                            <div class="pcpi-inline-actions">
+                                <button id="btnCopiarTextoConsolidado" type="button">Copiar texto consolidado</button>
+                            </div>
+                        </div>
+
+                        <form id="formConsolidacaoPreconselho" class="pcpi-filter-grid">
+                            <label class="pcpi-field" for="preconselhoPeriodoConsolidacao">
+                                <span>Período</span>
+                                <select id="preconselhoPeriodoConsolidacao" required></select>
+                            </label>
+
+                            <label class="pcpi-field" for="preconselhoProfessorConsolidacao">
+                                <span>Professor</span>
+                                <select id="preconselhoProfessorConsolidacao"></select>
+                            </label>
+
+                            <label class="pcpi-field" for="preconselhoTurmaConsolidacao">
+                                <span>Turma</span>
+                                <select id="preconselhoTurmaConsolidacao"></select>
+                            </label>
+
+                            <label class="pcpi-field" for="preconselhoDisciplinaConsolidacao">
+                                <span>Disciplina</span>
+                                <select id="preconselhoDisciplinaConsolidacao"></select>
+                            </label>
+
+                            <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
+                                <button id="btnAtualizarConsolidacao" class="btn-destaque" type="submit">Atualizar consolidação</button>
+                            </div>
+                        </form>
+
+                        <div class="preconselho-summary-grid">
+                            <article class="preconselho-summary-card">
+                                <span>Registros</span>
+                                <strong id="preconselhoResumoConsolidadoRegistros">0</strong>
+                                <small>Total de apontamentos retornados pelo filtro.</small>
+                            </article>
+                            <article class="preconselho-summary-card">
+                                <span>Estudantes</span>
+                                <strong id="preconselhoResumoConsolidadoEstudantes">0</strong>
+                                <small>Total de estudantes únicos sinalizados.</small>
+                            </article>
+                            <article class="preconselho-summary-card">
+                                <span>Motivos frequentes</span>
+                                <strong id="preconselhoResumoConsolidadoMotivos">0</strong>
+                                <small>Quantidade de motivos destacados na síntese.</small>
+                            </article>
+                        </div>
+
+                        <p id="msgPreconselhoConsolidacao" class="pcpi-status-copy"></p>
+                    </article>
+
+                    <article class="calendar-card pcpi-card">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">Resultados</p>
+                                <h2>Registros encontrados</h2>
+                                <p>Revise os pareceres individuais gerados pelos professores antes de utilizar a
+                                    consolidação em reunião ou ata.</p>
+                            </div>
+                        </div>
+
+                        <ul id="listaRegistrosConsolidacao" class="pcpi-list" aria-live="polite"></ul>
+                    </article>
+
+                    <article class="calendar-card pcpi-card">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">Síntese</p>
+                                <h2>Texto consolidado</h2>
+                                <p>Saída institucional determinística preparada para futura exportação.</p>
+                            </div>
+                        </div>
+
+                        <p id="preconselhoMotivosFrequentes" class="pcpi-hint"></p>
+                        <textarea id="preconselhoTextoConsolidado" class="pcpi-textarea" rows="16" readonly
+                            placeholder="A consolidação aparecerá aqui após a aplicação dos filtros."></textarea>
+                    </article>
+                </section>
+            </section>
+
+            <section id="preconselho-tab-configuracoes" class="admin-tab-panel" data-preconselho-tab-panel="configuracoes" hidden>
+                <section class="preconselho-config-grid">
+                    <article class="calendar-card pcpi-card">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">Administração</p>
+                                <h2>Períodos de pré-conselho</h2>
+                                <p>Cadastre, ajuste e controle a abertura dos períodos usados pelos professores.</p>
+                            </div>
+                        </div>
+
+                        <form id="formPeriodoPreconselho" class="pcpi-form-grid">
+                            <input id="preconselhoPeriodoEdicaoId" type="hidden">
+
+                            <label class="pcpi-field pcpi-field-wide" for="preconselhoPeriodoNome">
+                                <span>Nome</span>
+                                <input id="preconselhoPeriodoNome" type="text" maxlength="120"
+                                    placeholder="Ex.: 2º Bimestre 2026">
+                            </label>
+
+                            <label class="pcpi-field" for="preconselhoPeriodoAnoLetivo">
+                                <span>Ano letivo</span>
+                                <input id="preconselhoPeriodoAnoLetivo" type="number" min="2000" max="2100" required>
+                            </label>
+
+                            <label class="pcpi-field" for="preconselhoPeriodoEtapa">
+                                <span>Etapa</span>
+                                <select id="preconselhoPeriodoEtapa" required>
+                                    <option value="1">1º Bimestre</option>
+                                    <option value="2">2º Bimestre</option>
+                                    <option value="3">3º Bimestre</option>
+                                    <option value="4">4º Bimestre</option>
+                                </select>
+                            </label>
+
+                            <label class="pcpi-field" for="preconselhoPeriodoDataInicio">
+                                <span>Data inicial</span>
+                                <input id="preconselhoPeriodoDataInicio" type="date" required>
+                            </label>
+
+                            <label class="pcpi-field" for="preconselhoPeriodoDataFim">
+                                <span>Data final</span>
+                                <input id="preconselhoPeriodoDataFim" type="date" required>
+                            </label>
+
+                            <label class="pcpi-field pcpi-field-wide" for="preconselhoPeriodoStatusForm">
+                                <span>Status inicial ou desejado</span>
+                                <select id="preconselhoPeriodoStatusForm">
+                                    <option value="ABERTO">Aberto</option>
+                                    <option value="FECHADO">Fechado</option>
+                                </select>
+                            </label>
+
+                            <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
+                                <button id="btnSalvarPeriodoPreconselho" class="btn-destaque" type="submit">Salvar período</button>
+                                <button id="btnLimparPeriodoPreconselho" type="button">Limpar formulário</button>
+                            </div>
+                        </form>
+
+                        <p id="msgPreconselhoPeriodo" class="pcpi-status-copy"></p>
+
+                        <div class="preconselho-table-wrap">
+                            <table class="preconselho-table">
+                                <thead>
+                                    <tr>
+                                        <th>Período</th>
+                                        <th>Status</th>
+                                        <th>Datas</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyPeriodosPreconselho"></tbody>
+                            </table>
+                        </div>
+                    </article>
+
+                    <article class="calendar-card pcpi-card">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">Administração</p>
+                                <h2>Motivos padronizados</h2>
+                                <p>Mantenha o catálogo de motivos utilizado pelo professor no preenchimento do
+                                    pré-conselho.</p>
+                            </div>
+                        </div>
+
+                        <form id="formMotivoPreconselho" class="pcpi-form-grid">
+                            <input id="preconselhoMotivoEdicaoId" type="hidden">
+
+                            <label class="pcpi-field" for="preconselhoMotivoCategoria">
+                                <span>Categoria</span>
+                                <select id="preconselhoMotivoCategoria" required></select>
+                            </label>
+
+                            <label class="pcpi-field" for="preconselhoMotivoCodigo">
+                                <span>Código</span>
+                                <input id="preconselhoMotivoCodigo" type="text" maxlength="120"
+                                    placeholder="Ex.: nao_fez_prova_bimestral" required>
+                            </label>
+
+                            <label class="pcpi-field pcpi-field-wide" for="preconselhoMotivoDescricao">
+                                <span>Descrição</span>
+                                <input id="preconselhoMotivoDescricao" type="text" maxlength="255"
+                                    placeholder="Ex.: Não fez a prova bimestral" required>
+                            </label>
+
+                            <label class="pcpi-field" for="preconselhoMotivoOrdem">
+                                <span>Ordem</span>
+                                <input id="preconselhoMotivoOrdem" type="number" min="0" step="10" value="0">
+                            </label>
+
+                            <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
+                                <button id="btnSalvarMotivoPreconselho" class="btn-destaque" type="submit">Salvar motivo</button>
+                                <button id="btnLimparMotivoPreconselho" type="button">Limpar formulário</button>
+                            </div>
+                        </form>
+
+                        <p id="msgPreconselhoMotivo" class="pcpi-status-copy"></p>
+
+                        <div class="preconselho-table-wrap">
+                            <table class="preconselho-table">
+                                <thead>
+                                    <tr>
+                                        <th>Categoria</th>
+                                        <th>Descrição</th>
+                                        <th>Status</th>
+                                        <th>Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyMotivosPreconselho"></tbody>
+                            </table>
+                        </div>
+                    </article>
+                </section>
+            </section>
+        </section>
+    </main>
+
+    <script src="{{ request.url_for('static', path='js/preconselho.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+
+</html>

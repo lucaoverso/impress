@@ -26,9 +26,9 @@ function modulosPermitidos(usuario = {}) {
     }
 
     const cargo = normalizarCargoUsuario(usuario);
-    if (cargo === "ADMIN") return new Set(["impressao", "agendamento", "gestao", "coordenacao", "pcpi"]);
-    if (cargo === "COORDENADOR") return new Set(["coordenacao", "pcpi"]);
-    return new Set(["impressao", "agendamento"]);
+    if (cargo === "ADMIN") return new Set(["impressao", "agendamento", "gestao", "coordenacao", "pcpi", "preconselho"]);
+    if (cargo === "COORDENADOR") return new Set(["coordenacao", "pcpi", "preconselho"]);
+    return new Set(["impressao", "agendamento", "preconselho"]);
 }
 
 function aplicarVisibilidadeModulos(modulos) {
@@ -67,6 +67,13 @@ function registrarEventos() {
     document.getElementById("btnIrAgendamento").addEventListener("click", () => {
         window.location.href = "/agendamento";
     });
+
+    const btnIrPreconselho = document.getElementById("btnIrPreconselho");
+    if (btnIrPreconselho) {
+        btnIrPreconselho.addEventListener("click", () => {
+            window.location.href = "/preconselho";
+        });
+    }
 
     document.getElementById("btnIrGestao").addEventListener("click", () => {
         window.location.href = "/admin";
