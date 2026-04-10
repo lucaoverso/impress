@@ -85,122 +85,126 @@
                         <p id="msgPreconselhoDocente" class="pcpi-status-copy"></p>
                     </article>
 
-                    <article class="calendar-card pcpi-card">
-                        <div class="pcpi-card-header">
-                            <div>
-                                <p class="pcpi-eyebrow">Carga docente</p>
-                                <h2>Minhas turmas e disciplinas</h2>
-                                <p>Escolha a combinação em que deseja registrar ou revisar os estudantes sinalizados.
-                                </p>
-                            </div>
-                        </div>
-
-                        <div id="listaMinhasTurmasDisciplinas" class="preconselho-selection-list"></div>
-                    </article>
-
-                    <article class="calendar-card pcpi-card">
-                        <div class="pcpi-card-header">
-                            <div>
-                                <p class="pcpi-eyebrow">Turma</p>
-                                <h2>Lista de estudantes</h2>
-                                <p>Busque por nome, filtre por situação e abra rapidamente o formulário individual.</p>
-                            </div>
-                        </div>
-
-                        <form id="formFiltrosEstudantesDocente" class="pcpi-filter-grid">
-                            <label class="pcpi-field" for="preconselhoBuscaEstudante">
-                                <span>Buscar estudante</span>
-                                <input id="preconselhoBuscaEstudante" type="text" placeholder="Digite parte do nome">
-                            </label>
-
-                            <label class="pcpi-field" for="preconselhoStatusEstudante">
-                                <span>Filtro</span>
-                                <select id="preconselhoStatusEstudante">
-                                    <option value="todos">Todos</option>
-                                    <option value="sinalizados">Sinalizados</option>
-                                    <option value="nao_sinalizados">Não sinalizados</option>
-                                </select>
-                            </label>
-                        </form>
-
-                        <p id="preconselhoResumoEstudantesDocente" class="pcpi-hint"></p>
-                        <ul id="listaEstudantesDocente" class="pcpi-list" aria-live="polite"></ul>
-                    </article>
-
-                    <article class="calendar-card pcpi-card pcpi-card-full">
-                        <div class="pcpi-card-header">
-                            <div>
-                                <p class="pcpi-eyebrow">Registro individual</p>
-                                <h2>Parecer por estudante</h2>
-                                <p>Selecione os motivos padronizados, complemente com uma observação e revise o texto
-                                    pedagógico antes de salvar.</p>
-                            </div>
-                        </div>
-
-                        <div class="preconselho-editor-grid">
-                            <form id="formRegistroDocente" class="pcpi-form-grid preconselho-form-shell">
-                                <input id="preconselhoRegistroAtualId" type="hidden">
-                                <input id="preconselhoEstudanteAtualId" type="hidden">
-
-                                <div class="preconselho-highlight-box pcpi-field pcpi-field-wide">
-                                    <span>Estudante selecionado</span>
-                                    <strong id="preconselhoEstudanteSelecionadoNome">Selecione um estudante para iniciar.</strong>
-                                    <small id="preconselhoEstudanteSelecionadoMeta">Os dados do registro aparecerão aqui.</small>
+                    <section class="preconselho-docente-board pcpi-card-full">
+                        <article class="calendar-card pcpi-card preconselho-docente-column">
+                            <div class="pcpi-card-header">
+                                <div>
+                                    <p class="pcpi-eyebrow">Carga docente</p>
+                                    <h2>Minhas turmas e disciplinas</h2>
+                                    <p>Escolha a combinação em que deseja registrar ou revisar os estudantes sinalizados.
+                                    </p>
                                 </div>
+                            </div>
 
-                                <label class="pcpi-field pcpi-field-wide preconselho-toggle-field" for="preconselhoSinalizarEstudante">
-                                    <span>Sinalização</span>
-                                    <span class="preconselho-toggle-row">
-                                        <input id="preconselhoSinalizarEstudante" type="checkbox">
-                                        <strong>Sinalizar estudante para o pré-conselho</strong>
-                                    </span>
+                            <div class="preconselho-rail-scroll">
+                                <div id="listaMinhasTurmasDisciplinas" class="preconselho-selection-list"></div>
+                            </div>
+                        </article>
+
+                        <article class="calendar-card pcpi-card preconselho-docente-column">
+                            <div class="pcpi-card-header">
+                                <div>
+                                    <p class="pcpi-eyebrow">Turma</p>
+                                    <h2>Lista de estudantes</h2>
+                                    <p>Busque por nome, filtre por situação e clique no estudante para abrir o editor ao lado.</p>
+                                </div>
+                            </div>
+
+                            <form id="formFiltrosEstudantesDocente" class="pcpi-filter-grid preconselho-filter-stack">
+                                <label class="pcpi-field" for="preconselhoBuscaEstudante">
+                                    <span>Buscar estudante</span>
+                                    <input id="preconselhoBuscaEstudante" type="text" placeholder="Digite parte do nome">
                                 </label>
 
-                                <label class="pcpi-field" for="preconselhoNivelAtencao">
-                                    <span>Nível de atenção</span>
-                                    <select id="preconselhoNivelAtencao"></select>
+                                <label class="pcpi-field" for="preconselhoStatusEstudante">
+                                    <span>Filtro</span>
+                                    <select id="preconselhoStatusEstudante">
+                                        <option value="todos">Todos</option>
+                                        <option value="sinalizados">Sinalizados</option>
+                                        <option value="nao_sinalizados">Não sinalizados</option>
+                                    </select>
                                 </label>
-
-                                <label class="pcpi-field" for="preconselhoObservacaoProfessor">
-                                    <span>Observação complementar</span>
-                                    <textarea id="preconselhoObservacaoProfessor" rows="4" maxlength="1000"
-                                        placeholder="Complemento opcional para enriquecer o parecer pedagógico."></textarea>
-                                </label>
-
-                                <div class="pcpi-field pcpi-field-wide">
-                                    <span>Motivos padronizados</span>
-                                    <div id="preconselhoMotivosDocente" class="preconselho-motivos-board"></div>
-                                </div>
-
-                                <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
-                                    <button id="btnSalvarRegistroDocente" class="btn-destaque" type="submit">Salvar registro</button>
-                                    <button id="btnLimparRegistroDocente" type="button">Limpar formulário</button>
-                                    <button id="btnExcluirRegistroDocente" type="button">Excluir registro</button>
-                                </div>
-
-                                <p id="msgPreconselhoRegistro" class="pcpi-status-copy pcpi-field-wide"></p>
                             </form>
 
-                            <div class="preconselho-preview-stack">
-                                <article class="preconselho-preview-card">
-                                    <div class="pcpi-subsection-header">
-                                        <h3>Pré-visualização do parecer</h3>
-                                    </div>
-                                    <textarea id="preconselhoTextoPreview" class="pcpi-textarea" rows="10" readonly
-                                        placeholder="O parecer individual será gerado automaticamente com base nos motivos selecionados."></textarea>
-                                    <p id="preconselhoPreviewAjuda" class="pcpi-hint"></p>
-                                </article>
-
-                                <article class="preconselho-preview-card">
-                                    <div class="pcpi-subsection-header">
-                                        <h3>Registros da turma e disciplina</h3>
-                                        <span id="preconselhoResumoRegistrosDocente" class="pcpi-chip pcpi-chip-manual">0 registros</span>
-                                    </div>
-                                    <ul id="listaRegistrosDocente" class="pcpi-list" aria-live="polite"></ul>
-                                </article>
+                            <p id="preconselhoResumoEstudantesDocente" class="pcpi-hint"></p>
+                            <div class="preconselho-rail-scroll">
+                                <ul id="listaEstudantesDocente" class="pcpi-list" aria-live="polite"></ul>
                             </div>
-                        </div>
-                    </article>
+                        </article>
+
+                        <article id="preconselhoPainelEditor" class="calendar-card pcpi-card preconselho-docente-column preconselho-docente-editor-card">
+                            <div class="pcpi-card-header">
+                                <div>
+                                    <p class="pcpi-eyebrow">Registro individual</p>
+                                    <h2>Parecer por estudante</h2>
+                                    <p>Os dados do estudante ficam sempre visíveis aqui. Ao salvar, a sinalização é feita automaticamente.</p>
+                                </div>
+                            </div>
+
+                            <div class="preconselho-editor-scroll">
+                                <form id="formRegistroDocente" class="pcpi-form-grid preconselho-form-shell">
+                                    <input id="preconselhoRegistroAtualId" type="hidden">
+                                    <input id="preconselhoEstudanteAtualId" type="hidden">
+                                    <input id="preconselhoSinalizarEstudante" type="checkbox" hidden>
+
+                                    <div class="preconselho-highlight-box pcpi-field pcpi-field-wide">
+                                        <span>Estudante selecionado</span>
+                                        <strong id="preconselhoEstudanteSelecionadoNome">Selecione um estudante para iniciar.</strong>
+                                        <small id="preconselhoEstudanteSelecionadoMeta">Os dados do registro aparecerão aqui.</small>
+                                    </div>
+
+                                    <div class="preconselho-status-banner pcpi-field pcpi-field-wide">
+                                        <span>Sinalização</span>
+                                        <strong id="preconselhoStatusSelecionadoTitulo">Nenhum estudante em edição</strong>
+                                        <small id="preconselhoStatusSelecionadoTexto">Quando você selecionar um estudante e salvar o formulário, a sinalização será aplicada automaticamente.</small>
+                                    </div>
+
+                                    <label class="pcpi-field" for="preconselhoNivelAtencao">
+                                        <span>Nível de atenção</span>
+                                        <select id="preconselhoNivelAtencao"></select>
+                                    </label>
+
+                                    <label class="pcpi-field" for="preconselhoObservacaoProfessor">
+                                        <span>Observação complementar</span>
+                                        <textarea id="preconselhoObservacaoProfessor" rows="4" maxlength="1000"
+                                            placeholder="Complemento opcional para enriquecer o parecer pedagógico."></textarea>
+                                    </label>
+
+                                    <div class="pcpi-field pcpi-field-wide">
+                                        <span>Motivos padronizados</span>
+                                        <div id="preconselhoMotivosDocente" class="preconselho-motivos-board"></div>
+                                    </div>
+
+                                    <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
+                                        <button id="btnSalvarRegistroDocente" class="btn-destaque" type="submit">Salvar registro</button>
+                                        <button id="btnLimparRegistroDocente" type="button">Limpar formulário</button>
+                                        <button id="btnExcluirRegistroDocente" type="button">Excluir registro</button>
+                                    </div>
+
+                                    <p id="msgPreconselhoRegistro" class="pcpi-status-copy pcpi-field-wide"></p>
+                                </form>
+
+                                <div class="preconselho-preview-stack">
+                                    <article class="preconselho-preview-card">
+                                        <div class="pcpi-subsection-header">
+                                            <h3>Pré-visualização do parecer</h3>
+                                        </div>
+                                        <textarea id="preconselhoTextoPreview" class="pcpi-textarea" rows="10" readonly
+                                            placeholder="O parecer individual será gerado automaticamente com base nos motivos selecionados."></textarea>
+                                        <p id="preconselhoPreviewAjuda" class="pcpi-hint"></p>
+                                    </article>
+
+                                    <article class="preconselho-preview-card">
+                                        <div class="pcpi-subsection-header">
+                                            <h3>Registros da turma e disciplina</h3>
+                                            <span id="preconselhoResumoRegistrosDocente" class="pcpi-chip pcpi-chip-manual">0 registros</span>
+                                        </div>
+                                        <ul id="listaRegistrosDocente" class="pcpi-list preconselho-registros-list" aria-live="polite"></ul>
+                                    </article>
+                                </div>
+                            </div>
+                        </article>
+                    </section>
                 </section>
             </section>
 

@@ -264,6 +264,36 @@ function aplicarSelecaoMotivosDocente(motivoIds = []) {
     });
 }
 
+function atualizarStatusSinalizacaoDocente({ possuiEstudante = false, possuiRegistro = false } = {}) {
+    if (!possuiEstudante) {
+        el("preconselhoStatusSelecionadoTitulo").textContent = "Nenhum estudante em edição";
+        el("preconselhoStatusSelecionadoTexto").textContent =
+            "Quando você selecionar um estudante e salvar o formulário, a sinalização será aplicada automaticamente.";
+        return;
+    }
+
+    if (possuiRegistro) {
+        el("preconselhoStatusSelecionadoTitulo").textContent = "Estudante já sinalizado";
+        el("preconselhoStatusSelecionadoTexto").textContent =
+            "Ao salvar novamente, o parecer será atualizado. Para remover a sinalização desta seleção, use Excluir registro.";
+        return;
+    }
+
+    el("preconselhoStatusSelecionadoTitulo").textContent = "Sinalização automática no salvamento";
+    el("preconselhoStatusSelecionadoTexto").textContent =
+        "Este estudante será sinalizado automaticamente assim que o registro for salvo nesta turma, disciplina e período.";
+}
+
+function focarEditorDocenteSeNecessario() {
+    if (!window.matchMedia("(max-width: 980px)").matches) {
+        return;
+    }
+    const painel = el("preconselhoPainelEditor");
+    if (painel) {
+        painel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+}
+
 function limparFormularioDocente() {
     estadoDocente.estudanteId = null;
     el("preconselhoRegistroAtualId").value = "";
@@ -276,6 +306,7 @@ function limparFormularioDocente() {
     aplicarSelecaoMotivosDocente([]);
     el("preconselhoTextoPreview").value = "";
     el("preconselhoPreviewAjuda").textContent = "Selecione um estudante e marque os motivos para gerar a pré-visualização.";
+    atualizarStatusSinalizacaoDocente();
     atualizarEstadoFormularioDocente();
     renderizarEstudantesDocente();
 }
@@ -285,10 +316,8 @@ function definirBotoesDocenteHabilitados() {
     const registro = registroDocenteAtual();
     const possuiEstudante = Number(estadoDocente.estudanteId || 0) > 0;
     const podeEditar = Boolean(periodo?.editavel);
-    const sinalizado = Boolean(el("preconselhoSinalizarEstudante").checked);
-    const camposHabilitados = possuiEstudante && podeEditar && sinalizado;
+    const camposHabilitados = possuiEstudante && podeEditar;
 
-    el("preconselhoSinalizarEstudante").disabled = !possuiEstudante || !podeEditar;
     el("preconselhoNivelAtencao").disabled = !camposHabilitados;
     el("preconselhoObservacaoProfessor").disabled = !camposHabilitados;
     document.querySelectorAll(".preconselho-motivo-checkbox").forEach((checkbox) => {
@@ -306,14 +335,13 @@ function definirBotoesDocenteHabilitados() {
         el("preconselhoPreviewAjuda").textContent = "O período selecionado está fechado para edição do professor. Os dados permanecem disponíveis para consulta.";
         return;
     }
-    if (!sinalizado) {
-        el("preconselhoPreviewAjuda").textContent = "Ative a sinalização para registrar o estudante no pré-conselho.";
-        return;
-    }
     if (obterMotivosSelecionadosDocente().length === 0) {
         el("preconselhoPreviewAjuda").textContent = "Selecione ao menos um motivo para gerar a pré-visualização.";
         return;
     }
+
+    el("preconselhoPreviewAjuda").textContent =
+        "O texto é atualizado automaticamente conforme os motivos e a observação selecionados.";
 }
 
 function atualizarEstadoFormularioDocente() {
@@ -569,7 +597,7 @@ function renderizarEstudantesDocente() {
                     <span class="pcpi-item-note">${escaparHtml(
                         item.sinalizado
                             ? `${item.motivos.length} motivo(s) selecionado(s)${nivel ? ` • Atencao ${nivel}` : ""}`
-                            : "Sem registro salvo para este estudante."
+                            : "Clique para preencher. Ao salvar, o estudante sera sinalizado automaticamente."
                     )}</span>
                 </button>
             </li>
@@ -639,22 +667,26 @@ function preencherFormularioComEstudante(estudante) {
     el("preconselhoEstudanteSelecionadoMeta").textContent = estudante.sinalizado
         ? `${estudante.turma_nome || ""} • Registro já salvo para a seleção atual.`
         : `${estudante.turma_nome || ""} • Ainda não sinalizado neste período e disciplina.`;
-    el("preconselhoSinalizarEstudante").checked = Boolean(estudante.sinalizado);
+    el("preconselhoSinalizarEstudante").checked = true;
     el("preconselhoNivelAtencao").value = String(estudante.nivel_atencao || "");
     el("preconselhoObservacaoProfessor").value = String(estudante.observacao_professor || "");
     aplicarSelecaoMotivosDocente(estudante.motivo_ids || []);
+    atualizarStatusSinalizacaoDocente({
+        possuiEstudante: true,
+        possuiRegistro: Boolean(estudante.sinalizado),
+    });
 
     renderizarEstudantesDocente();
     atualizarEstadoFormularioDocente();
+    focarEditorDocenteSeNecessario();
     void atualizarPreviewDocente();
 }
 
 async function atualizarPreviewDocente() {
     const possuiEstudante = Number(estadoDocente.estudanteId || 0) > 0;
-    const sinalizado = Boolean(el("preconselhoSinalizarEstudante").checked);
     const motivoIds = obterMotivosSelecionadosDocente();
 
-    if (!possuiEstudante || !sinalizado) {
+    if (!possuiEstudante) {
         el("preconselhoTextoPreview").value = "";
         atualizarEstadoFormularioDocente();
         return;
@@ -1203,11 +1235,9 @@ async function salvarRegistroDocente(event) {
     const periodo = periodoDocenteAtual();
     const combo = comboDocenteAtual();
     const estudanteId = Number(estadoDocente.estudanteId || 0);
-    const sinalizar = Boolean(el("preconselhoSinalizarEstudante").checked);
     const motivoIds = obterMotivosSelecionadosDocente();
     const observacao = String(el("preconselhoObservacaoProfessor").value || "").trim();
     const nivelAtencao = String(el("preconselhoNivelAtencao").value || "").trim() || null;
-    const registroIdAtual = Number(el("preconselhoRegistroAtualId").value || 0);
 
     if (!periodo || !combo) {
         definirMensagem("msgPreconselhoRegistro", "Selecione um período e uma turma/disciplina antes de salvar.", true);
@@ -1223,25 +1253,6 @@ async function salvarRegistroDocente(event) {
     }
 
     try {
-        if (!sinalizar) {
-            if (!registroIdAtual) {
-                definirMensagem("msgPreconselhoRegistro", "Ative a sinalização ou selecione um registro salvo para excluir.", true);
-                return;
-            }
-
-            const respostaExclusao = await fetchComAuth(`/preconselho/registros/${registroIdAtual}`, {
-                method: "DELETE",
-                headers
-            });
-            if (!respostaExclusao.ok) {
-                throw new Error(await obterMensagemErroResposta(respostaExclusao, "Nao foi possivel excluir o registro."));
-            }
-
-            await carregarPainelDocente();
-            definirMensagem("msgPreconselhoRegistro", "Registro excluido com sucesso.");
-            return;
-        }
-
         if (motivoIds.length === 0) {
             definirMensagem("msgPreconselhoRegistro", "Selecione ao menos um motivo para salvar o registro.", true);
             return;
@@ -1422,7 +1433,7 @@ function registrarEventos() {
         if (!botao) {
             return;
         }
-        const estudante = estadoDocente.estudantes.find((item) => Number(item.estudante_id) === Number(botao.dataset.estudanteId || 0));
+        const estudante = resolverEstudanteParaFormulario(botao.dataset.estudanteId || 0);
         preencherFormularioComEstudante(estudante);
     });
 
@@ -1464,10 +1475,6 @@ function registrarEventos() {
         await excluirRegistroDocente(registro.id, registro.estudante_id);
     });
 
-    el("preconselhoSinalizarEstudante").addEventListener("change", () => {
-        atualizarEstadoFormularioDocente();
-        agendarPreviewDocente();
-    });
     el("preconselhoNivelAtencao").addEventListener("change", agendarPreviewDocente);
     el("preconselhoObservacaoProfessor").addEventListener("input", agendarPreviewDocente);
     el("preconselhoMotivosDocente").addEventListener("change", (event) => {

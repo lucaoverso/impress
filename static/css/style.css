@@ -2188,6 +2188,43 @@ footer {
     font-size: 13px;
 }
 
+.preconselho-docente-board {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: minmax(240px, 0.82fr) minmax(320px, 1fr) minmax(420px, 1.08fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.preconselho-docente-column {
+    min-height: 0;
+}
+
+.preconselho-rail-scroll {
+    min-height: 0;
+    max-height: calc(100vh - 340px);
+    overflow: auto;
+    padding-right: 4px;
+}
+
+.preconselho-filter-stack {
+    margin-bottom: 4px;
+}
+
+.preconselho-docente-editor-card {
+    position: sticky;
+    top: 16px;
+}
+
+.preconselho-editor-scroll {
+    display: grid;
+    gap: 14px;
+    min-height: 0;
+    max-height: calc(100vh - 200px);
+    overflow: auto;
+    padding-right: 4px;
+}
+
 .preconselho-editor-grid {
     display: grid;
     grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.85fr);
@@ -2223,6 +2260,23 @@ footer {
 }
 
 .preconselho-highlight-box small {
+    color: #5f7186;
+    font-size: 13px;
+}
+
+.preconselho-status-banner {
+    padding: 12px 14px;
+    border: 1px solid #cfe1f0;
+    border-radius: 14px;
+    background: linear-gradient(180deg, #f5fbff 0%, #ffffff 100%);
+}
+
+.preconselho-status-banner strong {
+    color: #16314c;
+    font-size: 15px;
+}
+
+.preconselho-status-banner small {
     color: #5f7186;
     font-size: 13px;
 }
@@ -2282,6 +2336,12 @@ footer {
     justify-content: space-between;
     gap: 10px;
     flex-wrap: wrap;
+}
+
+.preconselho-registros-list {
+    max-height: 320px;
+    overflow: auto;
+    padding-right: 4px;
 }
 
 .preconselho-table-wrap {
@@ -2364,8 +2424,21 @@ footer {
     .preconselho-workspace-grid,
     .preconselho-config-grid,
     .preconselho-summary-grid,
-    .preconselho-editor-grid {
+    .preconselho-editor-grid,
+    .preconselho-docente-board {
         grid-template-columns: 1fr;
+    }
+
+    .preconselho-docente-editor-card {
+        position: static;
+    }
+
+    .preconselho-editor-scroll,
+    .preconselho-rail-scroll,
+    .preconselho-registros-list {
+        max-height: none;
+        overflow: visible;
+        padding-right: 0;
     }
 }
 
