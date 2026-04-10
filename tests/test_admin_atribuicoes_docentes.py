@@ -128,6 +128,61 @@ class AdminAtribuicoesDocentesTest(unittest.TestCase):
             self.assertEqual(len(listagem_final), 1)
             self.assertEqual(int(listagem_final[0]["turma_id"]), turma_fund_id)
 
+    def test_admin_sincroniza_turmas_por_professor_e_disciplina(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, main, models = _reload_modules(db_path)
+            database.criar_tabelas()
+
+            professor_id = int(
+                database.criar_professor(
+                    nome="Professor Lote",
+                    email="lote@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1988-03-18",
+                    aulas_semanais=15,
+                    turmas_quantidade=3,
+                    turmas=["7A", "7B", "8A"],
+                    disciplinas=["Matematica"],
+                )
+            )
+            turma_a_id = int(database.criar_turma("7A", "MATUTINO", 30))
+            turma_b_id = int(database.criar_turma("7B", "MATUTINO", 30))
+            turma_c_id = int(database.criar_turma("8A", "VESPERTINO", 28))
+            disciplina_id = int(database.criar_disciplina("Matematica", 5))
+
+            resposta_inicial = main.sincronizar_atribuicoes_docentes_admin_api(
+                payload=models.ProfessorDisciplinaTurmasSyncIn(
+                    professor_id=professor_id,
+                    disciplina_id=disciplina_id,
+                    turma_ids=[turma_a_id, turma_b_id],
+                ),
+                usuario=self._usuario_admin(),
+            )
+            self.assertEqual(int(resposta_inicial["criados"]), 2)
+            self.assertEqual(int(resposta_inicial["removidos"]), 0)
+            self.assertEqual(int(resposta_inicial["total_ativo"]), 2)
+
+            resposta_atualizacao = main.sincronizar_atribuicoes_docentes_admin_api(
+                payload=models.ProfessorDisciplinaTurmasSyncIn(
+                    professor_id=professor_id,
+                    disciplina_id=disciplina_id,
+                    turma_ids=[turma_b_id, turma_c_id],
+                ),
+                usuario=self._usuario_admin(),
+            )
+            self.assertEqual(int(resposta_atualizacao["criados"]), 1)
+            self.assertEqual(int(resposta_atualizacao["removidos"]), 1)
+            self.assertEqual(int(resposta_atualizacao["total_ativo"]), 2)
+
+            listagem = main.listar_atribuicoes_docentes_admin_api(
+                professor_id=professor_id,
+                disciplina_id=disciplina_id,
+                usuario=self._usuario_admin(),
+            )
+            turma_ids = sorted(int(item["turma_id"]) for item in listagem)
+            self.assertEqual(turma_ids, sorted([turma_b_id, turma_c_id]))
+
 
 if __name__ == "__main__":
     unittest.main()

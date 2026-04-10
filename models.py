@@ -343,6 +343,11 @@ class ProfessorTurmaDisciplinaCreateIn(BaseModel):
     turma_id: int
     disciplina_id: int
 
+class ProfessorDisciplinaTurmasSyncIn(BaseModel):
+    professor_id: int
+    disciplina_id: int
+    turma_ids: list[int] = Field(default_factory=list)
+
 class ProfessorTurmaDisciplinaOut(BaseModel):
     id: int
     professor_id: int

@@ -36,6 +36,7 @@ from pcpi_router import router as pcpi_router
 from preconselho_router import router as preconselho_router
 from services.auth_service import hash_senha
 from security.nt_hash import generate_nt_hash
+from services.atribuicoes_docentes_import_service import importar_atribuicoes_docentes_arquivo
 from models import (
     AgendamentoIn,
     ProfessorCreateIn,
@@ -44,6 +45,7 @@ from models import (
     ProfessorRedefinirSenhaAdminIn,
     CoordenadorCreateIn,
     ProfessorCargaIn,
+    ProfessorDisciplinaTurmasSyncIn,
     ProfessorTurmaDisciplinaCreateIn,
     ProfessorTurmaDisciplinaOut,
     TurmaCreateIn,
@@ -120,6 +122,7 @@ from database import (
     listar_professores_admin,
     listar_professores_agendamento,
     salvar_carga_professor,
+    sincronizar_atribuicoes_docentes_professor_disciplina,
     obter_regras_cota,
     atualizar_regras_cota,
     recalcular_cotas_mes,
@@ -336,6 +339,41 @@ def validar_payload_atribuicao_docente(payload: ProfessorTurmaDisciplinaCreateIn
         "professor_id": professor_id,
         "turma_id": turma_id,
         "disciplina_id": disciplina_id,
+    }
+
+
+def validar_payload_atribuicao_docente_lote(payload: ProfessorDisciplinaTurmasSyncIn):
+    professor_id = validar_numero_nao_negativo(payload.professor_id, "Professor")
+    disciplina_id = validar_numero_nao_negativo(payload.disciplina_id, "Disciplina")
+
+    if professor_id <= 0:
+        raise HTTPException(400, "Professor obrigatorio.")
+    if disciplina_id <= 0:
+        raise HTTPException(400, "Disciplina obrigatoria.")
+
+    professor = buscar_usuario_por_id(professor_id)
+    if not professor or normalizar_cargo_usuario(professor) != CARGO_PROFESSOR:
+        raise HTTPException(404, "Professor nao encontrado.")
+
+    disciplina = next((item for item in listar_disciplinas_ativas() if int(item["id"]) == disciplina_id), None)
+    if not disciplina:
+        raise HTTPException(404, "Disciplina nao encontrada ou inativa.")
+
+    turmas_ativas = {int(item["id"]): item for item in listar_turmas_ativas()}
+    turma_ids = []
+    for turma_id in payload.turma_ids or []:
+        valor = validar_numero_nao_negativo(turma_id, "Turma")
+        if valor <= 0:
+            continue
+        if valor not in turmas_ativas:
+            raise HTTPException(404, "Uma ou mais turmas nao foram encontradas ou estao inativas.")
+        if valor not in turma_ids:
+            turma_ids.append(valor)
+
+    return {
+        "professor_id": professor_id,
+        "disciplina_id": disciplina_id,
+        "turma_ids": turma_ids,
     }
 
 def _validar_dados_usuario_basicos(
@@ -1562,6 +1600,49 @@ def criar_atribuicao_docente_admin_api(
         )
     except sqlite3.IntegrityError as exc:
         raise HTTPException(409, "Esta atribuicao docente ja esta cadastrada.") from exc
+
+@app.put("/admin/atribuicoes-docentes/lote")
+def sincronizar_atribuicoes_docentes_admin_api(
+    payload: ProfessorDisciplinaTurmasSyncIn,
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    dados = validar_payload_atribuicao_docente_lote(payload)
+    resultado = sincronizar_atribuicoes_docentes_professor_disciplina(
+        professor_id=dados["professor_id"],
+        disciplina_id=dados["disciplina_id"],
+        turma_ids=dados["turma_ids"],
+    )
+    return {
+        **resultado,
+        "mensagem": (
+            f"Atribuicoes atualizadas com sucesso. "
+            f"{resultado['criados']} criada(s), {resultado['removidos']} removida(s) e "
+            f"{resultado['total_ativo']} turma(s) ativa(s) para esta disciplina."
+        ),
+    }
+
+@app.post("/admin/atribuicoes-docentes/importar")
+def importar_atribuicoes_docentes_admin_api(
+    arquivo: UploadFile = File(...),
+    usuario = Depends(get_usuario_logado)
+):
+    exigir_admin(usuario)
+    if not arquivo or not arquivo.filename:
+        raise HTTPException(400, "Arquivo JSON nao enviado.")
+
+    conteudo = arquivo.file.read()
+    if not conteudo:
+        raise HTTPException(400, "Arquivo JSON vazio.")
+
+    try:
+        return importar_atribuicoes_docentes_arquivo(
+            conteudo,
+            nome_arquivo=arquivo.filename,
+            tipo_conteudo=getattr(arquivo, "content_type", None),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 @app.delete("/admin/atribuicoes-docentes/{atribuicao_id}")
 def excluir_atribuicao_docente_admin_api(

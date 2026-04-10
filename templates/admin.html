@@ -152,15 +152,39 @@
             <section id="tab-atribuicoes" class="admin-tab-panel admin-only" data-admin-only="true" data-admin-tab-panel="atribuicoes" hidden>
                 <div class="admin-grid">
                     <article class="admin-card">
-                        <h2>Nova atribuição</h2>
-                        <p class="booking-detail">Defina exatamente qual professor atende cada disciplina em cada turma. Esse vínculo passa a orientar os módulos operacionais.</p>
+                        <h2>Professor por disciplina</h2>
+                        <p class="booking-detail">Selecione o professor e a disciplina. Em seguida, marque as turmas em que essa combinação se aplica e salve tudo de uma vez.</p>
                         <form id="formAtribuicaoDocente" class="admin-form">
                             <select id="atribuicaoProfessor" required></select>
-                            <select id="atribuicaoTurma" required></select>
                             <select id="atribuicaoDisciplina" required></select>
-                            <button class="btn-destaque" type="submit">Adicionar atribuição</button>
+                            <div class="admin-fieldset">
+                                <p>Turmas atribuídas</p>
+                                <div class="admin-inline">
+                                    <button id="btnSelecionarTodasTurmasAtribuicao" type="button">Selecionar todas</button>
+                                    <button id="btnLimparTurmasAtribuicao" type="button">Limpar seleção</button>
+                                </div>
+                                <div id="atribuicaoTurmasLista" class="admin-checkbox-grid"></div>
+                                <p id="atribuicaoTurmasResumo" class="booking-detail">Selecione professor e disciplina para carregar as turmas.</p>
+                            </div>
+                            <button class="btn-destaque" type="submit">Salvar turmas da disciplina</button>
                         </form>
                         <p id="msgAtribuicoesDocentes"></p>
+                    </article>
+
+                    <article class="admin-card">
+                        <h2>Importação JSON</h2>
+                        <p class="booking-detail">Envie um JSON com professor, disciplina e a lista de turmas para atualizar atribuições em lote.</p>
+                        <form id="formImportarAtribuicoesDocentes" class="admin-form">
+                            <label class="admin-upload-field" for="arquivoJsonAtribuicoesDocentes">
+                                <span>Arquivo JSON</span>
+                                <input id="arquivoJsonAtribuicoesDocentes" type="file" accept=".json,application/json" required>
+                            </label>
+                            <p class="booking-detail">Formato sugerido: <strong>professor_email</strong>, <strong>disciplina</strong> e <strong>turmas</strong>.</p>
+                            <div class="admin-inline">
+                                <button class="btn-destaque" type="submit">Importar JSON</button>
+                                <button id="btnBaixarModeloAtribuicoesJson" type="button">Baixar modelo JSON</button>
+                            </div>
+                        </form>
                     </article>
 
                     <article class="admin-card">

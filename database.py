@@ -2979,6 +2979,96 @@ def criar_atribuicao_docente(professor_id: int, turma_id: int, disciplina_id: in
     return buscar_atribuicao_docente_por_id(atribuicao_id, incluir_inativos=True)
 
 
+def sincronizar_atribuicoes_docentes_professor_disciplina(
+    professor_id: int,
+    disciplina_id: int,
+    turma_ids: list[int],
+):
+    professor_id_valor = int(professor_id)
+    disciplina_id_valor = int(disciplina_id)
+    turma_ids_unicos = []
+    for turma_id in turma_ids or []:
+        try:
+            valor = int(turma_id)
+        except (TypeError, ValueError):
+            continue
+        if valor > 0 and valor not in turma_ids_unicos:
+            turma_ids_unicos.append(valor)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT id, turma_id
+            FROM professores_turmas_disciplinas
+            WHERE professor_usuario_id = ?
+              AND disciplina_id = ?
+            """,
+            (professor_id_valor, disciplina_id_valor),
+        )
+        atuais = cursor.fetchall()
+        atuais_por_turma = {
+            int(row["turma_id"]): int(row["id"])
+            for row in atuais
+        }
+
+        novas_turmas = set(turma_ids_unicos)
+        turmas_atuais = set(atuais_por_turma.keys())
+        turmas_para_inserir = sorted(novas_turmas - turmas_atuais)
+        turmas_para_remover = sorted(turmas_atuais - novas_turmas)
+
+        removidos = 0
+        for turma_id in turmas_para_remover:
+            cursor.execute(
+                """
+                DELETE FROM professores_turmas_disciplinas
+                WHERE id = ?
+                """,
+                (atuais_por_turma[turma_id],),
+            )
+            removidos += max(int(cursor.rowcount or 0), 0)
+
+        criados = 0
+        for turma_id in turmas_para_inserir:
+            cursor.execute(
+                """
+                INSERT INTO professores_turmas_disciplinas (
+                    professor_usuario_id,
+                    turma_id,
+                    disciplina_id,
+                    criado_em
+                )
+                VALUES (?, ?, ?, datetime('now'))
+                """,
+                (professor_id_valor, int(turma_id), disciplina_id_valor),
+            )
+            criados += 1
+
+        _sincronizar_resumo_carga_professor(cursor, professor_id_valor)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+
+    atribuicoes = listar_atribuicoes_docentes(
+        professor_id=professor_id_valor,
+        disciplina_id=disciplina_id_valor,
+        incluir_inativos=True,
+    )
+    return {
+        "professor_id": professor_id_valor,
+        "disciplina_id": disciplina_id_valor,
+        "criados": criados,
+        "removidos": removidos,
+        "total_ativo": len(atribuicoes),
+        "turma_ids": [int(item["turma_id"]) for item in atribuicoes],
+        "atribuicoes": atribuicoes,
+    }
+
+
 def excluir_atribuicao_docente(atribuicao_id: int) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
