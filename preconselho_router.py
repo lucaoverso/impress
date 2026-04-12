@@ -517,6 +517,8 @@ def gerar_texto_preview_preconselho_api(
             motivos=motivos,
             observacao_professor=payload.observacao_professor,
             nivel_atencao=payload.nivel_atencao,
+            estudante_nome=payload.estudante_nome,
+            disciplina_nome=payload.disciplina_nome,
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -570,6 +572,8 @@ def salvar_registro_preconselho_api(
             motivos=motivos,
             observacao_professor=observacao_professor,
             nivel_atencao=nivel_atencao,
+            estudante_nome=str(estudante["nome"]),
+            disciplina_nome=str(disciplina["nome"]),
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -687,6 +691,7 @@ def gerar_consolidado_preconselho_api(
         "total_estudantes": int(consolidado["total_estudantes"]),
         "motivos_frequentes": consolidado["motivos_frequentes"],
         "texto": consolidado["texto"],
+        "itens_agrupados": consolidado["itens_agrupados"],
         "itens": itens,
     }
 

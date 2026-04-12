@@ -264,6 +264,8 @@ class PreConselhoTextoPreviewIn(BaseModel):
     motivo_ids: list[int] = Field(default_factory=list)
     observacao_professor: str = ""
     nivel_atencao: str | None = None
+    estudante_nome: str = ""
+    disciplina_nome: str = ""
 
 class PreConselhoRegistroOut(BaseModel):
     id: int
@@ -296,6 +298,18 @@ class PreConselhoTextoOut(BaseModel):
     texto: str = ""
     fragmentos: list[str] = Field(default_factory=list)
 
+class PreConselhoConsolidadoEstudanteOut(BaseModel):
+    estudante_id: int = 0
+    estudante_nome: str = ""
+    turma_nome: str = ""
+    nivel_atencao: str = ""
+    total_registros: int = 0
+    disciplinas: list[str] = Field(default_factory=list)
+    motivos: list[str] = Field(default_factory=list)
+    observacoes: list[str] = Field(default_factory=list)
+    professores: list[str] = Field(default_factory=list)
+    texto: str = ""
+
 class PreConselhoConsolidadoOut(BaseModel):
     periodo_id: int | None = None
     periodo_nome: str = ""
@@ -309,6 +323,7 @@ class PreConselhoConsolidadoOut(BaseModel):
     total_estudantes: int = 0
     motivos_frequentes: list[str] = Field(default_factory=list)
     texto: str = ""
+    itens_agrupados: list[PreConselhoConsolidadoEstudanteOut] = Field(default_factory=list)
     itens: list[PreConselhoRegistroOut] = Field(default_factory=list)
 
 class ProfessorCreateIn(BaseModel):

@@ -5,7 +5,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Suíte Escolar - Serviços</title>
-    <link rel="stylesheet" href="{{ request.url_for('static', path='css/style.css') }}?v={{ asset_version | default('1') }}">
+    <link rel="stylesheet"
+        href="{{ request.url_for('static', path='css/style.css') }}?v={{ asset_version | default('1') }}">
 </head>
 
 <body>
@@ -24,44 +25,66 @@
         <section class="services-grid">
             <article id="cardImpressao" class="service-card" data-modulo="impressao" hidden>
                 <img class="service-img" src="/static/img/impressao.png" alt="impressão">
-                <h2>Impressão de atividades</h2>
-                <p>Envie PDF, DOCX, DOC, PNG ou JPEG, configure cópias e acompanhe o consumo da cota.</p>
-                <button id="btnIrImpressao" class="btn-destaque" type="button">Ir para impressão</button>
+                <div class="card-text">
+                    <h3>Impressão de atividades</h3>
+                    <p>Envie PDF, DOCX, DOC, PNG ou JPEG, configure cópias e acompanhe o consumo da cota.</p>
+                    <button id="btnIrImpressao" class="btn-destaque" type="button">Ir para impressão</button>
+                </div>
             </article>
 
             <article id="cardAgendamento" class="service-card" data-modulo="agendamento" hidden>
+
                 <img class="service-img" src="/static/img/agendamento.png" alt="agendamento">
-                <h2>Agendamento de equipamentos</h2>
-                <p>Reserve recursos tecnológicos por data e aula com visão de calendário e disponibilidade.</p>
-                <button id="btnIrAgendamento" class="btn-destaque" type="button">Ir para agendamento</button>
+                <div class="card-text">
+                    <h3>Agendamento de equipamentos</h3>
+                    <p>Reserve recursos tecnológicos por data e aula com visão de calendário e disponibilidade.</p>
+                    <button id="btnIrAgendamento" class="btn-destaque" type="button">Ir para agendamento</button>
+                </div>
+            </article>
+
+            <article id="cardDownload" class="service-card" data-modulo="pcpi" hidden>
+                <img class="service-img" src="/static/img/download-videos.png" alt="pcpi">
+                <div class="card-text">
+                    <h3>Baixar Vídeo ou Música</h3>
+                    <p>Cole o link do youtube para baixar vídeos ou músicas que deseja utilizar em aula.</p>
+                    <button id="btnIrPcpi" class="btn-destaque" type="button">Ir para PCPI</button>
+                </div>
             </article>
 
             <article id="cardPreconselho" class="service-card" data-modulo="preconselho" hidden>
-                <img class="service-img" src="/static/img/coordenacao.png" alt="pre conselho">
-                <h2>Pre-conselho</h2>
-                <p>Marque estudantes com baixo rendimento, registre os motivos e gere o texto-base para a ata.</p>
-                <button id="btnIrPreconselho" class="btn-destaque" type="button">Ir para pre-conselho</button>
+                <img class="service-img" src="/static/img/preconselho.png" alt="pre conselho">
+                <div class="card-text">
+                    <h3>Pré Conselho</h3>
+                    <p>Marque estudantes com baixo rendimento, registre os motivos e gere o texto-base para a ata.</p>
+                    <button id="btnIrPreconselho" class="btn-destaque" type="button">Ir para pre-conselho</button>
+                </div>
             </article>
 
             <article id="cardGestao" class="service-card" data-modulo="gestao" hidden>
                 <img class="service-img" src="/static/img/sistema.png" alt="gestão">
-                <h2>Módulos de gestão</h2>
-                <p>Acesse os recursos de coordenação para administrar operação, cadastros e relatórios.</p>
-                <button id="btnIrGestao" class="btn-destaque" type="button">Ir para gestão</button>
+                <div class="card-text">
+                    <h3>Módulos de gestão</h3>
+                    <p>Acesse os recursos de coordenação para administrar operação, cadastros e relatórios.</p>
+                    <button id="btnIrGestao" class="btn-destaque" type="button">Ir para gestão</button>
+                </div>
             </article>
 
             <article id="cardCoordenacao" class="service-card" data-modulo="coordenacao" hidden>
                 <img class="service-img" src="/static/img/coordenacao.png" alt="coordenação">
-                <h2>Ocorrências da coordenação</h2>
-                <p>Registre, acompanhe e consulte ocorrências disciplinares e pedagógicas em um único fluxo.</p>
-                <button id="btnIrCoordenacao" class="btn-destaque" type="button">Ir para ocorrências</button>
+                <div class="card-text">
+                    <h3>Ocorrências da coordenação</h3>
+                    <p>Registre, acompanhe e consulte ocorrências disciplinares e pedagógicas em um único fluxo.</p>
+                    <button id="btnIrCoordenacao" class="btn-destaque" type="button">Ir para ocorrências</button>
+                </div>
             </article>
 
             <article id="cardPcpi" class="service-card" data-modulo="pcpi" hidden>
-                <img class="service-img" src="/static/img/coordenacao.png" alt="pcpi">
-                <h2>Registro PCPI</h2>
-                <p>Importe agendamentos do turno, registre ações manuais e gere o texto administrativo do PCPI.</p>
-                <button id="btnIrPcpi" class="btn-destaque" type="button">Ir para PCPI</button>
+                <img class="service-img" src="/static/img/pcpi.png" alt="pcpi">
+                <div class="card-text">
+                    <h3>Registro PCPI</h3>
+                    <p>Importe agendamentos do turno, registre ações manuais e gere o texto administrativo do PCPI.</p>
+                    <button id="btnIrPcpi" class="btn-destaque" type="button">Ir para PCPI</button>
+                </div>
             </article>
         </section>
     </main>

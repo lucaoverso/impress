@@ -27,7 +27,7 @@ function modulosPermitidos(usuario = {}) {
 
     const cargo = normalizarCargoUsuario(usuario);
     if (cargo === "ADMIN") return new Set(["impressao", "agendamento", "gestao", "coordenacao", "pcpi", "preconselho"]);
-    if (cargo === "COORDENADOR") return new Set(["coordenacao", "pcpi", "preconselho"]);
+    if (cargo === "COORDENADOR") return new Set(["coordenacao", "preconselho"]);
     return new Set(["impressao", "agendamento", "preconselho"]);
 }
 
@@ -60,33 +60,37 @@ async function carregarUsuario() {
 }
 
 function registrarEventos() {
-    document.getElementById("btnIrImpressao").addEventListener("click", () => {
+    document.getElementById("cardImpressao").addEventListener("click", () => {
         window.location.href = "/impressao";
     });
 
-    document.getElementById("btnIrAgendamento").addEventListener("click", () => {
+    document.getElementById("cardAgendamento").addEventListener("click", () => {
         window.location.href = "/agendamento";
     });
 
-    const btnIrPreconselho = document.getElementById("btnIrPreconselho");
+    document.getElementById("cardDownload").addEventListener("click", () => {
+        window.location.href = "/download";
+    });
+
+    const btnIrPreconselho = document.getElementById("cardPreconselho");
     if (btnIrPreconselho) {
         btnIrPreconselho.addEventListener("click", () => {
             window.location.href = "/preconselho";
         });
     }
 
-    document.getElementById("btnIrGestao").addEventListener("click", () => {
+    document.getElementById("cardGestao").addEventListener("click", () => {
         window.location.href = "/admin";
     });
 
-    const btnIrCoordenacao = document.getElementById("btnIrCoordenacao");
+    const btnIrCoordenacao = document.getElementById("cardCoordenacao");
     if (btnIrCoordenacao) {
         btnIrCoordenacao.addEventListener("click", () => {
             window.location.href = "/coordenacao";
         });
     }
 
-    const btnIrPcpi = document.getElementById("btnIrPcpi");
+    const btnIrPcpi = document.getElementById("cardPcpi");
     if (btnIrPcpi) {
         btnIrPcpi.addEventListener("click", () => {
             window.location.href = "/pcpi";

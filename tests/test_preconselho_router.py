@@ -103,6 +103,7 @@ class PreConselhoRouterTest(unittest.TestCase):
 
             turma_id = int(database.criar_turma("7A", "MATUTINO", 30))
             disciplina_id = int(database.criar_disciplina("Matematica", 5))
+            disciplina_historia_id = int(database.criar_disciplina("Historia", 3))
             estudante_id = int(database.criar_estudante("Ana", turma_id))
             professor_id = int(
                 database.criar_professor(
@@ -113,7 +114,7 @@ class PreConselhoRouterTest(unittest.TestCase):
                     aulas_semanais=10,
                     turmas_quantidade=1,
                     turmas=["7A"],
-                    disciplinas=["Matematica"],
+                    disciplinas=["Matematica", "Historia"],
                 )
             )
             coordenador_id = int(
@@ -157,7 +158,23 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertGreater(int(salvo["id"]), 0)
             self.assertEqual(int(salvo["estudante_id"]), estudante_id)
             self.assertEqual(int(salvo["disciplina_id"]), disciplina_id)
-            self.assertIn("baixo rendimento", salvo["texto_gerado"])
+            self.assertIn("O estudante Ana obteve baixo rendimento na disciplina de Matematica", salvo["texto_gerado"])
+
+            salvo_historia = preconselho_router.salvar_registro_preconselho_api(
+                payload=models.PreConselhoRegistroSaveIn(
+                    periodo_id=periodo_id,
+                    turma_id=turma_id,
+                    disciplina_id=disciplina_historia_id,
+                    estudante_id=estudante_id,
+                    sinalizar=True,
+                    motivo_ids=[motivo_ids[0]],
+                    observacao_professor="apresentou dificuldade para retomar os conteudos",
+                    nivel_atencao="alto",
+                ),
+                usuario=self._usuario_professor(professor_id, "Professor Registro"),
+            )
+
+            self.assertEqual(int(salvo_historia["disciplina_id"]), disciplina_historia_id)
 
             listagem = preconselho_router.listar_registros_preconselho_api(
                 periodo_id=periodo_id,
@@ -173,15 +190,19 @@ class PreConselhoRouterTest(unittest.TestCase):
             consolidado = preconselho_router.gerar_consolidado_preconselho_api(
                 periodo_id=periodo_id,
                 turma_id=turma_id,
-                disciplina_id=disciplina_id,
+                disciplina_id=None,
                 professor_id=professor_id,
                 usuario=self._usuario_coord(coordenador_id, "Coordenadora"),
             )
 
-            self.assertEqual(consolidado["total_registros"], 1)
+            self.assertEqual(consolidado["total_registros"], 2)
             self.assertEqual(consolidado["total_estudantes"], 1)
             self.assertIn("1o Bimestre 2032", consolidado["texto"])
             self.assertIn("Ana", consolidado["texto"])
+            self.assertIn("Historia", consolidado["texto"])
+            self.assertIn("Matematica", consolidado["texto"])
+            self.assertEqual(len(consolidado["itens_agrupados"]), 1)
+            self.assertEqual(sorted(consolidado["itens_agrupados"][0]["disciplinas"]), ["Historia", "Matematica"])
 
     def test_professor_nao_pode_salvar_em_periodo_fechado(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

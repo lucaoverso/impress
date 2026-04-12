@@ -59,8 +59,8 @@ function setMensagemRecuperacao(texto, erro = false) {
 }
 
 function painelRecuperacaoAberto() {
-    const painel = el("painelRecuperacao");
-    return Boolean(painel) && !painel.hidden;
+    const painel = document.querySelector("auth-recovery");
+    return Boolean(painel) && painel.style.display == "flex";
 }
 
 function atualizarBotaoRecuperacao() {
@@ -72,19 +72,8 @@ function atualizarBotaoRecuperacao() {
 }
 
 function alternarPainelRecuperacao() {
-    const painel = el("painelRecuperacao");
-    if (!painel) return;
-
-    painel.hidden = !painel.hidden;
-    if (!painel.hidden) {
-        const emailLogin = String(el("email")?.value || "").trim();
-        const emailRecuperacao = el("recEmail");
-        if (emailRecuperacao && !String(emailRecuperacao.value || "").trim()) {
-            emailRecuperacao.value = emailLogin;
-        }
-    } else {
-        setMensagemRecuperacao("");
-    }
+    const painel = document.querySelector("auth-recovery");
+    painel.style.display = "flex";
     atualizarBotaoRecuperacao();
 }
 

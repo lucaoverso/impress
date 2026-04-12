@@ -222,7 +222,7 @@ hr {
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-md);
     background: var(--surface-1);
-    display: flex;
+    display: none;
     flex-direction: column;
     gap: 10px;
 }
@@ -1228,8 +1228,26 @@ footer {
     box-shadow: var(--shadow-card);
     padding: 20px;
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
     gap: 12px;
+    cursor: pointer;
+}
+
+.service-card:hover {
+    border: 1px solid var(--line-strong);
+    background-color: var(--surface-1);
+}
+
+.card-text {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.card-text > .btn-destaque {
+    display: none;
 }
 
 .service-card[hidden] {

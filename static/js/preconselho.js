@@ -614,6 +614,25 @@ function formatarMotivosRegistro(motivos = []) {
     return motivos.map((item) => String(item.descricao || "")).filter(Boolean).join(", ");
 }
 
+function formatarListaNatural(valores = []) {
+    const itens = Array.from(new Set(
+        (Array.isArray(valores) ? valores : [])
+            .map((item) => String(item || "").trim())
+            .filter(Boolean)
+    ));
+
+    if (itens.length === 0) {
+        return "";
+    }
+    if (itens.length === 1) {
+        return itens[0];
+    }
+    if (itens.length === 2) {
+        return `${itens[0]} e ${itens[1]}`;
+    }
+    return `${itens.slice(0, -1).join(", ")} e ${itens[itens.length - 1]}`;
+}
+
 function renderizarRegistrosDocente() {
     const lista = el("listaRegistrosDocente");
     if (!lista) {
@@ -685,6 +704,8 @@ function preencherFormularioComEstudante(estudante) {
 async function atualizarPreviewDocente() {
     const possuiEstudante = Number(estadoDocente.estudanteId || 0) > 0;
     const motivoIds = obterMotivosSelecionadosDocente();
+    const estudante = resolverEstudanteParaFormulario(estadoDocente.estudanteId);
+    const combo = comboDocenteAtual();
 
     if (!possuiEstudante) {
         el("preconselhoTextoPreview").value = "";
@@ -705,7 +726,9 @@ async function atualizarPreviewDocente() {
             body: JSON.stringify({
                 motivo_ids: motivoIds,
                 observacao_professor: String(el("preconselhoObservacaoProfessor").value || "").trim(),
-                nivel_atencao: String(el("preconselhoNivelAtencao").value || "").trim() || null
+                nivel_atencao: String(el("preconselhoNivelAtencao").value || "").trim() || null,
+                estudante_nome: String(estudante?.nome || "").trim(),
+                disciplina_nome: String(combo?.disciplina_nome || "").trim()
             })
         });
 
@@ -864,9 +887,9 @@ function renderizarConsolidacao() {
         el("preconselhoResumoConsolidadoRegistros").textContent = "0";
         el("preconselhoResumoConsolidadoEstudantes").textContent = "0";
         el("preconselhoResumoConsolidadoMotivos").textContent = "0";
-        el("preconselhoMotivosFrequentes").textContent = "A síntese consolidada aparecerá após a aplicação dos filtros.";
+        el("preconselhoMotivosFrequentes").textContent = "A síntese agrupada por estudante aparecerá após a aplicação dos filtros.";
         el("preconselhoTextoConsolidado").value = "";
-        lista.innerHTML = criarEstadoVazio("Nenhum registro consolidado disponível.");
+        lista.innerHTML = criarEstadoVazio("Nenhum estudante consolidado disponível.");
         return;
     }
 
@@ -878,13 +901,22 @@ function renderizarConsolidacao() {
         : "Nenhum motivo recorrente foi destacado nesta consolidação.";
     el("preconselhoTextoConsolidado").value = String(dados.texto || "");
 
-    const itens = Array.isArray(dados.itens) ? dados.itens : [];
-    if (itens.length === 0) {
-        lista.innerHTML = criarEstadoVazio("Nao ha registros para os filtros aplicados.");
+    const itensAgrupados = Array.isArray(dados.itens_agrupados) ? dados.itens_agrupados : [];
+    if (itensAgrupados.length === 0) {
+        lista.innerHTML = criarEstadoVazio("Nao ha estudantes sinalizados para os filtros aplicados.");
         return;
     }
 
-    lista.innerHTML = itens.map((item) => `
+    lista.innerHTML = itensAgrupados.map((item) => {
+        const disciplinas = formatarListaNatural(item.disciplinas || []);
+        const motivos = formatarListaNatural(item.motivos || []);
+        const professores = formatarListaNatural(item.professores || []);
+        const observacoes = Array.isArray(item.observacoes)
+            ? item.observacoes.map((entrada) => String(entrada || "").trim()).filter(Boolean).join("; ")
+            : "";
+        const totalRegistros = Number(item.total_registros || 0);
+
+        return `
         <li class="pcpi-item pcpi-item-manual">
             <div class="pcpi-checkbox-row">
                 <div class="pcpi-item-body">
@@ -892,16 +924,19 @@ function renderizarConsolidacao() {
                         <strong>${escaparHtml(item.estudante_nome || "")}</strong>
                         <div class="pcpi-tag-group">
                             ${item.nivel_atencao ? `<span class="pcpi-chip">${escaparHtml(rotuloNivelAtencao(item.nivel_atencao))}</span>` : ""}
-                            <span class="pcpi-chip pcpi-chip-manual">${escaparHtml(item.professor_nome || "Professor")}</span>
+                            <span class="pcpi-chip pcpi-chip-manual">${totalRegistros} ${totalRegistros === 1 ? "registro" : "registros"}</span>
                         </div>
                     </div>
-                    <p class="pcpi-item-line">${escaparHtml(item.turma_nome || "")} • ${escaparHtml(item.disciplina_nome || "")}</p>
-                    <p class="pcpi-item-note">${escaparHtml(formatarMotivosRegistro(item.motivos || []))}</p>
-                    ${item.texto_gerado ? `<p class="pcpi-item-note is-secondary">${escaparHtml(item.texto_gerado)}</p>` : ""}
+                    <p class="pcpi-item-line">${escaparHtml(item.turma_nome || "")}${disciplinas ? ` • ${escaparHtml(disciplinas)}` : ""}</p>
+                    ${motivos ? `<p class="pcpi-item-note">${escaparHtml(motivos)}</p>` : ""}
+                    ${professores ? `<p class="pcpi-item-note">${escaparHtml(`Professores envolvidos: ${professores}`)}</p>` : ""}
+                    ${observacoes ? `<p class="pcpi-item-note">${escaparHtml(`Relatos complementares: ${observacoes}`)}</p>` : ""}
+                    ${item.texto ? `<p class="pcpi-item-note is-secondary">${escaparHtml(item.texto)}</p>` : ""}
                 </div>
             </div>
         </li>
-    `).join("");
+    `;
+    }).join("");
 }
 
 async function carregarConsolidacao() {
