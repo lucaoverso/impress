@@ -20,6 +20,41 @@ sudo useradd --system --create-home --shell /usr/sbin/nologin sistema-impress ||
 sudo usermod -aG lp sistema-impress
 ```
 
+## 2.1) Liberar `sudo` sem senha para o usuário do runner
+
+A workflow de deploy em [`.github/workflows/deploy.yml`](/Users/lucassbaraini/sistema-impress/.github/workflows/deploy.yml:1) usa `sudo -n`, ou seja: ela **não pode** pedir senha interativamente. Se o servidor estiver com um runner `self-hosted`, o usuário que executa o serviço do GitHub Actions precisa ter permissão `NOPASSWD` apenas para os comandos usados no deploy.
+
+Descubra primeiro qual é o usuário do runner:
+
+```bash
+ps -ef | grep actions-runner
+```
+
+Depois crie um arquivo em `/etc/sudoers.d/` com `visudo` (troque `runneruser` pelo usuário real do runner):
+
+```bash
+sudo visudo -f /etc/sudoers.d/sistema-impress-deploy
+```
+
+Conteúdo sugerido:
+
+```sudoers
+Cmnd_Alias SISTEMA_IMPRESS_GIT = /usr/bin/rm -f /opt/sistema-impress/.git/index.lock, /usr/bin/git -C /opt/sistema-impress *
+Cmnd_Alias SISTEMA_IMPRESS_APP = /usr/bin/bash -lc *
+Cmnd_Alias SISTEMA_IMPRESS_SYSTEMD = /usr/bin/systemctl restart sistema-impress-api.service, /usr/bin/systemctl restart sistema-impress-worker.service, /usr/bin/systemctl is-active --quiet sistema-impress-api.service, /usr/bin/systemctl is-active --quiet sistema-impress-worker.service
+
+runneruser ALL=(sistema-impress) NOPASSWD: SISTEMA_IMPRESS_GIT, SISTEMA_IMPRESS_APP
+runneruser ALL=(root) NOPASSWD: SISTEMA_IMPRESS_SYSTEMD
+```
+
+Valide antes de fechar:
+
+```bash
+sudo visudo -cf /etc/sudoers.d/sistema-impress-deploy
+```
+
+Se preferir simplificar a operacao, uma alternativa e executar o runner como `root`, mas isso aumenta bastante a superficie de risco. A configuracao acima e a opcao recomendada.
+
 ## 3) Publicar código em `/opt/sistema-impress`
 
 ```bash
@@ -136,6 +171,8 @@ Resultado esperado:
 - JSON com `"status":"ok"` e `checks.database = "ok"`
 - worker ativo sem erro no `journalctl`
 - envio de impressão cria job e envia para CUPS (`lp`)
+
+Se o deploy automatizado falhar com mensagem parecida com `sudo: a password is required`, revise primeiro o passo `2.1`: normalmente isso indica que o usuário do runner ainda não recebeu as regras `NOPASSWD` esperadas pela workflow.
 
 ## Acesso remoto via 5G
 
