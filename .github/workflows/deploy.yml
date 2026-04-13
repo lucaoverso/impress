@@ -39,8 +39,8 @@ jobs:
 
       - name: Verificar serviços ativos
         run: |
-          sudo -n systemctl is-active --quiet sistema-impress-api.service
-          sudo -n systemctl is-active --quiet sistema-impress-worker.service
+          systemctl is-active --quiet sistema-impress-api.service
+          systemctl is-active --quiet sistema-impress-worker.service
 
       - name: Healthcheck da API
         run: |
