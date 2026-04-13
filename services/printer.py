@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import re
 import shlex
@@ -10,14 +11,17 @@ from services.pdf_service import gerar_pdf_n_por_folha
 LP_COMMAND = os.getenv("CUPS_LP_COMMAND", "lp")
 LP_TIMEOUT_SECONDS = int(os.getenv("CUPS_LP_TIMEOUT_SECONDS", "30"))
 DEFAULT_PRINTER_NAME = os.getenv("CUPS_PRINTER", "").strip()
+logger = logging.getLogger(__name__)
 
 REQUEST_ID_REGEX = re.compile(r"request id is\s+([^\s]+)-(\d+)", re.IGNORECASE)
 GENERIC_JOB_ID_REGEX = re.compile(r"([A-Za-z0-9_.-]+)-(\d+)")
+
 
 def _obter_layout_duas_por_folha(orientacao: str) -> str:
     if orientacao == "retrato":
         return "tblr"
     return "lrtb"
+
 
 def _montar_opcoes_cups_legado(job):
     paginas_por_folha = int(job.get("paginas_por_folha") or 1)
@@ -49,6 +53,7 @@ def _montar_opcoes_cups_legado(job):
 
     return opcoes
 
+
 def _carregar_opcoes_cups(job):
     payload = job.get("cups_options")
     if not payload:
@@ -61,6 +66,7 @@ def _carregar_opcoes_cups(job):
         return opcoes
     except Exception:
         return _montar_opcoes_cups_legado(job)
+
 
 def _extrair_cups_job_id(lp_output: str):
     if not lp_output:
@@ -79,11 +85,13 @@ def _extrair_cups_job_id(lp_output: str):
 
     return None
 
+
 def _normalizar_int(valor, padrao: int) -> int:
     try:
         return int(valor)
     except (TypeError, ValueError):
         return padrao
+
 
 def _normalizar_orientacao_layout(job, opcoes_cups) -> str:
     orientacao = str(job.get("orientacao") or "").strip().lower()
@@ -95,18 +103,16 @@ def _normalizar_orientacao_layout(job, opcoes_cups) -> str:
         return "paisagem"
     return "retrato"
 
+
 def _forcar_layout_n_por_folha(caminho: Path, job, opcoes_cups):
     paginas_por_folha = _normalizar_int(
-        opcoes_cups.get("number-up", job.get("paginas_por_folha")),
-        1
+        opcoes_cups.get("number-up", job.get("paginas_por_folha")), 1
     )
     if paginas_por_folha not in (2, 4):
         return caminho, opcoes_cups, None
 
     intervalo_paginas = str(
-        job.get("intervalo_paginas")
-        or opcoes_cups.get("page-ranges")
-        or ""
+        job.get("intervalo_paginas") or opcoes_cups.get("page-ranges") or ""
     ).strip()
     orientacao_layout = _normalizar_orientacao_layout(job, opcoes_cups)
     caminho_layout = gerar_pdf_n_por_folha(
@@ -125,6 +131,7 @@ def _forcar_layout_n_por_folha(caminho: Path, job, opcoes_cups):
 
     return caminho_layout, opcoes_ajustadas, caminho_layout
 
+
 def imprimir_job(job):
     arquivo_path = job.get("arquivo_path")
     if not arquivo_path:
@@ -141,9 +148,7 @@ def imprimir_job(job):
 
     try:
         caminho_envio, opcoes_cups, arquivo_temporario = _forcar_layout_n_por_folha(
-            caminho,
-            job,
-            opcoes_cups
+            caminho, job, opcoes_cups
         )
 
         cmd = [LP_COMMAND]
@@ -165,7 +170,7 @@ def imprimir_job(job):
             cmd.extend(["-o", f"{chave}={valor}"])
 
         cmd.append(str(caminho_envio))
-        print(f"🖨️ Enviando para CUPS: {shlex.join(cmd)}")
+        logger.info("Enviando job para CUPS: %s", shlex.join(cmd))
 
         try:
             resultado = subprocess.run(
@@ -176,7 +181,9 @@ def imprimir_job(job):
                 timeout=LP_TIMEOUT_SECONDS,
             )
         except FileNotFoundError as exc:
-            raise RuntimeError("Comando 'lp' não encontrado. Instale e configure o CUPS no servidor.") from exc
+            raise RuntimeError(
+                "Comando 'lp' não encontrado. Instale e configure o CUPS no servidor."
+            ) from exc
         except subprocess.TimeoutExpired as exc:
             raise RuntimeError("Timeout ao enviar job para o CUPS.") from exc
 
@@ -185,10 +192,12 @@ def imprimir_job(job):
         ).strip()
 
         if resultado.returncode != 0:
-            raise RuntimeError(output or f"Falha ao enviar job para CUPS (exit {resultado.returncode})")
+            raise RuntimeError(
+                output or f"Falha ao enviar job para CUPS (exit {resultado.returncode})"
+            )
 
         cups_job_id = _extrair_cups_job_id(output)
-        print(f"✅ Job aceito pelo CUPS: {output or 'sem saída'}")
+        logger.info("Job aceito pelo CUPS: %s", output or "sem saida")
         return {
             "cups_job_id": cups_job_id,
             "printer_name": impressora or None,

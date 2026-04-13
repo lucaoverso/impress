@@ -5,8 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pré-Conselho</title>
-    <link rel="stylesheet"
-        href="{{ request.url_for('static', path='css/style.css') }}?v={{ asset_version | default('1') }}">
+    {% include "includes/style_bundle.html" %}
 </head>
 
 <body>
@@ -60,7 +59,8 @@
                             </label>
 
                             <div class="pcpi-inline-actions pcpi-field">
-                                <button id="btnAtualizarDocente" class="btn-destaque" type="submit">Atualizar painel</button>
+                                <button id="btnAtualizarDocente" class="btn-destaque" type="submit">Atualizar
+                                    painel</button>
                             </div>
                         </form>
 
@@ -90,8 +90,9 @@
                             <div class="pcpi-card-header">
                                 <div>
                                     <p class="pcpi-eyebrow">Carga docente</p>
-                                    <h2>Minhas turmas e disciplinas</h2>
-                                    <p>Escolha a combinação em que deseja registrar ou revisar os estudantes sinalizados.
+                                    <h2>Turmas do professor</h2>
+                                    <p>Escolha a combinação de turma e disciplina em que deseja registrar ou revisar os
+                                        estudantes sinalizados.
                                     </p>
                                 </div>
                             </div>
@@ -106,14 +107,16 @@
                                 <div>
                                     <p class="pcpi-eyebrow">Turma</p>
                                     <h2>Lista de estudantes</h2>
-                                    <p>Busque por nome, filtre por situação e clique no estudante para abrir o editor ao lado.</p>
+                                    <p>Busque por nome, filtre por situação e clique no estudante para abrir a janela de
+                                        sinalização.</p>
                                 </div>
                             </div>
 
                             <form id="formFiltrosEstudantesDocente" class="pcpi-filter-grid preconselho-filter-stack">
                                 <label class="pcpi-field" for="preconselhoBuscaEstudante">
                                     <span>Buscar estudante</span>
-                                    <input id="preconselhoBuscaEstudante" type="text" placeholder="Digite parte do nome">
+                                    <input id="preconselhoBuscaEstudante" type="text"
+                                        placeholder="Digite parte do nome">
                                 </label>
 
                                 <label class="pcpi-field" for="preconselhoStatusEstudante">
@@ -131,14 +134,20 @@
                                 <ul id="listaEstudantesDocente" class="pcpi-list" aria-live="polite"></ul>
                             </div>
                         </article>
+                    </section>
 
-                        <article id="preconselhoPainelEditor" class="calendar-card pcpi-card preconselho-docente-column preconselho-docente-editor-card">
-                            <div class="pcpi-card-header">
+                    <div id="preconselhoModalEditor" class="preconselho-modal" hidden>
+                        <article id="preconselhoPainelEditor" class="calendar-card pcpi-card preconselho-modal-card"
+                            role="dialog" aria-modal="true" aria-labelledby="preconselhoModalTitulo">
+                            <div class="pcpi-card-header preconselho-modal-header">
                                 <div>
                                     <p class="pcpi-eyebrow">Registro individual</p>
-                                    <h2>Parecer por estudante</h2>
-                                    <p>Os dados do estudante ficam sempre visíveis aqui. Ao salvar, a sinalização é feita automaticamente.</p>
+                                    <h2 id="preconselhoModalTitulo">Parecer por estudante</h2>
+                                    <p>Preencha os relatos, selecione os motivos e salve para aplicar a sinalização do
+                                        estudante.</p>
                                 </div>
+                                <button id="btnFecharModalRegistroDocente" type="button"
+                                    class="preconselho-modal-close">Fechar</button>
                             </div>
 
                             <div class="preconselho-editor-scroll">
@@ -149,26 +158,21 @@
 
                                     <div class="preconselho-highlight-box pcpi-field pcpi-field-wide">
                                         <span>Estudante selecionado</span>
-                                        <strong id="preconselhoEstudanteSelecionadoNome">Selecione um estudante para iniciar.</strong>
-                                        <small id="preconselhoEstudanteSelecionadoMeta">Os dados do registro aparecerão aqui.</small>
+                                        <strong id="preconselhoEstudanteSelecionadoNome">Selecione um estudante para
+                                            iniciar.</strong>
+                                        <small id="preconselhoEstudanteSelecionadoMeta">Os dados do registro aparecerão
+                                            aqui.</small>
                                     </div>
 
-                                    <div class="preconselho-status-banner pcpi-field pcpi-field-wide">
+                                    <div class="preconselho-status-banner pcpi-field pcpi-field-wide"
+                                        style="display: none;">
                                         <span>Sinalização</span>
-                                        <strong id="preconselhoStatusSelecionadoTitulo">Nenhum estudante em edição</strong>
-                                        <small id="preconselhoStatusSelecionadoTexto">Quando você selecionar um estudante e salvar o formulário, a sinalização será aplicada automaticamente.</small>
+                                        <strong id="preconselhoStatusSelecionadoTitulo">Nenhum estudante em
+                                            edição</strong>
+                                        <small id="preconselhoStatusSelecionadoTexto">Quando você selecionar um
+                                            estudante e salvar o formulário, a sinalização será aplicada
+                                            automaticamente.</small>
                                     </div>
-
-                                    <label class="pcpi-field" for="preconselhoNivelAtencao">
-                                        <span>Nível de atenção</span>
-                                        <select id="preconselhoNivelAtencao"></select>
-                                    </label>
-
-                                    <label class="pcpi-field" for="preconselhoObservacaoProfessor">
-                                        <span>Observação complementar</span>
-                                        <textarea id="preconselhoObservacaoProfessor" rows="4" maxlength="1000"
-                                            placeholder="Complemento opcional para enriquecer o parecer pedagógico."></textarea>
-                                    </label>
 
                                     <div class="pcpi-field pcpi-field-wide">
                                         <span>Motivos padronizados</span>
@@ -176,9 +180,11 @@
                                     </div>
 
                                     <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
-                                        <button id="btnSalvarRegistroDocente" class="btn-destaque" type="submit">Salvar registro</button>
+                                        <button id="btnSalvarRegistroDocente" class="btn-destaque" type="submit">Salvar
+                                            registro</button>
                                         <button id="btnLimparRegistroDocente" type="button">Limpar formulário</button>
                                         <button id="btnExcluirRegistroDocente" type="button">Excluir registro</button>
+                                        <button id="btnFecharModalRegistroDocenteRodape" type="button">Fechar</button>
                                     </div>
 
                                     <p id="msgPreconselhoRegistro" class="pcpi-status-copy pcpi-field-wide"></p>
@@ -194,21 +200,35 @@
                                         <p id="preconselhoPreviewAjuda" class="pcpi-hint"></p>
                                     </article>
 
-                                    <article class="preconselho-preview-card">
+                                    <label class="pcpi-field" for="preconselhoNivelAtencao">
+                                        <span>Nível de atenção</span>
+                                        <select id="preconselhoNivelAtencao"></select>
+                                    </label>
+
+                                    <label class="pcpi-field" for="preconselhoObservacaoProfessor">
+                                        <span>Observação complementar</span>
+                                        <textarea id="preconselhoObservacaoProfessor" rows="4" maxlength="1000"
+                                            placeholder="Complemento opcional para enriquecer o parecer pedagógico."></textarea>
+                                    </label>
+
+                                    <article class="preconselho-preview-card" style="display: none;">
                                         <div class="pcpi-subsection-header">
                                             <h3>Registros da turma e disciplina</h3>
-                                            <span id="preconselhoResumoRegistrosDocente" class="pcpi-chip pcpi-chip-manual">0 registros</span>
+                                            <span id="preconselhoResumoRegistrosDocente"
+                                                class="pcpi-chip pcpi-chip-manual">0 registros</span>
                                         </div>
-                                        <ul id="listaRegistrosDocente" class="pcpi-list preconselho-registros-list" aria-live="polite"></ul>
+                                        <ul id="listaRegistrosDocente" class="pcpi-list preconselho-registros-list"
+                                            aria-live="polite"></ul>
                                     </article>
                                 </div>
                             </div>
                         </article>
-                    </section>
+                    </div>
                 </section>
             </section>
 
-            <section id="preconselho-tab-consolidacao" class="admin-tab-panel" data-preconselho-tab-panel="consolidacao" hidden>
+            <section id="preconselho-tab-consolidacao" class="admin-tab-panel" data-preconselho-tab-panel="consolidacao"
+                hidden>
                 <section class="preconselho-workspace-grid">
                     <article class="calendar-card pcpi-card pcpi-card-full">
                         <div class="pcpi-card-header">
@@ -245,7 +265,8 @@
                             </label>
 
                             <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
-                                <button id="btnAtualizarConsolidacao" class="btn-destaque" type="submit">Atualizar consolidação</button>
+                                <button id="btnAtualizarConsolidacao" class="btn-destaque" type="submit">Atualizar
+                                    consolidação</button>
                             </div>
                         </form>
 
@@ -299,7 +320,8 @@
                 </section>
             </section>
 
-            <section id="preconselho-tab-configuracoes" class="admin-tab-panel" data-preconselho-tab-panel="configuracoes" hidden>
+            <section id="preconselho-tab-configuracoes" class="admin-tab-panel"
+                data-preconselho-tab-panel="configuracoes" hidden>
                 <section class="preconselho-config-grid">
                     <article class="calendar-card pcpi-card">
                         <div class="pcpi-card-header">
@@ -353,7 +375,8 @@
                             </label>
 
                             <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
-                                <button id="btnSalvarPeriodoPreconselho" class="btn-destaque" type="submit">Salvar período</button>
+                                <button id="btnSalvarPeriodoPreconselho" class="btn-destaque" type="submit">Salvar
+                                    período</button>
                                 <button id="btnLimparPeriodoPreconselho" type="button">Limpar formulário</button>
                             </div>
                         </form>
@@ -411,7 +434,8 @@
                             </label>
 
                             <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
-                                <button id="btnSalvarMotivoPreconselho" class="btn-destaque" type="submit">Salvar motivo</button>
+                                <button id="btnSalvarMotivoPreconselho" class="btn-destaque" type="submit">Salvar
+                                    motivo</button>
                                 <button id="btnLimparMotivoPreconselho" type="button">Limpar formulário</button>
                             </div>
                         </form>
@@ -437,7 +461,13 @@
         </section>
     </main>
 
-    <script src="{{ request.url_for('static', path='js/preconselho.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script
+        src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script
+        src="{{ request.url_for('static', path='js/preconselho.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>
 
 </html>

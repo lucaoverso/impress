@@ -9,6 +9,7 @@ User=sistema-impress
 Group=lp
 WorkingDirectory=/opt/sistema-impress
 EnvironmentFile=/opt/sistema-impress/.env
+Environment=PYTHONUNBUFFERED=1
 ExecStart=/opt/sistema-impress/.venv/bin/python worker_main.py
 Restart=always
 RestartSec=3

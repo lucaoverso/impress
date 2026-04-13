@@ -53,7 +53,7 @@ class OcorrenciasRouterTest(unittest.TestCase):
                 descricao="Descricao em negrito e marcada.",
                 descricao_formatada=(
                     "<p><strong>Descricao</strong> em "
-                    "<span style=\"background-color: rgb(255, 243, 163);\">negrito</span>"
+                    '<span style="background-color: rgb(255, 243, 163);">negrito</span>'
                     "<script>alert(1)</script></p>"
                 ),
                 regimento_item_ids=[item_id],
@@ -180,6 +180,7 @@ class OcorrenciasRouterTest(unittest.TestCase):
             )
             self.assertEqual([row["regimento_item_id"] for row in cursor.fetchall()], [item_id])
             conn.close()
+
 
 if __name__ == "__main__":
     unittest.main()

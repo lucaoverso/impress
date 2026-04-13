@@ -271,11 +271,19 @@ def _frase_automatica_apoio(itens: list[dict]) -> str:
 
 def classificar_categoria_uso(recurso_nome: str, recurso_tipo: str) -> str:
     chave = _normalizar_texto_chave(f"{recurso_nome} {recurso_tipo}")
-    if any(token in chave for token in ("ste", "sala de tecnologia", "sala de tecnologia educacional")):
+    if any(
+        token in chave for token in ("ste", "sala de tecnologia", "sala de tecnologia educacional")
+    ):
         return GRUPO_AUTOMATICO_STE
-    if any(token in chave for token in ("notebook", "tablet", "laboratorio", "maker", "computador", "tecnologia")):
+    if any(
+        token in chave
+        for token in ("notebook", "tablet", "laboratorio", "maker", "computador", "tecnologia")
+    ):
         return GRUPO_AUTOMATICO_TECNOLOGIA
-    if any(token in chave for token in ("projetor", "datashow", "audio", "video", "som", "caixa de som")):
+    if any(
+        token in chave
+        for token in ("projetor", "datashow", "audio", "video", "som", "caixa de som")
+    ):
         return GRUPO_AUTOMATICO_AUDIOVISUAL
     return GRUPO_AUTOMATICO_APOIO
 
@@ -287,9 +295,7 @@ def normalizar_agendamento_pcpi(
 ) -> dict:
     carga = carga_professor or {}
     componentes = [
-        _texto_limpo(item)
-        for item in (carga.get("disciplinas") or [])
-        if _texto_limpo(item)
+        _texto_limpo(item) for item in (carga.get("disciplinas") or []) if _texto_limpo(item)
     ]
 
     recurso_nome = _texto_limpo(agendamento.get("recurso_nome"))
@@ -351,8 +357,14 @@ def gerar_frases_automaticas_pcpi(itens_automaticos: list[dict]) -> list[str]:
 def _frases_reuniao(registros: list[dict]) -> list[str]:
     frases = []
     for registro in registros:
-        participantes = _texto_limpo(registro.get("professor_nome")) or "setores e profissionais da unidade escolar"
-        finalidade = _texto_limpo(registro.get("descricao_curta")) or "alinhamento de demandas institucionais"
+        participantes = (
+            _texto_limpo(registro.get("professor_nome"))
+            or "setores e profissionais da unidade escolar"
+        )
+        finalidade = (
+            _texto_limpo(registro.get("descricao_curta"))
+            or "alinhamento de demandas institucionais"
+        )
         observacoes = _complemento_observacoes(registro.get("observacoes"))
         frase = (
             f"Participação em reunião com {participantes}, para {finalidade}, "
@@ -366,7 +378,9 @@ def _frases_orientacao(registros: list[dict]) -> list[str]:
     frases = []
     for registro in registros:
         professor = _texto_limpo(registro.get("professor_nome"))
-        recurso = _texto_limpo(registro.get("componente")) or _texto_limpo(registro.get("descricao_curta"))
+        recurso = _texto_limpo(registro.get("componente")) or _texto_limpo(
+            registro.get("descricao_curta")
+        )
         if not recurso:
             recurso = "recursos e ferramentas digitais"
         finalidade = _texto_limpo(registro.get("descricao_curta"))
@@ -448,7 +462,9 @@ def _frases_rede_social(registros: list[dict]) -> list[str]:
 def _frases_projeto(registros: list[dict]) -> list[str]:
     frases = []
     for registro in registros:
-        nome_projeto = _texto_limpo(registro.get("componente")) or _texto_limpo(registro.get("descricao_curta"))
+        nome_projeto = _texto_limpo(registro.get("componente")) or _texto_limpo(
+            registro.get("descricao_curta")
+        )
         if not nome_projeto:
             nome_projeto = "ações do turno"
         observacoes = _complemento_observacoes(registro.get("observacoes"))
@@ -477,7 +493,9 @@ def _frases_gremio(registros: list[dict]) -> list[str]:
 def _frases_colaboracao(registros: list[dict]) -> list[str]:
     frases = []
     for registro in registros:
-        referencia = _texto_limpo(registro.get("professor_nome")) or _texto_limpo(registro.get("descricao_curta"))
+        referencia = _texto_limpo(registro.get("professor_nome")) or _texto_limpo(
+            registro.get("descricao_curta")
+        )
         observacoes = _complemento_observacoes(registro.get("observacoes"))
         if referencia:
             frase = (
@@ -496,7 +514,9 @@ def _frases_colaboracao(registros: list[dict]) -> list[str]:
 def _frases_evento(registros: list[dict]) -> list[str]:
     frases = []
     for registro in registros:
-        evento = _texto_limpo(registro.get("descricao_curta")) or _texto_limpo(registro.get("componente"))
+        evento = _texto_limpo(registro.get("descricao_curta")) or _texto_limpo(
+            registro.get("componente")
+        )
         if not evento:
             evento = "atividade institucional"
         observacoes = _complemento_observacoes(registro.get("observacoes"))
@@ -525,7 +545,9 @@ def _frases_planejamento(registros: list[dict]) -> list[str]:
 def _frases_formulario2(registros: list[dict]) -> list[str]:
     frases = []
     for registro in registros:
-        projeto = _texto_limpo(registro.get("descricao_curta")) or _texto_limpo(registro.get("componente"))
+        projeto = _texto_limpo(registro.get("descricao_curta")) or _texto_limpo(
+            registro.get("componente")
+        )
         if not projeto:
             projeto = "atividade pedagógica em desenvolvimento"
         observacoes = _complemento_observacoes(registro.get("observacoes"))
@@ -586,7 +608,11 @@ def gerar_frases_registros_manuais_pcpi(registros_manuais: list[dict]) -> list[s
 
 
 def _precisa_fechamento(frases_automaticas: list[str], frases_manuais: list[str]) -> bool:
-    frases = [frase for frase in (frases_automaticas or []) + (frases_manuais or []) if _texto_limpo(frase)]
+    frases = [
+        frase
+        for frase in (frases_automaticas or []) + (frases_manuais or [])
+        if _texto_limpo(frase)
+    ]
     if len(frases) <= 1:
         return True
     texto = " ".join(frases)

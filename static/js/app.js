@@ -1,49 +1,11 @@
-const SENHA_FORTE_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-
-function el(id) {
-    return document.getElementById(id);
-}
-
-function limparSessaoLocal() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("token_expira_em");
-}
-
-function normalizarCargoUsuario(dadosUsuario = {}) {
-    const cargo = String(dadosUsuario.cargo || "").trim().toUpperCase();
-    if (cargo) {
-        return cargo;
-    }
-
-    const perfil = String(dadosUsuario.perfil || "").trim().toLowerCase();
-    if (perfil === "admin") return "ADMIN";
-    if (perfil === "coordenador") return "COORDENADOR";
-    return "PROFESSOR";
-}
-
-function parseDataSqlUtc(valor) {
-    if (!valor) return null;
-    const isoBase = String(valor).trim().replace(" ", "T");
-    const data = new Date(`${isoBase}Z`);
-    return Number.isNaN(data.getTime()) ? null : data;
-}
-
-function sessaoLocalValida() {
-    const token = localStorage.getItem("token");
-    const expiraEm = localStorage.getItem("token_expira_em");
-    if (!token || !expiraEm) {
-        return false;
-    }
-    const expiraData = parseDataSqlUtc(expiraEm);
-    if (!expiraData) {
-        return false;
-    }
-    return expiraData.getTime() > Date.now();
-}
-
-function validarSenhaForte(senha) {
-    return SENHA_FORTE_REGEX.test(senha || "");
-}
+const { el } = window.AppDom;
+const {
+    limparSessaoLocal,
+    normalizarCargoUsuario,
+    parseDataSqlUtc,
+    sessaoLocalValida,
+    validarSenhaForte,
+} = window.AppAuth;
 
 function setErroLogin(texto) {
     const erro = el("erro");

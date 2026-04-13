@@ -91,7 +91,7 @@ def gerar_pdf_n_por_folha(
     caminho_origem: Path,
     paginas_por_folha: int,
     intervalo_paginas: str = "",
-    orientacao: str = "retrato"
+    orientacao: str = "retrato",
 ) -> Path:
     if paginas_por_folha not in (1, 2, 4):
         raise ValueError("Paginação por folha inválida para geração de layout.")
@@ -116,7 +116,7 @@ def gerar_pdf_n_por_folha(
     altura_celula = altura_folha / linhas
 
     for inicio in range(0, len(paginas_selecionadas), paginas_por_folha):
-        numeros_da_folha = paginas_selecionadas[inicio:inicio + paginas_por_folha]
+        numeros_da_folha = paginas_selecionadas[inicio : inicio + paginas_por_folha]
         folha = writer.add_blank_page(width=largura_folha, height=altura_folha)
 
         for indice_slot, numero_pagina in enumerate(numeros_da_folha):
@@ -136,9 +136,10 @@ def gerar_pdf_n_por_folha(
             deslocamento_x = origem_x_celula + ((largura_celula - largura_render) / 2.0)
             deslocamento_y = origem_y_celula + ((altura_celula - altura_render) / 2.0)
 
-            transformacao = Transformation().scale(escala, escala).translate(
-                tx=deslocamento_x,
-                ty=deslocamento_y
+            transformacao = (
+                Transformation()
+                .scale(escala, escala)
+                .translate(tx=deslocamento_x, ty=deslocamento_y)
             )
             folha.merge_transformed_page(pagina, transformacao, expand=False)
 

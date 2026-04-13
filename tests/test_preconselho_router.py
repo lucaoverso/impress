@@ -158,7 +158,10 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertGreater(int(salvo["id"]), 0)
             self.assertEqual(int(salvo["estudante_id"]), estudante_id)
             self.assertEqual(int(salvo["disciplina_id"]), disciplina_id)
-            self.assertIn("O estudante Ana obteve baixo rendimento na disciplina de Matematica", salvo["texto_gerado"])
+            self.assertIn(
+                "O estudante Ana obteve baixo rendimento na disciplina de Matematica",
+                salvo["texto_gerado"],
+            )
 
             salvo_historia = preconselho_router.salvar_registro_preconselho_api(
                 payload=models.PreConselhoRegistroSaveIn(
@@ -202,7 +205,9 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertIn("Historia", consolidado["texto"])
             self.assertIn("Matematica", consolidado["texto"])
             self.assertEqual(len(consolidado["itens_agrupados"]), 1)
-            self.assertEqual(sorted(consolidado["itens_agrupados"][0]["disciplinas"]), ["Historia", "Matematica"])
+            self.assertEqual(
+                sorted(consolidado["itens_agrupados"][0]["disciplinas"]), ["Historia", "Matematica"]
+            )
 
     def test_professor_nao_pode_salvar_em_periodo_fechado(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -292,9 +297,11 @@ class PreConselhoRouterTest(unittest.TestCase):
             database.criar_atribuicao_docente(professor_id, turma_em_id, geometria_id)
             database.criar_atribuicao_docente(professor_id, turma_fund_id, letramento_id)
 
-            minhas_turmas_disciplinas = preconselho_router.listar_minhas_turmas_disciplinas_preconselho_api(
-                periodo_id=periodo_id,
-                usuario=self._usuario_professor(professor_id, "Professor Alex"),
+            minhas_turmas_disciplinas = (
+                preconselho_router.listar_minhas_turmas_disciplinas_preconselho_api(
+                    periodo_id=periodo_id,
+                    usuario=self._usuario_professor(professor_id, "Professor Alex"),
+                )
             )
             pares = {
                 (int(item["turma_id"]), int(item["disciplina_id"]))

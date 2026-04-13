@@ -1,8 +1,10 @@
 from typing import Literal
 from pydantic import BaseModel, Field
 
+
 class JobCreate(BaseModel):
     copias: int
+
 
 class JobOut(BaseModel):
     id: int
@@ -12,24 +14,30 @@ class JobOut(BaseModel):
     prioridade: int
     criado_em: str
 
+
 class FilaOut(BaseModel):
     jobs: list[JobOut]
+
 
 class LoginIn(BaseModel):
     email: str
     senha: str
+
 
 class ProfessorRecuperarSenhaIn(BaseModel):
     email: str
     data_nascimento: str
     nova_senha: str
 
+
 class ProfessorRedefinirSenhaAdminIn(BaseModel):
     nova_senha: str
+
 
 class RadiusEnsureNtHashIn(BaseModel):
     username: str
     password: str
+
 
 class UsuarioOut(BaseModel):
     id: int
@@ -37,6 +45,7 @@ class UsuarioOut(BaseModel):
     email: str
     perfil: str
     cargo: str = ""
+
 
 class AgendamentoIn(BaseModel):
     recurso_id: int
@@ -46,6 +55,7 @@ class AgendamentoIn(BaseModel):
     tema_aula: str
     professor_id: int | None = None
     observacao: str = ""
+
 
 TipoAcaoPcpi = Literal[
     "reuniao",
@@ -62,6 +72,7 @@ TipoAcaoPcpi = Literal[
     "formulario2",
 ]
 
+
 class PcpiRegistroManualIn(BaseModel):
     data: str
     turno: str
@@ -71,6 +82,7 @@ class PcpiRegistroManualIn(BaseModel):
     turma: str = ""
     descricao_curta: str
     observacoes: str = ""
+
 
 class PcpiRegistroManualOut(BaseModel):
     id: int
@@ -87,12 +99,14 @@ class PcpiRegistroManualOut(BaseModel):
     criado_em: str = ""
     atualizado_em: str = ""
 
+
 class PcpiRegistrosManuaisOut(BaseModel):
     data: str
     turno: str
     turno_nome: str = ""
     total_registros: int = 0
     itens: list[PcpiRegistroManualOut] = Field(default_factory=list)
+
 
 class PcpiSugestaoAutomaticaOut(BaseModel):
     agendamento_id: int
@@ -112,12 +126,14 @@ class PcpiSugestaoAutomaticaOut(BaseModel):
     observacao: str = ""
     categoria_uso: str = ""
 
+
 class PcpiResumoAutomaticoOut(BaseModel):
     total_agendamentos: int = 0
     total_professores: int = 0
     total_turmas: int = 0
     recursos: list[str] = Field(default_factory=list)
     categorias_uso: list[str] = Field(default_factory=list)
+
 
 class PcpiSugestoesOut(BaseModel):
     data: str
@@ -126,6 +142,7 @@ class PcpiSugestoesOut(BaseModel):
     resumo: PcpiResumoAutomaticoOut = Field(default_factory=PcpiResumoAutomaticoOut)
     itens: list[PcpiSugestaoAutomaticaOut] = Field(default_factory=list)
     texto_base: str = ""
+
 
 class PcpiTextoGeradoOut(BaseModel):
     data: str
@@ -138,10 +155,12 @@ class PcpiTextoGeradoOut(BaseModel):
     frase_fechamento: str = ""
     texto: str = ""
 
+
 class PcpiTextoPreviewIn(BaseModel):
     data: str
     turno: str
     agendamento_ids: list[int] | None = None
+
 
 class PreConselhoPeriodoOut(BaseModel):
     id: int
@@ -153,6 +172,7 @@ class PreConselhoPeriodoOut(BaseModel):
     status: str = ""
     editavel: bool = False
 
+
 class PreConselhoPeriodoCreateIn(BaseModel):
     nome: str = ""
     ano_letivo: int
@@ -161,6 +181,7 @@ class PreConselhoPeriodoCreateIn(BaseModel):
     data_fim: str
     status: str = ""
 
+
 class PreConselhoPeriodoUpdateIn(BaseModel):
     nome: str = ""
     ano_letivo: int
@@ -168,8 +189,10 @@ class PreConselhoPeriodoUpdateIn(BaseModel):
     data_inicio: str
     data_fim: str
 
+
 class PreConselhoPeriodoStatusIn(BaseModel):
     status: str
+
 
 class PreConselhoMotivoOut(BaseModel):
     id: int
@@ -181,19 +204,23 @@ class PreConselhoMotivoOut(BaseModel):
     criado_em: str = ""
     atualizado_em: str = ""
 
+
 class PreConselhoMotivoCreateIn(BaseModel):
     categoria: str
     codigo: str
     descricao: str
     ordem: int = 0
 
+
 class PreConselhoMotivoUpdateIn(BaseModel):
     categoria: str
     descricao: str
     ordem: int = 0
 
+
 class PreConselhoMotivoStatusIn(BaseModel):
     ativo: bool
+
 
 class PreConselhoTurmaOut(BaseModel):
     id: int
@@ -201,15 +228,18 @@ class PreConselhoTurmaOut(BaseModel):
     turno: str = ""
     quantidade_estudantes: int = 0
 
+
 class PreConselhoDisciplinaOut(BaseModel):
     id: int
     nome: str
+
 
 class PreConselhoProfessorOut(BaseModel):
     id: int
     nome: str
     email: str = ""
     label: str = ""
+
 
 class PreConselhoTurmaDisciplinaOut(BaseModel):
     turma_id: int
@@ -220,6 +250,7 @@ class PreConselhoTurmaDisciplinaOut(BaseModel):
     total_estudantes: int = 0
     total_sinalizados: int = 0
     total_pendentes: int = 0
+
 
 class PreConselhoContextoOut(BaseModel):
     cargo: str = ""
@@ -236,6 +267,7 @@ class PreConselhoContextoOut(BaseModel):
     niveis_atencao: list[dict] = Field(default_factory=list)
     minhas_turmas_disciplinas: list[PreConselhoTurmaDisciplinaOut] = Field(default_factory=list)
 
+
 class PreConselhoEstudantePainelOut(BaseModel):
     estudante_id: int
     nome: str
@@ -249,6 +281,7 @@ class PreConselhoEstudantePainelOut(BaseModel):
     motivo_ids: list[int] = Field(default_factory=list)
     motivos: list[PreConselhoMotivoOut] = Field(default_factory=list)
 
+
 class PreConselhoRegistroSaveIn(BaseModel):
     periodo_id: int
     turma_id: int
@@ -260,12 +293,14 @@ class PreConselhoRegistroSaveIn(BaseModel):
     nivel_atencao: str | None = None
     professor_id: int | None = None
 
+
 class PreConselhoTextoPreviewIn(BaseModel):
     motivo_ids: list[int] = Field(default_factory=list)
     observacao_professor: str = ""
     nivel_atencao: str | None = None
     estudante_nome: str = ""
     disciplina_nome: str = ""
+
 
 class PreConselhoRegistroOut(BaseModel):
     id: int
@@ -290,13 +325,16 @@ class PreConselhoRegistroOut(BaseModel):
     motivos: list[PreConselhoMotivoOut] = Field(default_factory=list)
     editavel: bool = False
 
+
 class PreConselhoRegistrosOut(BaseModel):
     total_registros: int = 0
     itens: list[PreConselhoRegistroOut] = Field(default_factory=list)
 
+
 class PreConselhoTextoOut(BaseModel):
     texto: str = ""
     fragmentos: list[str] = Field(default_factory=list)
+
 
 class PreConselhoConsolidadoEstudanteOut(BaseModel):
     estudante_id: int = 0
@@ -309,6 +347,7 @@ class PreConselhoConsolidadoEstudanteOut(BaseModel):
     observacoes: list[str] = Field(default_factory=list)
     professores: list[str] = Field(default_factory=list)
     texto: str = ""
+
 
 class PreConselhoConsolidadoOut(BaseModel):
     periodo_id: int | None = None
@@ -326,6 +365,7 @@ class PreConselhoConsolidadoOut(BaseModel):
     itens_agrupados: list[PreConselhoConsolidadoEstudanteOut] = Field(default_factory=list)
     itens: list[PreConselhoRegistroOut] = Field(default_factory=list)
 
+
 class ProfessorCreateIn(BaseModel):
     nome: str
     email: str
@@ -335,6 +375,7 @@ class ProfessorCreateIn(BaseModel):
     turmas: list[str] = Field(default_factory=list)
     disciplinas: list[str] = Field(default_factory=list)
 
+
 class ProfessorUpdateIn(BaseModel):
     nome: str
     email: str
@@ -343,25 +384,30 @@ class ProfessorUpdateIn(BaseModel):
     turmas: list[str] = Field(default_factory=list)
     disciplinas: list[str] = Field(default_factory=list)
 
+
 class CoordenadorCreateIn(BaseModel):
     nome: str
     email: str
     senha: str
     data_nascimento: str
 
+
 class ProfessorCargaIn(BaseModel):
     aulas_semanais: int
     turmas_quantidade: int
+
 
 class ProfessorTurmaDisciplinaCreateIn(BaseModel):
     professor_id: int
     turma_id: int
     disciplina_id: int
 
+
 class ProfessorDisciplinaTurmasSyncIn(BaseModel):
     professor_id: int
     disciplina_id: int
     turma_ids: list[int] = Field(default_factory=list)
+
 
 class ProfessorTurmaDisciplinaOut(BaseModel):
     id: int
@@ -378,6 +424,7 @@ class ProfessorTurmaDisciplinaOut(BaseModel):
     disciplina_ativa: bool = True
     criado_em: str = ""
 
+
 class TurmaDisciplinaCreateIn(BaseModel):
     turma_id: int
     disciplina_id: int | None = None
@@ -385,9 +432,11 @@ class TurmaDisciplinaCreateIn(BaseModel):
     carga_horaria: int = 0
     professor_id: int | None = None
 
+
 class TurmaDisciplinaUpdateIn(BaseModel):
     carga_horaria: int
     professor_id: int | None = None
+
 
 class TurmaDisciplinaOut(BaseModel):
     id: int
@@ -407,21 +456,26 @@ class TurmaDisciplinaOut(BaseModel):
     criado_em: str = ""
     atualizado_em: str = ""
 
+
 class TurmaCreateIn(BaseModel):
     nome: str
     turno: str
     quantidade_estudantes: int = 0
 
+
 class TurmaUpdateIn(BaseModel):
     turno: str
     quantidade_estudantes: int
+
 
 class DisciplinaCreateIn(BaseModel):
     nome: str
     aulas_semanais: int = 0
 
+
 class DisciplinaUpdateIn(BaseModel):
     aulas_semanais: int
+
 
 class RecursoCreateIn(BaseModel):
     nome: str
@@ -429,14 +483,17 @@ class RecursoCreateIn(BaseModel):
     descricao: str = ""
     quantidade_itens: int = 1
 
+
 class RecursoUpdateIn(BaseModel):
     nome: str
     tipo: str
     descricao: str = ""
     quantidade_itens: int = 1
 
+
 class RecursoStatusIn(BaseModel):
     ativo: bool
+
 
 class RegrasCotaIn(BaseModel):
     base_paginas: int
@@ -600,6 +657,7 @@ class RegimentoItemOcorrenciaOut(BaseModel):
     descricao: str
     ordem: int = 0
 
+
 AcaoAplicadaOcorrencia = Literal[
     "advertencia_verbal",
     "retirada_sala_orientacao",
@@ -621,6 +679,7 @@ StatusOcorrencia = Literal[
     "resolvido",
 ]
 
+
 class OcorrenciaCreateIn(BaseModel):
     nome_estudante: str | None = None
     estudante_id: int | None = None
@@ -637,6 +696,7 @@ class OcorrenciaCreateIn(BaseModel):
     acao_aplicada: AcaoAplicadaOcorrencia
     status: StatusOcorrencia | None = None
 
+
 class OcorrenciaUpdateIn(BaseModel):
     nome_estudante: str | None = None
     estudante_id: int | None = None
@@ -652,6 +712,7 @@ class OcorrenciaUpdateIn(BaseModel):
     regimento_item_ids: list[int] | None = None
     acao_aplicada: AcaoAplicadaOcorrencia | None = None
     status: StatusOcorrencia | None = None
+
 
 class OcorrenciaOut(BaseModel):
     id: int
@@ -673,17 +734,21 @@ class OcorrenciaOut(BaseModel):
     criado_em: str
     atualizado_em: str
 
+
 class EstudanteCreateIn(BaseModel):
     nome: str
     turma_id: int
+
 
 class EstudanteUpdateIn(BaseModel):
     nome: str
     turma_id: int
     ativo: bool = True
 
+
 class EstudanteStatusIn(BaseModel):
     ativo: bool
+
 
 class EstudanteOut(BaseModel):
     id: int

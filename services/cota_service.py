@@ -1,13 +1,14 @@
 from datetime import datetime
-from database import (
+from db.impressao import (
     buscar_cota,
     criar_cota,
     consumir_cota,
     buscar_cota_do_usuario,
-    calcular_limite_cota_usuario
+    calcular_limite_cota_usuario,
 )
 
 LIMITE_PADRAO = 100
+
 
 def _obter_limite_usuario(usuario_id: int) -> int:
     try:
@@ -15,6 +16,7 @@ def _obter_limite_usuario(usuario_id: int) -> int:
         return max(limite, 0)
     except Exception:
         return LIMITE_PADRAO
+
 
 def validar_e_consumir_cota(usuario_id: int, paginas: int):
     mes_atual = datetime.now().strftime("%Y-%m")
@@ -40,6 +42,7 @@ def validar_e_consumir_cota(usuario_id: int, paginas: int):
     consumir_cota(cota["id"], paginas)
     return True, restante - paginas
 
+
 def obter_cota_atual(usuario_id: int):
     mes_atual = datetime.now().strftime("%Y-%m")
 
@@ -54,5 +57,5 @@ def obter_cota_atual(usuario_id: int):
     return {
         "limite": cota["limite_paginas"],
         "usadas": cota["usadas_paginas"],
-        "restante": restante
+        "restante": restante,
     }

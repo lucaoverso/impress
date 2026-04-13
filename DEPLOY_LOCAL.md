@@ -52,6 +52,7 @@ Ajuste obrigatório em `.env`:
 
 Ajuste recomendado em `.env` para o banco fora da pasta do código:
 - `DB_PATH=/opt/sistema-impress-data/impressao.db`
+- `LOG_LEVEL=INFO`
 
 Ajuste recomendado para integração FreeRADIUS:
 - `RADIUS_INTERNAL_SECRET=<segredo-forte-aleatorio>` (usado no endpoint interno de migração silenciosa de `nt_hash`)
@@ -105,6 +106,16 @@ journalctl -u sistema-impress-api -f
 journalctl -u sistema-impress-worker -f
 ```
 
+Aplicar migrations manualmente antes de um restart planejado:
+
+```bash
+cd /opt/sistema-impress
+set -a
+. ./.env
+set +a
+.venv/bin/python -m db.schema_migrations upgrade
+```
+
 ## 9) Configurar Nginx
 
 ```bash
@@ -122,7 +133,7 @@ curl http://127.0.0.1/health
 ```
 
 Resultado esperado:
-- `{"status":"ok"}` nas duas chamadas
+- JSON com `"status":"ok"` e `checks.database = "ok"`
 - worker ativo sem erro no `journalctl`
 - envio de impressão cria job e envia para CUPS (`lp`)
 

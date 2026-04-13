@@ -5,10 +5,12 @@ import io
 import json
 import unicodedata
 
-from database import (
-    LEI_PADRAO_IMPORTACAO,
+from db.catalogos import (
     buscar_turma_por_id,
     buscar_turma_por_nome,
+)
+from db.ocorrencias import (
+    LEI_PADRAO_IMPORTACAO,
     criar_ou_atualizar_estudante_por_nome_turma,
     criar_ou_atualizar_regimento_item,
 )
@@ -244,8 +246,7 @@ def _montar_resultado_importacao(
     erros = len(detalhes_erros)
     total_importado = criados + atualizados
     mensagem = (
-        f"Importacao de {entidade} concluida: "
-        f"{criados} criado(s), {atualizados} atualizado(s)"
+        f"Importacao de {entidade} concluida: {criados} criado(s), {atualizados} atualizado(s)"
     )
     if erros:
         mensagem += f" e {erros} linha(s) com erro."
@@ -292,10 +293,7 @@ def _obter_valor_json(objeto: dict, *aliases: str):
     if not isinstance(objeto, dict):
         return None
 
-    mapa = {
-        _normalizar_chave(chave): valor
-        for chave, valor in objeto.items()
-    }
+    mapa = {_normalizar_chave(chave): valor for chave, valor in objeto.items()}
     for alias in aliases:
         chave = _normalizar_chave(alias)
         if chave in mapa:
@@ -361,9 +359,10 @@ def _extrair_linhas_base_legal_json(conteudo: bytes) -> list[tuple[str, dict[str
         if not isinstance(lei_item, dict):
             raise ValueError(f"Lei #{indice_lei}: estrutura invalida.")
 
-        lei_nome = _texto_json(
-            _obter_valor_json(lei_item, "lei", "lei_nome", "nome")
-        ) or LEI_PADRAO_IMPORTACAO
+        lei_nome = (
+            _texto_json(_obter_valor_json(lei_item, "lei", "lei_nome", "nome"))
+            or LEI_PADRAO_IMPORTACAO
+        )
         artigos = _lista_json(
             _obter_valor_json(lei_item, "artigos"),
             campo=f"artigos da lei {lei_nome}",
@@ -384,23 +383,27 @@ def _extrair_linhas_base_legal_json(conteudo: bytes) -> list[tuple[str, dict[str
             if not artigo_numero:
                 raise ValueError(f"Lei {lei_nome}: numero do artigo obrigatorio.")
             if not artigo_descricao:
-                raise ValueError(f"Lei {lei_nome} > Art. {artigo_numero}: descricao do artigo obrigatoria.")
+                raise ValueError(
+                    f"Lei {lei_nome} > Art. {artigo_numero}: descricao do artigo obrigatoria."
+                )
 
-            linhas.append((
-                _identificador_item_base_legal(
-                    lei_nome=lei_nome,
-                    artigo_numero=artigo_numero,
-                ),
-                {
-                    "lei_nome": lei_nome,
-                    "artigo_numero": artigo_numero,
-                    "artigo_descricao": artigo_descricao,
-                    "inciso_numero": "",
-                    "inciso_descricao": "",
-                    "alinea_identificador": "",
-                    "alinea_descricao": "",
-                }
-            ))
+            linhas.append(
+                (
+                    _identificador_item_base_legal(
+                        lei_nome=lei_nome,
+                        artigo_numero=artigo_numero,
+                    ),
+                    {
+                        "lei_nome": lei_nome,
+                        "artigo_numero": artigo_numero,
+                        "artigo_descricao": artigo_descricao,
+                        "inciso_numero": "",
+                        "inciso_descricao": "",
+                        "alinea_identificador": "",
+                        "alinea_descricao": "",
+                    },
+                )
+            )
 
             incisos = _lista_json(
                 _obter_valor_json(artigo_item, "incisos"),
@@ -408,7 +411,9 @@ def _extrair_linhas_base_legal_json(conteudo: bytes) -> list[tuple[str, dict[str
             )
             for inciso_item in incisos:
                 if not isinstance(inciso_item, dict):
-                    raise ValueError(f"Lei {lei_nome} > Art. {artigo_numero}: inciso com estrutura invalida.")
+                    raise ValueError(
+                        f"Lei {lei_nome} > Art. {artigo_numero}: inciso com estrutura invalida."
+                    )
 
                 inciso_numero = _texto_json(
                     _obter_valor_json(inciso_item, "numero", "inciso_numero", "inciso")
@@ -417,28 +422,32 @@ def _extrair_linhas_base_legal_json(conteudo: bytes) -> list[tuple[str, dict[str
                     _obter_valor_json(inciso_item, "descricao", "inciso_descricao", "texto")
                 )
                 if not inciso_numero:
-                    raise ValueError(f"Lei {lei_nome} > Art. {artigo_numero}: numero do inciso obrigatorio.")
+                    raise ValueError(
+                        f"Lei {lei_nome} > Art. {artigo_numero}: numero do inciso obrigatorio."
+                    )
                 if not inciso_descricao:
                     raise ValueError(
                         f"Lei {lei_nome} > Art. {artigo_numero} > inciso {inciso_numero}: descricao do inciso obrigatoria."
                     )
 
-                linhas.append((
-                    _identificador_item_base_legal(
-                        lei_nome=lei_nome,
-                        artigo_numero=artigo_numero,
-                        inciso_numero=inciso_numero,
-                    ),
-                    {
-                        "lei_nome": lei_nome,
-                        "artigo_numero": artigo_numero,
-                        "artigo_descricao": artigo_descricao,
-                        "inciso_numero": inciso_numero,
-                        "inciso_descricao": inciso_descricao,
-                        "alinea_identificador": "",
-                        "alinea_descricao": "",
-                    }
-                ))
+                linhas.append(
+                    (
+                        _identificador_item_base_legal(
+                            lei_nome=lei_nome,
+                            artigo_numero=artigo_numero,
+                            inciso_numero=inciso_numero,
+                        ),
+                        {
+                            "lei_nome": lei_nome,
+                            "artigo_numero": artigo_numero,
+                            "artigo_descricao": artigo_descricao,
+                            "inciso_numero": inciso_numero,
+                            "inciso_descricao": inciso_descricao,
+                            "alinea_identificador": "",
+                            "alinea_descricao": "",
+                        },
+                    )
+                )
 
                 alineas = _lista_json(
                     _obter_valor_json(inciso_item, "alineas"),
@@ -451,7 +460,9 @@ def _extrair_linhas_base_legal_json(conteudo: bytes) -> list[tuple[str, dict[str
                         )
 
                     alinea_identificador = _texto_json(
-                        _obter_valor_json(alinea_item, "identificador", "alinea_identificador", "alinea")
+                        _obter_valor_json(
+                            alinea_item, "identificador", "alinea_identificador", "alinea"
+                        )
                     )
                     alinea_descricao = _texto_json(
                         _obter_valor_json(alinea_item, "descricao", "alinea_descricao", "texto")
@@ -465,23 +476,25 @@ def _extrair_linhas_base_legal_json(conteudo: bytes) -> list[tuple[str, dict[str
                             f"Lei {lei_nome} > Art. {artigo_numero} > inciso {inciso_numero} > alinea {alinea_identificador}: descricao da alinea obrigatoria."
                         )
 
-                    linhas.append((
-                        _identificador_item_base_legal(
-                            lei_nome=lei_nome,
-                            artigo_numero=artigo_numero,
-                            inciso_numero=inciso_numero,
-                            alinea_identificador=alinea_identificador,
-                        ),
-                        {
-                            "lei_nome": lei_nome,
-                            "artigo_numero": artigo_numero,
-                            "artigo_descricao": artigo_descricao,
-                            "inciso_numero": inciso_numero,
-                            "inciso_descricao": inciso_descricao,
-                            "alinea_identificador": alinea_identificador,
-                            "alinea_descricao": alinea_descricao,
-                        }
-                    ))
+                    linhas.append(
+                        (
+                            _identificador_item_base_legal(
+                                lei_nome=lei_nome,
+                                artigo_numero=artigo_numero,
+                                inciso_numero=inciso_numero,
+                                alinea_identificador=alinea_identificador,
+                            ),
+                            {
+                                "lei_nome": lei_nome,
+                                "artigo_numero": artigo_numero,
+                                "artigo_descricao": artigo_descricao,
+                                "inciso_numero": inciso_numero,
+                                "inciso_descricao": inciso_descricao,
+                                "alinea_identificador": alinea_identificador,
+                                "alinea_descricao": alinea_descricao,
+                            },
+                        )
+                    )
 
     if not linhas:
         raise ValueError("O JSON nao possui itens de base legal para importar.")
@@ -522,9 +535,7 @@ def _extrair_linhas_estudantes_json(conteudo: bytes) -> list[tuple[str, dict[str
         turma_padrao = _texto_json(
             _obter_valor_json(grupo, "turma", "turma_nome", "nome_turma", "classe", "sala")
         )
-        turma_id_padrao = _texto_json(
-            _obter_valor_json(grupo, "turma_id", "id_turma")
-        )
+        turma_id_padrao = _texto_json(_obter_valor_json(grupo, "turma_id", "id_turma"))
         estudantes = _lista_json(
             _obter_valor_json(grupo, "estudantes", "alunos"),
             campo=f"estudantes do grupo {indice_grupo}",
@@ -548,27 +559,29 @@ def _extrair_linhas_estudantes_json(conteudo: bytes) -> list[tuple[str, dict[str
                     "nome_aluno",
                 )
             )
-            turma = _texto_json(
-                _obter_valor_json(estudante_item, "turma", "turma_nome", "nome_turma")
-            ) or turma_padrao
-            turma_id = _texto_json(
-                _obter_valor_json(estudante_item, "turma_id", "id_turma")
-            ) or turma_id_padrao
-            ativo = _texto_json(
-                _obter_valor_json(estudante_item, "ativo", "status", "situacao")
+            turma = (
+                _texto_json(_obter_valor_json(estudante_item, "turma", "turma_nome", "nome_turma"))
+                or turma_padrao
             )
+            turma_id = (
+                _texto_json(_obter_valor_json(estudante_item, "turma_id", "id_turma"))
+                or turma_id_padrao
+            )
+            ativo = _texto_json(_obter_valor_json(estudante_item, "ativo", "status", "situacao"))
 
             referencia_turma = turma or turma_id or f"grupo {indice_grupo}"
             referencia_nome = nome or f"estudante #{indice_estudante}"
-            linhas.append((
-                f"{referencia_turma} > {referencia_nome}",
-                {
-                    "nome": nome,
-                    "turma": turma,
-                    "turma_id": turma_id,
-                    "ativo": ativo,
-                }
-            ))
+            linhas.append(
+                (
+                    f"{referencia_turma} > {referencia_nome}",
+                    {
+                        "nome": nome,
+                        "turma": turma,
+                        "turma_id": turma_id,
+                        "ativo": ativo,
+                    },
+                )
+            )
 
     if not linhas:
         raise ValueError("O JSON nao possui estudantes para importar.")

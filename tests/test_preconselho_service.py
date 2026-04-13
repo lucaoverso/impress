@@ -34,7 +34,10 @@ class PreConselhoServiceTest(unittest.TestCase):
             disciplina_nome="Matematica",
         )
 
-        self.assertIn("O estudante Ana obteve baixo rendimento na disciplina de Matematica", resultado["texto"])
+        self.assertIn(
+            "O estudante Ana obteve baixo rendimento na disciplina de Matematica",
+            resultado["texto"],
+        )
         self.assertIn("ausencia na realizacao da prova bimestral", resultado["texto"])
         self.assertIn("nao entrega de trabalhos propostos", resultado["texto"])
         self.assertIn("baixa participacao nas aulas", resultado["texto"])
@@ -57,7 +60,10 @@ class PreConselhoServiceTest(unittest.TestCase):
                 "nivel_atencao": "medio",
                 "motivos": [
                     {"codigo": "nao_fez_prova_bimestral", "descricao": "Nao fez a prova bimestral"},
-                    {"codigo": "baixa_participacao_aula", "descricao": "Baixa participacao em aula"},
+                    {
+                        "codigo": "baixa_participacao_aula",
+                        "descricao": "Baixa participacao em aula",
+                    },
                 ],
                 "observacao_professor": "precisa retomar a rotina de estudos",
             },
@@ -92,7 +98,9 @@ class PreConselhoServiceTest(unittest.TestCase):
         self.assertIn("Nao fez a prova bimestral", resultado["motivos_frequentes"][0])
         self.assertEqual(len(resultado["itens_agrupados"]), 1)
         self.assertEqual(resultado["itens_agrupados"][0]["estudante_nome"], "Ana")
-        self.assertIn("Relatos complementares registrados", resultado["itens_agrupados"][0]["texto"])
+        self.assertIn(
+            "Relatos complementares registrados", resultado["itens_agrupados"][0]["texto"]
+        )
 
 
 if __name__ == "__main__":

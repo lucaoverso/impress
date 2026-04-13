@@ -41,7 +41,9 @@ def _existe_tabela(cursor: sqlite3.Cursor, tabela: str) -> bool:
     return cursor.fetchone() is not None
 
 
-def _adicionar_coluna_se_necessario(cursor: sqlite3.Cursor, tabela: str, coluna: str, definicao: str):
+def _adicionar_coluna_se_necessario(
+    cursor: sqlite3.Cursor, tabela: str, coluna: str, definicao: str
+):
     if coluna in _colunas_tabela(cursor, tabela):
         return
     cursor.execute(f"ALTER TABLE {tabela} ADD COLUMN {coluna} {definicao}")
@@ -214,42 +216,102 @@ def upgrade(conn: sqlite3.Connection):
         """
     )
 
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_periodos", "nome", "TEXT NOT NULL DEFAULT ''")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_periodos", "ano_letivo", "INTEGER NOT NULL DEFAULT 0")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_periodos", "etapa", "INTEGER NOT NULL DEFAULT 0")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_periodos", "data_inicio", "TEXT NOT NULL DEFAULT ''")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_periodos", "data_fim", "TEXT NOT NULL DEFAULT ''")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_periodos", "status", "TEXT NOT NULL DEFAULT 'FECHADO'")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_periodos", "criado_em", "TEXT NOT NULL DEFAULT ''")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_periodos", "atualizado_em", "TEXT NOT NULL DEFAULT ''")
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_periodos", "nome", "TEXT NOT NULL DEFAULT ''"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_periodos", "ano_letivo", "INTEGER NOT NULL DEFAULT 0"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_periodos", "etapa", "INTEGER NOT NULL DEFAULT 0"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_periodos", "data_inicio", "TEXT NOT NULL DEFAULT ''"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_periodos", "data_fim", "TEXT NOT NULL DEFAULT ''"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_periodos", "status", "TEXT NOT NULL DEFAULT 'FECHADO'"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_periodos", "criado_em", "TEXT NOT NULL DEFAULT ''"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_periodos", "atualizado_em", "TEXT NOT NULL DEFAULT ''"
+    )
 
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_motivos", "categoria", "TEXT NOT NULL DEFAULT ''")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_motivos", "codigo", "TEXT NOT NULL DEFAULT ''")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_motivos", "descricao", "TEXT NOT NULL DEFAULT ''")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_motivos", "ativo", "INTEGER NOT NULL DEFAULT 1")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_motivos", "ordem", "INTEGER NOT NULL DEFAULT 0")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_motivos", "criado_em", "TEXT NOT NULL DEFAULT ''")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_motivos", "atualizado_em", "TEXT NOT NULL DEFAULT ''")
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_motivos", "categoria", "TEXT NOT NULL DEFAULT ''"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_motivos", "codigo", "TEXT NOT NULL DEFAULT ''"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_motivos", "descricao", "TEXT NOT NULL DEFAULT ''"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_motivos", "ativo", "INTEGER NOT NULL DEFAULT 1"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_motivos", "ordem", "INTEGER NOT NULL DEFAULT 0"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_motivos", "criado_em", "TEXT NOT NULL DEFAULT ''"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_motivos", "atualizado_em", "TEXT NOT NULL DEFAULT ''"
+    )
 
     _adicionar_coluna_se_necessario(cursor, "pre_conselho_registros", "periodo_id", "INTEGER")
     _adicionar_coluna_se_necessario(cursor, "pre_conselho_registros", "disciplina_id", "INTEGER")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_registros", "professor_usuario_id", "INTEGER NOT NULL DEFAULT 0")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_registros", "turma_id", "INTEGER NOT NULL DEFAULT 0")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_registros", "estudante_id", "INTEGER NOT NULL DEFAULT 0")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_registros", "disciplina", "TEXT NOT NULL DEFAULT ''")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_registros", "ano_letivo", "INTEGER NOT NULL DEFAULT 0")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_registros", "bimestre", "INTEGER NOT NULL DEFAULT 0")
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_registros", "professor_usuario_id", "INTEGER NOT NULL DEFAULT 0"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_registros", "turma_id", "INTEGER NOT NULL DEFAULT 0"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_registros", "estudante_id", "INTEGER NOT NULL DEFAULT 0"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_registros", "disciplina", "TEXT NOT NULL DEFAULT ''"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_registros", "ano_letivo", "INTEGER NOT NULL DEFAULT 0"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_registros", "bimestre", "INTEGER NOT NULL DEFAULT 0"
+    )
     _adicionar_coluna_se_necessario(cursor, "pre_conselho_registros", "nivel_atencao", "TEXT")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_registros", "motivos", "TEXT NOT NULL DEFAULT '[]'")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_registros", "observacoes", "TEXT NOT NULL DEFAULT ''")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_registros", "observacao_professor", "TEXT NOT NULL DEFAULT ''")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_registros", "texto_gerado", "TEXT NOT NULL DEFAULT ''")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_registros", "criado_em", "TEXT NOT NULL DEFAULT ''")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_registros", "atualizado_em", "TEXT NOT NULL DEFAULT ''")
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_registros", "motivos", "TEXT NOT NULL DEFAULT '[]'"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_registros", "observacoes", "TEXT NOT NULL DEFAULT ''"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_registros", "observacao_professor", "TEXT NOT NULL DEFAULT ''"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_registros", "texto_gerado", "TEXT NOT NULL DEFAULT ''"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_registros", "criado_em", "TEXT NOT NULL DEFAULT ''"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_registros", "atualizado_em", "TEXT NOT NULL DEFAULT ''"
+    )
 
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_registro_motivos", "registro_id", "INTEGER NOT NULL DEFAULT 0")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_registro_motivos", "motivo_id", "INTEGER NOT NULL DEFAULT 0")
-    _adicionar_coluna_se_necessario(cursor, "pre_conselho_registro_motivos", "criado_em", "TEXT NOT NULL DEFAULT ''")
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_registro_motivos", "registro_id", "INTEGER NOT NULL DEFAULT 0"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_registro_motivos", "motivo_id", "INTEGER NOT NULL DEFAULT 0"
+    )
+    _adicionar_coluna_se_necessario(
+        cursor, "pre_conselho_registro_motivos", "criado_em", "TEXT NOT NULL DEFAULT ''"
+    )
 
     cursor.execute(
         """

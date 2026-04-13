@@ -3,13 +3,13 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from auth import get_usuario_logado
-from database import (
+from db.agendamento import listar_agendamentos
+from db.pcpi import (
     buscar_registro_pcpi_manual_por_id,
     criar_registro_pcpi_manual,
-    listar_agendamentos,
-    listar_cargas_professores_por_usuario_ids,
     listar_registros_pcpi_manuais,
 )
+from db.usuarios import listar_cargas_professores_por_usuario_ids
 from models import (
     PcpiRegistroManualIn,
     PcpiRegistroManualOut,
@@ -127,23 +127,19 @@ def _listar_registros_manuais_normalizados(data: str, turno: str) -> list[dict]:
     return registros_turno
 
 
-def _filtrar_itens_automaticos_por_ids(itens: list[dict], agendamento_ids: list[int] | None) -> list[dict]:
+def _filtrar_itens_automaticos_por_ids(
+    itens: list[dict], agendamento_ids: list[int] | None
+) -> list[dict]:
     if agendamento_ids is None:
         return list(itens or [])
 
     ids_validos = {
-        int(valor)
-        for valor in agendamento_ids
-        if isinstance(valor, int) and int(valor) > 0
+        int(valor) for valor in agendamento_ids if isinstance(valor, int) and int(valor) > 0
     }
     if not ids_validos:
         return []
 
-    return [
-        item
-        for item in (itens or [])
-        if int(item.get("agendamento_id") or 0) in ids_validos
-    ]
+    return [item for item in (itens or []) if int(item.get("agendamento_id") or 0) in ids_validos]
 
 
 @router.get("/pcpi/sugestoes", response_model=PcpiSugestoesOut)

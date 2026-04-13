@@ -1,12 +1,16 @@
 import json
 
-from database import (
+from db.catalogos import (
     buscar_disciplina_por_id,
     buscar_disciplina_por_nome,
     buscar_turma_por_id,
     buscar_turma_por_nome,
+)
+from db.usuarios import (
     buscar_usuario_por_id,
     listar_professores_agendamento,
+)
+from db.docencia import (
     sincronizar_atribuicoes_docentes_professor_disciplina,
 )
 
@@ -72,7 +76,8 @@ def _resolver_professor(item: dict) -> dict:
     nome = _normalizar_texto(item.get("professor_nome") or item.get("professor"))
     if nome:
         candidatos = [
-            prof for prof in listar_professores_agendamento()
+            prof
+            for prof in listar_professores_agendamento()
             if _normalizar_texto(prof.get("nome")).casefold() == nome.casefold()
         ]
         if len(candidatos) == 1:
@@ -80,7 +85,9 @@ def _resolver_professor(item: dict) -> dict:
             if _eh_professor(professor):
                 return professor
         if len(candidatos) > 1:
-            raise ValueError("Existe mais de um professor com esse nome. Use professor_id para diferenciar.")
+            raise ValueError(
+                "Existe mais de um professor com esse nome. Use professor_id para diferenciar."
+            )
         raise ValueError("Professor nao encontrado para o nome informado.")
 
     professor_id = item.get("professor_id")
@@ -172,7 +179,9 @@ def importar_atribuicoes_docentes_json(conteudo: bytes) -> dict:
             disciplina = _resolver_disciplina(item)
             turma_ids = _resolver_turmas(item)
             if not turma_ids and not bool(item.get("permitir_vazio", False)):
-                raise ValueError("Informe ao menos uma turma ou use permitir_vazio=true para limpar a atribuicao.")
+                raise ValueError(
+                    "Informe ao menos uma turma ou use permitir_vazio=true para limpar a atribuicao."
+                )
 
             resultado = sincronizar_atribuicoes_docentes_professor_disciplina(
                 professor_id=int(professor["id"]),

@@ -1,17 +1,18 @@
-const token = localStorage.getItem("token");
+const { el } = window.AppDom;
+const {
+    garantirToken,
+    criarHeadersAuth,
+    criarHeadersJsonAuth,
+    encerrarSessao,
+    normalizarCargoUsuario,
+    modulosPermitidos,
+} = window.AppAuth;
+const { fetchComAuth, obterMensagemErroResposta } = window.AppApi;
+const { escaparHtml } = window.AppFormat;
 
-if (!token) {
-    window.location.href = "/login-page";
-}
-
-const headers = {
-    Authorization: `Bearer ${token}`
-};
-
-const headersJson = {
-    Authorization: `Bearer ${token}`,
-    "Content-Type": "application/json"
-};
+const token = garantirToken();
+const headers = criarHeadersAuth(token);
+const headersJson = criarHeadersJsonAuth(token);
 
 const CATEGORIAS_MOTIVO = [
     { id: "avaliacao", nome: "Avaliacao" },
@@ -26,6 +27,7 @@ let usuarioAtual = null;
 let contextoAtual = null;
 let abaAtiva = "";
 let timerPreviewDocente = null;
+let ultimoElementoFocadoModal = null;
 
 const estadoDocente = {
     periodoId: null,
@@ -41,57 +43,6 @@ const estadoConsolidacao = {
     dados: null
 };
 
-function el(id) {
-    return document.getElementById(id);
-}
-
-function encerrarSessao() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("token_expira_em");
-    window.location.href = "/login-page";
-}
-
-async function fetchComAuth(url, options = {}) {
-    const resposta = await fetch(url, options);
-    if (resposta.status === 401) {
-        encerrarSessao();
-        throw new Error("Sessao expirada.");
-    }
-    return resposta;
-}
-
-function normalizarCargoUsuario(usuario = {}) {
-    const cargo = String(usuario.cargo || "").trim().toUpperCase();
-    if (cargo) {
-        return cargo;
-    }
-
-    const perfil = String(usuario.perfil || "").trim().toLowerCase();
-    if (perfil === "admin") return "ADMIN";
-    if (perfil === "coordenador") return "COORDENADOR";
-    return "PROFESSOR";
-}
-
-function modulosPermitidos(usuario = {}) {
-    if (Array.isArray(usuario.modulos) && usuario.modulos.length > 0) {
-        return new Set(usuario.modulos.map((item) => String(item).trim().toLowerCase()));
-    }
-
-    const cargo = normalizarCargoUsuario(usuario);
-    if (cargo === "ADMIN") return new Set(["impressao", "agendamento", "gestao", "coordenacao", "pcpi", "preconselho"]);
-    if (cargo === "COORDENADOR") return new Set(["coordenacao", "pcpi", "preconselho"]);
-    return new Set(["impressao", "agendamento", "preconselho"]);
-}
-
-function escaparHtml(valor) {
-    return String(valor || "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll("\"", "&quot;")
-        .replaceAll("'", "&#39;");
-}
-
 function limparMensagem(id) {
     definirMensagem(id, "", false);
 }
@@ -104,21 +55,6 @@ function definirMensagem(id, texto, erro = false) {
 
     alvo.textContent = texto || "";
     alvo.dataset.state = erro ? "erro" : "ok";
-}
-
-async function obterMensagemErroResposta(resposta, fallback) {
-    try {
-        const dados = await resposta.json();
-        if (typeof dados?.detail === "string" && dados.detail.trim()) {
-            return dados.detail.trim();
-        }
-        if (typeof dados?.mensagem === "string" && dados.mensagem.trim()) {
-            return dados.mensagem.trim();
-        }
-    } catch (_erro) {
-        // Resposta sem JSON util.
-    }
-    return fallback;
 }
 
 function criarEstadoVazio(mensagem) {
@@ -284,14 +220,58 @@ function atualizarStatusSinalizacaoDocente({ possuiEstudante = false, possuiRegi
         "Este estudante será sinalizado automaticamente assim que o registro for salvo nesta turma, disciplina e período.";
 }
 
-function focarEditorDocenteSeNecessario() {
-    if (!window.matchMedia("(max-width: 980px)").matches) {
+function modalRegistroDocenteAberto() {
+    return Boolean(el("preconselhoModalEditor")) && !el("preconselhoModalEditor").hidden;
+}
+
+function abrirModalRegistroDocente() {
+    const modal = el("preconselhoModalEditor");
+    if (!modal) {
         return;
     }
-    const painel = el("preconselhoPainelEditor");
-    if (painel) {
-        painel.scrollIntoView({ behavior: "smooth", block: "start" });
+
+    if (modal.hidden) {
+        const focoAtual = document.activeElement;
+        ultimoElementoFocadoModal = focoAtual && typeof focoAtual.focus === "function" ? focoAtual : null;
     }
+    modal.hidden = false;
+    document.body.classList.add("preconselho-modal-open");
+}
+
+function fecharModalRegistroDocente({ limparFormulario = true, restaurarFoco = true } = {}) {
+    const modal = el("preconselhoModalEditor");
+    if (!modal) {
+        return;
+    }
+
+    modal.hidden = true;
+    document.body.classList.remove("preconselho-modal-open");
+
+    if (limparFormulario) {
+        limparMensagem("msgPreconselhoRegistro");
+        limparFormularioDocente();
+    }
+
+    if (restaurarFoco && ultimoElementoFocadoModal && typeof ultimoElementoFocadoModal.focus === "function") {
+        ultimoElementoFocadoModal.focus();
+    }
+    ultimoElementoFocadoModal = null;
+}
+
+function abrirModalComEstudante(estudante) {
+    if (!estudante) {
+        return;
+    }
+
+    preencherFormularioComEstudante(estudante);
+    abrirModalRegistroDocente();
+    focarEditorDocenteSeNecessario();
+}
+
+function focarEditorDocenteSeNecessario() {
+    window.requestAnimationFrame(() => {
+        el("preconselhoNivelAtencao")?.focus();
+    });
 }
 
 function limparFormularioDocente() {
@@ -556,7 +536,7 @@ function renderizarCombosDocente() {
                 data-disciplina-id="${Number(item.disciplina_id)}">
                 <strong>${escaparHtml(item.turma_nome || "")} • ${escaparHtml(item.disciplina_nome || "")}</strong>
                 <span>${Number(item.total_estudantes || 0)} estudante(s)</span>
-                <small>${Number(item.total_sinalizados || 0)} sinalizado(s) • ${Number(item.total_pendentes || 0)} pendente(s)</small>
+                <small>${Number(item.total_sinalizados || 0)} sinalizado(s)</small>
             </button>
         `;
     }).join("");
@@ -593,11 +573,10 @@ function renderizarEstudantesDocente() {
                             <span class="pcpi-chip ${item.sinalizado ? "pcpi-chip-manual" : "pcpi-chip-automatico"}">${item.sinalizado ? "Sinalizado" : "Nao sinalizado"}</span>
                         </span>
                     </span>
-                    <span class="pcpi-item-line">${escaparHtml(item.turma_nome || combo.turma_nome || "")}</span>
                     <span class="pcpi-item-note">${escaparHtml(
                         item.sinalizado
                             ? `${item.motivos.length} motivo(s) selecionado(s)${nivel ? ` • Atencao ${nivel}` : ""}`
-                            : "Clique para preencher. Ao salvar, o estudante sera sinalizado automaticamente."
+                            : "Clique para abrir um relato."
                     )}</span>
                 </button>
             </li>
@@ -697,7 +676,6 @@ function preencherFormularioComEstudante(estudante) {
 
     renderizarEstudantesDocente();
     atualizarEstadoFormularioDocente();
-    focarEditorDocenteSeNecessario();
     void atualizarPreviewDocente();
 }
 
@@ -851,6 +829,7 @@ async function carregarPainelDocente(estudanteIdParaReabrir = null) {
         }
 
         definirMensagem("msgPreconselhoDocente", "Painel docente atualizado.");
+        return true;
     } catch (erro) {
         estadoDocente.combos = [];
         estadoDocente.estudantes = [];
@@ -861,6 +840,7 @@ async function carregarPainelDocente(estudanteIdParaReabrir = null) {
         renderizarRegistrosDocente();
         limparFormularioDocente();
         definirMensagem("msgPreconselhoDocente", erro.message || "Nao foi possivel carregar o painel docente.", true);
+        return false;
     }
 }
 
@@ -1313,28 +1293,25 @@ async function salvarRegistroDocente(event) {
         }
 
         const salvo = await resposta.json();
-        await carregarPainelDocente(Number(salvo.estudante_id));
-        definirMensagem("msgPreconselhoRegistro", "Registro salvo com sucesso.");
+        const painelAtualizado = await carregarPainelDocente(Number(salvo.estudante_id));
+        if (!painelAtualizado) {
+            definirMensagem("msgPreconselhoRegistro", "Registro salvo, mas o painel nao foi recarregado corretamente.", true);
+            return;
+        }
+        definirMensagem("msgPreconselhoDocente", `Registro de ${String(salvo.estudante_nome || "estudante")} salvo com sucesso.`);
+        fecharModalRegistroDocente({ restaurarFoco: false });
     } catch (erro) {
         definirMensagem("msgPreconselhoRegistro", erro.message || "Erro ao salvar o registro.", true);
     }
 }
 
-async function excluirRegistroDocente(registroId, estudanteId = null) {
-    limparMensagem("msgPreconselhoRegistro");
-    try {
-        const resposta = await fetchComAuth(`/preconselho/registros/${Number(registroId)}`, {
-            method: "DELETE",
-            headers
-        });
-        if (!resposta.ok) {
-            throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel excluir o registro."));
-        }
-
-        await carregarPainelDocente(estudanteId);
-        definirMensagem("msgPreconselhoRegistro", "Registro excluido com sucesso.");
-    } catch (erro) {
-        definirMensagem("msgPreconselhoRegistro", erro.message || "Erro ao excluir o registro.", true);
+async function excluirRegistroDocente(registroId) {
+    const resposta = await fetchComAuth(`/preconselho/registros/${Number(registroId)}`, {
+        method: "DELETE",
+        headers
+    });
+    if (!resposta.ok) {
+        throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel excluir o registro."));
     }
 }
 
@@ -1429,11 +1406,13 @@ function registrarEventos() {
 
     el("formPreconselhoDocentePeriodo").addEventListener("submit", async (event) => {
         event.preventDefault();
+        fecharModalRegistroDocente({ restaurarFoco: false });
         estadoDocente.periodoId = Number(el("preconselhoPeriodoDocente").value || 0);
         await carregarPainelDocente();
     });
 
     el("preconselhoPeriodoDocente").addEventListener("change", async () => {
+        fecharModalRegistroDocente({ restaurarFoco: false });
         estadoDocente.periodoId = Number(el("preconselhoPeriodoDocente").value || 0);
         await carregarPainelDocente();
     });
@@ -1445,6 +1424,7 @@ function registrarEventos() {
         }
         estadoDocente.turmaId = Number(botao.dataset.turmaId || 0);
         estadoDocente.disciplinaId = Number(botao.dataset.disciplinaId || 0);
+        fecharModalRegistroDocente({ restaurarFoco: false });
         renderizarCombosDocente();
         await Promise.all([carregarEstudantesDocente(), carregarRegistrosDocente()]);
         limparFormularioDocente();
@@ -1469,14 +1449,14 @@ function registrarEventos() {
             return;
         }
         const estudante = resolverEstudanteParaFormulario(botao.dataset.estudanteId || 0);
-        preencherFormularioComEstudante(estudante);
+        abrirModalComEstudante(estudante);
     });
 
     el("listaRegistrosDocente").addEventListener("click", async (event) => {
         const botaoEditar = event.target.closest("button[data-action='editar-registro']");
         if (botaoEditar) {
             const estudante = resolverEstudanteParaFormulario(botaoEditar.dataset.estudanteId || 0);
-            preencherFormularioComEstudante(estudante);
+            abrirModalComEstudante(estudante);
             return;
         }
 
@@ -1489,7 +1469,19 @@ function registrarEventos() {
             if (!window.confirm("Deseja realmente excluir este registro do pré-conselho?")) {
                 return;
             }
-            await excluirRegistroDocente(registro.id, registro.estudante_id);
+            limparMensagem("msgPreconselhoRegistro");
+            try {
+                await excluirRegistroDocente(registro.id);
+                const painelAtualizado = await carregarPainelDocente();
+                if (!painelAtualizado) {
+                    definirMensagem("msgPreconselhoRegistro", "Registro excluido, mas o painel nao foi recarregado corretamente.", true);
+                    return;
+                }
+                definirMensagem("msgPreconselhoDocente", "Registro excluido com sucesso.");
+                fecharModalRegistroDocente({ restaurarFoco: false });
+            } catch (erro) {
+                definirMensagem("msgPreconselhoRegistro", erro.message || "Erro ao excluir o registro.", true);
+            }
         }
     });
 
@@ -1507,7 +1499,36 @@ function registrarEventos() {
         if (!window.confirm("Deseja realmente excluir este registro do pré-conselho?")) {
             return;
         }
-        await excluirRegistroDocente(registro.id, registro.estudante_id);
+        limparMensagem("msgPreconselhoRegistro");
+        try {
+            await excluirRegistroDocente(registro.id);
+            const painelAtualizado = await carregarPainelDocente();
+            if (!painelAtualizado) {
+                definirMensagem("msgPreconselhoRegistro", "Registro excluido, mas o painel nao foi recarregado corretamente.", true);
+                return;
+            }
+            definirMensagem("msgPreconselhoDocente", "Registro excluido com sucesso.");
+            fecharModalRegistroDocente({ restaurarFoco: false });
+        } catch (erro) {
+            definirMensagem("msgPreconselhoRegistro", erro.message || "Erro ao excluir o registro.", true);
+        }
+    });
+
+    el("btnFecharModalRegistroDocente").addEventListener("click", () => {
+        fecharModalRegistroDocente();
+    });
+    el("btnFecharModalRegistroDocenteRodape").addEventListener("click", () => {
+        fecharModalRegistroDocente();
+    });
+    el("preconselhoModalEditor").addEventListener("click", (event) => {
+        if (event.target === event.currentTarget) {
+            fecharModalRegistroDocente();
+        }
+    });
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && modalRegistroDocenteAberto()) {
+            fecharModalRegistroDocente();
+        }
     });
 
     el("preconselhoNivelAtencao").addEventListener("change", agendarPreviewDocente);

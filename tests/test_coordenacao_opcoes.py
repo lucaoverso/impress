@@ -38,9 +38,7 @@ class CoordenacaoOpcoesTest(unittest.TestCase):
                 inciso_descricao="Integrar-se ao processo pedagogico desenvolvido pela unidade escolar.",
             )
 
-            resposta = ocorrencias_router.listar_opcoes_ocorrencias(
-                usuario={"cargo": "ADMIN"}
-            )
+            resposta = ocorrencias_router.listar_opcoes_ocorrencias(usuario={"cargo": "ADMIN"})
 
             self.assertIn("disciplinas", resposta)
             self.assertTrue(isinstance(resposta["disciplinas"], list))

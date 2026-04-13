@@ -39,6 +39,7 @@ def converter_para_pdf(caminho_origem: Path, extensao: str) -> Path:
 
     raise ValueError("Formato de arquivo não suportado para impressão.")
 
+
 def _descobrir_comando_soffice() -> str | None:
     comando_env = os.getenv("LIBREOFFICE_COMMAND", "").strip()
     if comando_env:
@@ -94,9 +95,7 @@ def converter_office_para_pdf(caminho_origem: Path) -> Path:
             timeout=SOFFICE_TIMEOUT_SECONDS,
         )
     except subprocess.TimeoutExpired as exc:
-        raise RuntimeError(
-            "Timeout ao converter documento Office para PDF."
-        ) from exc
+        raise RuntimeError("Timeout ao converter documento Office para PDF.") from exc
     except FileNotFoundError as exc:
         raise RuntimeError(
             "Comando do LibreOffice não encontrado para conversão de DOC/DOCX."
@@ -104,11 +103,7 @@ def converter_office_para_pdf(caminho_origem: Path) -> Path:
 
     if resultado.returncode != 0:
         saida = "\n".join(
-            [
-                parte
-                for parte in [resultado.stdout.strip(), resultado.stderr.strip()]
-                if parte
-            ]
+            [parte for parte in [resultado.stdout.strip(), resultado.stderr.strip()] if parte]
         ).strip()
         raise RuntimeError(saida or "Falha ao converter documento Office para PDF.")
 
@@ -122,9 +117,7 @@ def converter_imagem_para_pdf(caminho_origem: Path) -> Path:
     try:
         from PIL import Image, ImageOps
     except ModuleNotFoundError as exc:
-        raise RuntimeError(
-            "Conversão de imagens requer a biblioteca Pillow no servidor."
-        ) from exc
+        raise RuntimeError("Conversão de imagens requer a biblioteca Pillow no servidor.") from exc
 
     caminho_destino = caminho_origem.with_suffix(".pdf")
     if caminho_destino.exists():

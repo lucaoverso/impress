@@ -6,6 +6,7 @@ import os
 import shutil
 import unicodedata
 from pathlib import Path
+from db.schema_migrations import apply_pending_migrations
 from security.nt_hash import generate_nt_hash
 from services.ocorrencia_disciplina_service import ACAO_OCORRENCIA_VALIDAS
 from services.preconselho_service import (
@@ -103,6 +104,7 @@ else:
 
 _BANCO_PREPARADO = False
 
+
 def _resolver_ttl_token_dias() -> int:
     valor_bruto = os.getenv("TOKEN_TTL_DIAS", str(TOKEN_TTL_DIAS_PADRAO)).strip()
     try:
@@ -111,7 +113,9 @@ def _resolver_ttl_token_dias() -> int:
         return TOKEN_TTL_DIAS_PADRAO
     return valor if valor in (7, 15) else TOKEN_TTL_DIAS_PADRAO
 
+
 TOKEN_TTL_DIAS = _resolver_ttl_token_dias()
+
 
 def _garantir_banco_preparado():
     global _BANCO_PREPARADO
@@ -136,12 +140,14 @@ def _garantir_banco_preparado():
 
     _BANCO_PREPARADO = True
 
+
 def get_connection():
     _garantir_banco_preparado()
     conn = sqlite3.connect(str(DB_PATH))
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     return conn
+
 
 def criar_job(
     usuario_id: int,
@@ -159,45 +165,53 @@ def criar_job(
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO jobs (
             usuario_id, arquivo, arquivo_path, copias, paginas_por_folha, duplex, orientacao,
             intervalo_paginas, cups_options, printer_name, paginas_totais, status, prioridade, criado_em
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDENTE', 0, datetime('now'))
-    """, (
-        usuario_id,
-        arquivo,
-        arquivo_path,
-        copias,
-        paginas_por_folha,
-        int(bool(duplex)),
-        orientacao,
-        intervalo_paginas,
-        cups_options,
-        printer_name or None,
-        paginas_totais,
-    ))
+    """,
+        (
+            usuario_id,
+            arquivo,
+            arquivo_path,
+            copias,
+            paginas_por_folha,
+            int(bool(duplex)),
+            orientacao,
+            intervalo_paginas,
+            cups_options,
+            printer_name or None,
+            paginas_totais,
+        ),
+    )
 
     job_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return job_id
 
+
 def listar_jobs_ativos():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT * FROM jobs
         WHERE status NOT IN (?, ?)
         ORDER BY criado_em DESC
-    """, (STATUS_CONCLUIDO, STATUS_FINALIZADO_LEGADO))
+    """,
+        (STATUS_CONCLUIDO, STATUS_FINALIZADO_LEGADO),
+    )
 
     rows = cursor.fetchall()
     conn.close()
 
     return [dict(r) for r in rows]
+
 
 def listar_historico(data_inicio=None, data_fim=None, usuario_id=None):
     conn = get_connection()
@@ -231,20 +245,25 @@ def listar_historico(data_inicio=None, data_fim=None, usuario_id=None):
 
     return [dict(r) for r in rows]
 
+
 def listar_jobs_por_usuario(usuario_id):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT * FROM jobs
         WHERE usuario_id = ?
         ORDER BY criado_em DESC
-    """, (usuario_id,))
+    """,
+        (usuario_id,),
+    )
 
     rows = cursor.fetchall()
     conn.close()
 
     return [dict(r) for r in rows]
+
 
 def criar_tabelas():
     conn = get_connection()
@@ -599,6 +618,22 @@ def criar_tabelas():
         )
     """)
 
+    _aplicar_migracoes_versionadas(conn)
+    _aplicar_compatibilidade_schema_legada(cursor)
+    _criar_indices_schema(cursor)
+    _aplicar_seeds_iniciais(cursor)
+
+    conn.commit()
+    conn.close()
+
+
+def _aplicar_migracoes_versionadas(conn):
+    apply_pending_migrations(conn)
+
+
+def _aplicar_compatibilidade_schema_legada(cursor):
+    # Backstop temporário enquanto migramos totalmente a evolução de schema
+    # para arquivos versionados em `migrations/`.
     _garantir_colunas_usuarios(cursor)
     _garantir_colunas_tokens(cursor)
     _garantir_colunas_jobs(cursor)
@@ -619,13 +654,12 @@ def criar_tabelas():
     _garantir_colunas_ocorrencia_regimento_itens(cursor)
     _migrar_base_legal_legado(cursor)
     _garantir_view_radcheck(cursor)
-    _seed_catalogos_academicos(cursor)
     _migrar_catalogos_academicos(cursor)
     _migrar_turmas_disciplinas_legado(cursor)
-    _seed_pre_conselho_periodos(cursor)
-    _seed_pre_conselho_motivos(cursor)
     _migrar_registros_pre_conselho_legado(cursor)
 
+
+def _criar_indices_schema(cursor):
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_jobs_status_prioridade_criado_em
         ON jobs(status, prioridade, criado_em)
@@ -837,23 +871,31 @@ def criar_tabelas():
         ON estudantes(ativo)
     """)
 
-    cursor.execute("""
+
+def _aplicar_seeds_iniciais(cursor):
+    _seed_catalogos_academicos(cursor)
+    _seed_pre_conselho_periodos(cursor)
+    _seed_pre_conselho_motivos(cursor)
+
+    cursor.execute(
+        """
         INSERT OR IGNORE INTO cota_regras (
             id, base_paginas, paginas_por_aula, paginas_por_turma, cota_mensal_escola, atualizado_em
         )
         VALUES (1, ?, ?, ?, ?, datetime('now'))
-    """, (
-        COTA_BASE_PADRAO,
-        COTA_POR_AULA_PADRAO,
-        COTA_POR_TURMA_PADRAO,
-        COTA_MENSAL_ESCOLA_PADRAO,
-    ))
+    """,
+        (
+            COTA_BASE_PADRAO,
+            COTA_POR_AULA_PADRAO,
+            COTA_POR_TURMA_PADRAO,
+            COTA_MENSAL_ESCOLA_PADRAO,
+        ),
+    )
 
-    conn.commit()
-    conn.close()
 
 def _normalizar_nome_catalogo(nome: str) -> str:
     return str(nome or "").strip()
+
 
 def _cargo_padrao_por_perfil(perfil: str) -> str:
     perfil_limpo = str(perfil or "").strip().lower()
@@ -863,16 +905,24 @@ def _cargo_padrao_por_perfil(perfil: str) -> str:
         return CARGO_COORDENADOR
     return CARGO_PROFESSOR
 
+
 def _seed_catalogos_academicos(cursor):
-    cursor.executemany("""
+    cursor.executemany(
+        """
         INSERT OR IGNORE INTO turmas (nome, turno, quantidade_estudantes, ativo, criado_em)
         VALUES (?, '', 0, 1, datetime('now'))
-    """, [(nome,) for nome in TURMAS_PADRAO])
+    """,
+        [(nome,) for nome in TURMAS_PADRAO],
+    )
 
-    cursor.executemany("""
+    cursor.executemany(
+        """
         INSERT OR IGNORE INTO disciplinas (nome, aulas_semanais, ativo, criado_em)
         VALUES (?, 0, 1, datetime('now'))
-    """, [(nome,) for nome in DISCIPLINAS_PADRAO])
+    """,
+        [(nome,) for nome in DISCIPLINAS_PADRAO],
+    )
+
 
 def _migrar_catalogos_academicos(cursor):
     cursor.execute("""
@@ -883,18 +933,24 @@ def _migrar_catalogos_academicos(cursor):
         for turma in _desserializar_lista_texto(row["turmas"]):
             nome = _normalizar_nome_catalogo(turma)
             if nome:
-                cursor.execute("""
+                cursor.execute(
+                    """
                     INSERT OR IGNORE INTO turmas (nome, turno, quantidade_estudantes, ativo, criado_em)
                     VALUES (?, '', 0, 1, datetime('now'))
-                """, (nome,))
+                """,
+                    (nome,),
+                )
 
         for disciplina in _desserializar_lista_texto(row["disciplinas"]):
             nome = _normalizar_nome_catalogo(disciplina)
             if nome:
-                cursor.execute("""
+                cursor.execute(
+                    """
                     INSERT OR IGNORE INTO disciplinas (nome, aulas_semanais, ativo, criado_em)
                     VALUES (?, 0, 1, datetime('now'))
-                """, (nome,))
+                """,
+                    (nome,),
+                )
 
     cursor.execute("""
         SELECT DISTINCT turma
@@ -904,10 +960,13 @@ def _migrar_catalogos_academicos(cursor):
     for row in cursor.fetchall():
         nome = _normalizar_nome_catalogo(row["turma"])
         if nome:
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT OR IGNORE INTO turmas (nome, turno, quantidade_estudantes, ativo, criado_em)
                 VALUES (?, '', 0, 1, datetime('now'))
-            """, (nome,))
+            """,
+                (nome,),
+            )
 
 
 def _migrar_turmas_disciplinas_legado(cursor):
@@ -927,16 +986,20 @@ def _migrar_turmas_disciplinas_legado(cursor):
         professor_id = int(row["professor_usuario_id"] or 0)
         carga_horaria = int(row["carga_horaria_padrao"] or 0)
 
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT id, professor_usuario_id, carga_horaria
             FROM turmas_disciplinas
             WHERE turma_id = ? AND disciplina_id = ?
             LIMIT 1
-        """, (turma_id, disciplina_id))
+        """,
+            (turma_id, disciplina_id),
+        )
         existente = cursor.fetchone()
 
         if not existente:
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT INTO turmas_disciplinas (
                     turma_id,
                     disciplina_id,
@@ -946,34 +1009,44 @@ def _migrar_turmas_disciplinas_legado(cursor):
                     atualizado_em
                 )
                 VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
-            """, (
-                turma_id,
-                disciplina_id,
-                carga_horaria,
-                professor_id if professor_id > 0 else None,
-            ))
+            """,
+                (
+                    turma_id,
+                    disciplina_id,
+                    carga_horaria,
+                    professor_id if professor_id > 0 else None,
+                ),
+            )
             continue
 
         professor_existente = int(existente["professor_usuario_id"] or 0)
         carga_existente = int(existente["carga_horaria"] or 0)
         if professor_existente <= 0 and professor_id > 0:
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE turmas_disciplinas
                 SET professor_usuario_id = ?,
                     atualizado_em = datetime('now')
                 WHERE id = ?
-            """, (professor_id, int(existente["id"])))
+            """,
+                (professor_id, int(existente["id"])),
+            )
         if carga_existente <= 0 and carga_horaria > 0:
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE turmas_disciplinas
                 SET carga_horaria = ?,
                     atualizado_em = datetime('now')
                 WHERE id = ?
-            """, (carga_horaria, int(existente["id"])))
+            """,
+                (carga_horaria, int(existente["id"])),
+            )
+
 
 def _seed_pre_conselho_periodos(cursor):
     for periodo in periodos_padrao_pre_conselho():
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT OR IGNORE INTO pre_conselho_periodos (
                 nome,
                 ano_letivo,
@@ -985,19 +1058,22 @@ def _seed_pre_conselho_periodos(cursor):
                 atualizado_em
             )
             VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-        """, (
-            periodo["nome"],
-            int(periodo["ano_letivo"]),
-            int(periodo["etapa"]),
-            periodo["data_inicio"],
-            periodo["data_fim"],
-            periodo["status"],
-        ))
+        """,
+            (
+                periodo["nome"],
+                int(periodo["ano_letivo"]),
+                int(periodo["etapa"]),
+                periodo["data_inicio"],
+                periodo["data_fim"],
+                periodo["status"],
+            ),
+        )
 
 
 def _seed_pre_conselho_motivos(cursor):
     for motivo in catalogo_motivos_iniciais_pre_conselho():
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT OR IGNORE INTO pre_conselho_motivos (
                 categoria,
                 codigo,
@@ -1008,12 +1084,14 @@ def _seed_pre_conselho_motivos(cursor):
                 atualizado_em
             )
             VALUES (?, ?, ?, 1, ?, datetime('now'), datetime('now'))
-        """, (
-            motivo["categoria"],
-            motivo["codigo"],
-            motivo["descricao"],
-            int(motivo.get("ordem") or 0),
-        ))
+        """,
+            (
+                motivo["categoria"],
+                motivo["codigo"],
+                motivo["descricao"],
+                int(motivo.get("ordem") or 0),
+            ),
+        )
 
 
 def _migrar_registros_pre_conselho_legado(cursor):
@@ -1048,8 +1126,7 @@ def _migrar_registros_pre_conselho_legado(cursor):
         FROM pre_conselho_motivos
     """)
     motivos_por_codigo = {
-        _normalizar_nome_catalogo(row["codigo"]): int(row["id"])
-        for row in cursor.fetchall()
+        _normalizar_nome_catalogo(row["codigo"]): int(row["id"]) for row in cursor.fetchall()
     }
 
     for registro in registros:
@@ -1064,33 +1141,45 @@ def _migrar_registros_pre_conselho_legado(cursor):
 
         if periodo_id <= 0 and (ano_letivo, etapa) in periodos_por_chave:
             periodo_id = int(periodos_por_chave[(ano_letivo, etapa)])
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE pre_conselho_registros
                 SET periodo_id = ?
                 WHERE id = ?
-            """, (periodo_id, registro_id))
+            """,
+                (periodo_id, registro_id),
+            )
 
         if disciplina_id <= 0 and disciplina:
             disciplina_id = int(disciplinas_por_nome.get(disciplina.casefold()) or 0)
             if disciplina_id > 0:
-                cursor.execute("""
+                cursor.execute(
+                    """
                     UPDATE pre_conselho_registros
                     SET disciplina_id = ?
                     WHERE id = ?
-                """, (disciplina_id, registro_id))
+                """,
+                    (disciplina_id, registro_id),
+                )
 
         if not observacao_professor and observacoes:
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE pre_conselho_registros
                 SET observacao_professor = ?
                 WHERE id = ?
-            """, (observacoes, registro_id))
+            """,
+                (observacoes, registro_id),
+            )
 
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT COUNT(*) AS total
             FROM pre_conselho_registro_motivos
             WHERE registro_id = ?
-        """, (registro_id,))
+        """,
+            (registro_id,),
+        )
         total_motivos = int(cursor.fetchone()["total"] or 0)
         if total_motivos > 0:
             continue
@@ -1099,31 +1188,31 @@ def _migrar_registros_pre_conselho_legado(cursor):
             motivo_id = int(motivos_por_codigo.get(_normalizar_nome_catalogo(codigo)) or 0)
             if motivo_id <= 0:
                 continue
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT OR IGNORE INTO pre_conselho_registro_motivos (
                     registro_id,
                     motivo_id,
                     criado_em
                 )
                 VALUES (?, ?, datetime('now'))
-            """, (registro_id, motivo_id))
+            """,
+                (registro_id, motivo_id),
+            )
+
 
 def _garantir_colunas_usuarios(cursor):
     cursor.execute("PRAGMA table_info(usuarios)")
     colunas = {row["name"] for row in cursor.fetchall()}
 
     if "cargo" not in colunas:
-        cursor.execute(
-            "ALTER TABLE usuarios ADD COLUMN cargo TEXT NOT NULL DEFAULT ''"
-        )
+        cursor.execute("ALTER TABLE usuarios ADD COLUMN cargo TEXT NOT NULL DEFAULT ''")
     if "data_nascimento" not in colunas:
         cursor.execute("ALTER TABLE usuarios ADD COLUMN data_nascimento TEXT")
     if "nt_hash" not in colunas:
         cursor.execute("ALTER TABLE usuarios ADD COLUMN nt_hash CHAR(32)")
     if "ativo" not in colunas:
-        cursor.execute(
-            "ALTER TABLE usuarios ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1"
-        )
+        cursor.execute("ALTER TABLE usuarios ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1")
 
     # Backfill de cargo para bancos legados baseando-se no perfil existente.
     cursor.execute("""
@@ -1131,7 +1220,8 @@ def _garantir_colunas_usuarios(cursor):
         SET cargo = UPPER(TRIM(cargo))
         WHERE TRIM(COALESCE(cargo, '')) <> ''
     """)
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE usuarios
         SET cargo = (
             CASE
@@ -1141,7 +1231,9 @@ def _garantir_colunas_usuarios(cursor):
             END
         )
         WHERE TRIM(COALESCE(cargo, '')) = ''
-    """, (CARGO_ADMIN, CARGO_COORDENADOR, CARGO_PROFESSOR))
+    """,
+        (CARGO_ADMIN, CARGO_COORDENADOR, CARGO_PROFESSOR),
+    )
 
     cursor.execute("""
         UPDATE usuarios
@@ -1165,29 +1257,29 @@ def _clausula_usuario_ativo(alias: str = "") -> str:
         f"OR LOWER(CAST(COALESCE({prefixo}ativo, 1) AS TEXT)) = 'true')"
     )
 
+
 def _garantir_colunas_tokens(cursor):
     cursor.execute("PRAGMA table_info(tokens)")
     colunas = {row["name"] for row in cursor.fetchall()}
 
     if "criado_em" not in colunas:
-        cursor.execute(
-            "ALTER TABLE tokens ADD COLUMN criado_em TEXT NOT NULL DEFAULT ''"
-        )
+        cursor.execute("ALTER TABLE tokens ADD COLUMN criado_em TEXT NOT NULL DEFAULT ''")
     if "expira_em" not in colunas:
-        cursor.execute(
-            "ALTER TABLE tokens ADD COLUMN expira_em TEXT NOT NULL DEFAULT ''"
-        )
+        cursor.execute("ALTER TABLE tokens ADD COLUMN expira_em TEXT NOT NULL DEFAULT ''")
 
     cursor.execute("""
         UPDATE tokens
         SET criado_em = datetime('now')
         WHERE TRIM(COALESCE(criado_em, '')) = ''
     """)
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE tokens
         SET expira_em = datetime('now', ?)
         WHERE TRIM(COALESCE(expira_em, '')) = ''
-    """, (f"+{TOKEN_TTL_DIAS} days",))
+    """,
+        (f"+{TOKEN_TTL_DIAS} days",),
+    )
 
     cursor.execute("""
         DELETE FROM tokens
@@ -1200,29 +1292,19 @@ def _garantir_colunas_jobs(cursor):
     colunas = {row["name"] for row in cursor.fetchall()}
 
     if "paginas_por_folha" not in colunas:
-        cursor.execute(
-            "ALTER TABLE jobs ADD COLUMN paginas_por_folha INTEGER NOT NULL DEFAULT 1"
-        )
+        cursor.execute("ALTER TABLE jobs ADD COLUMN paginas_por_folha INTEGER NOT NULL DEFAULT 1")
     if "duplex" not in colunas:
         cursor.execute("ALTER TABLE jobs ADD COLUMN duplex INTEGER NOT NULL DEFAULT 0")
     if "orientacao" not in colunas:
-        cursor.execute(
-            "ALTER TABLE jobs ADD COLUMN orientacao TEXT NOT NULL DEFAULT 'retrato'"
-        )
+        cursor.execute("ALTER TABLE jobs ADD COLUMN orientacao TEXT NOT NULL DEFAULT 'retrato'")
     if "paginas_totais" not in colunas:
-        cursor.execute(
-            "ALTER TABLE jobs ADD COLUMN paginas_totais INTEGER NOT NULL DEFAULT 0"
-        )
+        cursor.execute("ALTER TABLE jobs ADD COLUMN paginas_totais INTEGER NOT NULL DEFAULT 0")
     if "arquivo_path" not in colunas:
         cursor.execute("ALTER TABLE jobs ADD COLUMN arquivo_path TEXT")
     if "intervalo_paginas" not in colunas:
-        cursor.execute(
-            "ALTER TABLE jobs ADD COLUMN intervalo_paginas TEXT NOT NULL DEFAULT ''"
-        )
+        cursor.execute("ALTER TABLE jobs ADD COLUMN intervalo_paginas TEXT NOT NULL DEFAULT ''")
     if "cups_options" not in colunas:
-        cursor.execute(
-            "ALTER TABLE jobs ADD COLUMN cups_options TEXT NOT NULL DEFAULT '{}'"
-        )
+        cursor.execute("ALTER TABLE jobs ADD COLUMN cups_options TEXT NOT NULL DEFAULT '{}'")
     if "printer_name" not in colunas:
         cursor.execute("ALTER TABLE jobs ADD COLUMN printer_name TEXT")
     if "cups_job_id" not in colunas:
@@ -1232,22 +1314,17 @@ def _garantir_colunas_jobs(cursor):
     if "finalizado_em" not in colunas:
         cursor.execute("ALTER TABLE jobs ADD COLUMN finalizado_em TEXT")
 
+
 def _garantir_colunas_agendamentos(cursor):
     cursor.execute("PRAGMA table_info(agendamentos)")
     colunas = {row["name"] for row in cursor.fetchall()}
 
     if "turno" not in colunas:
-        cursor.execute(
-            "ALTER TABLE agendamentos ADD COLUMN turno TEXT NOT NULL DEFAULT 'MATUTINO'"
-        )
+        cursor.execute("ALTER TABLE agendamentos ADD COLUMN turno TEXT NOT NULL DEFAULT 'MATUTINO'")
     if "turma" not in colunas:
-        cursor.execute(
-            "ALTER TABLE agendamentos ADD COLUMN turma TEXT NOT NULL DEFAULT ''"
-        )
+        cursor.execute("ALTER TABLE agendamentos ADD COLUMN turma TEXT NOT NULL DEFAULT ''")
     if "status" not in colunas:
-        cursor.execute(
-            "ALTER TABLE agendamentos ADD COLUMN status TEXT NOT NULL DEFAULT 'ATIVO'"
-        )
+        cursor.execute("ALTER TABLE agendamentos ADD COLUMN status TEXT NOT NULL DEFAULT 'ATIVO'")
     if "cancelado_em" not in colunas:
         cursor.execute("ALTER TABLE agendamentos ADD COLUMN cancelado_em TEXT")
     if "faixa_global" not in colunas:
@@ -1255,9 +1332,7 @@ def _garantir_colunas_agendamentos(cursor):
             "ALTER TABLE agendamentos ADD COLUMN faixa_global INTEGER NOT NULL DEFAULT 0"
         )
     if "tema_aula" not in colunas:
-        cursor.execute(
-            "ALTER TABLE agendamentos ADD COLUMN tema_aula TEXT NOT NULL DEFAULT ''"
-        )
+        cursor.execute("ALTER TABLE agendamentos ADD COLUMN tema_aula TEXT NOT NULL DEFAULT ''")
 
     # Faixa global padroniza simultaneidade entre turnos:
     # MATUTINO inicia na faixa 1.
@@ -1281,6 +1356,7 @@ def _garantir_colunas_agendamentos(cursor):
         )
     """)
 
+
 def _garantir_colunas_professores_carga(cursor):
     cursor.execute("PRAGMA table_info(professores_carga)")
     colunas = {row["name"] for row in cursor.fetchall()}
@@ -1298,9 +1374,7 @@ def _garantir_colunas_professores_carga(cursor):
             "ALTER TABLE professores_carga ADD COLUMN atualizado_em TEXT NOT NULL DEFAULT datetime('now')"
         )
     if "turmas" not in colunas:
-        cursor.execute(
-            "ALTER TABLE professores_carga ADD COLUMN turmas TEXT NOT NULL DEFAULT '[]'"
-        )
+        cursor.execute("ALTER TABLE professores_carga ADD COLUMN turmas TEXT NOT NULL DEFAULT '[]'")
     if "disciplinas" not in colunas:
         cursor.execute(
             "ALTER TABLE professores_carga ADD COLUMN disciplinas TEXT NOT NULL DEFAULT '[]'"
@@ -1347,6 +1421,7 @@ def _garantir_colunas_cota_regras(cursor):
             "ALTER TABLE cota_regras ADD COLUMN cota_mensal_escola INTEGER NOT NULL DEFAULT 4000"
         )
 
+
 def _garantir_colunas_recursos(cursor):
     cursor.execute("PRAGMA table_info(recursos)")
     colunas = {row["name"] for row in cursor.fetchall()}
@@ -1362,18 +1437,18 @@ def _garantir_colunas_recursos(cursor):
         WHERE COALESCE(quantidade_itens, 0) < 1
     """)
 
+
 def _garantir_colunas_turmas(cursor):
     cursor.execute("PRAGMA table_info(turmas)")
     colunas = {row["name"] for row in cursor.fetchall()}
 
     if "turno" not in colunas:
-        cursor.execute(
-            "ALTER TABLE turmas ADD COLUMN turno TEXT NOT NULL DEFAULT ''"
-        )
+        cursor.execute("ALTER TABLE turmas ADD COLUMN turno TEXT NOT NULL DEFAULT ''")
     if "quantidade_estudantes" not in colunas:
         cursor.execute(
             "ALTER TABLE turmas ADD COLUMN quantidade_estudantes INTEGER NOT NULL DEFAULT 0"
         )
+
 
 def _garantir_colunas_disciplinas(cursor):
     cursor.execute("PRAGMA table_info(disciplinas)")
@@ -1412,9 +1487,7 @@ def _garantir_colunas_turmas_disciplinas(cursor):
             "ALTER TABLE turmas_disciplinas ADD COLUMN carga_horaria INTEGER NOT NULL DEFAULT 0"
         )
     if "professor_usuario_id" not in colunas:
-        cursor.execute(
-            "ALTER TABLE turmas_disciplinas ADD COLUMN professor_usuario_id INTEGER"
-        )
+        cursor.execute("ALTER TABLE turmas_disciplinas ADD COLUMN professor_usuario_id INTEGER")
     if "criado_em" not in colunas:
         cursor.execute(
             "ALTER TABLE turmas_disciplinas ADD COLUMN criado_em TEXT NOT NULL DEFAULT ''"
@@ -1480,6 +1553,7 @@ def _garantir_colunas_estudantes(cursor):
         WHERE ativo IS NULL
     """)
 
+
 def _garantir_colunas_pre_conselho_periodos(cursor):
     cursor.execute("""
         SELECT name
@@ -1496,13 +1570,21 @@ def _garantir_colunas_pre_conselho_periodos(cursor):
     if "nome" not in colunas:
         cursor.execute("ALTER TABLE pre_conselho_periodos ADD COLUMN nome TEXT NOT NULL DEFAULT ''")
     if "ano_letivo" not in colunas:
-        cursor.execute("ALTER TABLE pre_conselho_periodos ADD COLUMN ano_letivo INTEGER NOT NULL DEFAULT 0")
+        cursor.execute(
+            "ALTER TABLE pre_conselho_periodos ADD COLUMN ano_letivo INTEGER NOT NULL DEFAULT 0"
+        )
     if "etapa" not in colunas:
-        cursor.execute("ALTER TABLE pre_conselho_periodos ADD COLUMN etapa INTEGER NOT NULL DEFAULT 0")
+        cursor.execute(
+            "ALTER TABLE pre_conselho_periodos ADD COLUMN etapa INTEGER NOT NULL DEFAULT 0"
+        )
     if "data_inicio" not in colunas:
-        cursor.execute("ALTER TABLE pre_conselho_periodos ADD COLUMN data_inicio TEXT NOT NULL DEFAULT ''")
+        cursor.execute(
+            "ALTER TABLE pre_conselho_periodos ADD COLUMN data_inicio TEXT NOT NULL DEFAULT ''"
+        )
     if "data_fim" not in colunas:
-        cursor.execute("ALTER TABLE pre_conselho_periodos ADD COLUMN data_fim TEXT NOT NULL DEFAULT ''")
+        cursor.execute(
+            "ALTER TABLE pre_conselho_periodos ADD COLUMN data_fim TEXT NOT NULL DEFAULT ''"
+        )
     if "status" not in colunas:
         cursor.execute(
             "ALTER TABLE pre_conselho_periodos ADD COLUMN status TEXT NOT NULL DEFAULT 'FECHADO'"
@@ -1531,15 +1613,25 @@ def _garantir_colunas_pre_conselho_motivos(cursor):
     colunas = {row["name"] for row in cursor.fetchall()}
 
     if "categoria" not in colunas:
-        cursor.execute("ALTER TABLE pre_conselho_motivos ADD COLUMN categoria TEXT NOT NULL DEFAULT ''")
+        cursor.execute(
+            "ALTER TABLE pre_conselho_motivos ADD COLUMN categoria TEXT NOT NULL DEFAULT ''"
+        )
     if "codigo" not in colunas:
-        cursor.execute("ALTER TABLE pre_conselho_motivos ADD COLUMN codigo TEXT NOT NULL DEFAULT ''")
+        cursor.execute(
+            "ALTER TABLE pre_conselho_motivos ADD COLUMN codigo TEXT NOT NULL DEFAULT ''"
+        )
     if "descricao" not in colunas:
-        cursor.execute("ALTER TABLE pre_conselho_motivos ADD COLUMN descricao TEXT NOT NULL DEFAULT ''")
+        cursor.execute(
+            "ALTER TABLE pre_conselho_motivos ADD COLUMN descricao TEXT NOT NULL DEFAULT ''"
+        )
     if "ativo" not in colunas:
-        cursor.execute("ALTER TABLE pre_conselho_motivos ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1")
+        cursor.execute(
+            "ALTER TABLE pre_conselho_motivos ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1"
+        )
     if "ordem" not in colunas:
-        cursor.execute("ALTER TABLE pre_conselho_motivos ADD COLUMN ordem INTEGER NOT NULL DEFAULT 0")
+        cursor.execute(
+            "ALTER TABLE pre_conselho_motivos ADD COLUMN ordem INTEGER NOT NULL DEFAULT 0"
+        )
     if "criado_em" not in colunas:
         cursor.execute(
             "ALTER TABLE pre_conselho_motivos ADD COLUMN criado_em TEXT NOT NULL DEFAULT (datetime('now'))"
@@ -1570,13 +1662,9 @@ def _garantir_colunas_pre_conselho_registros(cursor):
     colunas = {row["name"] for row in cursor.fetchall()}
 
     if "periodo_id" not in colunas:
-        cursor.execute(
-            "ALTER TABLE pre_conselho_registros ADD COLUMN periodo_id INTEGER"
-        )
+        cursor.execute("ALTER TABLE pre_conselho_registros ADD COLUMN periodo_id INTEGER")
     if "disciplina_id" not in colunas:
-        cursor.execute(
-            "ALTER TABLE pre_conselho_registros ADD COLUMN disciplina_id INTEGER"
-        )
+        cursor.execute("ALTER TABLE pre_conselho_registros ADD COLUMN disciplina_id INTEGER")
     if "professor_usuario_id" not in colunas:
         cursor.execute(
             "ALTER TABLE pre_conselho_registros ADD COLUMN professor_usuario_id INTEGER NOT NULL DEFAULT 0"
@@ -1602,9 +1690,7 @@ def _garantir_colunas_pre_conselho_registros(cursor):
             "ALTER TABLE pre_conselho_registros ADD COLUMN bimestre INTEGER NOT NULL DEFAULT 0"
         )
     if "nivel_atencao" not in colunas:
-        cursor.execute(
-            "ALTER TABLE pre_conselho_registros ADD COLUMN nivel_atencao TEXT"
-        )
+        cursor.execute("ALTER TABLE pre_conselho_registros ADD COLUMN nivel_atencao TEXT")
     if "motivos" not in colunas:
         cursor.execute(
             "ALTER TABLE pre_conselho_registros ADD COLUMN motivos TEXT NOT NULL DEFAULT '[]'"
@@ -1656,6 +1742,7 @@ def _garantir_colunas_pre_conselho_registros(cursor):
         WHERE TRIM(COALESCE(atualizado_em, '')) = ''
     """)
 
+
 def _garantir_colunas_pre_conselho_registro_motivos(cursor):
     cursor.execute("""
         SELECT name
@@ -1703,17 +1790,23 @@ def _garantir_colunas_ocorrencias(cursor):
     if "turma_id" not in colunas:
         cursor.execute("ALTER TABLE ocorrencias ADD COLUMN turma_id INTEGER NOT NULL DEFAULT 0")
     if "professor_requerente" not in colunas:
-        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN professor_requerente TEXT NOT NULL DEFAULT ''")
+        cursor.execute(
+            "ALTER TABLE ocorrencias ADD COLUMN professor_requerente TEXT NOT NULL DEFAULT ''"
+        )
     if "professor_requerente_id" not in colunas:
         cursor.execute("ALTER TABLE ocorrencias ADD COLUMN professor_requerente_id INTEGER")
     if "disciplina" not in colunas:
         cursor.execute("ALTER TABLE ocorrencias ADD COLUMN disciplina TEXT NOT NULL DEFAULT ''")
     if "data_ocorrencia" not in colunas:
-        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN data_ocorrencia TEXT NOT NULL DEFAULT ''")
+        cursor.execute(
+            "ALTER TABLE ocorrencias ADD COLUMN data_ocorrencia TEXT NOT NULL DEFAULT ''"
+        )
     if "aula" not in colunas:
         cursor.execute("ALTER TABLE ocorrencias ADD COLUMN aula TEXT NOT NULL DEFAULT ''")
     if "horario_ocorrencia" not in colunas:
-        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN horario_ocorrencia TEXT NOT NULL DEFAULT ''")
+        cursor.execute(
+            "ALTER TABLE ocorrencias ADD COLUMN horario_ocorrencia TEXT NOT NULL DEFAULT ''"
+        )
     if "descricao" not in colunas:
         cursor.execute("ALTER TABLE ocorrencias ADD COLUMN descricao TEXT NOT NULL DEFAULT ''")
     if "acao_aplicada" not in colunas:
@@ -1731,11 +1824,14 @@ def _garantir_colunas_ocorrencias(cursor):
             "ALTER TABLE ocorrencias ADD COLUMN atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))"
         )
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE ocorrencias
         SET status = ?
         WHERE TRIM(COALESCE(status, '')) = ''
-    """, (STATUS_OCORRENCIA_REGISTRADO,))
+    """,
+        (STATUS_OCORRENCIA_REGISTRADO,),
+    )
 
     cursor.execute("""
         UPDATE ocorrencias
@@ -1785,7 +1881,8 @@ def _recriar_tabela_ocorrencias_se_necessario(cursor):
             FOREIGN KEY(professor_requerente_id) REFERENCES usuarios(id)
         )
     """)
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO ocorrencias__tmp (
             id,
             nome_estudante,
@@ -1823,7 +1920,9 @@ def _recriar_tabela_ocorrencias_se_necessario(cursor):
             COALESCE(criado_em, datetime('now')),
             COALESCE(atualizado_em, datetime('now'))
         FROM ocorrencias
-    """, (STATUS_OCORRENCIA_REGISTRADO,))
+    """,
+        (STATUS_OCORRENCIA_REGISTRADO,),
+    )
     cursor.execute("DROP TABLE ocorrencias")
     cursor.execute("ALTER TABLE ocorrencias__tmp RENAME TO ocorrencias")
     cursor.execute("PRAGMA foreign_keys = ON")
@@ -1975,13 +2074,16 @@ def _obter_ou_criar_artigo_cursor(
 ) -> tuple[int, bool]:
     numero_limpo = str(numero or "").strip()
     descricao_limpa = str(descricao or "").strip()
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT id
         FROM artigos
         WHERE lei_id = ?
           AND numero = ? COLLATE NOCASE
         LIMIT 1
-    """, (int(lei_id), numero_limpo))
+    """,
+        (int(lei_id), numero_limpo),
+    )
     row = cursor.fetchone()
     if row:
         artigo_id = int(row["id"])
@@ -1990,10 +2092,13 @@ def _obter_ou_criar_artigo_cursor(
             (descricao_limpa, artigo_id),
         )
         return artigo_id, False
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO artigos (lei_id, numero, descricao)
         VALUES (?, ?, ?)
-    """, (int(lei_id), numero_limpo, descricao_limpa))
+    """,
+        (int(lei_id), numero_limpo, descricao_limpa),
+    )
     return int(cursor.lastrowid), True
 
 
@@ -2006,13 +2111,16 @@ def _obter_ou_criar_inciso_cursor(
 ) -> tuple[int, bool]:
     numero_limpo = str(numero or "").strip()
     descricao_limpa = str(descricao or "").strip()
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT id
         FROM incisos
         WHERE artigo_id = ?
           AND numero = ? COLLATE NOCASE
         LIMIT 1
-    """, (int(artigo_id), numero_limpo))
+    """,
+        (int(artigo_id), numero_limpo),
+    )
     row = cursor.fetchone()
     if row:
         inciso_id = int(row["id"])
@@ -2021,10 +2129,13 @@ def _obter_ou_criar_inciso_cursor(
             (descricao_limpa, inciso_id),
         )
         return inciso_id, False
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO incisos (artigo_id, numero, descricao)
         VALUES (?, ?, ?)
-    """, (int(artigo_id), numero_limpo, descricao_limpa))
+    """,
+        (int(artigo_id), numero_limpo, descricao_limpa),
+    )
     return int(cursor.lastrowid), True
 
 
@@ -2037,13 +2148,16 @@ def _obter_ou_criar_alinea_cursor(
 ) -> tuple[int, bool]:
     identificador_limpo = str(identificador or "").strip()
     descricao_limpa = str(descricao or "").strip()
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT id
         FROM alineas
         WHERE inciso_id = ?
           AND identificador = ? COLLATE NOCASE
         LIMIT 1
-    """, (int(inciso_id), identificador_limpo))
+    """,
+        (int(inciso_id), identificador_limpo),
+    )
     row = cursor.fetchone()
     if row:
         alinea_id = int(row["id"])
@@ -2052,10 +2166,13 @@ def _obter_ou_criar_alinea_cursor(
             (descricao_limpa, alinea_id),
         )
         return alinea_id, False
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO alineas (inciso_id, identificador, descricao)
         VALUES (?, ?, ?)
-    """, (int(inciso_id), identificador_limpo, descricao_limpa))
+    """,
+        (int(inciso_id), identificador_limpo, descricao_limpa),
+    )
     return int(cursor.lastrowid), True
 
 
@@ -2065,7 +2182,8 @@ def _buscar_item_base_legal_por_tipo_cursor(cursor, tipo: str, entidade_id: int)
         return None
 
     if tipo == TIPO_BASE_LEGAL_ARTIGO:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 ? AS tipo,
                 l.id AS lei_id,
@@ -2083,9 +2201,12 @@ def _buscar_item_base_legal_por_tipo_cursor(cursor, tipo: str, entidade_id: int)
             FROM artigos a
             INNER JOIN leis l ON l.id = a.lei_id
             WHERE a.id = ?
-        """, (TIPO_BASE_LEGAL_ARTIGO, entidade_id_valor))
+        """,
+            (TIPO_BASE_LEGAL_ARTIGO, entidade_id_valor),
+        )
     elif tipo == TIPO_BASE_LEGAL_INCISO:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 ? AS tipo,
                 l.id AS lei_id,
@@ -2104,9 +2225,12 @@ def _buscar_item_base_legal_por_tipo_cursor(cursor, tipo: str, entidade_id: int)
             INNER JOIN artigos a ON a.id = i.artigo_id
             INNER JOIN leis l ON l.id = a.lei_id
             WHERE i.id = ?
-        """, (TIPO_BASE_LEGAL_INCISO, entidade_id_valor))
+        """,
+            (TIPO_BASE_LEGAL_INCISO, entidade_id_valor),
+        )
     elif tipo == TIPO_BASE_LEGAL_ALINEA:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT
                 ? AS tipo,
                 l.id AS lei_id,
@@ -2126,7 +2250,9 @@ def _buscar_item_base_legal_por_tipo_cursor(cursor, tipo: str, entidade_id: int)
             INNER JOIN artigos a ON a.id = i.artigo_id
             INNER JOIN leis l ON l.id = a.lei_id
             WHERE al.id = ?
-        """, (TIPO_BASE_LEGAL_ALINEA, entidade_id_valor))
+        """,
+            (TIPO_BASE_LEGAL_ALINEA, entidade_id_valor),
+        )
     else:
         return None
 
@@ -2137,7 +2263,8 @@ def _buscar_item_base_legal_por_tipo_cursor(cursor, tipo: str, entidade_id: int)
 def _listar_itens_base_legal_cursor(cursor) -> list[dict]:
     itens = []
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             ? AS tipo,
             l.id AS lei_id,
@@ -2155,10 +2282,13 @@ def _listar_itens_base_legal_cursor(cursor) -> list[dict]:
         FROM artigos a
         INNER JOIN leis l ON l.id = a.lei_id
         ORDER BY LOWER(l.nome), a.id
-    """, (TIPO_BASE_LEGAL_ARTIGO,))
+    """,
+        (TIPO_BASE_LEGAL_ARTIGO,),
+    )
     itens.extend(_montar_item_base_legal(row) for row in cursor.fetchall())
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             ? AS tipo,
             l.id AS lei_id,
@@ -2177,10 +2307,13 @@ def _listar_itens_base_legal_cursor(cursor) -> list[dict]:
         INNER JOIN artigos a ON a.id = i.artigo_id
         INNER JOIN leis l ON l.id = a.lei_id
         ORDER BY LOWER(l.nome), a.id, i.id
-    """, (TIPO_BASE_LEGAL_INCISO,))
+    """,
+        (TIPO_BASE_LEGAL_INCISO,),
+    )
     itens.extend(_montar_item_base_legal(row) for row in cursor.fetchall())
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             ? AS tipo,
             l.id AS lei_id,
@@ -2200,7 +2333,9 @@ def _listar_itens_base_legal_cursor(cursor) -> list[dict]:
         INNER JOIN artigos a ON a.id = i.artigo_id
         INNER JOIN leis l ON l.id = a.lei_id
         ORDER BY LOWER(l.nome), a.id, i.id, al.id
-    """, (TIPO_BASE_LEGAL_ALINEA,))
+    """,
+        (TIPO_BASE_LEGAL_ALINEA,),
+    )
     itens.extend(_montar_item_base_legal(row) for row in cursor.fetchall())
 
     ordem_tipo = {
@@ -2250,7 +2385,9 @@ def _garantir_colunas_ocorrencia_regimento_itens(cursor):
     if "inciso_descricao" not in colunas:
         cursor.execute("ALTER TABLE ocorrencia_regimento_itens ADD COLUMN inciso_descricao TEXT")
     if "alinea_identificador" not in colunas:
-        cursor.execute("ALTER TABLE ocorrencia_regimento_itens ADD COLUMN alinea_identificador TEXT")
+        cursor.execute(
+            "ALTER TABLE ocorrencia_regimento_itens ADD COLUMN alinea_identificador TEXT"
+        )
     if "alinea_descricao" not in colunas:
         cursor.execute("ALTER TABLE ocorrencia_regimento_itens ADD COLUMN alinea_descricao TEXT")
 
@@ -2377,22 +2514,28 @@ def _migrar_base_legal_legado(cursor):
         )
 
     for regimento_item_id_legado, (item_id_novo, artigo_id_novo) in mapa_ids_legados.items():
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE ocorrencia_regimento_itens
             SET regimento_item_id = ?,
                 artigo_id = COALESCE(artigo_id, ?)
             WHERE regimento_item_id = ?
               AND (artigo_id IS NULL OR artigo_id <= 0)
-        """, (item_id_novo, artigo_id_novo, regimento_item_id_legado))
+        """,
+            (item_id_novo, artigo_id_novo, regimento_item_id_legado),
+        )
 
 
-def _mapear_regimento_itens_por_ocorrencia(cursor, ocorrencia_ids: list[int]) -> dict[int, list[dict]]:
+def _mapear_regimento_itens_por_ocorrencia(
+    cursor, ocorrencia_ids: list[int]
+) -> dict[int, list[dict]]:
     ids_validos = [int(ocorrencia_id) for ocorrencia_id in ocorrencia_ids if int(ocorrencia_id) > 0]
     if not ids_validos:
         return {}
 
     placeholders = ",".join(["?"] * len(ids_validos))
-    cursor.execute(f"""
+    cursor.execute(
+        f"""
         SELECT
             ori.ocorrencia_id,
             ori.regimento_item_id,
@@ -2421,14 +2564,18 @@ def _mapear_regimento_itens_por_ocorrencia(cursor, ocorrencia_ids: list[int]) ->
         LEFT JOIN leis l ON l.id = a.lei_id
         WHERE ori.ocorrencia_id IN ({placeholders})
         ORDER BY ori.ocorrencia_id ASC, ori.ordem ASC, ori.id ASC
-    """, [TIPO_BASE_LEGAL_ALINEA, TIPO_BASE_LEGAL_INCISO, TIPO_BASE_LEGAL_ARTIGO, *ids_validos])
+    """,
+        [TIPO_BASE_LEGAL_ALINEA, TIPO_BASE_LEGAL_INCISO, TIPO_BASE_LEGAL_ARTIGO, *ids_validos],
+    )
 
     mapa: dict[int, list[dict]] = {}
     for row in cursor.fetchall():
         ocorrencia_id = int(row["ocorrencia_id"])
         mapa.setdefault(ocorrencia_id, []).append(
             {
-                "regimento_item_id": int(row["regimento_item_id"]) if row["regimento_item_id"] is not None else None,
+                "regimento_item_id": int(row["regimento_item_id"])
+                if row["regimento_item_id"] is not None
+                else None,
                 "tipo": str(row["tipo"] or "").strip() or None,
                 "artigo_id": int(row["artigo_id"]) if row["artigo_id"] is not None else None,
                 "inciso_id": int(row["inciso_id"]) if row["inciso_id"] is not None else None,
@@ -2461,6 +2608,7 @@ def _anexar_regimento_itens_ocorrencias(cursor, ocorrencias: list[dict]) -> list
         ocorrencia["regimento_itens"] = mapa.get(ocorrencia_id, [])
     return ocorrencias
 
+
 def _garantir_view_radcheck(cursor):
     # O sistema usa email como identificador de login para autenticação.
     # Se existir coluna `ativo`, a VIEW inclui apenas usuários ativos.
@@ -2484,17 +2632,22 @@ def _garantir_view_radcheck(cursor):
           {filtro_ativo}
     """)
 
+
 def salvar_token(token: str, usuario_id: int, expira_em: str):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO tokens (token, usuario_id, criado_em, expira_em)
         VALUES (?, ?, datetime('now'), ?)
-    """, (token, usuario_id, expira_em))
+    """,
+        (token, usuario_id, expira_em),
+    )
 
     conn.commit()
     conn.close()
+
 
 def limpar_tokens_expirados():
     conn = get_connection()
@@ -2509,39 +2662,49 @@ def limpar_tokens_expirados():
     conn.commit()
     conn.close()
 
+
 def revogar_tokens_usuario(usuario_id: int) -> int:
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         DELETE FROM tokens
         WHERE usuario_id = ?
-    """, (usuario_id,))
+    """,
+        (usuario_id,),
+    )
     removidos = cursor.rowcount
     conn.commit()
     conn.close()
     return removidos
 
+
 def buscar_usuario_por_token(token: str):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(f"""
+    cursor.execute(
+        f"""
         SELECT u.id, u.nome, u.email, u.perfil, u.cargo
         FROM usuarios u
         JOIN tokens t ON u.id = t.usuario_id
         WHERE t.token = ?
           AND t.expira_em > datetime('now')
-          AND {_clausula_usuario_ativo('u')}
-    """, (token,))
+          AND {_clausula_usuario_ativo("u")}
+    """,
+        (token,),
+    )
 
     row = cursor.fetchone()
     conn.close()
 
     return dict(row) if row else None
 
-#hash para senhas
+
+# hash para senhas
 def hash_senha(senha: str):
     return hashlib.sha256(senha.encode()).hexdigest()
+
 
 def _normalizar_nt_hash(nt_hash: str | None) -> str | None:
     if nt_hash is None:
@@ -2553,26 +2716,24 @@ def _normalizar_nt_hash(nt_hash: str | None) -> str | None:
         return None
     return valor
 
+
 def criar_usuario(nome, email, senha, perfil, cargo: str = ""):
     conn = get_connection()
     cursor = conn.cursor()
     cargo_norm = str(cargo or "").strip().upper() or _cargo_padrao_por_perfil(perfil)
     nt_hash = generate_nt_hash(senha)
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO usuarios (nome, email, senha_hash, nt_hash, perfil, cargo)
         VALUES (?, ?, ?, ?, ?, ?)
-    """, (
-        nome,
-        email,
-        hash_senha(senha),
-        nt_hash,
-        perfil,
-        cargo_norm
-    ))
+    """,
+        (nome, email, hash_senha(senha), nt_hash, perfil, cargo_norm),
+    )
 
     conn.commit()
     conn.close()
+
 
 def buscar_usuario_por_email(email, incluir_inativos: bool = False):
     conn = get_connection()
@@ -2588,6 +2749,7 @@ def buscar_usuario_por_email(email, incluir_inativos: bool = False):
     conn.close()
 
     return dict(row) if row else None
+
 
 def buscar_usuario_por_id(usuario_id: int, incluir_inativos: bool = False):
     conn = get_connection()
@@ -2607,6 +2769,7 @@ def buscar_usuario_por_id(usuario_id: int, incluir_inativos: bool = False):
     conn.close()
 
     return dict(row) if row else None
+
 
 def criar_usuario_se_nao_existir(
     nome,
@@ -2628,13 +2791,17 @@ def criar_usuario_se_nao_existir(
     if nt_hash_final is None and senha_plana is not None:
         nt_hash_final = generate_nt_hash(senha_plana)
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO usuarios (nome, email, senha_hash, nt_hash, perfil, cargo)
         VALUES (?, ?, ?, ?, ?, ?)
-    """, (nome, email, senha_hash, nt_hash_final, perfil, cargo_norm))
+    """,
+        (nome, email, senha_hash, nt_hash_final, perfil, cargo_norm),
+    )
 
     conn.commit()
     conn.close()
+
 
 def _serializar_lista_texto(valores):
     if not valores:
@@ -2646,6 +2813,7 @@ def _serializar_lista_texto(valores):
         if texto and texto not in normalizados:
             normalizados.append(texto)
     return json.dumps(normalizados, ensure_ascii=False)
+
 
 def _desserializar_lista_texto(valor):
     if not valor:
@@ -2664,6 +2832,7 @@ def _desserializar_lista_texto(valor):
             normalizados.append(texto)
     return normalizados
 
+
 def _normalizar_texto_chave(valor: str) -> str:
     texto = str(valor or "").strip().lower()
     sem_acentos = "".join(
@@ -2673,6 +2842,7 @@ def _normalizar_texto_chave(valor: str) -> str:
     )
     return " ".join(sem_acentos.split())
 
+
 def _obter_multiplicador_disciplina(nome_disciplina: str) -> float:
     chave = _normalizar_texto_chave(nome_disciplina)
     if chave in DISCIPLINAS_MULTIPLICADOR_ALTO:
@@ -2680,6 +2850,7 @@ def _obter_multiplicador_disciplina(nome_disciplina: str) -> float:
     if chave in DISCIPLINAS_MULTIPLICADOR_BAIXO:
         return 0.8
     return 1.0
+
 
 def criar_professor(
     nome: str,
@@ -2699,22 +2870,29 @@ def criar_professor(
     disciplinas_json = _serializar_lista_texto(disciplinas)
     nt_hash_final = _normalizar_nt_hash(nt_hash)
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO usuarios (nome, email, senha_hash, nt_hash, perfil, cargo, data_nascimento)
         VALUES (?, ?, ?, ?, 'professor', ?, ?)
-    """, (nome, email, senha_hash, nt_hash_final, CARGO_PROFESSOR, data_nascimento or None))
+    """,
+        (nome, email, senha_hash, nt_hash_final, CARGO_PROFESSOR, data_nascimento or None),
+    )
 
     usuario_id = cursor.lastrowid
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO professores_carga (
             usuario_id, aulas_semanais, turmas_quantidade, turmas, disciplinas, atualizado_em
         )
         VALUES (?, ?, ?, ?, ?, datetime('now'))
-    """, (usuario_id, aulas_semanais, turmas_quantidade, turmas_json, disciplinas_json))
+    """,
+        (usuario_id, aulas_semanais, turmas_quantidade, turmas_json, disciplinas_json),
+    )
 
     conn.commit()
     conn.close()
     return usuario_id
+
 
 def atualizar_professor(
     usuario_id: int,
@@ -2729,11 +2907,14 @@ def atualizar_professor(
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT id
         FROM usuarios
         WHERE id = ? AND perfil = 'professor'
-    """, (usuario_id,))
+    """,
+        (usuario_id,),
+    )
     if not cursor.fetchone():
         conn.close()
         return False
@@ -2741,13 +2922,17 @@ def atualizar_professor(
     turmas_json = _serializar_lista_texto(turmas)
     disciplinas_json = _serializar_lista_texto(disciplinas)
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE usuarios
         SET nome = ?, email = ?, cargo = ?, data_nascimento = ?
         WHERE id = ?
-    """, (nome, email, CARGO_PROFESSOR, data_nascimento or None, usuario_id))
+    """,
+        (nome, email, CARGO_PROFESSOR, data_nascimento or None, usuario_id),
+    )
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO professores_carga (
             usuario_id, aulas_semanais, turmas_quantidade, turmas, disciplinas, atualizado_em
         )
@@ -2758,17 +2943,20 @@ def atualizar_professor(
             turmas = excluded.turmas,
             disciplinas = excluded.disciplinas,
             atualizado_em = datetime('now')
-    """, (
-        usuario_id,
-        aulas_semanais,
-        turmas_quantidade,
-        turmas_json,
-        disciplinas_json,
-    ))
+    """,
+        (
+            usuario_id,
+            aulas_semanais,
+            turmas_quantidade,
+            turmas_json,
+            disciplinas_json,
+        ),
+    )
 
     conn.commit()
     conn.close()
     return True
+
 
 def criar_coordenador(
     nome: str,
@@ -2781,31 +2969,39 @@ def criar_coordenador(
     cursor = conn.cursor()
     nt_hash_final = _normalizar_nt_hash(nt_hash)
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO usuarios (nome, email, senha_hash, nt_hash, perfil, cargo, data_nascimento)
         VALUES (?, ?, ?, ?, 'coordenador', ?, ?)
-    """, (nome, email, senha_hash, nt_hash_final, CARGO_COORDENADOR, data_nascimento or None))
+    """,
+        (nome, email, senha_hash, nt_hash_final, CARGO_COORDENADOR, data_nascimento or None),
+    )
 
     usuario_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return usuario_id
 
+
 def listar_coordenadores_admin():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(f"""
+    cursor.execute(
+        f"""
         SELECT id, nome, email, data_nascimento
         FROM usuarios
         WHERE UPPER(COALESCE(cargo, '')) = ?
           AND {_clausula_usuario_ativo()}
         ORDER BY nome ASC
-    """, (CARGO_COORDENADOR,))
+    """,
+        (CARGO_COORDENADOR,),
+    )
 
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
 
 def atualizar_nt_hash_usuario(usuario_id: int, nt_hash: str):
     nt_hash_final = _normalizar_nt_hash(nt_hash)
@@ -2814,43 +3010,50 @@ def atualizar_nt_hash_usuario(usuario_id: int, nt_hash: str):
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE usuarios
         SET nt_hash = ?
         WHERE id = ?
-    """, (nt_hash_final, usuario_id))
+    """,
+        (nt_hash_final, usuario_id),
+    )
     alterado = cursor.rowcount > 0
     conn.commit()
     conn.close()
     return alterado
+
 
 def preencher_nt_hash_se_ausente(usuario_id: int, senha_em_texto: str):
     nt_hash = generate_nt_hash(senha_em_texto)
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE usuarios
         SET nt_hash = ?
         WHERE id = ?
           AND TRIM(COALESCE(nt_hash, '')) = ''
-    """, (nt_hash, usuario_id))
+    """,
+        (nt_hash, usuario_id),
+    )
     alterado = cursor.rowcount > 0
     conn.commit()
     conn.close()
     return alterado
 
+
 def atualizar_senha_usuario(usuario_id: int, senha_em_texto: str):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE usuarios
         SET senha_hash = ?, nt_hash = ?
         WHERE id = ?
-    """, (
-        hash_senha(senha_em_texto),
-        generate_nt_hash(senha_em_texto),
-        usuario_id
-    ))
+    """,
+        (hash_senha(senha_em_texto), generate_nt_hash(senha_em_texto), usuario_id),
+    )
     alterado = cursor.rowcount > 0
     conn.commit()
     conn.close()
@@ -2861,37 +3064,47 @@ def desativar_professor(usuario_id: int) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(f"""
+    cursor.execute(
+        f"""
         UPDATE usuarios
         SET ativo = 0
         WHERE id = ?
           AND perfil = 'professor'
           AND {_clausula_usuario_ativo()}
-    """, (usuario_id,))
+    """,
+        (usuario_id,),
+    )
     alterado = cursor.rowcount > 0
 
     if alterado:
-        cursor.execute("""
+        cursor.execute(
+            """
             DELETE FROM tokens
             WHERE usuario_id = ?
-        """, (usuario_id,))
+        """,
+            (usuario_id,),
+        )
 
     conn.commit()
     conn.close()
     return alterado
 
+
 def salvar_carga_professor(usuario_id: int, aulas_semanais: int, turmas_quantidade: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO professores_carga (usuario_id, aulas_semanais, turmas_quantidade, atualizado_em)
         VALUES (?, ?, ?, datetime('now'))
         ON CONFLICT(usuario_id) DO UPDATE SET
             aulas_semanais = excluded.aulas_semanais,
             turmas_quantidade = excluded.turmas_quantidade,
             atualizado_em = datetime('now')
-    """, (usuario_id, aulas_semanais, turmas_quantidade))
+    """,
+        (usuario_id, aulas_semanais, turmas_quantidade),
+    )
 
     conn.commit()
     conn.close()
@@ -2906,11 +3119,14 @@ def _normalizar_professor_usuario_id(valor) -> int | None:
 
 
 def _obter_carga_horaria_base_disciplina(cursor, disciplina_id: int) -> int:
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT COALESCE(aulas_semanais, 0) AS aulas_semanais
         FROM disciplinas
         WHERE id = ?
-    """, (int(disciplina_id),))
+    """,
+        (int(disciplina_id),),
+    )
     row = cursor.fetchone()
     return int((row["aulas_semanais"] if row else 0) or 0)
 
@@ -2926,26 +3142,33 @@ def _sincronizar_atribuicoes_docentes_por_turma_disciplina(
     disciplina_id_valor = int(disciplina_id)
     professor_id_valor = _normalizar_professor_usuario_id(professor_usuario_id)
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT DISTINCT professor_usuario_id
         FROM professores_turmas_disciplinas
         WHERE turma_id = ?
           AND disciplina_id = ?
-    """, (turma_id_valor, disciplina_id_valor))
+    """,
+        (turma_id_valor, disciplina_id_valor),
+    )
     professores_afetados = {
         int(row["professor_usuario_id"])
         for row in cursor.fetchall()
         if int(row["professor_usuario_id"] or 0) > 0
     }
 
-    cursor.execute("""
+    cursor.execute(
+        """
         DELETE FROM professores_turmas_disciplinas
         WHERE turma_id = ?
           AND disciplina_id = ?
-    """, (turma_id_valor, disciplina_id_valor))
+    """,
+        (turma_id_valor, disciplina_id_valor),
+    )
 
     if professor_id_valor is not None:
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT OR IGNORE INTO professores_turmas_disciplinas (
                 professor_usuario_id,
                 turma_id,
@@ -2953,7 +3176,9 @@ def _sincronizar_atribuicoes_docentes_por_turma_disciplina(
                 criado_em
             )
             VALUES (?, ?, ?, datetime('now'))
-        """, (professor_id_valor, turma_id_valor, disciplina_id_valor))
+        """,
+            (professor_id_valor, turma_id_valor, disciplina_id_valor),
+        )
         professores_afetados.add(professor_id_valor)
 
     for usuario_id in sorted(professores_afetados):
@@ -2972,13 +3197,16 @@ def _upsert_turma_disciplina_cursor(
     disciplina_id_valor = int(disciplina_id)
     professor_id_valor = _normalizar_professor_usuario_id(professor_usuario_id)
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT id, carga_horaria, professor_usuario_id
         FROM turmas_disciplinas
         WHERE turma_id = ?
           AND disciplina_id = ?
         LIMIT 1
-    """, (turma_id_valor, disciplina_id_valor))
+    """,
+        (turma_id_valor, disciplina_id_valor),
+    )
     existente = cursor.fetchone()
 
     if existente:
@@ -2989,13 +3217,16 @@ def _upsert_turma_disciplina_cursor(
         )
         if carga_horaria is None and carga_final <= 0:
             carga_final = _obter_carga_horaria_base_disciplina(cursor, disciplina_id_valor)
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE turmas_disciplinas
             SET carga_horaria = ?,
                 professor_usuario_id = ?,
                 atualizado_em = datetime('now')
             WHERE id = ?
-        """, (carga_final, professor_id_valor, int(existente["id"])))
+        """,
+            (carga_final, professor_id_valor, int(existente["id"])),
+        )
         turma_disciplina_id = int(existente["id"])
         criado = False
     else:
@@ -3004,7 +3235,8 @@ def _upsert_turma_disciplina_cursor(
             if carga_horaria is not None
             else _obter_carga_horaria_base_disciplina(cursor, disciplina_id_valor)
         )
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO turmas_disciplinas (
                 turma_id,
                 disciplina_id,
@@ -3014,7 +3246,9 @@ def _upsert_turma_disciplina_cursor(
                 atualizado_em
             )
             VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
-        """, (turma_id_valor, disciplina_id_valor, carga_final, professor_id_valor))
+        """,
+            (turma_id_valor, disciplina_id_valor, carga_final, professor_id_valor),
+        )
         turma_disciplina_id = int(cursor.lastrowid)
         criado = True
 
@@ -3044,7 +3278,9 @@ def _mapear_turma_disciplina_admin(row) -> dict:
         "professor_id": professor_id if professor_id > 0 else None,
         "professor_nome": item.get("professor_nome", "") or "",
         "professor_email": item.get("professor_email", "") or "",
-        "professor_ativo": bool(int(item.get("professor_ativo", 1) or 0)) if professor_id > 0 else True,
+        "professor_ativo": bool(int(item.get("professor_ativo", 1) or 0))
+        if professor_id > 0
+        else True,
         "criado_em": item.get("criado_em", "") or "",
         "atualizado_em": item.get("atualizado_em", "") or "",
     }
@@ -3381,11 +3617,14 @@ def atualizar_turma_disciplina(
 ):
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT turma_id, disciplina_id
         FROM turmas_disciplinas
         WHERE id = ?
-    """, (int(turma_disciplina_id),))
+    """,
+        (int(turma_disciplina_id),),
+    )
     row = cursor.fetchone()
     if not row:
         conn.close()
@@ -3411,11 +3650,14 @@ def atualizar_turma_disciplina(
 def excluir_turma_disciplina(turma_disciplina_id: int) -> bool:
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT turma_id, disciplina_id
         FROM turmas_disciplinas
         WHERE id = ?
-    """, (int(turma_disciplina_id),))
+    """,
+        (int(turma_disciplina_id),),
+    )
     row = cursor.fetchone()
     if not row:
         conn.close()
@@ -3424,30 +3666,39 @@ def excluir_turma_disciplina(turma_disciplina_id: int) -> bool:
     turma_id = int(row["turma_id"])
     disciplina_id = int(row["disciplina_id"])
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT DISTINCT professor_usuario_id
         FROM professores_turmas_disciplinas
         WHERE turma_id = ?
           AND disciplina_id = ?
-    """, (turma_id, disciplina_id))
+    """,
+        (turma_id, disciplina_id),
+    )
     professores_afetados = {
         int(item["professor_usuario_id"])
         for item in cursor.fetchall()
         if int(item["professor_usuario_id"] or 0) > 0
     }
 
-    cursor.execute("""
+    cursor.execute(
+        """
         DELETE FROM turmas_disciplinas
         WHERE id = ?
-    """, (int(turma_disciplina_id),))
+    """,
+        (int(turma_disciplina_id),),
+    )
     alterado = cursor.rowcount > 0
 
     if alterado:
-        cursor.execute("""
+        cursor.execute(
+            """
             DELETE FROM professores_turmas_disciplinas
             WHERE turma_id = ?
               AND disciplina_id = ?
-        """, (turma_id, disciplina_id))
+        """,
+            (turma_id, disciplina_id),
+        )
         for professor_id in sorted(professores_afetados):
             _sincronizar_resumo_carga_professor(cursor, professor_id)
 
@@ -3460,16 +3711,21 @@ def criar_atribuicao_docente(professor_id: int, turma_id: int, disciplina_id: in
     conn = get_connection()
     cursor = conn.cursor()
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT professor_usuario_id
             FROM turmas_disciplinas
             WHERE turma_id = ?
               AND disciplina_id = ?
             LIMIT 1
-        """, (int(turma_id), int(disciplina_id)))
+        """,
+            (int(turma_id), int(disciplina_id)),
+        )
         row = cursor.fetchone()
         if row and int(row["professor_usuario_id"] or 0) == int(professor_id):
-            raise sqlite3.IntegrityError("A atribuicao docente ja existe para esta turma e disciplina.")
+            raise sqlite3.IntegrityError(
+                "A atribuicao docente ja existe para esta turma e disciplina."
+            )
 
         _upsert_turma_disciplina_cursor(
             cursor,
@@ -3521,10 +3777,7 @@ def sincronizar_atribuicoes_docentes_professor_disciplina(
             """,
             (professor_id_valor, disciplina_id_valor),
         )
-        atuais_por_turma = {
-            int(row["turma_id"]): True
-            for row in cursor.fetchall()
-        }
+        atuais_por_turma = {int(row["turma_id"]): True for row in cursor.fetchall()}
 
         novas_turmas = set(turma_ids_unicos)
         turmas_atuais = set(atuais_por_turma.keys())
@@ -3532,14 +3785,17 @@ def sincronizar_atribuicoes_docentes_professor_disciplina(
 
         removidos = 0
         for turma_id in turmas_para_remover:
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE turmas_disciplinas
                 SET professor_usuario_id = NULL,
                     atualizado_em = datetime('now')
                 WHERE turma_id = ?
                   AND disciplina_id = ?
                   AND professor_usuario_id = ?
-            """, (int(turma_id), disciplina_id_valor, professor_id_valor))
+            """,
+                (int(turma_id), disciplina_id_valor, professor_id_valor),
+            )
             alterado = max(int(cursor.rowcount or 0), 0)
             if alterado > 0:
                 _sincronizar_atribuicoes_docentes_por_turma_disciplina(
@@ -3552,13 +3808,16 @@ def sincronizar_atribuicoes_docentes_professor_disciplina(
 
         criados = 0
         for turma_id in sorted(novas_turmas):
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT professor_usuario_id
                 FROM turmas_disciplinas
                 WHERE turma_id = ?
                   AND disciplina_id = ?
                 LIMIT 1
-            """, (int(turma_id), disciplina_id_valor))
+            """,
+                (int(turma_id), disciplina_id_valor),
+            )
             row = cursor.fetchone()
             professor_atual = int(row["professor_usuario_id"] or 0) if row else 0
             if professor_atual != professor_id_valor:
@@ -3613,14 +3872,17 @@ def excluir_atribuicao_docente(atribuicao_id: int) -> bool:
     turma_id = int(row["turma_id"])
     disciplina_id = int(row["disciplina_id"])
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE turmas_disciplinas
         SET professor_usuario_id = NULL,
             atualizado_em = datetime('now')
         WHERE turma_id = ?
           AND disciplina_id = ?
           AND professor_usuario_id = ?
-    """, (turma_id, disciplina_id, professor_id))
+    """,
+        (turma_id, disciplina_id, professor_id),
+    )
     alterado = cursor.rowcount > 0
     if alterado:
         _sincronizar_atribuicoes_docentes_por_turma_disciplina(
@@ -3633,6 +3895,7 @@ def excluir_atribuicao_docente(atribuicao_id: int) -> bool:
     conn.commit()
     conn.close()
     return alterado
+
 
 def obter_regras_cota():
     conn = get_connection()
@@ -3656,6 +3919,7 @@ def obter_regras_cota():
         }
     return dict(row)
 
+
 def atualizar_regras_cota(
     base_paginas: int,
     paginas_por_aula: int,
@@ -3665,7 +3929,8 @@ def atualizar_regras_cota(
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO cota_regras (
             id, base_paginas, paginas_por_aula, paginas_por_turma, cota_mensal_escola, atualizado_em
         )
@@ -3676,15 +3941,19 @@ def atualizar_regras_cota(
             paginas_por_turma = excluded.paginas_por_turma,
             cota_mensal_escola = excluded.cota_mensal_escola,
             atualizado_em = datetime('now')
-    """, (base_paginas, paginas_por_aula, paginas_por_turma, cota_mensal_escola))
+    """,
+        (base_paginas, paginas_por_aula, paginas_por_turma, cota_mensal_escola),
+    )
 
     conn.commit()
     conn.close()
+
 
 def _calcular_total_distribuivel(cota_mensal_escola: int) -> int:
     cota_total = max(int(cota_mensal_escola or 0), 0)
     percentual_disponivel = max(0, 100 - RESERVA_INSTITUCIONAL_PERCENTUAL)
     return cota_total * percentual_disponivel // 100
+
 
 def _calcular_peso_professor(
     professor: dict,
@@ -3746,6 +4015,7 @@ def _calcular_peso_professor(
 
     return max(peso_total, 0.0)
 
+
 def calcular_cotas_mensais_professores():
     regras = obter_regras_cota()
     cota_distribuivel = _calcular_total_distribuivel(regras["cota_mensal_escola"])
@@ -3763,7 +4033,7 @@ def calcular_cotas_mensais_professores():
         FROM usuarios u
         LEFT JOIN professores_carga pc ON pc.usuario_id = u.id
         WHERE u.perfil = 'professor'
-          AND {_clausula_usuario_ativo('u')}
+          AND {_clausula_usuario_ativo("u")}
         ORDER BY u.nome COLLATE NOCASE ASC, u.id ASC
     """)
     professores_rows = cursor.fetchall()
@@ -3814,12 +4084,14 @@ def calcular_cotas_mensais_professores():
             atribuicoes_docentes=atribuicoes_por_usuario.get(int(professor["id"]), []),
         )
 
-        calculos.append({
-            "usuario_id": int(professor["id"]),
-            "professor": professor["nome"],
-            "peso_total_individual": peso_total_individual,
-            "cota_mensal_calculada": 0,
-        })
+        calculos.append(
+            {
+                "usuario_id": int(professor["id"]),
+                "professor": professor["nome"],
+                "peso_total_individual": peso_total_individual,
+                "cota_mensal_calculada": 0,
+            }
+        )
         total_pesos += peso_total_individual
 
     if total_pesos <= 0:
@@ -3855,22 +4127,26 @@ def calcular_cotas_mensais_professores():
 
     return calculos
 
+
 def calcular_limites_cota_professores():
     calculos = calcular_cotas_mensais_professores()
     return {
-        int(calculo["usuario_id"]): int(calculo["cota_mensal_calculada"])
-        for calculo in calculos
+        int(calculo["usuario_id"]): int(calculo["cota_mensal_calculada"]) for calculo in calculos
     }
+
 
 def calcular_limite_cota_usuario(usuario_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT perfil
         FROM usuarios
         WHERE id = ?
-    """, (usuario_id,))
+    """,
+        (usuario_id,),
+    )
     row_usuario = cursor.fetchone()
 
     if not row_usuario:
@@ -3886,6 +4162,7 @@ def calcular_limite_cota_usuario(usuario_id: int):
     conn.close()
     limites = calcular_limites_cota_professores()
     return max(int(limites.get(int(usuario_id), 0)), 0)
+
 
 def listar_professores_admin(mes: str = None):
     conn = get_connection()
@@ -3904,7 +4181,7 @@ def listar_professores_admin(mes: str = None):
         FROM usuarios u
         LEFT JOIN professores_carga pc ON pc.usuario_id = u.id
         WHERE u.perfil = 'professor'
-          AND {_clausula_usuario_ativo('u')}
+          AND {_clausula_usuario_ativo("u")}
         ORDER BY u.nome ASC
     """
     cursor.execute(query)
@@ -3938,11 +4215,14 @@ def listar_professores_admin(mes: str = None):
 
     if mes:
         for professor in professores:
-            cursor.execute("""
+            cursor.execute(
+                """
                 SELECT limite_paginas, usadas_paginas
                 FROM cotas
                 WHERE usuario_id = ? AND mes = ?
-            """, (professor["id"], mes))
+            """,
+                (professor["id"], mes),
+            )
             cota = cursor.fetchone()
             if cota:
                 professor["cota_mes"] = dict(cota)
@@ -3952,11 +4232,13 @@ def listar_professores_admin(mes: str = None):
     conn.close()
     return professores
 
+
 def listar_professores_agendamento():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(f"""
+    cursor.execute(
+        f"""
         SELECT id, nome, email
         FROM usuarios
         WHERE (
@@ -3968,11 +4250,14 @@ def listar_professores_agendamento():
               )
           AND {_clausula_usuario_ativo()}
         ORDER BY nome COLLATE NOCASE ASC
-    """, (CARGO_PROFESSOR,))
+    """,
+        (CARGO_PROFESSOR,),
+    )
 
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
 
 def listar_cargas_professores_por_usuario_ids(usuario_ids: list[int]):
     ids_unicos = []
@@ -3991,14 +4276,17 @@ def listar_cargas_professores_por_usuario_ids(usuario_ids: list[int]):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(f"""
+    cursor.execute(
+        f"""
         SELECT
             usuario_id,
             COALESCE(turmas, '[]') AS turmas,
             COALESCE(disciplinas, '[]') AS disciplinas
         FROM professores_carga
         WHERE usuario_id IN ({placeholders})
-    """, ids_unicos)
+    """,
+        ids_unicos,
+    )
 
     rows = cursor.fetchall()
     conn.close()
@@ -4012,11 +4300,13 @@ def listar_cargas_professores_por_usuario_ids(usuario_ids: list[int]):
         }
     return cargas
 
+
 def buscar_professor_por_id_ocorrencia(usuario_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(f"""
+    cursor.execute(
+        f"""
         SELECT id, nome, email
         FROM usuarios
         WHERE id = ?
@@ -4028,11 +4318,14 @@ def buscar_professor_por_id_ocorrencia(usuario_id: int):
                    AND LOWER(COALESCE(perfil, '')) = 'professor'
               )
           )
-    """, (int(usuario_id), CARGO_PROFESSOR))
+    """,
+        (int(usuario_id), CARGO_PROFESSOR),
+    )
 
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
+
 
 def buscar_professores_ocorrencia(termo: str = "", limite: int = 20):
     conn = get_connection()
@@ -4075,6 +4368,7 @@ def buscar_professores_ocorrencia(termo: str = "", limite: int = 20):
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
 
 def listar_estudantes(
     incluir_inativos: bool = False,
@@ -4126,11 +4420,13 @@ def listar_estudantes(
     conn.close()
     return [dict(row) for row in rows]
 
+
 def buscar_estudante_por_id(estudante_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             e.id,
             e.nome,
@@ -4142,11 +4438,14 @@ def buscar_estudante_por_id(estudante_id: int):
         FROM estudantes e
         LEFT JOIN turmas t ON t.id = e.turma_id
         WHERE e.id = ?
-    """, (int(estudante_id),))
+    """,
+        (int(estudante_id),),
+    )
 
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
+
 
 def buscar_estudante_por_nome_turma(nome: str, turma_id: int):
     nome_limpo = _normalizar_nome_catalogo(nome)
@@ -4157,7 +4456,8 @@ def buscar_estudante_por_nome_turma(nome: str, turma_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             e.id,
             e.nome,
@@ -4172,11 +4472,14 @@ def buscar_estudante_por_nome_turma(nome: str, turma_id: int):
           AND COALESCE(e.nome, '') = ? COLLATE NOCASE
         ORDER BY e.id ASC
         LIMIT 1
-    """, (turma_id_valor, nome_limpo))
+    """,
+        (turma_id_valor, nome_limpo),
+    )
 
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
+
 
 def criar_estudante(nome: str, turma_id: int, ativo: bool = True):
     nome_limpo = _normalizar_nome_catalogo(nome)
@@ -4188,15 +4491,19 @@ def criar_estudante(nome: str, turma_id: int, ativo: bool = True):
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO estudantes (nome, turma_id, ativo, criado_em, atualizado_em)
         VALUES (?, ?, ?, datetime('now'), datetime('now'))
-    """, (nome_limpo, turma_id_valor, 1 if ativo else 0))
+    """,
+        (nome_limpo, turma_id_valor, 1 if ativo else 0),
+    )
 
     estudante_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return estudante_id
+
 
 def criar_ou_atualizar_estudante_por_nome_turma(nome: str, turma_id: int, ativo: bool = True):
     existente = buscar_estudante_por_nome_turma(nome, turma_id)
@@ -4212,6 +4519,7 @@ def criar_ou_atualizar_estudante_por_nome_turma(nome: str, turma_id: int, ativo:
     estudante_id = criar_estudante(nome=nome, turma_id=turma_id, ativo=ativo)
     return int(estudante_id), True
 
+
 def atualizar_estudante(estudante_id: int, nome: str, turma_id: int, ativo: bool):
     nome_limpo = _normalizar_nome_catalogo(nome)
     turma_id_valor = int(turma_id or 0)
@@ -4222,31 +4530,39 @@ def atualizar_estudante(estudante_id: int, nome: str, turma_id: int, ativo: bool
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE estudantes
         SET nome = ?, turma_id = ?, ativo = ?, atualizado_em = datetime('now')
         WHERE id = ?
-    """, (nome_limpo, turma_id_valor, 1 if ativo else 0, int(estudante_id)))
+    """,
+        (nome_limpo, turma_id_valor, 1 if ativo else 0, int(estudante_id)),
+    )
 
     alterado = cursor.rowcount > 0
     conn.commit()
     conn.close()
     return alterado
+
 
 def atualizar_status_estudante(estudante_id: int, ativo: bool):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE estudantes
         SET ativo = ?, atualizado_em = datetime('now')
         WHERE id = ?
-    """, (1 if ativo else 0, int(estudante_id)))
+    """,
+        (1 if ativo else 0, int(estudante_id)),
+    )
 
     alterado = cursor.rowcount > 0
     conn.commit()
     conn.close()
     return alterado
+
 
 def remover_estudante(estudante_id: int):
     conn = get_connection()
@@ -4258,11 +4574,14 @@ def remover_estudante(estudante_id: int):
         conn.close()
         return False, 0
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE ocorrencias
         SET estudante_id = NULL, atualizado_em = datetime('now')
         WHERE estudante_id = ?
-    """, (estudante_id_valor,))
+    """,
+        (estudante_id_valor,),
+    )
     ocorrencias_desvinculadas = cursor.rowcount
 
     cursor.execute("DELETE FROM estudantes WHERE id = ?", (estudante_id_valor,))
@@ -4272,6 +4591,7 @@ def remover_estudante(estudante_id: int):
     conn.close()
     return removido, ocorrencias_desvinculadas
 
+
 def buscar_estudantes_ocorrencia(termo: str = "", turma_id: int = None, limite: int = 20):
     return listar_estudantes(
         incluir_inativos=False,
@@ -4279,6 +4599,7 @@ def buscar_estudantes_ocorrencia(termo: str = "", turma_id: int = None, limite: 
         turma_id=turma_id,
         limite=limite,
     )
+
 
 def seed_recursos_padrao():
     recursos = [
@@ -4292,13 +4613,17 @@ def seed_recursos_padrao():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.executemany("""
+    cursor.executemany(
+        """
         INSERT OR IGNORE INTO recursos (nome, tipo, descricao, quantidade_itens, ativo)
         VALUES (?, ?, ?, ?, 1)
-    """, recursos)
+    """,
+        recursos,
+    )
 
     conn.commit()
     conn.close()
+
 
 def listar_turmas(incluir_inativas: bool = False):
     conn = get_connection()
@@ -4321,22 +4646,28 @@ def listar_turmas(incluir_inativas: bool = False):
 
     return [dict(row) for row in rows]
 
+
 def listar_turmas_ativas():
     return listar_turmas(incluir_inativas=False)
+
 
 def buscar_turma_por_id(turma_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT id, nome, turno, quantidade_estudantes, ativo, criado_em
         FROM turmas
         WHERE id = ?
-    """, (int(turma_id),))
+    """,
+        (int(turma_id),),
+    )
 
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
+
 
 def buscar_turma_por_nome(nome: str, incluir_inativas: bool = True):
     nome_limpo = _normalizar_nome_catalogo(nome)
@@ -4361,6 +4692,7 @@ def buscar_turma_por_nome(nome: str, incluir_inativas: bool = True):
     conn.close()
     return dict(row) if row else None
 
+
 def criar_turma(nome: str, turno: str = "", quantidade_estudantes: int = 0):
     nome_limpo = _normalizar_nome_catalogo(nome)
     if not nome_limpo:
@@ -4373,15 +4705,19 @@ def criar_turma(nome: str, turno: str = "", quantidade_estudantes: int = 0):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO turmas (nome, turno, quantidade_estudantes, ativo, criado_em)
         VALUES (?, ?, ?, 1, datetime('now'))
-    """, (nome_limpo, turno_limpo, quantidade_estudantes_valor))
+    """,
+        (nome_limpo, turno_limpo, quantidade_estudantes_valor),
+    )
 
     turma_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return turma_id
+
 
 def atualizar_turma_dados(turma_id: int, turno: str, quantidade_estudantes: int):
     turno_limpo = str(turno or "").strip().upper()
@@ -4392,31 +4728,39 @@ def atualizar_turma_dados(turma_id: int, turno: str, quantidade_estudantes: int)
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE turmas
         SET turno = ?, quantidade_estudantes = ?
         WHERE id = ?
-    """, (turno_limpo, quantidade_estudantes_valor, turma_id))
+    """,
+        (turno_limpo, quantidade_estudantes_valor, turma_id),
+    )
 
     alterado = cursor.rowcount > 0
     conn.commit()
     conn.close()
     return alterado
+
 
 def atualizar_status_turma(turma_id: int, ativo: bool):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE turmas
         SET ativo = ?
         WHERE id = ?
-    """, (1 if ativo else 0, turma_id))
+    """,
+        (1 if ativo else 0, turma_id),
+    )
 
     alterado = cursor.rowcount > 0
     conn.commit()
     conn.close()
     return alterado
+
 
 def listar_disciplinas(incluir_inativas: bool = False):
     conn = get_connection()
@@ -4439,18 +4783,23 @@ def listar_disciplinas(incluir_inativas: bool = False):
 
     return [dict(row) for row in rows]
 
+
 def listar_disciplinas_ativas():
     return listar_disciplinas(incluir_inativas=False)
+
 
 def buscar_disciplina_por_id(disciplina_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT id, nome, aulas_semanais, ativo, criado_em
         FROM disciplinas
         WHERE id = ?
-    """, (int(disciplina_id),))
+    """,
+        (int(disciplina_id),),
+    )
 
     row = cursor.fetchone()
     conn.close()
@@ -4480,6 +4829,7 @@ def buscar_disciplina_por_nome(nome: str, incluir_inativas: bool = True):
     conn.close()
     return dict(row) if row else None
 
+
 def criar_disciplina(nome: str, aulas_semanais: int = 0):
     nome_limpo = _normalizar_nome_catalogo(nome)
     if not nome_limpo:
@@ -4491,15 +4841,19 @@ def criar_disciplina(nome: str, aulas_semanais: int = 0):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO disciplinas (nome, aulas_semanais, ativo, criado_em)
         VALUES (?, ?, 1, datetime('now'))
-    """, (nome_limpo, aulas_semanais_valor))
+    """,
+        (nome_limpo, aulas_semanais_valor),
+    )
 
     disciplina_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return disciplina_id
+
 
 def atualizar_disciplina_dados(disciplina_id: int, aulas_semanais: int):
     aulas_semanais_valor = int(aulas_semanais or 0)
@@ -4509,26 +4863,33 @@ def atualizar_disciplina_dados(disciplina_id: int, aulas_semanais: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE disciplinas
         SET aulas_semanais = ?
         WHERE id = ?
-    """, (aulas_semanais_valor, disciplina_id))
+    """,
+        (aulas_semanais_valor, disciplina_id),
+    )
 
     alterado = cursor.rowcount > 0
     conn.commit()
     conn.close()
     return alterado
 
+
 def atualizar_status_disciplina(disciplina_id: int, ativo: bool):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE disciplinas
         SET ativo = ?
         WHERE id = ?
-    """, (1 if ativo else 0, disciplina_id))
+    """,
+        (1 if ativo else 0, disciplina_id),
+    )
 
     alterado = cursor.rowcount > 0
     conn.commit()
@@ -4538,6 +4899,7 @@ def atualizar_status_disciplina(disciplina_id: int, ativo: bool):
 
 def gerar_token():
     return str(uuid.uuid4())
+
 
 def listar_fila():
     conn = get_connection()
@@ -4553,29 +4915,31 @@ def listar_fila():
 
     return [dict(row) for row in rows]
 
+
 def buscar_job(job_id):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(
-        "SELECT * FROM jobs WHERE id = ?",
-        (job_id,)
-    )
+    cursor.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
 
     row = cursor.fetchone()
     conn.close()
 
     return dict(row) if row else None
 
+
 def cancelar_job(job_id, estornar_cota: bool = True):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT usuario_id, paginas_totais, criado_em
         FROM jobs
         WHERE id = ?
-    """, (job_id,))
+    """,
+        (job_id,),
+    )
     job = cursor.fetchone()
 
     if not job:
@@ -4586,11 +4950,14 @@ def cancelar_job(job_id, estornar_cota: bool = True):
             "paginas_estornadas": 0,
         }
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE jobs
         SET status = 'CANCELADO'
         WHERE id = ? AND status = 'PENDENTE'
-    """, (job_id,))
+    """,
+        (job_id,),
+    )
     cancelado = cursor.rowcount > 0
 
     paginas_estornadas = 0
@@ -4601,11 +4968,14 @@ def cancelar_job(job_id, estornar_cota: bool = True):
         mes_referencia = str(job["criado_em"] or "")[:7]
 
         if paginas > 0 and usuario_id is not None and len(mes_referencia) == 7:
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE cotas
                 SET usadas_paginas = MAX(usadas_paginas - ?, 0)
                 WHERE usuario_id = ? AND mes = ?
-            """, (paginas, usuario_id, mes_referencia))
+            """,
+                (paginas, usuario_id, mes_referencia),
+            )
             paginas_estornadas = paginas
 
     conn.commit()
@@ -4616,20 +4986,25 @@ def cancelar_job(job_id, estornar_cota: bool = True):
         "paginas_estornadas": paginas_estornadas,
     }
 
+
 def alterar_prioridade(job_id, urgente):
     prioridade = 1 if urgente else 0
 
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE jobs
         SET prioridade = ?
         WHERE id = ? AND status = 'PENDENTE'
-    """, (prioridade, job_id))
+    """,
+        (prioridade, job_id),
+    )
 
     conn.commit()
     conn.close()
+
 
 # Para impressão automática, busca o próximo job pendente já elegível para iniciar.
 def buscar_proximo_job(atraso_minimo_segundos: int = 0):
@@ -4642,13 +5017,16 @@ def buscar_proximo_job(atraso_minimo_segundos: int = 0):
     cursor = conn.cursor()
 
     if atraso_minimo > 0:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT * FROM jobs
             WHERE status = 'PENDENTE'
               AND datetime(criado_em) <= datetime('now', ?)
             ORDER BY prioridade DESC, criado_em ASC
             LIMIT 1
-        """, (f"-{atraso_minimo} seconds",))
+        """,
+            (f"-{atraso_minimo} seconds",),
+        )
     else:
         cursor.execute("""
             SELECT * FROM jobs
@@ -4662,67 +5040,89 @@ def buscar_proximo_job(atraso_minimo_segundos: int = 0):
 
     return dict(row) if row else None
 
+
 def atualizar_status(job_id, status):
     conn = get_connection()
     cursor = conn.cursor()
 
     if status in (STATUS_CONCLUIDO, STATUS_FINALIZADO_LEGADO):
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE jobs
             SET status = ?, finalizado_em = datetime('now'), erro_mensagem = NULL
             WHERE id = ?
-        """, (status, job_id))
+        """,
+            (status, job_id),
+        )
     elif status == "ERRO":
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE jobs
             SET status = ?
             WHERE id = ?
-        """, (status, job_id))
+        """,
+            (status, job_id),
+        )
     else:
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE jobs
             SET status = ?, erro_mensagem = NULL
             WHERE id = ?
-        """, (status, job_id))
+        """,
+            (status, job_id),
+        )
 
     conn.commit()
     conn.close()
+
 
 def atualizar_job_cups(job_id, cups_job_id, printer_name):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE jobs
         SET cups_job_id = ?, printer_name = ?
         WHERE id = ?
-    """, (cups_job_id, printer_name or None, job_id))
+    """,
+        (cups_job_id, printer_name or None, job_id),
+    )
 
     conn.commit()
     conn.close()
+
 
 def atualizar_erro_job(job_id, erro_mensagem: str):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE jobs
         SET erro_mensagem = ?
         WHERE id = ?
-    """, (str(erro_mensagem)[:1000], job_id))
+    """,
+        (str(erro_mensagem)[:1000], job_id),
+    )
 
     conn.commit()
     conn.close()
+
 
 def buscar_cota(usuario_id: int, mes: str):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT *
         FROM cotas
         WHERE usuario_id = ? AND mes = ?
-    """, (usuario_id, mes))
+    """,
+        (usuario_id, mes),
+    )
 
     row = cursor.fetchone()
     conn.close()
@@ -4734,70 +5134,92 @@ def criar_cota(usuario_id: int, mes: str, limite: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO cotas (usuario_id, mes, limite_paginas, usadas_paginas)
         VALUES (?, ?, ?, 0)
-    """, (usuario_id, mes, limite))
+    """,
+        (usuario_id, mes, limite),
+    )
 
     conn.commit()
     conn.close()
+
 
 def consumir_cota(cota_id: int, paginas: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE cotas
         SET usadas_paginas = usadas_paginas + ?
         WHERE id = ?
-    """, (paginas, cota_id))
+    """,
+        (paginas, cota_id),
+    )
 
     conn.commit()
     conn.close()
+
 
 def buscar_cota_do_usuario(usuario_id: int, mes: str):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT limite_paginas, usadas_paginas
         FROM cotas
         WHERE usuario_id = ? AND mes = ?
-    """, (usuario_id, mes))
+    """,
+        (usuario_id, mes),
+    )
 
     row = cursor.fetchone()
     conn.close()
 
     return dict(row) if row else None
 
+
 def atualizar_limite_cota_mes(usuario_id: int, mes: str, limite_paginas: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT id, usadas_paginas
         FROM cotas
         WHERE usuario_id = ? AND mes = ?
-    """, (usuario_id, mes))
+    """,
+        (usuario_id, mes),
+    )
     row = cursor.fetchone()
 
     if row:
         usadas = int(row["usadas_paginas"])
         limite_final = max(int(limite_paginas), usadas)
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE cotas
             SET limite_paginas = ?
             WHERE id = ?
-        """, (limite_final, row["id"]))
+        """,
+            (limite_final, row["id"]),
+        )
     else:
         limite_final = max(int(limite_paginas), 0)
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO cotas (usuario_id, mes, limite_paginas, usadas_paginas)
             VALUES (?, ?, ?, 0)
-        """, (usuario_id, mes, limite_final))
+        """,
+            (usuario_id, mes, limite_final),
+        )
 
     conn.commit()
     conn.close()
+
 
 def recalcular_cotas_mes(mes: str):
     professores = listar_professores_admin()
@@ -4806,11 +5228,13 @@ def recalcular_cotas_mes(mes: str):
         limite = int(limites.get(int(professor["id"]), 0))
         atualizar_limite_cota_mes(professor["id"], mes, limite)
 
+
 def gerar_relatorio_consumo():
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             u.id AS usuario_id,
             u.nome,
@@ -4821,12 +5245,15 @@ def gerar_relatorio_consumo():
            AND j.status IN (?, ?)
         GROUP BY u.id, u.nome
         ORDER BY total_paginas DESC, u.nome ASC
-    """, (STATUS_CONCLUIDO, STATUS_FINALIZADO_LEGADO))
+    """,
+        (STATUS_CONCLUIDO, STATUS_FINALIZADO_LEGADO),
+    )
 
     rows = cursor.fetchall()
     conn.close()
 
     return [dict(row) for row in rows]
+
 
 def gerar_relatorio_impressao(data_inicio: str = None, data_fim: str = None):
     conn = get_connection()
@@ -4864,6 +5291,7 @@ def gerar_relatorio_impressao(data_inicio: str = None, data_fim: str = None):
     conn.close()
     return [dict(row) for row in rows]
 
+
 def gerar_relatorio_uso_recursos(data_inicio: str = None, data_fim: str = None):
     conn = get_connection()
     cursor = conn.cursor()
@@ -4900,6 +5328,7 @@ def gerar_relatorio_uso_recursos(data_inicio: str = None, data_fim: str = None):
     conn.close()
     return [dict(row) for row in rows]
 
+
 def gerar_relatorio_uso_recursos_por_professor(data_inicio: str = None, data_fim: str = None):
     conn = get_connection()
     cursor = conn.cursor()
@@ -4935,8 +5364,10 @@ def gerar_relatorio_uso_recursos_por_professor(data_inicio: str = None, data_fim
     conn.close()
     return [dict(row) for row in rows]
 
+
 def listar_recursos_ativos():
     return listar_recursos(incluir_inativos=False)
+
 
 def listar_recursos(incluir_inativos: bool = False):
     conn = get_connection()
@@ -4963,79 +5394,93 @@ def listar_recursos(incluir_inativos: bool = False):
     conn.close()
     return [dict(row) for row in rows]
 
+
 def criar_recurso(nome: str, tipo: str, descricao: str = "", quantidade_itens: int = 1):
     quantidade_itens_valor = max(int(quantidade_itens or 0), 1)
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO recursos (nome, tipo, descricao, quantidade_itens, ativo)
         VALUES (?, ?, ?, ?, 1)
-    """, (nome, tipo, descricao, quantidade_itens_valor))
+    """,
+        (nome, tipo, descricao, quantidade_itens_valor),
+    )
 
     recurso_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return recurso_id
 
+
 def atualizar_recurso_dados(
-    recurso_id: int,
-    nome: str,
-    tipo: str,
-    descricao: str = "",
-    quantidade_itens: int = 1
+    recurso_id: int, nome: str, tipo: str, descricao: str = "", quantidade_itens: int = 1
 ):
     quantidade_itens_valor = max(int(quantidade_itens or 0), 1)
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE recursos
         SET nome = ?, tipo = ?, descricao = ?, quantidade_itens = ?
         WHERE id = ?
-    """, (nome, tipo, descricao, quantidade_itens_valor, recurso_id))
+    """,
+        (nome, tipo, descricao, quantidade_itens_valor, recurso_id),
+    )
 
     alterados = cursor.rowcount
     conn.commit()
     conn.close()
     return alterados > 0
+
 
 def atualizar_recurso_quantidade_itens(recurso_id: int, quantidade_itens: int):
     quantidade_itens_valor = max(int(quantidade_itens or 0), 1)
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE recursos
         SET quantidade_itens = ?
         WHERE id = ?
-    """, (quantidade_itens_valor, recurso_id))
+    """,
+        (quantidade_itens_valor, recurso_id),
+    )
 
     alterados = cursor.rowcount
     conn.commit()
     conn.close()
     return alterados > 0
+
 
 def atualizar_status_recurso(recurso_id: int, ativo: bool):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE recursos
         SET ativo = ?
         WHERE id = ?
-    """, (1 if ativo else 0, recurso_id))
+    """,
+        (1 if ativo else 0, recurso_id),
+    )
 
     alterados = cursor.rowcount
     conn.commit()
     conn.close()
     return alterados > 0
 
+
 def buscar_recurso_por_id(recurso_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             id,
             nome,
@@ -5045,7 +5490,9 @@ def buscar_recurso_por_id(recurso_id: int):
             ativo
         FROM recursos
         WHERE id = ?
-    """, (recurso_id,))
+    """,
+        (recurso_id,),
+    )
 
     row = cursor.fetchone()
     conn.close()
@@ -5153,11 +5600,14 @@ def buscar_lei_por_id(lei_id: int):
         return None
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT id, nome
         FROM leis
         WHERE id = ?
-    """, (lei_id_valor,))
+    """,
+        (lei_id_valor,),
+    )
     row = cursor.fetchone()
     conn.close()
     return _montar_lei_base_legal(row) if row else None
@@ -5235,7 +5685,8 @@ def buscar_artigo_por_id(artigo_id: int):
         return None
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             a.id,
             a.lei_id,
@@ -5245,7 +5696,9 @@ def buscar_artigo_por_id(artigo_id: int):
         FROM artigos a
         INNER JOIN leis l ON l.id = a.lei_id
         WHERE a.id = ?
-    """, (artigo_id_valor,))
+    """,
+        (artigo_id_valor,),
+    )
     row = cursor.fetchone()
     conn.close()
     return _montar_artigo_base_legal(row) if row else None
@@ -5269,10 +5722,13 @@ def criar_artigo(*, lei_id: int, numero: str, descricao: str):
         conn.close()
         raise ValueError("Lei nao encontrada.")
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO artigos (lei_id, numero, descricao)
             VALUES (?, ?, ?)
-        """, (lei_id_valor, numero_limpo, descricao_limpa))
+        """,
+            (lei_id_valor, numero_limpo, descricao_limpa),
+        )
     except sqlite3.IntegrityError as exc:
         conn.close()
         raise ValueError("Ja existe um artigo com este numero para a lei informada.") from exc
@@ -5303,11 +5759,14 @@ def atualizar_artigo(*, artigo_id: int, lei_id: int, numero: str, descricao: str
         conn.close()
         raise ValueError("Lei nao encontrada.")
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE artigos
             SET lei_id = ?, numero = ?, descricao = ?
             WHERE id = ?
-        """, (lei_id_valor, numero_limpo, descricao_limpa, artigo_id_valor))
+        """,
+            (lei_id_valor, numero_limpo, descricao_limpa, artigo_id_valor),
+        )
     except sqlite3.IntegrityError as exc:
         conn.close()
         raise ValueError("Ja existe um artigo com este numero para a lei informada.") from exc
@@ -5351,7 +5810,8 @@ def buscar_inciso_por_id(inciso_id: int):
         return None
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             i.id,
             i.artigo_id,
@@ -5365,7 +5825,9 @@ def buscar_inciso_por_id(inciso_id: int):
         INNER JOIN artigos a ON a.id = i.artigo_id
         INNER JOIN leis l ON l.id = a.lei_id
         WHERE i.id = ?
-    """, (inciso_id_valor,))
+    """,
+        (inciso_id_valor,),
+    )
     row = cursor.fetchone()
     conn.close()
     return _montar_inciso_base_legal(row) if row else None
@@ -5389,10 +5851,13 @@ def criar_inciso(*, artigo_id: int, numero: str, descricao: str):
         conn.close()
         raise ValueError("Artigo nao encontrado.")
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO incisos (artigo_id, numero, descricao)
             VALUES (?, ?, ?)
-        """, (artigo_id_valor, numero_limpo, descricao_limpa))
+        """,
+            (artigo_id_valor, numero_limpo, descricao_limpa),
+        )
     except sqlite3.IntegrityError as exc:
         conn.close()
         raise ValueError("Ja existe um inciso com este numero para o artigo informado.") from exc
@@ -5423,11 +5888,14 @@ def atualizar_inciso(*, inciso_id: int, artigo_id: int, numero: str, descricao: 
         conn.close()
         raise ValueError("Artigo nao encontrado.")
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE incisos
             SET artigo_id = ?, numero = ?, descricao = ?
             WHERE id = ?
-        """, (artigo_id_valor, numero_limpo, descricao_limpa, inciso_id_valor))
+        """,
+            (artigo_id_valor, numero_limpo, descricao_limpa, inciso_id_valor),
+        )
     except sqlite3.IntegrityError as exc:
         conn.close()
         raise ValueError("Ja existe um inciso com este numero para o artigo informado.") from exc
@@ -5474,7 +5942,8 @@ def buscar_alinea_por_id(alinea_id: int):
         return None
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             al.id,
             al.inciso_id,
@@ -5491,7 +5960,9 @@ def buscar_alinea_por_id(alinea_id: int):
         INNER JOIN artigos a ON a.id = i.artigo_id
         INNER JOIN leis l ON l.id = a.lei_id
         WHERE al.id = ?
-    """, (alinea_id_valor,))
+    """,
+        (alinea_id_valor,),
+    )
     row = cursor.fetchone()
     conn.close()
     return _montar_alinea_base_legal(row) if row else None
@@ -5515,13 +5986,18 @@ def criar_alinea(*, inciso_id: int, identificador: str, descricao: str):
         conn.close()
         raise ValueError("Inciso nao encontrado.")
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO alineas (inciso_id, identificador, descricao)
             VALUES (?, ?, ?)
-        """, (inciso_id_valor, identificador_limpo, descricao_limpa))
+        """,
+            (inciso_id_valor, identificador_limpo, descricao_limpa),
+        )
     except sqlite3.IntegrityError as exc:
         conn.close()
-        raise ValueError("Ja existe uma alinea com este identificador para o inciso informado.") from exc
+        raise ValueError(
+            "Ja existe uma alinea com este identificador para o inciso informado."
+        ) from exc
     conn.commit()
     alinea_id = int(cursor.lastrowid)
     conn.close()
@@ -5549,14 +6025,19 @@ def atualizar_alinea(*, alinea_id: int, inciso_id: int, identificador: str, desc
         conn.close()
         raise ValueError("Inciso nao encontrado.")
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE alineas
             SET inciso_id = ?, identificador = ?, descricao = ?
             WHERE id = ?
-        """, (inciso_id_valor, identificador_limpo, descricao_limpa, alinea_id_valor))
+        """,
+            (inciso_id_valor, identificador_limpo, descricao_limpa, alinea_id_valor),
+        )
     except sqlite3.IntegrityError as exc:
         conn.close()
-        raise ValueError("Ja existe uma alinea com este identificador para o inciso informado.") from exc
+        raise ValueError(
+            "Ja existe uma alinea com este identificador para o inciso informado."
+        ) from exc
     alterado = cursor.rowcount > 0
     conn.commit()
     conn.close()
@@ -5610,9 +6091,16 @@ def remover_artigo(artigo_id: int):
     if _contar_relacoes_base_legal(cursor, "incisos", "artigo_id", artigo_id_valor) > 0:
         conn.close()
         raise ValueError("Nao e possivel excluir o artigo porque existem incisos vinculados.")
-    if _contar_relacoes_base_legal(cursor, "ocorrencia_regimento_itens", "artigo_id", artigo_id_valor) > 0:
+    if (
+        _contar_relacoes_base_legal(
+            cursor, "ocorrencia_regimento_itens", "artigo_id", artigo_id_valor
+        )
+        > 0
+    ):
         conn.close()
-        raise ValueError("Nao e possivel excluir o artigo porque ele ja foi vinculado a ocorrencias.")
+        raise ValueError(
+            "Nao e possivel excluir o artigo porque ele ja foi vinculado a ocorrencias."
+        )
 
     cursor.execute("DELETE FROM artigos WHERE id = ?", (artigo_id_valor,))
     removido = cursor.rowcount > 0
@@ -5636,9 +6124,16 @@ def remover_inciso(inciso_id: int):
     if _contar_relacoes_base_legal(cursor, "alineas", "inciso_id", inciso_id_valor) > 0:
         conn.close()
         raise ValueError("Nao e possivel excluir o inciso porque existem alineas vinculadas.")
-    if _contar_relacoes_base_legal(cursor, "ocorrencia_regimento_itens", "inciso_id", inciso_id_valor) > 0:
+    if (
+        _contar_relacoes_base_legal(
+            cursor, "ocorrencia_regimento_itens", "inciso_id", inciso_id_valor
+        )
+        > 0
+    ):
         conn.close()
-        raise ValueError("Nao e possivel excluir o inciso porque ele ja foi vinculado a ocorrencias.")
+        raise ValueError(
+            "Nao e possivel excluir o inciso porque ele ja foi vinculado a ocorrencias."
+        )
 
     cursor.execute("DELETE FROM incisos WHERE id = ?", (inciso_id_valor,))
     removido = cursor.rowcount > 0
@@ -5659,9 +6154,16 @@ def remover_alinea(alinea_id: int):
         conn.close()
         return False
 
-    if _contar_relacoes_base_legal(cursor, "ocorrencia_regimento_itens", "alinea_id", alinea_id_valor) > 0:
+    if (
+        _contar_relacoes_base_legal(
+            cursor, "ocorrencia_regimento_itens", "alinea_id", alinea_id_valor
+        )
+        > 0
+    ):
         conn.close()
-        raise ValueError("Nao e possivel excluir a alinea porque ela ja foi vinculada a ocorrencias.")
+        raise ValueError(
+            "Nao e possivel excluir a alinea porque ela ja foi vinculada a ocorrencias."
+        )
 
     cursor.execute("DELETE FROM alineas WHERE id = ?", (alinea_id_valor,))
     removido = cursor.rowcount > 0
@@ -5697,6 +6199,7 @@ def buscar_regimento_item_por_id(regimento_item_id: int):
     conn.close()
     return row
 
+
 def buscar_regimento_item_por_artigo(artigo: str):
     artigo_limpo = _normalizar_nome_catalogo(artigo)
     if not artigo_limpo:
@@ -5704,19 +6207,24 @@ def buscar_regimento_item_por_artigo(artigo: str):
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             a.id AS artigo_id
         FROM artigos a
         WHERE a.numero = ? COLLATE NOCASE
         ORDER BY a.id ASC
         LIMIT 1
-    """, (artigo_limpo,))
+    """,
+        (artigo_limpo,),
+    )
     row = cursor.fetchone()
     conn.close()
     if not row:
         return None
-    return buscar_regimento_item_por_id(_codificar_regimento_item_id(TIPO_BASE_LEGAL_ARTIGO, int(row["artigo_id"])))
+    return buscar_regimento_item_por_id(
+        _codificar_regimento_item_id(TIPO_BASE_LEGAL_ARTIGO, int(row["artigo_id"]))
+    )
 
 
 def buscar_regimento_itens_por_ids(regimento_item_ids: list[int]):
@@ -5825,6 +6333,7 @@ def criar_regimento_item(
     )
     return regimento_item_id
 
+
 def criar_ou_atualizar_regimento_item_por_artigo(
     artigo: str,
     descricao: str,
@@ -5892,37 +6401,46 @@ def atualizar_regimento_item(
             "UPDATE leis SET nome = ? WHERE id = ?",
             (dados["lei_nome"], int(atual.get("lei_id") or 0)),
         )
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE artigos
             SET numero = ?, descricao = ?
             WHERE id = ?
-        """, (
-            dados["artigo_numero"],
-            dados["artigo_descricao"],
-            int(atual.get("artigo_id") or 0),
-        ))
+        """,
+            (
+                dados["artigo_numero"],
+                dados["artigo_descricao"],
+                int(atual.get("artigo_id") or 0),
+            ),
+        )
 
         if atual.get("tipo") in {TIPO_BASE_LEGAL_INCISO, TIPO_BASE_LEGAL_ALINEA}:
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE incisos
                 SET numero = ?, descricao = ?
                 WHERE id = ?
-            """, (
-                dados["inciso_numero"],
-                dados["inciso_descricao"],
-                int(atual.get("inciso_id") or 0),
-            ))
+            """,
+                (
+                    dados["inciso_numero"],
+                    dados["inciso_descricao"],
+                    int(atual.get("inciso_id") or 0),
+                ),
+            )
 
         if atual.get("tipo") == TIPO_BASE_LEGAL_ALINEA:
-            cursor.execute("""
+            cursor.execute(
+                """
                 UPDATE alineas
                 SET identificador = ?, descricao = ?
                 WHERE id = ?
-            """, (
-                dados["alinea_identificador"],
-                dados["alinea_descricao"],
-                int(atual.get("alinea_id") or 0),
-            ))
+            """,
+                (
+                    dados["alinea_identificador"],
+                    dados["alinea_descricao"],
+                    int(atual.get("alinea_id") or 0),
+                ),
+            )
     except sqlite3.IntegrityError as exc:
         conn.close()
         raise ValueError("Ja existe um item de base legal com esta referencia.") from exc
@@ -5951,8 +6469,7 @@ def _normalizar_regimento_item_ids_banco(regimento_item_ids: list[int] | None) -
 def _mapear_regimento_itens_por_ids_para_snapshot(ids_norm: list[int]) -> dict[int, dict]:
     itens = {int(item["id"]): item for item in buscar_regimento_itens_por_ids(ids_norm)}
     faltantes = [
-        regimento_item_id for regimento_item_id in ids_norm
-        if regimento_item_id not in itens
+        regimento_item_id for regimento_item_id in ids_norm if regimento_item_id not in itens
     ]
     if faltantes:
         raise ValueError("Um ou mais itens do regimento nao foram encontrados.")
@@ -5973,7 +6490,8 @@ def _salvar_regimento_itens_ocorrencia_cursor(
     if ids_norm:
         itens = itens or _mapear_regimento_itens_por_ids_para_snapshot(ids_norm)
 
-        cursor.executemany("""
+        cursor.executemany(
+            """
             INSERT INTO ocorrencia_regimento_itens (
                 ocorrencia_id,
                 regimento_item_id,
@@ -5993,26 +6511,34 @@ def _salvar_regimento_itens_ocorrencia_cursor(
                 criado_em
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-        """, [
-            (
-                ocorrencia_id_valor,
-                regimento_item_id,
-                int(itens[regimento_item_id]["artigo_id"]) if itens[regimento_item_id].get("artigo_id") is not None else None,
-                int(itens[regimento_item_id]["inciso_id"]) if itens[regimento_item_id].get("inciso_id") is not None else None,
-                int(itens[regimento_item_id]["alinea_id"]) if itens[regimento_item_id].get("alinea_id") is not None else None,
-                str(itens[regimento_item_id].get("lei_nome") or "").strip() or None,
-                str(itens[regimento_item_id].get("artigo_numero") or "").strip() or None,
-                str(itens[regimento_item_id].get("artigo_descricao") or "").strip() or None,
-                str(itens[regimento_item_id].get("inciso_numero") or "").strip() or None,
-                str(itens[regimento_item_id].get("inciso_descricao") or "").strip() or None,
-                str(itens[regimento_item_id].get("alinea_identificador") or "").strip() or None,
-                str(itens[regimento_item_id].get("alinea_descricao") or "").strip() or None,
-                str(itens[regimento_item_id]["artigo"] or "").strip(),
-                str(itens[regimento_item_id]["descricao"] or "").strip(),
-                ordem,
-            )
-            for ordem, regimento_item_id in enumerate(ids_norm, start=1)
-        ])
+        """,
+            [
+                (
+                    ocorrencia_id_valor,
+                    regimento_item_id,
+                    int(itens[regimento_item_id]["artigo_id"])
+                    if itens[regimento_item_id].get("artigo_id") is not None
+                    else None,
+                    int(itens[regimento_item_id]["inciso_id"])
+                    if itens[regimento_item_id].get("inciso_id") is not None
+                    else None,
+                    int(itens[regimento_item_id]["alinea_id"])
+                    if itens[regimento_item_id].get("alinea_id") is not None
+                    else None,
+                    str(itens[regimento_item_id].get("lei_nome") or "").strip() or None,
+                    str(itens[regimento_item_id].get("artigo_numero") or "").strip() or None,
+                    str(itens[regimento_item_id].get("artigo_descricao") or "").strip() or None,
+                    str(itens[regimento_item_id].get("inciso_numero") or "").strip() or None,
+                    str(itens[regimento_item_id].get("inciso_descricao") or "").strip() or None,
+                    str(itens[regimento_item_id].get("alinea_identificador") or "").strip() or None,
+                    str(itens[regimento_item_id].get("alinea_descricao") or "").strip() or None,
+                    str(itens[regimento_item_id]["artigo"] or "").strip(),
+                    str(itens[regimento_item_id]["descricao"] or "").strip(),
+                    ordem,
+                )
+                for ordem, regimento_item_id in enumerate(ids_norm, start=1)
+            ],
+        )
 
 
 def salvar_regimento_itens_ocorrencia(ocorrencia_id: int, regimento_item_ids: list[int] | None):
@@ -6037,6 +6563,7 @@ def salvar_regimento_itens_ocorrencia(ocorrencia_id: int, regimento_item_ids: li
     finally:
         conn.close()
     return True
+
 
 def criar_ocorrencia(
     nome_estudante: str,
@@ -6098,13 +6625,16 @@ def criar_ocorrencia(
     if regimento_item_ids is not None:
         ids_regimento_norm = _normalizar_regimento_item_ids_banco(regimento_item_ids)
         if ids_regimento_norm:
-            itens_regimento_snapshot = _mapear_regimento_itens_por_ids_para_snapshot(ids_regimento_norm)
+            itens_regimento_snapshot = _mapear_regimento_itens_por_ids_para_snapshot(
+                ids_regimento_norm
+            )
 
     conn = get_connection()
     cursor = conn.cursor()
 
     try:
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO ocorrencias (
                 nome_estudante,
                 estudante_id,
@@ -6122,20 +6652,22 @@ def criar_ocorrencia(
                 atualizado_em
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-        """, (
-            nome_estudante_limpo,
-            estudante_id_valor,
-            turma_id_valor,
-            professor_requerente_limpo,
-            professor_requerente_id_valor,
-            disciplina_limpa,
-            data_ocorrencia_limpa,
-            aula_limpa,
-            horario_ocorrencia_limpo,
-            descricao_limpa,
-            acao_aplicada_limpa,
-            status_limpo,
-        ))
+        """,
+            (
+                nome_estudante_limpo,
+                estudante_id_valor,
+                turma_id_valor,
+                professor_requerente_limpo,
+                professor_requerente_id_valor,
+                disciplina_limpa,
+                data_ocorrencia_limpa,
+                aula_limpa,
+                horario_ocorrencia_limpo,
+                descricao_limpa,
+                acao_aplicada_limpa,
+                status_limpo,
+            ),
+        )
 
         ocorrencia_id = cursor.lastrowid
         if ids_regimento_norm is not None:
@@ -6153,6 +6685,7 @@ def criar_ocorrencia(
     finally:
         conn.close()
     return ocorrencia_id
+
 
 def listar_ocorrencias(
     status: str = None,
@@ -6227,11 +6760,13 @@ def listar_ocorrencias(
     conn.close()
     return ocorrencias
 
+
 def buscar_ocorrencia_por_id(ocorrencia_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             o.id,
             o.nome_estudante,
@@ -6252,7 +6787,9 @@ def buscar_ocorrencia_por_id(ocorrencia_id: int):
         FROM ocorrencias o
         LEFT JOIN turmas t ON t.id = o.turma_id
         WHERE o.id = ?
-    """, (int(ocorrencia_id),))
+    """,
+        (int(ocorrencia_id),),
+    )
 
     row = cursor.fetchone()
     ocorrencia = dict(row) if row else None
@@ -6260,6 +6797,7 @@ def buscar_ocorrencia_por_id(ocorrencia_id: int):
         _anexar_regimento_itens_ocorrencias(cursor, [ocorrencia])
     conn.close()
     return ocorrencia
+
 
 def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
     campos_permitidos = {
@@ -6348,16 +6886,20 @@ def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
 
     conn = get_connection()
     cursor = conn.cursor()
-    cursor.execute(f"""
+    cursor.execute(
+        f"""
         UPDATE ocorrencias
         SET {", ".join(atualizacoes)}
         WHERE id = ?
-    """, parametros)
+    """,
+        parametros,
+    )
 
     alterado = cursor.rowcount > 0
     conn.commit()
     conn.close()
     return alterado
+
 
 def remover_ocorrencia(ocorrencia_id: int):
     conn = get_connection()
@@ -6372,28 +6914,34 @@ def remover_ocorrencia(ocorrencia_id: int):
     conn.close()
     return removido
 
+
 def contar_agendamentos_ativos_faixa(recurso_id: int, data: str, faixa_global: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT COUNT(*) AS total
         FROM agendamentos
         WHERE recurso_id = ?
           AND data = ?
           AND faixa_global = ?
           AND status = ?
-    """, (recurso_id, data, int(faixa_global), STATUS_AGENDAMENTO_ATIVO))
+    """,
+        (recurso_id, data, int(faixa_global), STATUS_AGENDAMENTO_ATIVO),
+    )
 
     row = cursor.fetchone()
     conn.close()
     return int(row["total"] if row else 0)
 
+
 def buscar_agendamento_conflito(recurso_id: int, data: str, faixa_global: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT id
         FROM agendamentos
         WHERE recurso_id = ?
@@ -6401,11 +6949,14 @@ def buscar_agendamento_conflito(recurso_id: int, data: str, faixa_global: int):
           AND faixa_global = ?
           AND status = ?
         LIMIT 1
-    """, (recurso_id, data, int(faixa_global), STATUS_AGENDAMENTO_ATIVO))
+    """,
+        (recurso_id, data, int(faixa_global), STATUS_AGENDAMENTO_ATIVO),
+    )
 
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
+
 
 def criar_agendamento(
     recurso_id: int,
@@ -6421,28 +6972,32 @@ def criar_agendamento(
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO agendamentos (
             recurso_id, usuario_id, data, turno, aula, faixa_global, turma, tema_aula, observacao, status, criado_em
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-    """, (
-        recurso_id,
-        usuario_id,
-        data,
-        turno,
-        aula,
-        int(faixa_global),
-        turma,
-        tema_aula,
-        observacao,
-        STATUS_AGENDAMENTO_ATIVO,
-    ))
+    """,
+        (
+            recurso_id,
+            usuario_id,
+            data,
+            turno,
+            aula,
+            int(faixa_global),
+            turma,
+            tema_aula,
+            observacao,
+            STATUS_AGENDAMENTO_ATIVO,
+        ),
+    )
 
     agendamento_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return agendamento_id
+
 
 def listar_agendamentos(
     data_inicio: str = None,
@@ -6512,39 +7067,48 @@ def listar_agendamentos(
     conn.close()
     return [dict(row) for row in rows]
 
+
 def buscar_agendamento_por_id(agendamento_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT *
         FROM agendamentos
         WHERE id = ?
-    """, (agendamento_id,))
+    """,
+        (agendamento_id,),
+    )
 
     row = cursor.fetchone()
     conn.close()
     return dict(row) if row else None
 
+
 def cancelar_agendamento(agendamento_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE agendamentos
         SET status = ?, cancelado_em = datetime('now')
         WHERE id = ?
           AND status = ?
-    """, (
-        STATUS_AGENDAMENTO_CANCELADO,
-        agendamento_id,
-        STATUS_AGENDAMENTO_ATIVO,
-    ))
+    """,
+        (
+            STATUS_AGENDAMENTO_CANCELADO,
+            agendamento_id,
+            STATUS_AGENDAMENTO_ATIVO,
+        ),
+    )
 
     alterados = cursor.rowcount
     conn.commit()
     conn.close()
     return alterados > 0
+
 
 def criar_registro_pcpi_manual(
     data: str,
@@ -6562,7 +7126,8 @@ def criar_registro_pcpi_manual(
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO pcpi_registros_manuais (
             data,
             turno,
@@ -6578,23 +7143,26 @@ def criar_registro_pcpi_manual(
             atualizado_em
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-    """, (
-        data,
-        turno,
-        tipo_acao,
-        professor_nome or None,
-        componente or None,
-        turma or None,
-        descricao_curta,
-        observacoes or None,
-        criado_por_usuario_id,
-        atualizado_por_usuario_id,
-    ))
+    """,
+        (
+            data,
+            turno,
+            tipo_acao,
+            professor_nome or None,
+            componente or None,
+            turma or None,
+            descricao_curta,
+            observacoes or None,
+            criado_por_usuario_id,
+            atualizado_por_usuario_id,
+        ),
+    )
 
     registro_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return registro_id
+
 
 def listar_registros_pcpi_manuais(
     *,
@@ -6645,11 +7213,13 @@ def listar_registros_pcpi_manuais(
     conn.close()
     return [dict(row) for row in rows]
 
+
 def buscar_registro_pcpi_manual_por_id(registro_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             id,
             data,
@@ -6666,7 +7236,9 @@ def buscar_registro_pcpi_manual_por_id(registro_id: int):
             atualizado_em
         FROM pcpi_registros_manuais
         WHERE id = ?
-    """, (int(registro_id),))
+    """,
+        (int(registro_id),),
+    )
 
     row = cursor.fetchone()
     conn.close()
@@ -6701,7 +7273,8 @@ def buscar_periodo_pre_conselho_por_id(periodo_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             id,
             nome,
@@ -6714,7 +7287,9 @@ def buscar_periodo_pre_conselho_por_id(periodo_id: int):
             atualizado_em
         FROM pre_conselho_periodos
         WHERE id = ?
-    """, (int(periodo_id),))
+    """,
+        (int(periodo_id),),
+    )
 
     row = cursor.fetchone()
     conn.close()
@@ -6725,7 +7300,8 @@ def buscar_periodo_pre_conselho_por_ano_etapa(ano_letivo: int, etapa: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             id,
             nome,
@@ -6740,7 +7316,9 @@ def buscar_periodo_pre_conselho_por_ano_etapa(ano_letivo: int, etapa: int):
         WHERE ano_letivo = ?
           AND etapa = ?
         LIMIT 1
-    """, (int(ano_letivo), int(etapa)))
+    """,
+        (int(ano_letivo), int(etapa)),
+    )
 
     row = cursor.fetchone()
     conn.close()
@@ -6760,7 +7338,8 @@ def criar_periodo_pre_conselho(
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO pre_conselho_periodos (
             nome,
             ano_letivo,
@@ -6772,14 +7351,16 @@ def criar_periodo_pre_conselho(
             atualizado_em
         )
         VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-    """, (
-        nome_final,
-        int(ano_letivo),
-        int(etapa),
-        data_inicio,
-        data_fim,
-        status,
-    ))
+    """,
+        (
+            nome_final,
+            int(ano_letivo),
+            int(etapa),
+            data_inicio,
+            data_fim,
+            status,
+        ),
+    )
 
     periodo_id = cursor.lastrowid
     conn.commit()
@@ -6800,7 +7381,8 @@ def atualizar_periodo_pre_conselho_dados(
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE pre_conselho_periodos
         SET nome = ?,
             ano_letivo = ?,
@@ -6809,14 +7391,16 @@ def atualizar_periodo_pre_conselho_dados(
             data_fim = ?,
             atualizado_em = datetime('now')
         WHERE id = ?
-    """, (
-        nome_final,
-        int(ano_letivo),
-        int(etapa),
-        data_inicio,
-        data_fim,
-        int(periodo_id),
-    ))
+    """,
+        (
+            nome_final,
+            int(ano_letivo),
+            int(etapa),
+            data_inicio,
+            data_fim,
+            int(periodo_id),
+        ),
+    )
 
     alterado = cursor.rowcount > 0
     conn.commit()
@@ -6829,7 +7413,8 @@ def atualizar_status_periodo_pre_conselho(periodo_id: int, status: str):
     cursor = conn.cursor()
 
     if status == STATUS_PERIODO_PRE_CONSELHO_ABERTO:
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE pre_conselho_periodos
             SET status = 'FECHADO',
                 atualizado_em = datetime('now')
@@ -6840,14 +7425,19 @@ def atualizar_status_periodo_pre_conselho(periodo_id: int, status: str):
                   WHERE id = ?
                   LIMIT 1
               )
-        """, (int(periodo_id), int(periodo_id)))
+        """,
+            (int(periodo_id), int(periodo_id)),
+        )
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE pre_conselho_periodos
         SET status = ?,
             atualizado_em = datetime('now')
         WHERE id = ?
-    """, (status, int(periodo_id)))
+    """,
+        (status, int(periodo_id)),
+    )
 
     alterado = cursor.rowcount > 0
     conn.commit()
@@ -6885,7 +7475,8 @@ def buscar_motivo_pre_conselho_por_id(motivo_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             id,
             categoria,
@@ -6897,7 +7488,9 @@ def buscar_motivo_pre_conselho_por_id(motivo_id: int):
             atualizado_em
         FROM pre_conselho_motivos
         WHERE id = ?
-    """, (int(motivo_id),))
+    """,
+        (int(motivo_id),),
+    )
 
     row = cursor.fetchone()
     conn.close()
@@ -6912,7 +7505,8 @@ def buscar_motivo_pre_conselho_por_codigo(codigo: str):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             id,
             categoria,
@@ -6925,7 +7519,9 @@ def buscar_motivo_pre_conselho_por_codigo(codigo: str):
         FROM pre_conselho_motivos
         WHERE codigo = ? COLLATE NOCASE
         LIMIT 1
-    """, (codigo_limpo,))
+    """,
+        (codigo_limpo,),
+    )
 
     row = cursor.fetchone()
     conn.close()
@@ -6949,7 +7545,8 @@ def buscar_motivos_pre_conselho_por_ids(motivo_ids: list[int]):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute(f"""
+    cursor.execute(
+        f"""
         SELECT
             id,
             categoria,
@@ -6962,7 +7559,9 @@ def buscar_motivos_pre_conselho_por_ids(motivo_ids: list[int]):
         FROM pre_conselho_motivos
         WHERE id IN ({placeholders})
         ORDER BY categoria ASC, ordem ASC, descricao COLLATE NOCASE ASC
-    """, ids_validos)
+    """,
+        ids_validos,
+    )
 
     rows = cursor.fetchall()
     conn.close()
@@ -6979,7 +7578,8 @@ def criar_motivo_pre_conselho(
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO pre_conselho_motivos (
             categoria,
             codigo,
@@ -6990,12 +7590,14 @@ def criar_motivo_pre_conselho(
             atualizado_em
         )
         VALUES (?, ?, ?, 1, ?, datetime('now'), datetime('now'))
-    """, (
-        categoria,
-        codigo,
-        descricao,
-        int(ordem or 0),
-    ))
+    """,
+        (
+            categoria,
+            codigo,
+            descricao,
+            int(ordem or 0),
+        ),
+    )
 
     motivo_id = cursor.lastrowid
     conn.commit()
@@ -7013,19 +7615,22 @@ def atualizar_motivo_pre_conselho_dados(
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE pre_conselho_motivos
         SET categoria = ?,
             descricao = ?,
             ordem = ?,
             atualizado_em = datetime('now')
         WHERE id = ?
-    """, (
-        categoria,
-        descricao,
-        int(ordem or 0),
-        int(motivo_id),
-    ))
+    """,
+        (
+            categoria,
+            descricao,
+            int(ordem or 0),
+            int(motivo_id),
+        ),
+    )
 
     alterado = cursor.rowcount > 0
     conn.commit()
@@ -7037,12 +7642,15 @@ def atualizar_status_motivo_pre_conselho(motivo_id: int, ativo: bool):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         UPDATE pre_conselho_motivos
         SET ativo = ?,
             atualizado_em = datetime('now')
         WHERE id = ?
-    """, (1 if ativo else 0, int(motivo_id)))
+    """,
+        (1 if ativo else 0, int(motivo_id)),
+    )
 
     alterado = cursor.rowcount > 0
     conn.commit()
@@ -7054,7 +7662,8 @@ def contar_registros_pre_conselho_por_professor_periodo(periodo_id: int, profess
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             turma_id,
             disciplina_id,
@@ -7063,7 +7672,9 @@ def contar_registros_pre_conselho_por_professor_periodo(periodo_id: int, profess
         WHERE periodo_id = ?
           AND professor_usuario_id = ?
         GROUP BY turma_id, disciplina_id
-    """, (int(periodo_id), int(professor_usuario_id)))
+    """,
+        (int(periodo_id), int(professor_usuario_id)),
+    )
 
     rows = cursor.fetchall()
     conn.close()
@@ -7082,7 +7693,8 @@ def _buscar_registro_pre_conselho_unico(
     professor_usuario_id: int,
     estudante_id: int,
 ):
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT id
         FROM pre_conselho_registros
         WHERE periodo_id = ?
@@ -7091,13 +7703,15 @@ def _buscar_registro_pre_conselho_unico(
           AND professor_usuario_id = ?
           AND estudante_id = ?
         LIMIT 1
-    """, (
-        int(periodo_id),
-        int(turma_id),
-        int(disciplina_id),
-        int(professor_usuario_id),
-        int(estudante_id),
-    ))
+    """,
+        (
+            int(periodo_id),
+            int(turma_id),
+            int(disciplina_id),
+            int(professor_usuario_id),
+            int(estudante_id),
+        ),
+    )
     row = cursor.fetchone()
     return int(row["id"]) if row else None
 
@@ -7112,23 +7726,31 @@ def _sincronizar_motivos_registro_pre_conselho(cursor, registro_id: int, motivo_
         if valor > 0 and valor not in ids_validos:
             ids_validos.append(valor)
 
-    cursor.execute("""
+    cursor.execute(
+        """
         DELETE FROM pre_conselho_registro_motivos
         WHERE registro_id = ?
-    """, (int(registro_id),))
+    """,
+        (int(registro_id),),
+    )
 
     for motivo_id in ids_validos:
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT OR IGNORE INTO pre_conselho_registro_motivos (
                 registro_id,
                 motivo_id,
                 criado_em
             )
             VALUES (?, ?, datetime('now'))
-        """, (int(registro_id), motivo_id))
+        """,
+            (int(registro_id), motivo_id),
+        )
 
 
-def _carregar_motivos_pre_conselho_por_registro_ids(cursor, registro_ids: list[int]) -> dict[int, list[dict]]:
+def _carregar_motivos_pre_conselho_por_registro_ids(
+    cursor, registro_ids: list[int]
+) -> dict[int, list[dict]]:
     ids_validos = []
     for registro_id in registro_ids or []:
         try:
@@ -7142,7 +7764,8 @@ def _carregar_motivos_pre_conselho_por_registro_ids(cursor, registro_ids: list[i
         return {}
 
     placeholders = ",".join("?" for _ in ids_validos)
-    cursor.execute(f"""
+    cursor.execute(
+        f"""
         SELECT
             rm.registro_id,
             m.id,
@@ -7157,7 +7780,9 @@ def _carregar_motivos_pre_conselho_por_registro_ids(cursor, registro_ids: list[i
         INNER JOIN pre_conselho_motivos m ON m.id = rm.motivo_id
         WHERE rm.registro_id IN ({placeholders})
         ORDER BY m.categoria ASC, m.ordem ASC, m.descricao COLLATE NOCASE ASC
-    """, ids_validos)
+    """,
+        ids_validos,
+    )
 
     mapa = {registro_id: [] for registro_id in ids_validos}
     for row in cursor.fetchall():
@@ -7167,7 +7792,9 @@ def _carregar_motivos_pre_conselho_por_registro_ids(cursor, registro_ids: list[i
     return mapa
 
 
-def _normalizar_linha_registro_pre_conselho(item: dict, motivos_map: dict[int, list[dict]] | None = None) -> dict:
+def _normalizar_linha_registro_pre_conselho(
+    item: dict, motivos_map: dict[int, list[dict]] | None = None
+) -> dict:
     registro_id = int(item["id"])
     motivos = list(motivos_map.get(registro_id, [])) if motivos_map else []
     return {
@@ -7251,7 +7878,8 @@ def criar_ou_atualizar_registro_pre_conselho(
     )
 
     if registro_id:
-        cursor.execute("""
+        cursor.execute(
+            """
             UPDATE pre_conselho_registros
             SET periodo_id = ?,
                 disciplina_id = ?,
@@ -7268,24 +7896,27 @@ def criar_ou_atualizar_registro_pre_conselho(
                 texto_gerado = ?,
                 atualizado_em = datetime('now')
             WHERE id = ?
-        """, (
-            periodo_id_valor,
-            disciplina_id_valor,
-            professor_usuario_id_valor,
-            turma_id_valor,
-            estudante_id_valor,
-            nivel_atencao_limpo,
-            disciplina_nome_limpo,
-            ano_letivo_valor,
-            etapa_valor,
-            motivos_json,
-            observacao_limpa,
-            observacao_limpa,
-            texto_gerado_limpo,
-            int(registro_id),
-        ))
+        """,
+            (
+                periodo_id_valor,
+                disciplina_id_valor,
+                professor_usuario_id_valor,
+                turma_id_valor,
+                estudante_id_valor,
+                nivel_atencao_limpo,
+                disciplina_nome_limpo,
+                ano_letivo_valor,
+                etapa_valor,
+                motivos_json,
+                observacao_limpa,
+                observacao_limpa,
+                texto_gerado_limpo,
+                int(registro_id),
+            ),
+        )
     else:
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO pre_conselho_registros (
                 periodo_id,
                 disciplina_id,
@@ -7304,21 +7935,23 @@ def criar_ou_atualizar_registro_pre_conselho(
                 atualizado_em
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-        """, (
-            periodo_id_valor,
-            disciplina_id_valor,
-            professor_usuario_id_valor,
-            turma_id_valor,
-            estudante_id_valor,
-            nivel_atencao_limpo,
-            disciplina_nome_limpo,
-            ano_letivo_valor,
-            etapa_valor,
-            motivos_json,
-            observacao_limpa,
-            observacao_limpa,
-            texto_gerado_limpo,
-        ))
+        """,
+            (
+                periodo_id_valor,
+                disciplina_id_valor,
+                professor_usuario_id_valor,
+                turma_id_valor,
+                estudante_id_valor,
+                nivel_atencao_limpo,
+                disciplina_nome_limpo,
+                ano_letivo_valor,
+                etapa_valor,
+                motivos_json,
+                observacao_limpa,
+                observacao_limpa,
+                texto_gerado_limpo,
+            ),
+        )
         registro_id = int(cursor.lastrowid)
 
     _sincronizar_motivos_registro_pre_conselho(cursor, int(registro_id), motivo_ids_validos)
@@ -7399,10 +8032,7 @@ def listar_registros_pre_conselho(
         cursor,
         [int(row["id"]) for row in rows],
     )
-    itens = [
-        _normalizar_linha_registro_pre_conselho(dict(row), motivos_map)
-        for row in rows
-    ]
+    itens = [_normalizar_linha_registro_pre_conselho(dict(row), motivos_map) for row in rows]
     conn.close()
     return itens
 
@@ -7411,7 +8041,8 @@ def buscar_registro_pre_conselho_por_id(registro_id: int):
     conn = get_connection()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             r.id,
             r.periodo_id,
@@ -7439,7 +8070,9 @@ def buscar_registro_pre_conselho_por_id(registro_id: int):
         LEFT JOIN disciplinas d ON d.id = r.disciplina_id
         LEFT JOIN estudantes e ON e.id = r.estudante_id
         WHERE r.id = ?
-    """, (int(registro_id),))
+    """,
+        (int(registro_id),),
+    )
 
     row = cursor.fetchone()
     if not row:

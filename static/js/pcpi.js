@@ -1,17 +1,16 @@
-const token = localStorage.getItem("token");
+const { el } = window.AppDom;
+const {
+    garantirToken,
+    criarHeadersAuth,
+    criarHeadersJsonAuth,
+    encerrarSessao,
+} = window.AppAuth;
+const { fetchComAuth, obterMensagemErroResposta } = window.AppApi;
+const { hojeIso, paraDataBr, escaparHtml } = window.AppFormat;
 
-if (!token) {
-    window.location.href = "/login-page";
-}
-
-const headers = {
-    "Authorization": `Bearer ${token}`
-};
-
-const headersJson = {
-    "Authorization": `Bearer ${token}`,
-    "Content-Type": "application/json"
-};
+const token = garantirToken();
+const headers = criarHeadersAuth(token);
+const headersJson = criarHeadersJsonAuth(token);
 
 const TURNOS_FALLBACK = [
     { id: "MATUTINO", nome: "Matutino" },
@@ -107,41 +106,6 @@ let turnos = [];
 let sugestoesAtuais = null;
 let registrosManuaisAtuais = null;
 
-function el(id) {
-    return document.getElementById(id);
-}
-
-function encerrarSessao() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("token_expira_em");
-    window.location.href = "/login-page";
-}
-
-async function fetchComAuth(url, options = {}) {
-    const resposta = await fetch(url, options);
-    if (resposta.status === 401) {
-        encerrarSessao();
-        throw new Error("Sessão expirada.");
-    }
-    return resposta;
-}
-
-function hojeIso() {
-    const agora = new Date();
-    const ano = agora.getFullYear();
-    const mes = String(agora.getMonth() + 1).padStart(2, "0");
-    const dia = String(agora.getDate()).padStart(2, "0");
-    return `${ano}-${mes}-${dia}`;
-}
-
-function paraDataBr(dataIso) {
-    const partes = String(dataIso || "").split("-");
-    if (partes.length !== 3) {
-        return String(dataIso || "");
-    }
-    return `${partes[2]}/${partes[1]}/${partes[0]}`;
-}
-
 function normalizarTurnoId(turnoId) {
     return String(turnoId || "").trim().toUpperCase();
 }
@@ -166,15 +130,6 @@ function categoriaUsoLabel(categoria) {
     return CATEGORIAS_AUTOMATICAS[chave] || "Agendamento automático";
 }
 
-function escaparHtml(valor) {
-    return String(valor || "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll("\"", "&quot;")
-        .replaceAll("'", "&#39;");
-}
-
 function definirMensagem(id, texto, erro = false) {
     const alvo = el(id);
     if (!alvo) {
@@ -186,21 +141,6 @@ function definirMensagem(id, texto, erro = false) {
 
 function limparMensagem(id) {
     definirMensagem(id, "", false);
-}
-
-async function obterMensagemErroResposta(resposta, fallback) {
-    try {
-        const dados = await resposta.json();
-        if (typeof dados?.detail === "string" && dados.detail.trim()) {
-            return dados.detail.trim();
-        }
-        if (typeof dados?.mensagem === "string" && dados.mensagem.trim()) {
-            return dados.mensagem.trim();
-        }
-    } catch (_erro) {
-        // Resposta sem JSON útil.
-    }
-    return fallback;
 }
 
 function obterFiltrosAtuais() {

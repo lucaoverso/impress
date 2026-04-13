@@ -1,17 +1,16 @@
-const token = localStorage.getItem("token");
+const { el } = window.AppDom;
+const {
+    garantirToken,
+    criarHeadersAuth,
+    criarHeadersJsonAuth,
+    encerrarSessao,
+} = window.AppAuth;
+const { fetchComAuth } = window.AppApi;
+const { paraIso, paraDataBr } = window.AppFormat;
 
-if (!token) {
-    window.location.href = "/login-page";
-}
-
-const headers = {
-    "Authorization": `Bearer ${token}`
-};
-
-const headersJson = {
-    "Authorization": `Bearer ${token}`,
-    "Content-Type": "application/json"
-};
+const token = garantirToken();
+const headers = criarHeadersAuth(token);
+const headersJson = criarHeadersJsonAuth(token);
 
 const nomesMeses = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -60,37 +59,6 @@ const configuracaoAgendaDia = {
     filtroRecursoId: 0,
     agruparPorRecurso: false
 };
-
-function el(id) {
-    return document.getElementById(id);
-}
-
-function encerrarSessao() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("token_expira_em");
-    window.location.href = "/login-page";
-}
-
-async function fetchComAuth(url, options = {}) {
-    const res = await fetch(url, options);
-    if (res.status === 401) {
-        encerrarSessao();
-        throw new Error("Sessão expirada.");
-    }
-    return res;
-}
-
-function paraIso(dataObj) {
-    const ano = dataObj.getFullYear();
-    const mes = String(dataObj.getMonth() + 1).padStart(2, "0");
-    const dia = String(dataObj.getDate()).padStart(2, "0");
-    return `${ano}-${mes}-${dia}`;
-}
-
-function paraDataBr(dataIso) {
-    const [ano, mes, dia] = dataIso.split("-");
-    return `${dia}/${mes}/${ano}`;
-}
 
 function normalizarTurnoId(turnoId) {
     return String(turnoId || "").trim().toUpperCase();

@@ -1,17 +1,11 @@
-const SENHA_FORTE_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
-
-function el(id) {
-    return document.getElementById(id);
-}
+const { el } = window.AppDom;
+const { validarSenhaForte } = window.AppAuth;
+const { fetchJson } = window.AppApi;
 
 function setMensagem(texto, erro = false) {
     const target = el("msgCadastro");
     target.innerText = texto || "";
     target.style.color = erro ? "#b42318" : "#0f766e";
-}
-
-function validarSenhaForte(senha) {
-    return SENHA_FORTE_REGEX.test(senha || "");
 }
 
 function atualizarHintSenha() {
@@ -58,26 +52,6 @@ function renderCheckboxes(containerId, opcoes, prefixo) {
 function listarSelecionados(containerId) {
     return Array.from(el(containerId).querySelectorAll("input[type='checkbox']:checked"))
         .map((input) => input.value);
-}
-
-function normalizarErro(res, body) {
-    if (body && body.detail) return body.detail;
-    return `Erro ${res.status}`;
-}
-
-async function fetchJson(url, options = {}) {
-    const res = await fetch(url, options);
-    let body = null;
-    try {
-        body = await res.json();
-    } catch (err) {
-        body = null;
-    }
-
-    if (!res.ok) {
-        throw new Error(normalizarErro(res, body));
-    }
-    return body;
 }
 
 async function carregarOpcoes() {

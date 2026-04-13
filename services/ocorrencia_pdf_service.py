@@ -40,11 +40,7 @@ TITULO_CONTINUACAO = "CONTINUA\u00c7\u00c3O DO REGISTRO"
 SECAO_DESCRICAO = "DESCRI\u00c7\u00c3O DA OCORR\u00caNCIA"
 SECAO_REGIMENTO = "BASE LEGAL"
 ALTURA_AREA_REGIMENTO = 280
-ASSINATURA_RODAPE = (
-    "E.E. Padre Jos\u00e9 Daniel\n"
-    "Coordena\u00e7\u00e3o Pedag\u00f3gica\n"
-    "Assessoria"
-)
+ASSINATURA_RODAPE = "E.E. Padre Jos\u00e9 Daniel\nCoordena\u00e7\u00e3o Pedag\u00f3gica\nAssessoria"
 
 ACOES_ROTULOS = {
     "orientacao_verbal": "Orientacao verbal",
@@ -162,7 +158,7 @@ def _normalizar_cor_fundo_descricao(valor: str | None) -> tuple[int, int, int] |
         cor = match_hex.group(1)
         if len(cor) == 3:
             cor = "".join(caractere * 2 for caractere in cor)
-        return tuple(int(cor[indice:indice + 2], 16) for indice in (0, 2, 4))
+        return tuple(int(cor[indice : indice + 2], 16) for indice in (0, 2, 4))
 
     match_rgb = re.fullmatch(
         r"rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(?:0|1|0?\.\d+))?\s*\)",
@@ -365,13 +361,12 @@ def _obter_observacao_final(ocorrencia: dict) -> str:
             "acompanhamento institucional."
         ),
         "registro_informativo": (
-            "OBS.: Documento emitido para registro informativo e acompanhamento "
-            "pedagogico interno."
+            "OBS.: Documento emitido para registro informativo e acompanhamento pedagogico interno."
         ),
     }
     return observacoes.get(
         acao,
-        f"OBS.: Documento emitido para registro e acompanhamento da acao aplicada: {_rotulo_acao(acao)}."
+        f"OBS.: Documento emitido para registro e acompanhamento da acao aplicada: {_rotulo_acao(acao)}.",
     )
 
 
@@ -469,7 +464,9 @@ def _obter_itens_regimento_ocorrencia(ocorrencia: dict) -> list[dict]:
     )
 
 
-def _formatar_linha_artigo(numero: str | None, descricao: str | None, rotulo_legado: str | None = None) -> str:
+def _formatar_linha_artigo(
+    numero: str | None, descricao: str | None, rotulo_legado: str | None = None
+) -> str:
     numero_limpo = re.sub(r"^art\.?\s*", "", str(numero or "").strip(), flags=re.IGNORECASE)
     descricao_limpa = str(descricao or "").strip()
     if numero_limpo:
@@ -677,7 +674,10 @@ def _montar_blocos_base_legal(itens: list[dict]) -> list[dict]:
 
                 alineas_ordenadas = sorted(
                     inciso["alineas"].values(),
-                    key=lambda alinea: (int(alinea.get("ordem") or 0), str(alinea.get("identificador") or "")),
+                    key=lambda alinea: (
+                        int(alinea.get("ordem") or 0),
+                        str(alinea.get("identificador") or ""),
+                    ),
                 )
                 for alinea in alineas_ordenadas:
                     texto_alinea = _formatar_linha_alinea(
@@ -943,13 +943,21 @@ class _RenderizadorRegistroOcorrencia:
             elif tipo == "artigo":
                 self._adicionar_paragrafos(texto, fonte=self.fontes.pequeno_bold, espaco_final=2)
             elif tipo == "inciso":
-                self._adicionar_paragrafos(texto, fonte=self.fontes.pequeno, recuo=36, espaco_final=2)
+                self._adicionar_paragrafos(
+                    texto, fonte=self.fontes.pequeno, recuo=36, espaco_final=2
+                )
             elif tipo == "alinea":
-                self._adicionar_paragrafos(texto, fonte=self.fontes.pequeno, recuo=74, espaco_final=2)
+                self._adicionar_paragrafos(
+                    texto, fonte=self.fontes.pequeno, recuo=74, espaco_final=2
+                )
             else:
                 self._adicionar_paragrafos(texto, fonte=self.fontes.pequeno, espaco_final=2)
 
-            proximo_tipo = str(blocos[indice + 1].get("tipo") or "").strip().lower() if indice < len(blocos) - 1 else ""
+            proximo_tipo = (
+                str(blocos[indice + 1].get("tipo") or "").strip().lower()
+                if indice < len(blocos) - 1
+                else ""
+            )
             if tipo == "alinea" and proximo_tipo != "alinea":
                 self._adicionar_espaco(4)
             if tipo == "inciso" and proximo_tipo not in {"alinea", "inciso"}:
@@ -967,10 +975,14 @@ class _RenderizadorRegistroOcorrencia:
             altura_total = (len(linhas_rotulo) + len(linhas_valor)) * altura_linha + 12
             self._garantir_espaco(altura_total)
             for linha in linhas_rotulo:
-                self.draw.text((self.esquerda, self.y), linha, fill=COR_TEXTO, font=self.fontes.corpo_bold)
+                self.draw.text(
+                    (self.esquerda, self.y), linha, fill=COR_TEXTO, font=self.fontes.corpo_bold
+                )
                 self.y += altura_linha
             for linha in linhas_valor:
-                self.draw.text((self.esquerda, self.y), linha, fill=COR_TEXTO, font=self.fontes.corpo)
+                self.draw.text(
+                    (self.esquerda, self.y), linha, fill=COR_TEXTO, font=self.fontes.corpo
+                )
                 self.y += altura_linha
             self._adicionar_espaco(10)
             return
@@ -982,11 +994,15 @@ class _RenderizadorRegistroOcorrencia:
         )
         altura_total = max(len(linhas_valor), 1) * altura_linha + 10
         self._garantir_espaco(altura_total)
-        self.draw.text((self.esquerda, self.y), prefixo, fill=COR_TEXTO, font=self.fontes.corpo_bold)
+        self.draw.text(
+            (self.esquerda, self.y), prefixo, fill=COR_TEXTO, font=self.fontes.corpo_bold
+        )
 
         x_valor = self.esquerda + largura_prefixo
         if linhas_valor:
-            self.draw.text((x_valor, self.y), linhas_valor[0], fill=COR_TEXTO, font=self.fontes.corpo)
+            self.draw.text(
+                (x_valor, self.y), linhas_valor[0], fill=COR_TEXTO, font=self.fontes.corpo
+            )
             for linha in linhas_valor[1:]:
                 self.y += altura_linha
                 self.draw.text((x_valor, self.y), linha, fill=COR_TEXTO, font=self.fontes.corpo)
@@ -1212,7 +1228,9 @@ class _RenderizadorRegistroOcorrencia:
         self._adicionar_rotulo_valor("Disciplina ou funcao", disciplina)
         self._adicionar_rotulo_valor("Data", data)
         self._adicionar_rotulo_valor("Aula", aula)
-        self._adicionar_rotulo_valor("Horario", f"As {horario} h" if horario != "Nao informado" else horario)
+        self._adicionar_rotulo_valor(
+            "Horario", f"As {horario} h" if horario != "Nao informado" else horario
+        )
         self._adicionar_rotulo_valor("Acao aplicada", acao)
         self._adicionar_rotulo_valor("Status", status)
 
@@ -1226,7 +1244,9 @@ class _RenderizadorRegistroOcorrencia:
             self._adicionar_area_regimento_em_branco()
         self._desenhar_linha()
 
-        self._adicionar_paragrafos(_obter_observacao_final(self.ocorrencia), fonte=self.fontes.pequeno_bold)
+        self._adicionar_paragrafos(
+            _obter_observacao_final(self.ocorrencia), fonte=self.fontes.pequeno_bold
+        )
         self._desenhar_rodape()
         self._desenhar_numeracao_paginas()
 

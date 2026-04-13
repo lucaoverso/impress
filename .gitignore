@@ -3,6 +3,9 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
 
 # Virtual environments
 .venv/
@@ -13,6 +16,7 @@ venv/
 
 # SQLite
 *.db
+*.sqlite3
 impressao.db
 
 # Dados locais
@@ -22,3 +26,6 @@ spool/
 # IDE
 .vscode/
 .idea/
+
+# Sistema
+.DS_Store

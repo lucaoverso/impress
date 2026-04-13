@@ -75,7 +75,9 @@ class PcpiServiceTest(unittest.TestCase):
         self.assertEqual(resultado["total_agendamentos"], 3)
         self.assertEqual(len(resultado["frases_automaticas"]), 2)
         self.assertIn("Sala de Tecnologia Educacional (STE)", resultado["frases_automaticas"][0])
-        self.assertIn("Entrega e recebimento de equipamentos tecnológicos", resultado["frases_automaticas"][1])
+        self.assertIn(
+            "Entrega e recebimento de equipamentos tecnológicos", resultado["frases_automaticas"][1]
+        )
         self.assertIn("Bruno", resultado["frases_automaticas"][1])
         self.assertIn("Carla", resultado["frases_automaticas"][1])
 
@@ -125,7 +127,9 @@ class PcpiServiceTest(unittest.TestCase):
         resultado = gerar_texto_pcpi("2026-04-03", "VESPERTINO", [], registros)
 
         self.assertTrue(resultado["frase_fechamento"])
-        self.assertIn("Acompanhamento contínuo das demandas do turno", resultado["frase_fechamento"])
+        self.assertIn(
+            "Acompanhamento contínuo das demandas do turno", resultado["frase_fechamento"]
+        )
         self.assertIn(resultado["frase_fechamento"], resultado["texto"])
 
     def test_pcpi_usa_apenas_matutino_e_vespertino_com_equivalencias_do_agendamento(self):

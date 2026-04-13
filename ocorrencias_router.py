@@ -5,7 +5,12 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 
 from auth import get_usuario_logado
-from database import (
+from db.catalogos import (
+    buscar_turma_por_id,
+    listar_disciplinas_ativas,
+    listar_turmas_ativas,
+)
+from db.ocorrencias import (
     ACAO_OCORRENCIA_VALIDAS,
     STATUS_OCORRENCIA_REGISTRADO,
     STATUS_OCORRENCIA_VALIDOS,
@@ -29,7 +34,6 @@ from database import (
     buscar_professores_ocorrencia,
     buscar_regimento_item_por_id,
     buscar_regimento_itens_por_ids,
-    buscar_turma_por_id,
     criar_alinea,
     criar_artigo,
     criar_estudante,
@@ -39,14 +43,11 @@ from database import (
     criar_regimento_item,
     listar_alineas,
     listar_artigos,
-    listar_disciplinas_ativas,
     listar_estudantes,
     listar_incisos,
     listar_leis,
     listar_ocorrencias,
-    listar_professores_agendamento,
     listar_regimento_itens,
-    listar_turmas_ativas,
     remover_alinea,
     remover_artigo,
     remover_estudante,
@@ -56,6 +57,7 @@ from database import (
     remover_regimento_item,
     salvar_regimento_itens_ocorrencia,
 )
+from db.usuarios import listar_professores_agendamento
 from models import (
     AlineaCreateIn,
     AlineaOut,
@@ -97,7 +99,6 @@ _HORARIO_REGEX = re.compile(r"^\d{1,2}:\d{2}(:\d{2})?$")
 _ACOES_ROTULOS = {
     "orientacao_verbal": "Orientação verbal",
     "advertencia": "Advertência verbal",
-    ""
     "chamada_responsavel": "Chamada de responsável",
     "encaminhamento_direcao": "Encaminhamento à direção",
     "registro_informativo": "Registro informativo",
@@ -208,7 +209,9 @@ def _validar_acao_aplicada(valor: str) -> str:
     return acao
 
 
-def _validar_acao_compativel_com_base_legal(acao_aplicada: str, itens_regimento: list[dict]) -> str | None:
+def _validar_acao_compativel_com_base_legal(
+    acao_aplicada: str, itens_regimento: list[dict]
+) -> str | None:
     gravidade = inferir_gravidade_ocorrencia(itens_regimento)
     if gravidade and not acao_compativel_com_gravidade(acao_aplicada, gravidade):
         raise HTTPException(
@@ -443,11 +446,15 @@ def _montar_resposta_alinea(alinea_id: int) -> dict:
 
 def _normalizar_payload_regimento(payload) -> dict:
     dados_brutos = _model_to_dict(payload, exclude_unset=False)
-    lei_nome = _texto_obrigatorio(
-        dados_brutos.get("lei_nome"),
-        "Lei",
-        max_len=120,
-    ) if str(dados_brutos.get("lei_nome") or "").strip() else "Base legal"
+    lei_nome = (
+        _texto_obrigatorio(
+            dados_brutos.get("lei_nome"),
+            "Lei",
+            max_len=120,
+        )
+        if str(dados_brutos.get("lei_nome") or "").strip()
+        else "Base legal"
+    )
 
     artigo_numero = _texto_obrigatorio(
         dados_brutos.get("artigo_numero") or dados_brutos.get("artigo"),
@@ -499,7 +506,9 @@ def _ler_upload_estudantes(arquivo: UploadFile) -> tuple[bytes, str, str]:
         raise HTTPException(400, "Arquivo de estudantes nao enviado.")
 
     tipo_conteudo = str(getattr(arquivo, "content_type", "") or "").lower()
-    extensao_valida = nome_arquivo.lower().endswith(".json") or nome_arquivo.lower().endswith(".csv")
+    extensao_valida = nome_arquivo.lower().endswith(".json") or nome_arquivo.lower().endswith(
+        ".csv"
+    )
     tipo_valido = "json" in tipo_conteudo or "csv" in tipo_conteudo or "text/plain" in tipo_conteudo
     if not extensao_valida and not tipo_valido:
         raise HTTPException(400, "Envie um arquivo JSON ou CSV valido.")
@@ -516,7 +525,9 @@ def _ler_upload_base_legal(arquivo: UploadFile) -> tuple[bytes, str, str]:
         raise HTTPException(400, "Arquivo da base legal nao enviado.")
 
     tipo_conteudo = str(getattr(arquivo, "content_type", "") or "").lower()
-    extensao_valida = nome_arquivo.lower().endswith(".json") or nome_arquivo.lower().endswith(".csv")
+    extensao_valida = nome_arquivo.lower().endswith(".json") or nome_arquivo.lower().endswith(
+        ".csv"
+    )
     tipo_valido = "json" in tipo_conteudo or "csv" in tipo_conteudo or "text/plain" in tipo_conteudo
     if not extensao_valida and not tipo_valido:
         raise HTTPException(400, "Envie um arquivo JSON ou CSV valido.")
@@ -563,7 +574,7 @@ def listar_opcoes_ocorrencias(usuario=Depends(get_usuario_logado)):
                 "nome": professor["nome"],
                 "email": professor.get("email", ""),
                 "label": (
-                    f'{professor["nome"]} ({professor.get("email", "")})'
+                    f"{professor['nome']} ({professor.get('email', '')})"
                     if str(professor.get("email", "")).strip()
                     else str(professor["nome"])
                 ),
@@ -606,7 +617,7 @@ def buscar_professores_ocorrencia_api(
             "nome": professor["nome"],
             "email": professor.get("email", ""),
             "label": (
-                f'{professor["nome"]} ({professor.get("email", "")})'
+                f"{professor['nome']} ({professor.get('email', '')})"
                 if str(professor.get("email", "")).strip()
                 else str(professor["nome"])
             ),
@@ -638,7 +649,7 @@ def buscar_estudantes_ocorrencia_api(
             "nome": estudante["nome"],
             "turma_id": estudante["turma_id"],
             "turma_nome": estudante.get("turma_nome", ""),
-            "label": f'{estudante["nome"]} ({estudante.get("turma_nome", "Sem turma")})',
+            "label": f"{estudante['nome']} ({estudante.get('turma_nome', 'Sem turma')})",
         }
         for estudante in estudantes
     ]
@@ -655,7 +666,9 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
     regimento_item_ids = _exigir_regimento_item_ids(
         _normalizar_regimento_item_ids(payload.regimento_item_ids)
     )
-    regimento_itens = buscar_regimento_itens_por_ids(regimento_item_ids) if regimento_item_ids else []
+    regimento_itens = (
+        buscar_regimento_itens_por_ids(regimento_item_ids) if regimento_item_ids else []
+    )
     _validar_acao_compativel_com_base_legal(acao_aplicada, regimento_itens)
     descricao = _texto_obrigatorio(payload.descricao, "Descricao", max_len=5000)
 
@@ -833,7 +846,9 @@ def atualizar_ocorrencia_parcial_api(
         raise HTTPException(400, "Nenhum campo valido informado para atualizacao.")
 
     if regimento_item_ids_validados is not None or "acao_aplicada" in dados_validados:
-        acao_para_validar = str(dados_validados.get("acao_aplicada", atual.get("acao_aplicada") or "")).strip()
+        acao_para_validar = str(
+            dados_validados.get("acao_aplicada", atual.get("acao_aplicada") or "")
+        ).strip()
         if regimento_item_ids_validados is not None:
             itens_para_validar = (
                 buscar_regimento_itens_por_ids(regimento_item_ids_validados)
@@ -1229,7 +1244,9 @@ def criar_alinea_api(payload: AlineaCreateIn, usuario=Depends(get_usuario_logado
     try:
         alinea_id = criar_alinea(
             inciso_id=payload.inciso_id,
-            identificador=_texto_obrigatorio(payload.identificador, "Identificador da alinea", max_len=40),
+            identificador=_texto_obrigatorio(
+                payload.identificador, "Identificador da alinea", max_len=40
+            ),
             descricao=_texto_obrigatorio(payload.descricao, "Descricao da alinea", max_len=5000),
         )
     except ValueError as exc:
@@ -1252,7 +1269,9 @@ def atualizar_alinea_api(
         alterado = atualizar_alinea(
             alinea_id=alinea_id,
             inciso_id=payload.inciso_id,
-            identificador=_texto_obrigatorio(payload.identificador, "Identificador da alinea", max_len=40),
+            identificador=_texto_obrigatorio(
+                payload.identificador, "Identificador da alinea", max_len=40
+            ),
             descricao=_texto_obrigatorio(payload.descricao, "Descricao da alinea", max_len=5000),
         )
     except ValueError as exc:
@@ -1307,7 +1326,9 @@ def remover_regimento_item_api(regimento_item_id: int, usuario=Depends(get_usuar
 
 
 @router.post("/regimento-itens/{regimento_item_id}/excluir")
-def remover_regimento_item_fallback_api(regimento_item_id: int, usuario=Depends(get_usuario_logado)):
+def remover_regimento_item_fallback_api(
+    regimento_item_id: int, usuario=Depends(get_usuario_logado)
+):
     return remover_regimento_item_api(regimento_item_id, usuario)
 
 

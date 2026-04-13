@@ -4,6 +4,7 @@ from services.auth_service import autenticar_usuario, validar_token, obter_ttl_t
 
 router = APIRouter()
 
+
 def normalizar_cargo(usuario: dict) -> str:
     cargo = str(usuario.get("cargo") or "").strip().upper()
     if cargo:
@@ -15,6 +16,7 @@ def normalizar_cargo(usuario: dict) -> str:
     if perfil == "coordenador":
         return "COORDENADOR"
     return "PROFESSOR"
+
 
 @router.post("/login")
 def login(dados: LoginIn):
@@ -30,8 +32,9 @@ def login(dados: LoginIn):
         "perfil": usuario["perfil"],
         "cargo": cargo,
         "expira_em": expira_em,
-        "token_ttl_dias": obter_ttl_token_dias()
+        "token_ttl_dias": obter_ttl_token_dias(),
     }
+
 
 def get_usuario_logado(authorization: str = Header(...)):
     if not authorization.startswith("Bearer "):

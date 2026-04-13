@@ -30,10 +30,7 @@ class NtHashIntegrationTest(unittest.TestCase):
             os.environ["DB_PATH"] = self._old_db_path
 
     def test_generate_nt_hash_known_vector(self):
-        self.assertEqual(
-            generate_nt_hash("password"),
-            "8846f7eaee8fb117ad06bdd830b7586c"
-        )
+        self.assertEqual(generate_nt_hash("password"), "8846f7eaee8fb117ad06bdd830b7586c")
 
     def test_schema_migration_adds_nt_hash_and_index(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -113,7 +110,9 @@ class NtHashIntegrationTest(unittest.TestCase):
 
             conn = database.get_connection()
             cursor = conn.cursor()
-            cursor.execute("SELECT username, attribute, op, value FROM radcheck ORDER BY username ASC")
+            cursor.execute(
+                "SELECT username, attribute, op, value FROM radcheck ORDER BY username ASC"
+            )
             rows = cursor.fetchall()
             conn.close()
 

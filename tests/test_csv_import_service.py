@@ -33,11 +33,9 @@ class CsvImportServiceTest(unittest.TestCase):
             turma_id = database.criar_turma("8 B")
 
             resultado_inicial = csv_import_service.importar_estudantes_csv(
-                (
-                    "nome,turma,ativo\n"
-                    "Ana Maria Souza,8 B,ativo\n"
-                    "Bruno Lima,8 B,inativo\n"
-                ).encode("utf-8")
+                ("nome,turma,ativo\nAna Maria Souza,8 B,ativo\nBruno Lima,8 B,inativo\n").encode(
+                    "utf-8"
+                )
             )
 
             self.assertEqual(resultado_inicial["criados"], 2)
@@ -45,11 +43,9 @@ class CsvImportServiceTest(unittest.TestCase):
             self.assertEqual(resultado_inicial["erros"], 0)
 
             resultado_reenvio = csv_import_service.importar_estudantes_csv(
-                (
-                    "nome,turma,ativo\n"
-                    "Ana Maria Souza,8 B,inativo\n"
-                    "Bruno Lima,8 B,ativo\n"
-                ).encode("utf-8")
+                ("nome,turma,ativo\nAna Maria Souza,8 B,inativo\nBruno Lima,8 B,ativo\n").encode(
+                    "utf-8"
+                )
             )
 
             self.assertEqual(resultado_reenvio["criados"], 0)
@@ -86,7 +82,7 @@ class CsvImportServiceTest(unittest.TestCase):
             resultado_reenvio = csv_import_service.importar_base_legal_csv(
                 (
                     "lei,artigo_numero,artigo_descricao,inciso_numero,inciso_descricao\n"
-                    "\"Regimento Interno\",76,\"Dos deveres do estudante.\",VII,\"Descricao atualizada para o inciso.\"\n"
+                    '"Regimento Interno",76,"Dos deveres do estudante.",VII,"Descricao atualizada para o inciso."\n'
                 ).encode("utf-8")
             )
 
@@ -110,27 +106,27 @@ class CsvImportServiceTest(unittest.TestCase):
             resultado = csv_import_service.importar_base_legal_arquivo(
                 (
                     "{"
-                    "\"lei\": \"Regimento Escolar\","
-                    "\"artigos\": ["
+                    '"lei": "Regimento Escolar",'
+                    '"artigos": ['
                     "  {"
-                    "    \"numero\": 76,"
-                    "    \"descricao\": \"Sao deveres do estudante.\","
-                    "    \"incisos\": ["
+                    '    "numero": 76,'
+                    '    "descricao": "Sao deveres do estudante.",'
+                    '    "incisos": ['
                     "      {"
-                    "        \"numero\": \"I\","
-                    "        \"descricao\": \"Comparecer pontualmente.\""
+                    '        "numero": "I",'
+                    '        "descricao": "Comparecer pontualmente."'
                     "      },"
                     "      {"
-                    "        \"numero\": \"IV\","
-                    "        \"descricao\": \"Apresentar-se adequadamente trajado.\","
-                    "        \"alineas\": ["
+                    '        "numero": "IV",'
+                    '        "descricao": "Apresentar-se adequadamente trajado.",'
+                    '        "alineas": ['
                     "          {"
-                    "            \"identificador\": \"a\","
-                    "            \"descricao\": \"Short e bermuda.\""
+                    '            "identificador": "a",'
+                    '            "descricao": "Short e bermuda."'
                     "          },"
                     "          {"
-                    "            \"identificador\": \"b\","
-                    "            \"descricao\": \"Oculos escuros, salvo recomendacao medica.\""
+                    '            "identificador": "b",'
+                    '            "descricao": "Oculos escuros, salvo recomendacao medica."'
                     "          }"
                     "        ]"
                     "      }"
@@ -150,8 +146,14 @@ class CsvImportServiceTest(unittest.TestCase):
             itens = database.listar_regimento_itens(incluir_inativos=True)
             self.assertEqual(len(itens), 5)
             artigo = next(item for item in itens if item["tipo"] == "artigo")
-            inciso = next(item for item in itens if item["tipo"] == "inciso" and item["inciso_numero"] == "IV")
-            alinea = next(item for item in itens if item["tipo"] == "alinea" and item["alinea_identificador"] == "b")
+            inciso = next(
+                item for item in itens if item["tipo"] == "inciso" and item["inciso_numero"] == "IV"
+            )
+            alinea = next(
+                item
+                for item in itens
+                if item["tipo"] == "alinea" and item["alinea_identificador"] == "b"
+            )
             self.assertEqual(artigo["lei_nome"], "Regimento Escolar")
             self.assertEqual(inciso["artigo"], "Regimento Escolar - Art. 76, inciso IV")
             self.assertEqual(alinea["artigo"], "Regimento Escolar - Art. 76, inciso IV, alinea b")
@@ -166,9 +168,7 @@ class CsvImportServiceTest(unittest.TestCase):
 
             resultado = csv_import_service.importar_estudantes_csv(
                 (
-                    "nome,turma,ativo\n"
-                    "Clara Alves,9 A,ativo\n"
-                    "Diego Souza,Turma Inexistente,ativo\n"
+                    "nome,turma,ativo\nClara Alves,9 A,ativo\nDiego Souza,Turma Inexistente,ativo\n"
                 ).encode("utf-8")
             )
 
@@ -188,27 +188,27 @@ class CsvImportServiceTest(unittest.TestCase):
             resultado_inicial = csv_import_service.importar_estudantes_arquivo(
                 (
                     "{"
-                    "\"turma\": \"6o Ano A\","
-                    "\"turno\": \"Integral\","
-                    "\"ano_letivo\": 2026,"
-                    "\"estudantes\": ["
+                    '"turma": "6o Ano A",'
+                    '"turno": "Integral",'
+                    '"ano_letivo": 2026,'
+                    '"estudantes": ['
                     "  {"
-                    "    \"matricula\": \"1428172\","
-                    "    \"nome\": \"Adam Jose Marques Machado\","
-                    "    \"situacao\": \"Em curso\","
-                    "    \"faltas\": 0"
+                    '    "matricula": "1428172",'
+                    '    "nome": "Adam Jose Marques Machado",'
+                    '    "situacao": "Em curso",'
+                    '    "faltas": 0'
                     "  },"
                     "  {"
-                    "    \"matricula\": \"1474330\","
-                    "    \"nome\": \"Bianca Oliveira de Souza\","
-                    "    \"situacao\": \"Em curso\","
-                    "    \"faltas\": 0"
+                    '    "matricula": "1474330",'
+                    '    "nome": "Bianca Oliveira de Souza",'
+                    '    "situacao": "Em curso",'
+                    '    "faltas": 0'
                     "  },"
                     "  {"
-                    "    \"matricula\": \"1465299\","
-                    "    \"nome\": \"Davi Yudi Kimura\","
-                    "    \"situacao\": \"Remanejado\","
-                    "    \"faltas\": 0"
+                    '    "matricula": "1465299",'
+                    '    "nome": "Davi Yudi Kimura",'
+                    '    "situacao": "Remanejado",'
+                    '    "faltas": 0'
                     "  }"
                     "]"
                     "}"
@@ -224,27 +224,27 @@ class CsvImportServiceTest(unittest.TestCase):
             resultado_reenvio = csv_import_service.importar_estudantes_arquivo(
                 (
                     "{"
-                    "\"turma\": \"6o Ano A\","
-                    "\"turno\": \"Integral\","
-                    "\"ano_letivo\": 2026,"
-                    "\"estudantes\": ["
+                    '"turma": "6o Ano A",'
+                    '"turno": "Integral",'
+                    '"ano_letivo": 2026,'
+                    '"estudantes": ['
                     "  {"
-                    "    \"matricula\": \"1428172\","
-                    "    \"nome\": \"Adam Jose Marques Machado\","
-                    "    \"situacao\": \"Remanejado\","
-                    "    \"faltas\": 2"
+                    '    "matricula": "1428172",'
+                    '    "nome": "Adam Jose Marques Machado",'
+                    '    "situacao": "Remanejado",'
+                    '    "faltas": 2'
                     "  },"
                     "  {"
-                    "    \"matricula\": \"1474330\","
-                    "    \"nome\": \"Bianca Oliveira de Souza\","
-                    "    \"situacao\": \"Em curso\","
-                    "    \"faltas\": 1"
+                    '    "matricula": "1474330",'
+                    '    "nome": "Bianca Oliveira de Souza",'
+                    '    "situacao": "Em curso",'
+                    '    "faltas": 1'
                     "  },"
                     "  {"
-                    "    \"matricula\": \"1465299\","
-                    "    \"nome\": \"Davi Yudi Kimura\","
-                    "    \"situacao\": \"Em curso\","
-                    "    \"faltas\": 0"
+                    '    "matricula": "1465299",'
+                    '    "nome": "Davi Yudi Kimura",'
+                    '    "situacao": "Em curso",'
+                    '    "faltas": 0'
                     "  }"
                     "]"
                     "}"
@@ -262,8 +262,12 @@ class CsvImportServiceTest(unittest.TestCase):
                 turma_id=turma_id,
             )
             self.assertEqual(len(estudantes), 3)
-            estudante_adam = next(item for item in estudantes if item["nome"] == "Adam Jose Marques Machado")
-            estudante_bianca = next(item for item in estudantes if item["nome"] == "Bianca Oliveira de Souza")
+            estudante_adam = next(
+                item for item in estudantes if item["nome"] == "Adam Jose Marques Machado"
+            )
+            estudante_bianca = next(
+                item for item in estudantes if item["nome"] == "Bianca Oliveira de Souza"
+            )
             estudante_davi = next(item for item in estudantes if item["nome"] == "Davi Yudi Kimura")
             self.assertEqual(int(estudante_adam["ativo"]), 0)
             self.assertEqual(int(estudante_bianca["ativo"]), 1)

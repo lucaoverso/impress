@@ -309,7 +309,9 @@ class PcpiRegistroTest(unittest.TestCase):
 
             self.assertEqual(resposta["total_agendamentos"], 1)
             self.assertIn("Disponibilização e acompanhamento", resposta["texto"])
-            self.assertNotIn("Entrega e recebimento de equipamentos tecnológicos", resposta["texto"])
+            self.assertNotIn(
+                "Entrega e recebimento de equipamentos tecnológicos", resposta["texto"]
+            )
 
     def test_sugestoes_pcpi_agrupa_vespertino_em_no_turno_vespertino(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

@@ -1,24 +1,13 @@
-const token = localStorage.getItem("token");
+const {
+    garantirToken,
+    criarHeadersAuth,
+    encerrarSessao,
+    normalizarCargoUsuario,
+} = window.AppAuth;
+const { fetchComAuth } = window.AppApi;
 
-if (!token) {
-    window.location.href = "/login-page";
-}
-
-const headers = {
-    "Authorization": `Bearer ${token}`
-};
-
-function normalizarCargoUsuario(usuario = {}) {
-    const cargo = String(usuario.cargo || "").trim().toUpperCase();
-    if (cargo) {
-        return cargo;
-    }
-
-    const perfil = String(usuario.perfil || "").trim().toLowerCase();
-    if (perfil === "admin") return "ADMIN";
-    if (perfil === "coordenador") return "COORDENADOR";
-    return "PROFESSOR";
-}
+const token = garantirToken();
+const headers = criarHeadersAuth(token);
 
 function modulosPermitidos(usuario = {}) {
     if (Array.isArray(usuario.modulos) && usuario.modulos.length > 0) {
@@ -40,11 +29,9 @@ function aplicarVisibilidadeModulos(modulos) {
 
 async function carregarUsuario() {
     try {
-        const res = await fetch("/me", { headers });
+        const res = await fetchComAuth("/me", { headers });
         if (!res.ok) {
-            localStorage.removeItem("token");
-            localStorage.removeItem("token_expira_em");
-            window.location.href = "/login-page";
+            encerrarSessao();
             return;
         }
 
@@ -53,9 +40,7 @@ async function carregarUsuario() {
         titulo.innerText = `Olá, ${usuario.nome.split(" ")[0]}. Escolha o serviço`;
         aplicarVisibilidadeModulos(modulosPermitidos(usuario));
     } catch (err) {
-        localStorage.removeItem("token");
-        localStorage.removeItem("token_expira_em");
-        window.location.href = "/login-page";
+        encerrarSessao();
     }
 }
 
@@ -98,9 +83,7 @@ function registrarEventos() {
     }
 
     document.getElementById("btnSair").addEventListener("click", () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("token_expira_em");
-        window.location.href = "/login-page";
+        encerrarSessao();
     });
 }
 

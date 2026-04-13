@@ -33,7 +33,7 @@ def _md4_digest(data: bytes) -> bytes:
     d = 0x10325476
 
     for offset in range(0, len(msg), 64):
-        x = list(struct.unpack("<16I", msg[offset:offset + 64]))
+        x = list(struct.unpack("<16I", msg[offset : offset + 64]))
         aa, bb, cc, dd = a, b, c, d
 
         # Round 1

@@ -43,13 +43,15 @@ class OcorrenciaPdfServiceTest(unittest.TestCase):
 
     def test_obtem_runs_de_descricao_formatada_para_pdf(self):
         runs = _obter_runs_descricao_formatada(
-            '<p><strong>Aluno</strong> <em>orientado</em> '
+            "<p><strong>Aluno</strong> <em>orientado</em> "
             '<span style="background-color: #fff3a3;">com destaque</span></p>'
         )
 
         self.assertTrue(any(run.texto == "Aluno" and run.negrito for run in runs))
         self.assertTrue(any(run.texto == "orientado" and run.italico for run in runs))
-        self.assertTrue(any(run.texto == "com destaque" and run.cor_fundo == (255, 243, 163) for run in runs))
+        self.assertTrue(
+            any(run.texto == "com destaque" and run.cor_fundo == (255, 243, 163) for run in runs)
+        )
 
     def test_obtem_gravidade_a_partir_da_base_legal(self):
         ocorrencia = _ocorrencia_base("Descricao qualquer.")

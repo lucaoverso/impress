@@ -1,0 +1,243 @@
+/* Auth and self-registration screens */
+
+.auth-page {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    padding: 20px 16px;
+}
+
+.auth-card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 24px;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+    overflow: hidden;
+}
+
+.auth-header {
+    padding: 24px 24px 16px;
+}
+
+.auth-badge {
+    width: fit-content;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--brand-strong);
+    background: var(--brand-soft);
+    padding: 4px 10px;
+    border-radius: 999px;
+    margin-bottom: 10px;
+}
+
+.auth-header h1 {
+    font-size: 30px;
+    line-height: 1.1;
+    margin-bottom: 8px;
+}
+
+.auth-header p {
+    color: var(--text-muted);
+}
+
+.form {
+    padding: 12px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.form h2 {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.btn-destaque {
+    padding: 8px 16px;
+    margin-top: 4px;
+    height: 48px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--brand), #148c83);
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s ease, filter 0.2s ease;
+}
+
+.btn-destaque:hover {
+    filter: brightness(0.96);
+}
+
+.btn-destaque:active {
+    transform: translateY(1px);
+}
+
+#erro {
+    min-height: 20px;
+    font-size: 14px;
+    color: var(--error);
+    text-align: center;
+    margin-top: 4px;
+}
+
+.auth-recovery {
+    margin-top: 4px;
+    padding: 12px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-md);
+    background: var(--surface-1);
+    display: none;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.auth-recovery h3 {
+    font-size: 16px;
+}
+
+#msgRecuperacao {
+    min-height: 20px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.register-page {
+    flex: 1;
+    display: grid;
+    place-items: center;
+    padding: 20px 16px;
+}
+
+.register-card {
+    width: 100%;
+    max-width: 760px;
+    background: var(--card-bg);
+    border: 1px solid rgba(255, 255, 255, 0.8);
+    border-radius: 24px;
+    box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12);
+    overflow: hidden;
+}
+
+.register-header {
+    padding: 24px 24px 10px;
+}
+
+.register-header h1 {
+    font-size: 32px;
+    line-height: 1.1;
+    margin-bottom: 8px;
+}
+
+.register-header p {
+    color: var(--text-muted);
+}
+
+.register-form {
+    padding: 12px 24px 24px;
+    display: grid;
+    gap: 10px;
+}
+
+.register-fieldset {
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-md);
+    padding: 10px;
+    background: var(--surface-1);
+}
+
+.register-fieldset p {
+    font-size: 13px;
+    color: var(--text-main);
+    font-weight: 700;
+    margin-bottom: 6px;
+}
+
+.register-checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 6px;
+    max-height: 170px;
+    overflow: auto;
+    padding-right: 2px;
+}
+
+.register-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-sm);
+    background: var(--surface-0);
+    padding: 6px 8px;
+}
+
+.register-checkbox-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    min-height: 16px;
+    margin: 0;
+    padding: 0;
+    border-radius: 4px;
+    box-shadow: none;
+    flex: 0 0 16px;
+}
+
+.register-checkbox-item span {
+    font-size: 13px;
+    color: var(--text-main);
+}
+
+.register-secondary-btn {
+    height: 44px;
+    border-radius: 12px;
+    border-color: var(--line-strong);
+    background: var(--surface-0);
+    color: var(--text-main);
+}
+
+#msgCadastro {
+    min-height: 20px;
+    font-size: 14px;
+    text-align: center;
+}
+
+
+@media (min-width: 768px) {
+    .auth-page {
+        padding: 32px;
+    }
+
+    .register-page {
+        padding: 30px;
+    }
+
+    .auth-card {
+        max-width: 820px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .auth-header {
+        padding: 40px 32px;
+        background: linear-gradient(165deg, #effcf9, #f3f6ff);
+        border-right: 1px solid #e8eef6;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .auth-header h1 {
+        font-size: 42px;
+    }
+
+    .form {
+        justify-content: center;
+        padding: 34px 30px;
+    }
+}

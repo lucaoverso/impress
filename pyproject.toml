@@ -1,0 +1,18 @@
+[tool.ruff]
+target-version = "py313"
+line-length = 100
+extend-exclude = [
+    "venv",
+    ".venv",
+    "__pycache__",
+    "spool",
+    "static/img",
+]
+
+[tool.ruff.lint]
+select = ["E9", "F63", "F7", "F82"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "lf"

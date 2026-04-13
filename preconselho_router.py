@@ -4,34 +4,37 @@ from sqlite3 import IntegrityError
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from auth import get_usuario_logado
-from database import (
+from db.catalogos import (
+    buscar_disciplina_por_id,
+    buscar_turma_por_id,
+    listar_disciplinas_ativas,
+    listar_turmas_ativas,
+)
+from db.docencia import listar_atribuicoes_docentes_por_usuario_ids
+from db.ocorrencias import buscar_estudante_por_id, listar_estudantes
+from db.preconselho import (
     atualizar_motivo_pre_conselho_dados,
     atualizar_periodo_pre_conselho_dados,
     atualizar_status_motivo_pre_conselho,
     atualizar_status_periodo_pre_conselho,
-    buscar_disciplina_por_id,
-    buscar_estudante_por_id,
     buscar_motivo_pre_conselho_por_id,
     buscar_motivos_pre_conselho_por_ids,
     buscar_periodo_pre_conselho_por_id,
     buscar_registro_pre_conselho_por_id,
-    buscar_turma_por_id,
-    buscar_usuario_por_id,
     contar_registros_pre_conselho_por_professor_periodo,
     criar_motivo_pre_conselho,
     criar_ou_atualizar_registro_pre_conselho,
     criar_periodo_pre_conselho,
     excluir_registro_pre_conselho,
-    listar_atribuicoes_docentes_por_usuario_ids,
-    listar_cargas_professores_por_usuario_ids,
-    listar_disciplinas_ativas,
-    listar_estudantes,
     listar_estudantes_pre_conselho_painel,
     listar_motivos_pre_conselho,
     listar_periodos_pre_conselho,
-    listar_professores_agendamento,
     listar_registros_pre_conselho,
-    listar_turmas_ativas,
+)
+from db.usuarios import (
+    buscar_usuario_por_id,
+    listar_cargas_professores_por_usuario_ids,
+    listar_professores_agendamento,
 )
 from models import (
     PreConselhoConsolidadoOut,
@@ -191,7 +194,9 @@ def _validar_estudante_na_turma(estudante_id: int, turma_id: int) -> dict:
     return estudante
 
 
-def _resolver_professor(usuario: dict, professor_id: int | None = None, *, permitir_gestor: bool = False) -> dict:
+def _resolver_professor(
+    usuario: dict, professor_id: int | None = None, *, permitir_gestor: bool = False
+) -> dict:
     cargo = _normalizar_cargo(usuario)
     usuario_id = _usuario_id(usuario)
 
@@ -213,11 +218,11 @@ def _resolver_professor(usuario: dict, professor_id: int | None = None, *, permi
 
 def _escopo_professor_legado(usuario_id: int) -> dict:
     carga = listar_cargas_professores_por_usuario_ids([usuario_id]).get(usuario_id, {})
-    nomes_turmas = {str(item).strip().casefold() for item in carga.get("turmas") or [] if str(item).strip()}
+    nomes_turmas = {
+        str(item).strip().casefold() for item in carga.get("turmas") or [] if str(item).strip()
+    }
     nomes_disciplinas = {
-        str(item).strip().casefold()
-        for item in carga.get("disciplinas") or []
-        if str(item).strip()
+        str(item).strip().casefold() for item in carga.get("disciplinas") or [] if str(item).strip()
     }
 
     turmas = [
@@ -329,8 +334,7 @@ def _validar_escopo_professor(professor_id: int, turma_id: int, disciplina_id: i
         raise HTTPException(403, "Disciplina fora da carga do professor.")
     if escopo["usa_atribuicoes_exatas"]:
         combinacoes = {
-            (int(item["turma_id"]), int(item["disciplina_id"]))
-            for item in escopo["combinacoes"]
+            (int(item["turma_id"]), int(item["disciplina_id"])) for item in escopo["combinacoes"]
         }
         if (turma_id_valor, disciplina_id_valor) not in combinacoes:
             raise HTTPException(403, "Disciplina fora da atribuicao docente da turma selecionada.")
@@ -351,14 +355,9 @@ def _validar_filtros_professor(
         raise HTTPException(403, "Turma fora da carga do professor.")
     if disciplina_id is not None and int(disciplina_id) not in disciplina_ids:
         raise HTTPException(403, "Disciplina fora da carga do professor.")
-    if (
-        escopo["usa_atribuicoes_exatas"]
-        and turma_id is not None
-        and disciplina_id is not None
-    ):
+    if escopo["usa_atribuicoes_exatas"] and turma_id is not None and disciplina_id is not None:
         combinacoes = {
-            (int(item["turma_id"]), int(item["disciplina_id"]))
-            for item in escopo["combinacoes"]
+            (int(item["turma_id"]), int(item["disciplina_id"])) for item in escopo["combinacoes"]
         }
         if (int(turma_id), int(disciplina_id)) not in combinacoes:
             raise HTTPException(403, "Disciplina fora da atribuicao docente da turma selecionada.")
@@ -377,10 +376,9 @@ def _registro_editavel_usuario(usuario: dict, registro: dict) -> bool:
     if _usuario_eh_admin(usuario):
         return True
     if _usuario_eh_professor(usuario):
-        return (
-            int(registro.get("professor_id") or 0) == _usuario_id(usuario)
-            and periodo_editavel_para_cargo(registro.get("periodo_status"), "PROFESSOR")
-        )
+        return int(registro.get("professor_id") or 0) == _usuario_id(
+            usuario
+        ) and periodo_editavel_para_cargo(registro.get("periodo_status"), "PROFESSOR")
     return False
 
 
@@ -392,7 +390,9 @@ def _minhas_turmas_disciplinas(periodo_id: int, professor_id: int) -> list[dict]
     escopo = _escopo_professor(professor_id)
     registros = contar_registros_pre_conselho_por_professor_periodo(periodo_id, professor_id)
     estudantes_por_turma = {
-        int(turma["id"]): len(listar_estudantes(nome="", incluir_inativos=False, turma_id=int(turma["id"])))
+        int(turma["id"]): len(
+            listar_estudantes(nome="", incluir_inativos=False, turma_id=int(turma["id"]))
+        )
         for turma in escopo["turmas"]
     }
 
@@ -422,9 +422,14 @@ def obter_contexto_preconselho_api(usuario=Depends(get_usuario_logado)):
     _exigir_acesso_preconselho(usuario)
     cargo = _normalizar_cargo(usuario)
     usuario_id = _usuario_id(usuario)
-    turmas_professor, disciplinas_professor = _opcoes_professor(usuario_id) if _usuario_eh_professor(usuario) else ([], [])
+    turmas_professor, disciplinas_professor = (
+        _opcoes_professor(usuario_id) if _usuario_eh_professor(usuario) else ([], [])
+    )
     periodos = listar_periodos_pre_conselho()
-    periodo_referencia = next((item for item in periodos if item.get("status") == STATUS_PERIODO_PRE_CONSELHO_ABERTO), None)
+    periodo_referencia = next(
+        (item for item in periodos if item.get("status") == STATUS_PERIODO_PRE_CONSELHO_ABERTO),
+        None,
+    )
     minhas_turmas_disciplinas = (
         _minhas_turmas_disciplinas(int(periodo_referencia["id"]), usuario_id)
         if _usuario_eh_professor(usuario) and periodo_referencia
@@ -437,7 +442,9 @@ def obter_contexto_preconselho_api(usuario=Depends(get_usuario_logado)):
         "pode_consolidar": _usuario_eh_gestor(usuario),
         "pode_editar_periodo_fechado": _usuario_eh_admin(usuario),
         "professor_id": usuario_id if _usuario_eh_professor(usuario) else None,
-        "professor_nome": str(usuario.get("nome") or "").strip() if _usuario_eh_professor(usuario) else "",
+        "professor_nome": str(usuario.get("nome") or "").strip()
+        if _usuario_eh_professor(usuario)
+        else "",
         "periodos": [
             {
                 **item,
@@ -446,7 +453,9 @@ def obter_contexto_preconselho_api(usuario=Depends(get_usuario_logado)):
             for item in periodos
         ],
         "turmas": turmas_professor if _usuario_eh_professor(usuario) else listar_turmas_ativas(),
-        "disciplinas": disciplinas_professor if _usuario_eh_professor(usuario) else listar_disciplinas_ativas(),
+        "disciplinas": disciplinas_professor
+        if _usuario_eh_professor(usuario)
+        else listar_disciplinas_ativas(),
         "motivos": listar_motivos_pre_conselho(incluir_inativos=_usuario_eh_admin(usuario)),
         "professores": [
             {
@@ -454,19 +463,23 @@ def obter_contexto_preconselho_api(usuario=Depends(get_usuario_logado)):
                 "nome": item["nome"],
                 "email": item.get("email", ""),
                 "label": (
-                    f'{item["nome"]} ({item.get("email", "")})'
+                    f"{item['nome']} ({item.get('email', '')})"
                     if str(item.get("email", "")).strip()
                     else item["nome"]
                 ),
             }
             for item in listar_professores_agendamento()
-        ] if _usuario_eh_gestor(usuario) else [],
+        ]
+        if _usuario_eh_gestor(usuario)
+        else [],
         "niveis_atencao": listar_niveis_atencao_pre_conselho(),
         "minhas_turmas_disciplinas": minhas_turmas_disciplinas,
     }
 
 
-@router.get("/preconselho/minhas-turmas-disciplinas", response_model=list[PreConselhoTurmaDisciplinaOut])
+@router.get(
+    "/preconselho/minhas-turmas-disciplinas", response_model=list[PreConselhoTurmaDisciplinaOut]
+)
 def listar_minhas_turmas_disciplinas_preconselho_api(
     periodo_id: int = Query(...),
     usuario=Depends(get_usuario_logado),
@@ -540,7 +553,9 @@ def salvar_registro_preconselho_api(
     professor = _resolver_professor(usuario, payload.professor_id, permitir_gestor=True)
     _validar_escopo_professor(int(professor["id"]), int(turma["id"]), int(disciplina["id"]))
 
-    if _usuario_eh_professor(usuario) and not periodo_editavel_para_cargo(periodo.get("status"), "PROFESSOR"):
+    if _usuario_eh_professor(usuario) and not periodo_editavel_para_cargo(
+        periodo.get("status"), "PROFESSOR"
+    ):
         raise HTTPException(403, "Periodo fechado para edicao do professor.")
 
     if not payload.sinalizar:
@@ -561,11 +576,16 @@ def salvar_registro_preconselho_api(
             raise HTTPException(400, "Nao existe registro salvo para remover.")
         if not _registro_editavel_usuario(usuario, existente):
             raise HTTPException(403, "Acesso negado.")
-        excluir_registro_pre_conselho(int(existente["id"]), professor_usuario_id=None if _usuario_eh_admin(usuario) else int(professor["id"]))
+        excluir_registro_pre_conselho(
+            int(existente["id"]),
+            professor_usuario_id=None if _usuario_eh_admin(usuario) else int(professor["id"]),
+        )
         return {**existente, "editavel": False}
 
     motivos = _motivos_ativos_validos(payload.motivo_ids)
-    observacao_professor = _texto_opcional(payload.observacao_professor, "Observacao do professor", max_len=1000)
+    observacao_professor = _texto_opcional(
+        payload.observacao_professor, "Observacao do professor", max_len=1000
+    )
     try:
         nivel_atencao = validar_nivel_atencao_pre_conselho(payload.nivel_atencao)
         texto = gerar_texto_pre_conselho_individual(
@@ -707,11 +727,15 @@ def listar_periodos_preconselho_api(usuario=Depends(get_usuario_logado)):
 
 
 @router.post("/preconselho/periodos", response_model=PreConselhoPeriodoOut)
-def criar_periodo_preconselho_api(payload: PreConselhoPeriodoCreateIn, usuario=Depends(get_usuario_logado)):
+def criar_periodo_preconselho_api(
+    payload: PreConselhoPeriodoCreateIn, usuario=Depends(get_usuario_logado)
+):
     _exigir_admin(usuario)
     try:
         etapa = validar_etapa_pre_conselho(payload.etapa)
-        status = validar_status_periodo_pre_conselho(payload.status or STATUS_PERIODO_PRE_CONSELHO_ABERTO)
+        status = validar_status_periodo_pre_conselho(
+            payload.status or STATUS_PERIODO_PRE_CONSELHO_ABERTO
+        )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     try:
@@ -724,7 +748,9 @@ def criar_periodo_preconselho_api(payload: PreConselhoPeriodoCreateIn, usuario=D
             status=status,
         )
     except IntegrityError as exc:
-        raise HTTPException(400, "Ja existe um periodo cadastrado para este ano letivo e etapa.") from exc
+        raise HTTPException(
+            400, "Ja existe um periodo cadastrado para este ano letivo e etapa."
+        ) from exc
     periodo = buscar_periodo_pre_conselho_por_id(periodo_id)
     return {**periodo, "editavel": True}
 
@@ -751,7 +777,9 @@ def atualizar_periodo_preconselho_api(
         ):
             raise HTTPException(404, "Periodo nao encontrado.")
     except IntegrityError as exc:
-        raise HTTPException(400, "Ja existe um periodo cadastrado para este ano letivo e etapa.") from exc
+        raise HTTPException(
+            400, "Ja existe um periodo cadastrado para este ano letivo e etapa."
+        ) from exc
     periodo = buscar_periodo_pre_conselho_por_id(periodo_id)
     return {**periodo, "editavel": True}
 
@@ -785,7 +813,9 @@ def listar_motivos_preconselho_api(
 
 
 @router.post("/preconselho/motivos", response_model=PreConselhoMotivoOut)
-def criar_motivo_preconselho_api(payload: PreConselhoMotivoCreateIn, usuario=Depends(get_usuario_logado)):
+def criar_motivo_preconselho_api(
+    payload: PreConselhoMotivoCreateIn, usuario=Depends(get_usuario_logado)
+):
     _exigir_admin(usuario)
     try:
         categoria = validar_categoria_motivo_pre_conselho(payload.categoria)
@@ -794,7 +824,9 @@ def criar_motivo_preconselho_api(payload: PreConselhoMotivoCreateIn, usuario=Dep
     try:
         motivo_id = criar_motivo_pre_conselho(
             categoria=categoria,
-            codigo=_texto_obrigatorio(payload.codigo, "Codigo", max_len=120).lower().replace(" ", "_"),
+            codigo=_texto_obrigatorio(payload.codigo, "Codigo", max_len=120)
+            .lower()
+            .replace(" ", "_"),
             descricao=_texto_obrigatorio(payload.descricao, "Descricao", max_len=255),
             ordem=int(payload.ordem or 0),
         )

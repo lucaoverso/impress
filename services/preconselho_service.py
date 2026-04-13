@@ -233,9 +233,7 @@ def _texto_para_observacao(observacao_professor: str) -> str:
     texto = _texto_lista_observacao(observacao_professor)
     if not texto:
         return ""
-    return _garantir_ponto_final(
-        f"Como relato complementar do professor, destaca-se que {texto}"
-    )
+    return _garantir_ponto_final(f"Como relato complementar do professor, destaca-se que {texto}")
 
 
 def listar_niveis_atencao_pre_conselho() -> list[dict]:
@@ -362,17 +360,11 @@ def _descricao_disciplinas(disciplinas: list[str]) -> str:
 
 def _texto_recomendacao_nivel(nivel_atencao: str) -> str:
     if nivel_atencao == "alto":
-        return (
-            "Recomenda-se prioridade no acompanhamento individualizado e articulacao com a equipe pedagogica."
-        )
+        return "Recomenda-se prioridade no acompanhamento individualizado e articulacao com a equipe pedagogica."
     if nivel_atencao == "medio":
-        return (
-            "Recomenda-se monitoramento sistematico e intervencoes pedagogicas ao longo do periodo seguinte."
-        )
+        return "Recomenda-se monitoramento sistematico e intervencoes pedagogicas ao longo do periodo seguinte."
     if nivel_atencao == "baixo":
-        return (
-            "Recomenda-se acompanhamento continuo e retomada orientada dos conteudos essenciais."
-        )
+        return "Recomenda-se acompanhamento continuo e retomada orientada dos conteudos essenciais."
     return ""
 
 
@@ -391,7 +383,11 @@ def gerar_texto_pre_conselho_individual(
     if not fragmentos_motivos:
         raise ValueError("Nao foi possivel gerar o texto com os motivos selecionados.")
 
-    sujeito = f"O estudante {_texto_limpo(estudante_nome)}" if _texto_limpo(estudante_nome) else "O estudante"
+    sujeito = (
+        f"O estudante {_texto_limpo(estudante_nome)}"
+        if _texto_limpo(estudante_nome)
+        else "O estudante"
+    )
     abertura = (
         f"{sujeito} obteve baixo rendimento {_descricao_disciplinas([disciplina_nome])}, "
         f"em razao de {_formatar_lista_pt_br(fragmentos_motivos)}."
@@ -455,7 +451,9 @@ def _resumir_registros_por_disciplina(registros: list[dict]) -> list[dict]:
     ordem = []
 
     for registro in registros or []:
-        disciplina_nome = _texto_limpo(registro.get("disciplina_nome")) or "Disciplina nao informada"
+        disciplina_nome = (
+            _texto_limpo(registro.get("disciplina_nome")) or "Disciplina nao informada"
+        )
         if disciplina_nome not in agrupados:
             agrupados[disciplina_nome] = {
                 "disciplina": disciplina_nome,
@@ -495,9 +493,7 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
     disciplinas_resumidas = _resumir_registros_por_disciplina(registros)
     disciplinas = [item["disciplina"] for item in disciplinas_resumidas]
     motivos = _lista_unica_texto(
-        fragmento
-        for item in disciplinas_resumidas
-        for fragmento in item["motivos"]
+        fragmento for item in disciplinas_resumidas for fragmento in item["motivos"]
     )
     observacoes = _lista_unica_texto(
         f"em {item['disciplina']}, {observacao}"
@@ -653,8 +649,7 @@ def gerar_texto_consolidado_pre_conselho(
     total_estudantes = len(_lista_unica_texto(item.get("estudante_nome") for item in itens))
     motivos_frequentes = _motivos_frequentes(itens)
     itens_agrupados = [
-        _texto_estudante_consolidado(grupo)
-        for grupo in _agrupar_registros_por_estudante(itens)
+        _texto_estudante_consolidado(grupo) for grupo in _agrupar_registros_por_estudante(itens)
     ]
 
     if total_registros == 0:
@@ -681,15 +676,10 @@ def gerar_texto_consolidado_pre_conselho(
 
     fatores = ""
     if motivos_frequentes:
-        fatores = (
-            "Os motivos mais recorrentes foram "
-            f"{_formatar_lista_pt_br(motivos_frequentes)}."
-        )
+        fatores = f"Os motivos mais recorrentes foram {_formatar_lista_pt_br(motivos_frequentes)}."
 
     estudantes_txt = "\n\n".join(
-        item["texto"]
-        for item in itens_agrupados
-        if _texto_limpo(item.get("texto"))
+        item["texto"] for item in itens_agrupados if _texto_limpo(item.get("texto"))
     )
 
     return {
@@ -697,9 +687,5 @@ def gerar_texto_consolidado_pre_conselho(
         "total_estudantes": total_estudantes,
         "motivos_frequentes": motivos_frequentes,
         "itens_agrupados": itens_agrupados,
-        "texto": "\n\n".join(
-            parte
-            for parte in (abertura, fatores, estudantes_txt)
-            if parte
-        ),
+        "texto": "\n\n".join(parte for parte in (abertura, fatores, estudantes_txt) if parte),
     }

@@ -70,8 +70,12 @@ class AdminTurmasDisciplinasTest(unittest.TestCase):
 
             contexto = main.listar_contexto_turmas_disciplinas_admin(usuario=self._usuario_admin())
             self.assertTrue(any(int(item["id"]) == turma_id for item in contexto["turmas"]))
-            self.assertTrue(any(int(item["id"]) == disciplina_id for item in contexto["disciplinas"]))
-            self.assertTrue(any(int(item["id"]) == professor_id for item in contexto["professores"]))
+            self.assertTrue(
+                any(int(item["id"]) == disciplina_id for item in contexto["disciplinas"])
+            )
+            self.assertTrue(
+                any(int(item["id"]) == professor_id for item in contexto["professores"])
+            )
 
             vinculo = main.criar_turma_disciplina_admin_api(
                 payload=models.TurmaDisciplinaCreateIn(
@@ -143,7 +147,9 @@ class AdminTurmasDisciplinasTest(unittest.TestCase):
             self.assertIsNone(vinculo["professor_id"])
 
             disciplinas = database.listar_disciplinas(incluir_inativas=True)
-            projeto = next((item for item in disciplinas if item["nome"] == "Projeto de Vida"), None)
+            projeto = next(
+                (item for item in disciplinas if item["nome"] == "Projeto de Vida"), None
+            )
             self.assertIsNotNone(projeto)
             self.assertEqual(int(projeto["aulas_semanais"]), 2)
 

@@ -64,16 +64,16 @@ class AtribuicoesDocentesImportServiceTest(unittest.TestCase):
             resultado_inicial = import_service.importar_atribuicoes_docentes_arquivo(
                 (
                     "{"
-                    "\"atribuicoes\": ["
+                    '"atribuicoes": ['
                     "  {"
-                    "    \"professor_nome\": \"Professor Alex\","
-                    "    \"disciplina\": \"Geometria\","
-                    "    \"turmas\": [\"1 EM A\", \"1 EM B\"]"
+                    '    "professor_nome": "Professor Alex",'
+                    '    "disciplina": "Geometria",'
+                    '    "turmas": ["1 EM A", "1 EM B"]'
                     "  },"
                     "  {"
-                    "    \"professor_nome\": \"Professor Alex\","
-                    "    \"disciplina\": \"Letramento e Raciocinio Matematico\","
-                    "    \"turmas\": [\"6 ano A\"]"
+                    '    "professor_nome": "Professor Alex",'
+                    '    "disciplina": "Letramento e Raciocinio Matematico",'
+                    '    "turmas": ["6 ano A"]'
                     "  }"
                     "]"
                     "}"
@@ -90,8 +90,7 @@ class AtribuicoesDocentesImportServiceTest(unittest.TestCase):
                 incluir_inativos=True,
             )
             pares_iniciais = {
-                (int(item["disciplina_id"]), int(item["turma_id"]))
-                for item in atribuicoes_iniciais
+                (int(item["disciplina_id"]), int(item["turma_id"])) for item in atribuicoes_iniciais
             }
             self.assertEqual(
                 pares_iniciais,
@@ -105,11 +104,11 @@ class AtribuicoesDocentesImportServiceTest(unittest.TestCase):
             resultado_reenvio = import_service.importar_atribuicoes_docentes_arquivo(
                 (
                     "{"
-                    "\"atribuicoes\": ["
+                    '"atribuicoes": ['
                     "  {"
-                    "    \"professor_nome\": \"Professor Alex\","
-                    "    \"disciplina\": \"Geometria\","
-                    "    \"turmas\": [\"1 EM B\"]"
+                    '    "professor_nome": "Professor Alex",'
+                    '    "disciplina": "Geometria",'
+                    '    "turmas": ["1 EM B"]'
                     "  }"
                     "]"
                     "}"

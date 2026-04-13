@@ -136,21 +136,16 @@ class ExclusaoProfessorTest(unittest.TestCase):
             professores_painel = main.listar_professores_painel(
                 usuario={"id": 1, "perfil": "admin", "cargo": "ADMIN"},
             )
-            emails_painel = {
-                item["email"]
-                for item in professores_painel["professores"]
-            }
+            emails_painel = {item["email"] for item in professores_painel["professores"]}
             self.assertNotIn(email_professor, emails_painel)
 
             emails_agendamento = {
-                item["email"]
-                for item in database.listar_professores_agendamento()
+                item["email"] for item in database.listar_professores_agendamento()
             }
             self.assertNotIn(email_professor, emails_agendamento)
 
             emails_ocorrencia = {
-                item["email"]
-                for item in database.buscar_professores_ocorrencia("saida")
+                item["email"] for item in database.buscar_professores_ocorrencia("saida")
             }
             self.assertNotIn(email_professor, emails_ocorrencia)
 

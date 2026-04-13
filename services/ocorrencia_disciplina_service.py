@@ -53,18 +53,14 @@ ACAO_OCORRENCIA_VALIDAS = ACOES_OCORRENCIA_DETALHADAS + ACOES_OCORRENCIA_LEGADAS
 
 ACOES_ROTULOS = {
     ACAO_OCORRENCIA_ADVERTENCIA_VERBAL: "Advertencia verbal",
-    ACAO_OCORRENCIA_RETIRADA_SALA_ORIENTACAO: (
-        "Retirada de sala e encaminhamento para orientacao"
-    ),
+    ACAO_OCORRENCIA_RETIRADA_SALA_ORIENTACAO: ("Retirada de sala e encaminhamento para orientacao"),
     ACAO_OCORRENCIA_SUSPENSAO_EXTRACURRICULAR: (
         "Suspensao temporaria em programas extracurriculares"
     ),
     ACAO_OCORRENCIA_SUSPENSAO_ORIENTADA_2_DIAS: (
         "Suspensao orientada das aulas (ate 2 dias letivos)"
     ),
-    ACAO_OCORRENCIA_SUSPENSAO_AULAS_3_DIAS: (
-        "Suspensao das aulas (ate 3 dias letivos)"
-    ),
+    ACAO_OCORRENCIA_SUSPENSAO_AULAS_3_DIAS: ("Suspensao das aulas (ate 3 dias letivos)"),
     ACAO_OCORRENCIA_TRANSFERENCIA_COMPULSORIA: "Transferencia compulsoria",
     ACAO_OCORRENCIA_ORIENTACAO_VERBAL: "Orientacao verbal",
     ACAO_OCORRENCIA_ADVERTENCIA: "Advertencia",

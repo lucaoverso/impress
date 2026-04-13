@@ -1,4 +1,4 @@
-from database import buscar_usuario_por_email, preencher_nt_hash_se_ausente
+from db.usuarios import buscar_usuario_por_email, preencher_nt_hash_se_ausente
 from services.auth_service import hash_senha
 
 

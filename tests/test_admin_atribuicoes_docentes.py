@@ -70,10 +70,16 @@ class AdminAtribuicoesDocentesTest(unittest.TestCase):
             geometria_id = int(database.criar_disciplina("Geometria", 3))
             letramento_id = int(database.criar_disciplina("Letramento e Raciocinio Matematico", 5))
 
-            contexto = main.listar_contexto_atribuicoes_docentes_admin(usuario=self._usuario_admin())
-            self.assertTrue(any(int(item["id"]) == professor_id for item in contexto["professores"]))
+            contexto = main.listar_contexto_atribuicoes_docentes_admin(
+                usuario=self._usuario_admin()
+            )
+            self.assertTrue(
+                any(int(item["id"]) == professor_id for item in contexto["professores"])
+            )
             self.assertTrue(any(int(item["id"]) == turma_em_id for item in contexto["turmas"]))
-            self.assertTrue(any(int(item["id"]) == geometria_id for item in contexto["disciplinas"]))
+            self.assertTrue(
+                any(int(item["id"]) == geometria_id for item in contexto["disciplinas"])
+            )
 
             atribuicao_em = main.criar_atribuicao_docente_admin_api(
                 payload=models.ProfessorTurmaDisciplinaCreateIn(
@@ -94,7 +100,9 @@ class AdminAtribuicoesDocentesTest(unittest.TestCase):
 
             self.assertEqual(int(atribuicao_em["professor_id"]), professor_id)
             self.assertEqual(atribuicao_em["turma_nome"], "1 EM A")
-            self.assertEqual(atribuicao_fund["disciplina_nome"], "Letramento e Raciocinio Matematico")
+            self.assertEqual(
+                atribuicao_fund["disciplina_nome"], "Letramento e Raciocinio Matematico"
+            )
 
             listagem = main.listar_atribuicoes_docentes_admin_api(usuario=self._usuario_admin())
             self.assertEqual(len(listagem), 2)
@@ -122,9 +130,13 @@ class AdminAtribuicoesDocentesTest(unittest.TestCase):
                 atribuicao_id=int(atribuicao_em["id"]),
                 usuario=self._usuario_admin(),
             )
-            self.assertEqual(resposta_exclusao["mensagem"], "Atribuicao docente removida com sucesso.")
+            self.assertEqual(
+                resposta_exclusao["mensagem"], "Atribuicao docente removida com sucesso."
+            )
 
-            listagem_final = main.listar_atribuicoes_docentes_admin_api(usuario=self._usuario_admin())
+            listagem_final = main.listar_atribuicoes_docentes_admin_api(
+                usuario=self._usuario_admin()
+            )
             self.assertEqual(len(listagem_final), 1)
             self.assertEqual(int(listagem_final[0]["turma_id"]), turma_fund_id)
 

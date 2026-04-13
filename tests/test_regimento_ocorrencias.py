@@ -192,8 +192,7 @@ class RegimentoOcorrenciasTest(unittest.TestCase):
             fks = [dict(row) for row in cursor.fetchall()]
             self.assertFalse(
                 any(
-                    row["from"] == "regimento_item_id"
-                    and row["table"] == "regimento_itens"
+                    row["from"] == "regimento_item_id" and row["table"] == "regimento_itens"
                     for row in fks
                 )
             )

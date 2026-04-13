@@ -32,15 +32,9 @@ class OcorrenciaDisciplinaServiceTest(unittest.TestCase):
         self.assertEqual(gravidade, "gravissima")
 
     def test_acao_detalhada_precisa_ser_compativel_com_a_gravidade(self):
-        self.assertTrue(
-            acao_compativel_com_gravidade("advertencia_verbal", "leve")
-        )
-        self.assertFalse(
-            acao_compativel_com_gravidade("advertencia_verbal", "grave")
-        )
-        self.assertTrue(
-            acao_compativel_com_gravidade("advertencia", "grave")
-        )
+        self.assertTrue(acao_compativel_com_gravidade("advertencia_verbal", "leve"))
+        self.assertFalse(acao_compativel_com_gravidade("advertencia_verbal", "grave"))
+        self.assertTrue(acao_compativel_com_gravidade("advertencia", "grave"))
 
 
 if __name__ == "__main__":

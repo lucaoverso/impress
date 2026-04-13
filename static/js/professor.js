@@ -1,39 +1,9 @@
-const token = localStorage.getItem("token");
+const { el } = window.AppDom;
+const { garantirToken, criarHeadersAuth, encerrarSessao } = window.AppAuth;
+const { fetchComAuth, obterMensagemErroResposta } = window.AppApi;
 
-if (!token) {
-    window.location.href = "/login-page";
-}
-
-const headers = {
-    "Authorization": "Bearer " + token
-};
-
-function encerrarSessao() {
-    localStorage.removeItem("token");
-    localStorage.removeItem("token_expira_em");
-    window.location.href = "/login-page";
-}
-
-async function fetchComAuth(url, options = {}) {
-    const res = await fetch(url, options);
-    if (res.status === 401) {
-        encerrarSessao();
-        throw new Error("Sessão expirada.");
-    }
-    return res;
-}
-
-async function extrairMensagemErroResposta(res, fallback = "Falha na requisição.") {
-    try {
-        const data = await res.json();
-        if (typeof data?.detail === "string" && data.detail.trim()) {
-            return data.detail.trim();
-        }
-    } catch (_err) {
-        // Sem payload JSON legível.
-    }
-    return fallback;
-}
+const token = garantirToken();
+const headers = criarHeadersAuth(token);
 
 let pdfDoc = null;
 let folhaAtual = 1;
@@ -69,10 +39,6 @@ const TAMANHO_FOLHA = {
     retrato: { largura: 794, altura: 1123 },
     paisagem: { largura: 1123, altura: 794 }
 };
-
-function el(id) {
-    return document.getElementById(id);
-}
 
 function usuarioEhAdmin() {
     if (!usuarioAtual) {
@@ -946,7 +912,7 @@ async function carregarCota() {
 
     const res = await fetchComAuth(montarUrlConsultaImpressao("/minha-cota"), { headers });
     if (!res.ok) {
-        throw new Error(await extrairMensagemErroResposta(res, "Nao foi possivel carregar a cota."));
+        throw new Error(await obterMensagemErroResposta(res, "Nao foi possivel carregar a cota."));
     }
 
     const data = await res.json();
@@ -1060,7 +1026,7 @@ async function carregarFila() {
 
     const res = await fetchComAuth(montarUrlConsultaImpressao("/meus-jobs"), { headers });
     if (!res.ok) {
-        throw new Error(await extrairMensagemErroResposta(res, "Nao foi possivel carregar os pedidos de impressao."));
+        throw new Error(await obterMensagemErroResposta(res, "Nao foi possivel carregar os pedidos de impressao."));
     }
 
     const jobs = await res.json();
@@ -1161,7 +1127,7 @@ async function carregarPreview(file) {
             });
 
             if (!res.ok) {
-                const detalhe = await extrairMensagemErroResposta(
+                const detalhe = await obterMensagemErroResposta(
                     res,
                     "Falha ao gerar pré-visualização do documento."
                 );

@@ -1,0 +1,94 @@
+from fastapi import APIRouter, Request
+from fastapi.responses import RedirectResponse
+
+from .config import ASSET_VERSION, PRINT_CANCEL_WINDOW_SECONDS, render_template_response
+
+router = APIRouter()
+
+
+@router.get("/login-page")
+def login_page(request: Request):
+    return render_template_response(request, "login.html")
+
+
+@router.get("/servicos")
+def servicos_page(request: Request):
+    return render_template_response(
+        request,
+        "servicos.html",
+        {"asset_version": ASSET_VERSION},
+        cache_control="no-store",
+    )
+
+
+@router.get("/impressao")
+def impressao_page(request: Request):
+    return render_template_response(
+        request,
+        "professor.html",
+        {
+            "cancel_window_seconds": PRINT_CANCEL_WINDOW_SECONDS,
+            "asset_version": ASSET_VERSION,
+        },
+        cache_control="no-store",
+    )
+
+
+@router.get("/professor")
+def professor_redirect():
+    return RedirectResponse(url="/impressao", status_code=302)
+
+
+@router.get("/agendamento")
+def agendamento_page(request: Request):
+    return render_template_response(
+        request,
+        "agendamento.html",
+        {"asset_version": ASSET_VERSION},
+        cache_control="no-store",
+    )
+
+
+@router.get("/pcpi")
+def pcpi_page(request: Request):
+    return render_template_response(
+        request,
+        "pcpi.html",
+        {"asset_version": ASSET_VERSION},
+        cache_control="no-store",
+    )
+
+
+@router.get("/preconselho")
+def preconselho_page(request: Request):
+    return render_template_response(
+        request,
+        "preconselho.html",
+        {"asset_version": ASSET_VERSION},
+        cache_control="no-store",
+    )
+
+
+@router.get("/cadastro-professor")
+def cadastro_professor_page(request: Request):
+    return render_template_response(request, "cadastro_professor.html")
+
+
+@router.get("/admin")
+def admin_page(request: Request):
+    return render_template_response(
+        request,
+        "admin.html",
+        {"asset_version": ASSET_VERSION},
+        cache_control="no-store",
+    )
+
+
+@router.get("/coordenacao")
+def coordenacao_page(request: Request):
+    return render_template_response(
+        request,
+        "coordenacao.html",
+        {"asset_version": ASSET_VERSION},
+        cache_control="no-store",
+    )

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cadastro de Professor - Sistema EEPJD</title>
-    <link rel="stylesheet" href="{{ request.url_for('static', path='css/style.css') }}">
+    {% include "includes/style_bundle.html" %}
 </head>
 
 <body>
@@ -48,7 +48,11 @@
         <p>2026</p>
     </footer>
 
-    <script src="{{ request.url_for('static', path='js/cadastro-professor.js') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/cadastro-professor.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>
 
 </html>

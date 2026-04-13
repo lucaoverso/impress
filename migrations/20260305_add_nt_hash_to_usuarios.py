@@ -60,7 +60,9 @@ def downgrade(conn: sqlite3.Connection):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Migration: adiciona/remove coluna usuarios.nt_hash")
+    parser = argparse.ArgumentParser(
+        description="Migration: adiciona/remove coluna usuarios.nt_hash"
+    )
     parser.add_argument("action", choices=["upgrade", "downgrade"], help="Ação da migration.")
     parser.add_argument("--db", default=_default_db_path(), help="Caminho do banco SQLite.")
     args = parser.parse_args()

@@ -1,12 +1,17 @@
 name: Deploy no servidor
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: ["main"]
 
 jobs:
   deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
     runs-on: self-hosted
+    env:
+      HEALTHCHECK_URL: http://127.0.0.1:8000/health
 
     steps:
       - name: Atualizar código no servidor
@@ -17,7 +22,35 @@ jobs:
           sudo -n -u sistema-impress git -C /opt/sistema-impress reset --hard origin/main
           sudo -n -u sistema-impress git -C /opt/sistema-impress clean -fd
 
+      - name: Aplicar migrations
+        run: |
+          sudo -n -u sistema-impress bash -lc '
+            cd /opt/sistema-impress
+            set -a
+            [ -f .env ] && . ./.env
+            set +a
+            .venv/bin/python -m db.schema_migrations upgrade
+          '
+
       - name: Reiniciar serviços
         run: |
           sudo -n systemctl restart sistema-impress-api.service
           sudo -n systemctl restart sistema-impress-worker.service
+
+      - name: Verificar serviços ativos
+        run: |
+          sudo -n systemctl is-active --quiet sistema-impress-api.service
+          sudo -n systemctl is-active --quiet sistema-impress-worker.service
+
+      - name: Healthcheck da API
+        run: |
+          for tentativa in $(seq 1 10); do
+            resposta="$(curl --silent --show-error --fail "$HEALTHCHECK_URL" || true)"
+            if printf '%s' "$resposta" | grep -Eq '"status"[[:space:]]*:[[:space:]]*"ok"'; then
+              echo "$resposta"
+              exit 0
+            fi
+            sleep 3
+          done
+          echo "Healthcheck falhou em $HEALTHCHECK_URL"
+          exit 1

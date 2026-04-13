@@ -58,9 +58,7 @@ def upgrade(conn: sqlite3.Connection):
             "ALTER TABLE turmas_disciplinas ADD COLUMN carga_horaria INTEGER NOT NULL DEFAULT 0"
         )
     if "professor_usuario_id" not in colunas:
-        cursor.execute(
-            "ALTER TABLE turmas_disciplinas ADD COLUMN professor_usuario_id INTEGER"
-        )
+        cursor.execute("ALTER TABLE turmas_disciplinas ADD COLUMN professor_usuario_id INTEGER")
     if "criado_em" not in colunas:
         cursor.execute(
             "ALTER TABLE turmas_disciplinas ADD COLUMN criado_em TEXT NOT NULL DEFAULT ''"
@@ -110,7 +108,12 @@ def upgrade(conn: sqlite3.Connection):
             ORDER BY ptd.id ASC
             """
         )
-        for turma_id, disciplina_id, professor_usuario_id, carga_horaria_padrao in cursor.fetchall():
+        for (
+            turma_id,
+            disciplina_id,
+            professor_usuario_id,
+            carga_horaria_padrao,
+        ) in cursor.fetchall():
             cursor.execute(
                 """
                 INSERT OR IGNORE INTO turmas_disciplinas (

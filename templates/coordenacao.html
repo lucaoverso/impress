@@ -5,8 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coordenacao - Registro de Ocorrencias</title>
-    <link rel="stylesheet"
-        href="{{ request.url_for('static', path='css/style.css') }}?v={{ asset_version | default('1') }}">
+    {% include "includes/style_bundle.html" %}
 </head>
 
 <body>
@@ -831,8 +830,17 @@
         </section>
     </main>
 
-    <script
-        src="{{ request.url_for('static', path='js/coordenacao.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/coordenacao/core.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/coordenacao/ocorrencias.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/coordenacao/painel.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/coordenacao/base-legal.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/coordenacao/cadastros.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/coordenacao/init.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/coordenacao.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>
 
 </html>
