@@ -110,7 +110,14 @@
             </section>
 
             <section id="tab-turmas" class="admin-tab-panel" data-admin-tab-panel="turmas" hidden>
-                <div class="admin-grid">
+                    <article class="admin-card admin-card-wide admin-only" data-admin-only="true">
+                        <h2>Disciplinas por turma</h2>
+                        <p class="booking-detail">Abra a turma para ajustar as disciplinas ofertadas, a carga horária específica e o professor vinculado em cada uma.</p>
+                        <p id="msgTurmaDisciplina"></p>
+                        <div id="listaTurmasDisciplinasAdmin" class="admin-accordion-list"></div>
+                    </article>
+
+                    <div class="admin-grid">
                     <article class="admin-card">
                         <h2>Cadastrar turma</h2>
                         <form id="formTurma" class="admin-form">
@@ -145,13 +152,6 @@
                     <article class="admin-card">
                         <h2>Catálogo de disciplinas</h2>
                         <ul id="listaDisciplinasAdmin" class="admin-list"></ul>
-                    </article>
-
-                    <article class="admin-card admin-card-wide admin-only" data-admin-only="true">
-                        <h2>Disciplinas por turma</h2>
-                        <p class="booking-detail">Abra a turma para ajustar as disciplinas ofertadas, a carga horária específica e o professor vinculado em cada uma.</p>
-                        <p id="msgTurmaDisciplina"></p>
-                        <div id="listaTurmasDisciplinasAdmin" class="admin-accordion-list"></div>
                     </article>
                 </div>
             </section>

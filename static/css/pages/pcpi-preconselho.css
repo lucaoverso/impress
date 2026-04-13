@@ -240,6 +240,7 @@
     color: #1f2937;
     border-left: 3px solid #b8d7ef;
     padding-left: 8px;
+    white-space: pre-line;
 }
 
 .pcpi-item-note.is-secondary {

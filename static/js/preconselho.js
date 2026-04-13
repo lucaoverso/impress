@@ -570,14 +570,19 @@ function renderizarEstudantesDocente() {
                     <span class="preconselho-list-button-top">
                         <strong>${escaparHtml(item.nome || "")}</strong>
                         <span class="pcpi-tag-group">
-                            <span class="pcpi-chip ${item.sinalizado ? "pcpi-chip-manual" : "pcpi-chip-automatico"}">${item.sinalizado ? "Sinalizado" : "Nao sinalizado"}</span>
+                            <span class="pcpi-chip ${item.sinalizado ? "pcpi-chip-manual" : "pcpi-chip-automatico"}">${item.sinalizado ? "Sinalizado" : "Estudante Ok"}</span>
                         </span>
                     </span>
                     <span class="pcpi-item-note">${escaparHtml(
                         item.sinalizado
-                            ? `${item.motivos.length} motivo(s) selecionado(s)${nivel ? ` • Atencao ${nivel}` : ""}`
-                            : "Clique para abrir um relato."
-                    )}</span>
+                            ? `${item.motivos.length} motivo(s) selecionado(s)`
+                            + (nivel ? ` • Atencao ${nivel}` : "")
+                            + (item.motivos.length
+                                ? `\n${item.motivos.map((m) => `- ${escaparHtml(m.descricao || "")}`).join("\n")}`
+                                : ""
+                            )
+                            : "Clique para abrir um relato.")}
+                    </span>
                 </button>
             </li>
         `;

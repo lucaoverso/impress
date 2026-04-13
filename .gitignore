@@ -10,6 +10,8 @@ __pycache__/
 # Virtual environments
 .venv/
 venv/
+.local-python/
+*.ps1
 
 # Environment variables
 .env
