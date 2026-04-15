@@ -20,6 +20,7 @@ gerar_relatorio_uso_recursos = proxy("gerar_relatorio_uso_recursos")
 gerar_relatorio_uso_recursos_por_professor = proxy("gerar_relatorio_uso_recursos_por_professor")
 listar_fila = proxy("listar_fila")
 listar_historico = proxy("listar_historico")
+listar_arquivo_paths_jobs_em_andamento = proxy("listar_arquivo_paths_jobs_em_andamento")
 listar_jobs_ativos = proxy("listar_jobs_ativos")
 listar_jobs_por_usuario = proxy("listar_jobs_por_usuario")
 obter_regras_cota = proxy("obter_regras_cota")
@@ -46,6 +47,7 @@ __all__ = [
     "gerar_relatorio_uso_recursos_por_professor",
     "listar_fila",
     "listar_historico",
+    "listar_arquivo_paths_jobs_em_andamento",
     "listar_jobs_ativos",
     "listar_jobs_por_usuario",
     "obter_regras_cota",

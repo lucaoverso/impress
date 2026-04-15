@@ -246,6 +246,25 @@ def listar_historico(data_inicio=None, data_fim=None, usuario_id=None):
     return [dict(r) for r in rows]
 
 
+def listar_arquivo_paths_jobs_em_andamento():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT arquivo_path
+        FROM jobs
+        WHERE status IN ('PENDENTE', 'IMPRIMINDO')
+          AND TRIM(COALESCE(arquivo_path, '')) <> ''
+    """
+    )
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    return [str(row["arquivo_path"]).strip() for row in rows if str(row["arquivo_path"] or "").strip()]
+
+
 def listar_jobs_por_usuario(usuario_id):
     conn = get_connection()
     cursor = conn.cursor()

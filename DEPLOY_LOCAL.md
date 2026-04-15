@@ -89,6 +89,10 @@ Ajuste recomendado em `.env` para o banco fora da pasta do código:
 - `DB_PATH=/opt/sistema-impress-data/impressao.db`
 - `LOG_LEVEL=INFO`
 
+Ajuste opcional para diagnostico controlado no spool:
+- `KEEP_SPOOL_FILES=true`
+- `SPOOL_RETENTION_DAYS=7`
+
 Ajuste recomendado para integração FreeRADIUS:
 - `RADIUS_INTERNAL_SECRET=<segredo-forte-aleatorio>` (usado no endpoint interno de migração silenciosa de `nt_hash`)
 

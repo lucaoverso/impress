@@ -49,7 +49,8 @@ Por isso, no servidor, vale a pena manter um arquivo `/opt/sistema-impress/.env`
 | `SPOOL_DIR` | `routers/config.py`, `routers/impressao_router.py` | `./spool` | Diretorio onde uploads e PDFs temporarios ficam aguardando processamento. No servidor prefira `/var/spool/sistema-impress`. |
 | `CUPS_PRINTER` | `routers/config.py`, `services/printer.py` | vazio | Fila padrao do CUPS. Use o nome exato retornado por `lpstat -p`. |
 | `ENABLE_EMBEDDED_WORKER` | `routers/config.py`, `main.py` | `false` | Aceita `1`, `true` ou `yes` para ativar. Em producao, o recomendado e `false` quando houver servico worker dedicado. |
-| `KEEP_SPOOL_FILES` | `services/worker.py` | `false` | Mantem os arquivos do spool apos impressao. Deixe `false` e ative apenas para diagnostico. |
+| `KEEP_SPOOL_FILES` | `services/worker.py` | `false` | Mantem os arquivos do spool apos impressao concluida. Use junto de `SPOOL_RETENTION_DAYS` se quiser diagnostico com prazo. |
+| `SPOOL_RETENTION_DAYS` | `services/worker.py` | `0` | Quando maior que zero, o worker remove arquivos do `SPOOL_DIR` mais antigos que esse numero de dias. Jobs `PENDENTE` e `IMPRIMINDO` sao preservados. |
 | `LOG_LEVEL` | `app_logging.py` | `INFO` | Aceita niveis do `logging`, como `DEBUG`, `INFO`, `WARNING` e `ERROR`. |
 | `TOKEN_TTL_DIAS` | `database.py`, `services/auth_service.py` | `7` | So aceita `7` ou `15`. Qualquer outro valor volta para `7`. |
 | `PRINT_CANCEL_WINDOW_SECONDS` | `routers/config.py`, `services/worker.py` | `15` | Janela de cancelamento antes do worker despachar o job. Valores invalidos voltam para `15`. |
@@ -69,6 +70,7 @@ SPOOL_DIR=/var/spool/sistema-impress
 CUPS_PRINTER=HP_LaserJet
 ENABLE_EMBEDDED_WORKER=false
 KEEP_SPOOL_FILES=false
+SPOOL_RETENTION_DAYS=0
 LOG_LEVEL=INFO
 TOKEN_TTL_DIAS=7
 PRINT_CANCEL_WINDOW_SECONDS=15
@@ -84,6 +86,7 @@ LIBREOFFICE_COMMAND=/usr/bin/soffice
 - Use caminhos absolutos em todas as variaveis de caminho.
 - Mantenha `ENABLE_EMBEDDED_WORKER=false` e rode o worker em servico separado.
 - Deixe `KEEP_SPOOL_FILES=false` por padrao.
+- Se ativar `KEEP_SPOOL_FILES`, configure `SPOOL_RETENTION_DAYS` com um prazo curto, como `7`.
 - Preencha `RADIUS_INTERNAL_SECRET` apenas se a integracao com FreeRADIUS estiver ativa.
 - Se a impressao de `DOC` e `DOCX` for necessaria, instale o LibreOffice e configure `LIBREOFFICE_COMMAND` de forma explicita.
 - Considere fixar `STATIC_ASSET_VERSION` por release se quiser evitar invalidez de cache a cada restart.

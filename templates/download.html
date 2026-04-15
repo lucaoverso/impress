@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Suíte Escolar - Download YouTube</title>
+    {% include "includes/style_bundle.html" %}
+</head>
+
+<body>
+    <main class="download-page">
+        <header class="download-header">
+            <div>
+                <p class="auth-badge">Mídias para aula</p>
+                <h1>Baixar vídeo ou música do YouTube</h1>
+                <p>Cole o link, confira os dados do vídeo e salve em MP4 ou MP3.</p>
+            </div>
+            <div class="download-header-actions">
+                <button id="btnVoltarServicos" type="button">Serviços</button>
+                <button id="btnSair" type="button">Sair</button>
+            </div>
+        </header>
+
+        <section id="secaoFormulario" class="download-card">
+            <div class="download-card-copy">
+                <h2>Link do vídeo</h2>
+                <p>Funciona melhor com links diretos do YouTube, Shorts ou playlists individuais abertas em um vídeo.
+                </p>
+            </div>
+
+            <form id="formYoutube" class="download-form">
+                <label for="campoYoutubeUrl">Cole aqui a URL do vídeo</label>
+                <input id="campoYoutubeUrl" name="url" type="url" placeholder="https://www.youtube.com/watch?v=..."
+                    required>
+                <div class="download-form-actions">
+                    <button id="btnVerDetalhes" class="btn-primario" type="submit" onclick="ativarPainel()">Continuar</button>
+                </div>
+            </form>
+            <p id="mensagemFormulario" class="download-feedback" hidden></p>
+        </section>
+
+        <section id="secaoDetalhes" class="download-details" hidden>
+            <article class="download-details-card">
+                <div class="download-details-summary">
+                    <img id="previewMiniatura" class="download-thumb" alt="Miniatura do vídeo">
+                    <div class="download-preview-copy">
+                        <p class="download-eyebrow">Prévia do download</p>
+                        <h3 id="previewTitulo">Carregando...</h3>
+                        <dl class="download-meta-list">
+                            <div>
+                                <dt>Duração</dt>
+                                <dd id="previewDuracao">--:--</dd>
+                            </div>
+                            <div>
+                                <dt>Autor</dt>
+                                <dd id="previewAutor">-</dd>
+                            </div>
+                            <div>
+                                <dt>Qualidade máxima</dt>
+                                <dd id="previewResolucao">-</dd>
+                            </div>
+                        </dl>
+                    </div>
+                </div>
+
+                <div class="download-details-actions">
+                    <fieldset class="download-quality-group">
+                        <legend>Qualidade do Vídeo</legend>
+                        <p>Quanto maior a qualidade, maior o tamanho do arquivo.</p>
+                        <div class="download-quality-options">
+                            <label class="download-quality-option" data-qualidade-opcao="720p">
+                                <input type="radio" name="qualidadeMp4" value="720p">
+                                <span class="download-quality-option-copy">
+                                    <strong data-qualidade-rotulo="720p">720p</strong>
+                                </span>
+                            </label>
+                            <label class="download-quality-option" data-qualidade-opcao="1080p">
+                                <input type="radio" name="qualidadeMp4" value="1080p">
+                                <span class="download-quality-option-copy">
+                                    <strong data-qualidade-rotulo="1080p">1080p</strong>
+                                </span>
+                            </label>
+                            <label class="download-quality-option" data-qualidade-opcao="2160p">
+                                <input type="radio" name="qualidadeMp4" value="2160p">
+                                <span class="download-quality-option-copy">
+                                    <strong data-qualidade-rotulo="2160p">2160p (4K)</strong>
+                                </span>
+                            </label>
+                        </div>
+                    </fieldset>
+
+                    <div class="download-actions-footer">
+                        <div class="download-format-actions">
+                            <button id="btnBaixarMp4" class="btn-primario" type="button">Baixar Vídeo</button>
+                            <button id="btnBaixarMp3" type="button">Baixar Audio</button>
+                        </div>
+                    </div>
+                </div>
+            </article>
+        </section>
+    </main>
+
+    <footer>
+        <p>Desenvolvido por Lucas Sbaraini</p>
+        <p>2026</p>
+    </footer>
+
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/download.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+
+</html>

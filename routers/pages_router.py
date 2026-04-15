@@ -49,6 +49,26 @@ def agendamento_page(request: Request):
     )
 
 
+@router.get("/download")
+def download_page(request: Request):
+    return render_template_response(
+        request,
+        "download.html",
+        {"asset_version": ASSET_VERSION},
+        cache_control="no-store",
+    )
+
+
+@router.get("/download/detalhes")
+def download_details_page(request: Request):
+    return render_template_response(
+        request,
+        "download.html",
+        {"asset_version": ASSET_VERSION},
+        cache_control="no-store",
+    )
+
+
 @router.get("/pcpi")
 def pcpi_page(request: Request):
     return render_template_response(

@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import shutil
 import uuid
 from math import ceil
 from pathlib import Path
@@ -133,6 +134,160 @@ def montar_opcoes_cups(
     return opcoes
 
 
+def validar_parametros_impressao(
+    copias: int,
+    paginas_por_folha: int,
+    orientacao: str,
+):
+    if copias <= 0:
+        raise HTTPException(400, "Quantidade inválida")
+    if paginas_por_folha not in (1, 2, 4):
+        raise HTTPException(400, "Paginação por folha inválida")
+    if orientacao not in ("retrato", "paisagem"):
+        raise HTTPException(400, "Orientação inválida")
+
+
+def obter_job_com_acesso(job_id: int, usuario: dict) -> dict:
+    job = buscar_job(job_id)
+    if not job:
+        raise HTTPException(404, "Job não encontrado.")
+
+    usuario_job_raw = job.get("usuario_id")
+    usuario_job_id = int(usuario_job_raw) if usuario_job_raw is not None else None
+    eh_gestor = usuario_eh_gestor(usuario)
+    eh_dono = usuario_job_id is not None and usuario_job_id == int(usuario["id"])
+    if not eh_gestor and not eh_dono:
+        raise HTTPException(403, "Você não pode acessar este job.")
+
+    return job
+
+
+def job_pode_ser_reutilizado(job: dict) -> bool:
+    status = str(job.get("status") or "").strip().upper()
+    return status in {"CONCLUIDO", "FINALIZADO"}
+
+
+def resolver_caminho_pdf_job(job: dict) -> Path:
+    arquivo_path = str(job.get("arquivo_path") or "").strip()
+    if not arquivo_path:
+        raise HTTPException(404, "Este job não possui arquivo disponível para reutilização.")
+
+    caminho_spool = garantir_diretorio_spool().resolve(strict=False)
+    caminho_job = Path(arquivo_path).resolve(strict=False)
+    try:
+        caminho_job.relative_to(caminho_spool)
+    except ValueError as exc:
+        raise HTTPException(409, "O arquivo vinculado a este job está fora do spool configurado.") from exc
+
+    if not caminho_job.exists() or not caminho_job.is_file():
+        raise HTTPException(404, "O arquivo deste job não está mais disponível no spool.")
+
+    return caminho_job
+
+
+def copiar_pdf_job_para_spool(caminho_origem: Path, nome_referencia: str) -> Path:
+    nome_sanitizado = sanitizar_nome_arquivo(nome_referencia or caminho_origem.name or "documento.pdf")
+    nome_base = Path(nome_sanitizado).stem or "documento"
+    caminho_destino = garantir_diretorio_spool() / f"{uuid.uuid4().hex}_{nome_base}.pdf"
+    try:
+        shutil.copy2(caminho_origem, caminho_destino)
+    except OSError as exc:
+        raise HTTPException(
+            500,
+            "Falha ao preparar o arquivo do histórico para uma nova impressão.",
+        ) from exc
+    return caminho_destino
+
+
+def criar_job_a_partir_pdf_pronto(
+    *,
+    caminho_arquivo: Path,
+    nome_arquivo_exibicao: str,
+    copias: int,
+    paginas_por_folha: int,
+    duplex: bool,
+    orientacao: str,
+    intervalo_paginas: str,
+    usuario_responsavel: dict,
+    remover_arquivo_em_falha: bool = True,
+):
+    def limpar_em_falha():
+        if remover_arquivo_em_falha:
+            remover_arquivo_se_existir(caminho_arquivo)
+
+    try:
+        paginas_pdf = contar_paginas_pdf(str(caminho_arquivo))
+    except Exception:
+        limpar_em_falha()
+        raise
+
+    intervalo_normalizado = (intervalo_paginas or "").strip()
+    try:
+        paginas_selecionadas = contar_paginas_intervalo(intervalo_normalizado, paginas_pdf)
+    except Exception:
+        limpar_em_falha()
+        raise
+
+    folhas_por_copia = ceil(paginas_selecionadas / paginas_por_folha)
+    if duplex:
+        folhas_por_copia = ceil(folhas_por_copia / 2)
+    paginas_totais = folhas_por_copia * copias
+
+    cota_ilimitada = usuario_tem_cota_ilimitada(usuario_responsavel)
+    restante = None
+    if not cota_ilimitada:
+        try:
+            autorizado, restante = validar_e_consumir_cota(
+                usuario_id=usuario_responsavel["id"],
+                paginas=paginas_totais,
+            )
+        except Exception:
+            limpar_em_falha()
+            raise
+
+        if not autorizado:
+            limpar_em_falha()
+            raise HTTPException(
+                403,
+                f"Cota insuficiente. Documento consome {paginas_totais} páginas. Restam {restante}.",
+            )
+
+    opcoes_cups = montar_opcoes_cups(
+        paginas_por_folha=paginas_por_folha,
+        duplex=duplex,
+        orientacao=orientacao,
+        intervalo_paginas=intervalo_normalizado,
+    )
+
+    try:
+        criar_job(
+            usuario_id=usuario_responsavel["id"],
+            arquivo=nome_arquivo_exibicao,
+            arquivo_path=str(caminho_arquivo),
+            copias=copias,
+            paginas_totais=paginas_totais,
+            paginas_por_folha=paginas_por_folha,
+            duplex=duplex,
+            orientacao=orientacao,
+            intervalo_paginas=intervalo_normalizado,
+            printer_name=DEFAULT_PRINTER_NAME,
+            cups_options=json.dumps(opcoes_cups, ensure_ascii=True),
+        )
+    except Exception:
+        limpar_em_falha()
+        raise
+
+    return {
+        "mensagem": "Job criado com sucesso",
+        "paginas_documento": paginas_pdf,
+        "paginas_selecionadas": paginas_selecionadas,
+        "copias": copias,
+        "paginas_consumidas": paginas_totais,
+        "paginas_restantes": restante,
+        "cota_ilimitada": cota_ilimitada,
+    }
+
+
 @router.get("/impressao/turmas")
 def turmas_impressao(_usuario=Depends(get_usuario_logado)):
     turmas = []
@@ -159,8 +314,7 @@ def imprimir(
     professor_id: int | None = Form(None),
     usuario=Depends(get_usuario_logado),
 ):
-    if copias <= 0:
-        raise HTTPException(400, "Quantidade inválida")
+    validar_parametros_impressao(copias, paginas_por_folha, orientacao)
 
     if not arquivo or not arquivo.filename:
         raise HTTPException(400, "Arquivo não enviado")
@@ -169,10 +323,6 @@ def imprimir(
         raise HTTPException(400, f"Formato não suportado. Envie {FORMATOS_UPLOAD_DESCRICAO}.")
 
     extensao_arquivo = obter_extensao_arquivo(arquivo.filename)
-    if paginas_por_folha not in (1, 2, 4):
-        raise HTTPException(400, "Paginação por folha inválida")
-    if orientacao not in ("retrato", "paisagem"):
-        raise HTTPException(400, "Orientação inválida")
 
     usuario_responsavel = resolver_usuario_professor_selecionado(
         usuario,
@@ -215,77 +365,16 @@ def imprimir(
     if caminho_arquivo != caminho_arquivo_original:
         remover_arquivo_se_existir(caminho_arquivo_original)
 
-    try:
-        paginas_pdf = contar_paginas_pdf(str(caminho_arquivo))
-    except Exception:
-        remover_arquivo_se_existir(caminho_arquivo)
-        raise
-
-    intervalo_normalizado = (intervalo_paginas or "").strip()
-    try:
-        paginas_selecionadas = contar_paginas_intervalo(intervalo_normalizado, paginas_pdf)
-    except Exception:
-        remover_arquivo_se_existir(caminho_arquivo)
-        raise
-
-    folhas_por_copia = ceil(paginas_selecionadas / paginas_por_folha)
-    if duplex:
-        folhas_por_copia = ceil(folhas_por_copia / 2)
-    paginas_totais = folhas_por_copia * copias
-
-    cota_ilimitada = usuario_tem_cota_ilimitada(usuario_responsavel)
-    restante = None
-    if not cota_ilimitada:
-        try:
-            autorizado, restante = validar_e_consumir_cota(
-                usuario_id=usuario_responsavel["id"],
-                paginas=paginas_totais,
-            )
-        except Exception:
-            remover_arquivo_se_existir(caminho_arquivo)
-            raise
-
-        if not autorizado:
-            remover_arquivo_se_existir(caminho_arquivo)
-            raise HTTPException(
-                403,
-                f"Cota insuficiente. Documento consome {paginas_totais} páginas. Restam {restante}.",
-            )
-
-    opcoes_cups = montar_opcoes_cups(
+    return criar_job_a_partir_pdf_pronto(
+        caminho_arquivo=caminho_arquivo,
+        nome_arquivo_exibicao=arquivo.filename,
+        copias=copias,
         paginas_por_folha=paginas_por_folha,
         duplex=duplex,
         orientacao=orientacao,
-        intervalo_paginas=intervalo_normalizado,
+        intervalo_paginas=intervalo_paginas,
+        usuario_responsavel=usuario_responsavel,
     )
-
-    try:
-        criar_job(
-            usuario_id=usuario_responsavel["id"],
-            arquivo=arquivo.filename,
-            arquivo_path=str(caminho_arquivo),
-            copias=copias,
-            paginas_totais=paginas_totais,
-            paginas_por_folha=paginas_por_folha,
-            duplex=duplex,
-            orientacao=orientacao,
-            intervalo_paginas=intervalo_normalizado,
-            printer_name=DEFAULT_PRINTER_NAME,
-            cups_options=json.dumps(opcoes_cups, ensure_ascii=True),
-        )
-    except Exception:
-        remover_arquivo_se_existir(caminho_arquivo)
-        raise
-
-    return {
-        "mensagem": "Job criado com sucesso",
-        "paginas_documento": paginas_pdf,
-        "paginas_selecionadas": paginas_selecionadas,
-        "copias": copias,
-        "paginas_consumidas": paginas_totais,
-        "paginas_restantes": restante,
-        "cota_ilimitada": cota_ilimitada,
-    }
 
 
 @router.post("/impressao/preview")
@@ -348,19 +437,75 @@ def fila(usuario=Depends(get_usuario_logado)):
     return listar_fila()
 
 
+@router.get("/jobs/{job_id}/preview")
+def preview_job_historico(job_id: int, usuario=Depends(get_usuario_logado)):
+    job = obter_job_com_acesso(job_id, usuario)
+    if not job_pode_ser_reutilizado(job):
+        raise HTTPException(409, "Apenas jobs concluídos podem ser reutilizados no preview.")
+
+    caminho_arquivo = resolver_caminho_pdf_job(job)
+    try:
+        conteudo_pdf = caminho_arquivo.read_bytes()
+    except OSError as exc:
+        raise HTTPException(500, "Falha ao ler o arquivo vinculado a este job.") from exc
+
+    if not conteudo_pdf:
+        raise HTTPException(404, "O arquivo deste job está vazio ou indisponível.")
+
+    return Response(
+        content=conteudo_pdf,
+        media_type="application/pdf",
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@router.post("/jobs/{job_id}/reimprimir")
+def reimprimir_job_historico(
+    job_id: int,
+    copias: int = Form(...),
+    paginas_por_folha: int = Form(1),
+    duplex: bool = Form(False),
+    orientacao: str = Form("retrato"),
+    intervalo_paginas: str = Form(""),
+    professor_id: int | None = Form(None),
+    usuario=Depends(get_usuario_logado),
+):
+    validar_parametros_impressao(copias, paginas_por_folha, orientacao)
+
+    job = obter_job_com_acesso(job_id, usuario)
+    if not job_pode_ser_reutilizado(job):
+        raise HTTPException(409, "Apenas jobs concluídos podem ser reutilizados para nova impressão.")
+
+    usuario_responsavel = resolver_usuario_professor_selecionado(
+        usuario,
+        professor_id,
+        contexto="solicitante da reimpressão",
+    )
+
+    caminho_origem = resolver_caminho_pdf_job(job)
+    caminho_copia = copiar_pdf_job_para_spool(
+        caminho_origem,
+        str(job.get("arquivo") or caminho_origem.name),
+    )
+
+    return criar_job_a_partir_pdf_pronto(
+        caminho_arquivo=caminho_copia,
+        nome_arquivo_exibicao=str(job.get("arquivo") or caminho_origem.name),
+        copias=copias,
+        paginas_por_folha=paginas_por_folha,
+        duplex=duplex,
+        orientacao=orientacao,
+        intervalo_paginas=intervalo_paginas,
+        usuario_responsavel=usuario_responsavel,
+    )
+
+
 @router.post("/jobs/{job_id}/cancelar")
 def cancelar(job_id: int, usuario=Depends(get_usuario_logado)):
-    job = buscar_job(job_id)
-    if not job:
-        raise HTTPException(404, "Job não encontrado.")
+    job = obter_job_com_acesso(job_id, usuario)
 
     usuario_job_raw = job.get("usuario_id")
     usuario_job_id = int(usuario_job_raw) if usuario_job_raw is not None else None
-    eh_gestor = usuario_eh_gestor(usuario)
-    eh_dono = usuario_job_id is not None and usuario_job_id == int(usuario["id"])
-    if not eh_gestor and not eh_dono:
-        raise HTTPException(403, "Você não pode cancelar este job.")
-
     usuario_job = (
         buscar_usuario_por_id(usuario_job_id, incluir_inativos=True)
         if usuario_job_id is not None

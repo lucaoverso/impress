@@ -18,6 +18,7 @@ let usuarioAtual = null;
 let professoresImpressao = [];
 let turmasImpressao = [];
 let arquivoSelecionadoAtual = null;
+let jobHistoricoSelecionadoAtual = null;
 const QUALIDADE_MAX_DPR = 1.4;
 const FOLHA_PADDING = 8;
 const FOLHA_GAP = 6;
@@ -320,7 +321,11 @@ function atualizarEstadoArquivoSelecionado() {
 
     if (nomeArquivo) {
         nomeArquivo.innerText = arquivo
-            ? `Selecionado: ${arquivo.name}`
+            ? (
+                jobHistoricoSelecionadoAtual
+                    ? `Histórico: ${arquivo.name}`
+                    : `Selecionado: ${arquivo.name}`
+            )
             : "Nenhum arquivo selecionado.";
     }
 }
@@ -449,9 +454,11 @@ async function selecionarArquivoParaImpressao(file, mensagemSucesso = "") {
         return false;
     }
 
+    jobHistoricoSelecionadoAtual = null;
     arquivoSelecionadoAtual = arquivo;
     sincronizarInputArquivo(arquivo);
     atualizarEstadoArquivoSelecionado();
+    atualizarDestaqueJobSelecionado();
 
     await carregarPreview(arquivo);
     if (mensagemSucesso && !el("msg").innerText.trim()) {
@@ -461,7 +468,10 @@ async function selecionarArquivoParaImpressao(file, mensagemSucesso = "") {
 }
 
 function arquivoEhPdf(file) {
-    return obterExtensaoArquivo(file?.name || "") === "pdf";
+    return (
+        obterExtensaoArquivo(file?.name || "") === "pdf"
+        || String(file?.type || "").trim().toLowerCase() === "application/pdf"
+    );
 }
 
 function arquivoSuportado(file) {
@@ -803,6 +813,35 @@ function jobPodeSerCancelado(job) {
     return normalizarStatusJob(job?.status) === "PENDENTE";
 }
 
+function jobPodeSerReutilizado(job) {
+    const statusNormalizado = normalizarStatusJob(job?.status);
+    return statusNormalizado === "CONCLUIDO" || statusNormalizado === "FINALIZADO";
+}
+
+function jobHistoricoEstaSelecionado(job) {
+    return Number(jobHistoricoSelecionadoAtual?.id || 0) === Number(job?.id || 0);
+}
+
+function atualizarDestaqueJobSelecionado() {
+    const items = document.querySelectorAll("#lista-jobs .print-job-item[data-job-id]");
+    items.forEach((item) => {
+        const selecionado = Number(item.dataset.jobId || 0) === Number(jobHistoricoSelecionadoAtual?.id || 0);
+        item.classList.toggle("is-selected-source", selecionado);
+
+        const botao = item.querySelector(".print-job-reuse-btn");
+        if (botao) {
+            botao.innerText = selecionado ? "No preview" : "Usar novamente";
+        }
+
+        const dica = item.querySelector(".print-job-hint");
+        if (dica) {
+            dica.innerText = selecionado
+                ? "Arquivo carregado no preview atual."
+                : "Clique para abrir este arquivo novamente no preview.";
+        }
+    });
+}
+
 function atualizarEstadoEnvio(ativo, mensagem = "") {
     const botao = el("btnEnviar");
     const estado = el("estadoEnvio");
@@ -829,19 +868,21 @@ async function enviarImpressao() {
     }
 
     const arquivo = obterArquivoSelecionado();
+    const jobHistoricoId = Number(jobHistoricoSelecionadoAtual?.id || 0);
     const copias = Number(el("copias").value);
     const paginasPorFolha = Number(el("paginasPorFolha").value);
     const duplex = el("duplex").checked;
     const orientacao = obterOrientacaoPreview();
     const intervaloPaginas = el("intervaloPaginas").value.trim();
     const professorSolicitanteId = obterProfessorSolicitanteSelecionadoId();
+    const usaHistorico = jobHistoricoId > 0;
 
-    if (!arquivo || !copias || copias < 1) {
+    if ((!arquivo && !usaHistorico) || !copias || copias < 1) {
         el("msg").innerText = "Selecione um arquivo e informe uma quantidade válida de cópias.";
         return;
     }
 
-    if (!arquivoSuportado(arquivo)) {
+    if (arquivo && !arquivoSuportado(arquivo)) {
         el("msg").innerText = "Formato não suportado. Use PDF, DOCX, DOC, PNG, JPG ou JPEG.";
         return;
     }
@@ -859,19 +900,25 @@ async function enviarImpressao() {
     const cotaIlimitadaAdmin = usuarioEhAdmin() && !professorSolicitanteId;
     atualizarEstadoEnvio(
         true,
-        cotaIlimitadaAdmin
-            ? "Enviando para fila com cota ilimitada do admin..."
-            : "Enviando para fila e validando consumo da cota..."
+        usaHistorico
+            ? "Reenviando arquivo do histórico para a fila..."
+            : (
+                cotaIlimitadaAdmin
+                    ? "Enviando para fila com cota ilimitada do admin..."
+                    : "Enviando para fila e validando consumo da cota..."
+            )
     );
     el("msg").innerText = "";
 
     try {
         const formData = new FormData();
-        formData.append("arquivo", arquivo);
         formData.append("copias", copias);
         formData.append("paginas_por_folha", paginasPorFolha);
         formData.append("duplex", duplex);
         formData.append("orientacao", orientacao);
+        if (!usaHistorico) {
+            formData.append("arquivo", arquivo);
+        }
         if (intervaloPaginas) {
             formData.append("intervalo_paginas", intervaloPaginas);
         }
@@ -879,7 +926,8 @@ async function enviarImpressao() {
             formData.append("professor_id", professorSolicitanteId);
         }
 
-        const res = await fetchComAuth("/imprimir", {
+        const endpoint = usaHistorico ? `/jobs/${jobHistoricoId}/reimprimir` : "/imprimir";
+        const res = await fetchComAuth(endpoint, {
             method: "POST",
             headers,
             body: formData
@@ -893,9 +941,10 @@ async function enviarImpressao() {
 
         const professorSelecionado = obterProfessorSelecionado();
         const sufixoDestino = professorSelecionado ? ` para ${professorSelecionado.nome}` : "";
+        const verbo = usaHistorico ? "Reenviado" : "Enviado";
         el("msg").innerText = data.cota_ilimitada
-            ? `Enviado${sufixoDestino}! Cota ilimitada do admin.`
-            : `Enviado${sufixoDestino}! Restam ${data.paginas_restantes} páginas`;
+            ? `${verbo}${sufixoDestino}! Cota ilimitada do admin.`
+            : `${verbo}${sufixoDestino}! Restam ${data.paginas_restantes} páginas`;
         await carregarFila();
         await carregarCota();
         calcularConsumo();
@@ -970,9 +1019,126 @@ async function cancelarJobProfessor(jobId, botaoCancelar) {
     }
 }
 
+function criarArquivoHistoricoVirtual(arrayBuffer, job) {
+    const nomeArquivo = String(job?.arquivo || `job-${job?.id || Date.now()}.pdf`).trim()
+        || `job-${job?.id || Date.now()}.pdf`;
+
+    if (typeof File === "function") {
+        return new File([arrayBuffer], nomeArquivo, {
+            type: "application/pdf",
+            lastModified: Date.now()
+        });
+    }
+
+    const blob = new Blob([arrayBuffer], { type: "application/pdf" });
+    blob.name = nomeArquivo;
+    return blob;
+}
+
+async function carregarDocumentoPdfNoPreview(arrayBuffer, cargaAtual) {
+    if (cargaAtual !== previewLoadSeq) {
+        return;
+    }
+
+    pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    if (cargaAtual !== previewLoadSeq) {
+        return;
+    }
+
+    folhaAtual = 1;
+    el("intervaloInfo").innerText = "";
+    atualizarPreview();
+}
+
+async function carregarJobHistoricoNoPreview(job) {
+    if (!job?.id || !jobPodeSerReutilizado(job)) {
+        return;
+    }
+
+    previewLoadSeq += 1;
+    const cargaAtual = previewLoadSeq;
+    if (previewAbortController) {
+        previewAbortController.abort();
+        previewAbortController = null;
+    }
+
+    pdfDoc = null;
+    folhaAtual = 1;
+    el("intervaloPaginas").value = "";
+    el("msg").innerText = "";
+    el("intervaloInfo").innerText = "Buscando arquivo do histórico...";
+    renderTokenAtual += 1;
+    mostrarPreviewVazio("Buscando arquivo do histórico...");
+    calcularConsumo();
+    atualizarContador();
+
+    try {
+        previewAbortController = new AbortController();
+        const res = await fetchComAuth(`/jobs/${job.id}/preview`, {
+            headers,
+            signal: previewAbortController.signal
+        });
+
+        if (!res.ok) {
+            const detalhe = await obterMensagemErroResposta(
+                res,
+                "Não foi possível carregar o arquivo deste histórico."
+            );
+            throw new Error(detalhe);
+        }
+
+        const arrayBuffer = await res.arrayBuffer();
+        if (cargaAtual !== previewLoadSeq) {
+            return;
+        }
+
+        const arquivoHistorico = criarArquivoHistoricoVirtual(arrayBuffer, job);
+        jobHistoricoSelecionadoAtual = {
+            id: Number(job.id),
+            arquivo: String(job?.arquivo || "")
+        };
+        arquivoSelecionadoAtual = arquivoHistorico;
+        sincronizarInputArquivo(null);
+        atualizarEstadoArquivoSelecionado();
+        atualizarDestaqueJobSelecionado();
+
+        await carregarDocumentoPdfNoPreview(arrayBuffer, cargaAtual);
+        if (cargaAtual === previewLoadSeq && !el("msg").innerText.trim()) {
+            el("msg").innerText = `Arquivo do job #${job.id} carregado novamente no preview.`;
+        }
+    } catch (err) {
+        if (err && err.name === "AbortError") {
+            return;
+        }
+        if (cargaAtual !== previewLoadSeq) {
+            return;
+        }
+
+        jobHistoricoSelecionadoAtual = null;
+        arquivoSelecionadoAtual = null;
+        sincronizarInputArquivo(null);
+        atualizarEstadoArquivoSelecionado();
+        atualizarDestaqueJobSelecionado();
+        pdfDoc = null;
+        folhaAtual = 1;
+        renderTokenAtual += 1;
+        el("msg").innerText = err?.message || "Falha ao carregar o arquivo do histórico.";
+        el("intervaloInfo").innerText = "";
+        mostrarPreviewVazio("Não foi possível carregar o arquivo do histórico.");
+        calcularConsumo();
+        atualizarContador();
+    } finally {
+        if (cargaAtual === previewLoadSeq) {
+            previewAbortController = null;
+        }
+    }
+}
+
 function criarItemJob(job) {
     const li = document.createElement("li");
     li.classList.add("print-job-item");
+    li.dataset.jobId = String(job?.id || "");
+    li.classList.toggle("is-selected-source", jobHistoricoEstaSelecionado(job));
 
     const topo = document.createElement("div");
     topo.classList.add("print-job-top");
@@ -997,6 +1163,42 @@ function criarItemJob(job) {
     li.appendChild(topo);
     li.appendChild(meta);
 
+    const podeReutilizar = jobPodeSerReutilizado(job);
+    if (podeReutilizar) {
+        li.classList.add("is-reusable");
+        li.tabIndex = 0;
+        li.setAttribute("role", "button");
+        li.setAttribute("aria-label", `Abrir novamente ${String(job?.arquivo || "este arquivo")} no preview`);
+        li.title = "Clique para abrir este arquivo novamente no preview.";
+
+        const dica = document.createElement("p");
+        dica.classList.add("print-job-hint");
+        dica.innerText = jobHistoricoEstaSelecionado(job)
+            ? "Arquivo carregado no preview atual."
+            : "Clique para abrir este arquivo novamente no preview.";
+        li.appendChild(dica);
+
+        const abrirNovamente = () => {
+            carregarJobHistoricoNoPreview(job).catch((err) => {
+                el("msg").innerText = err?.message || "Falha ao buscar o arquivo do histórico.";
+            });
+        };
+
+        li.addEventListener("click", (event) => {
+            if (event.target.closest("button")) {
+                return;
+            }
+            abrirNovamente();
+        });
+        li.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter" && event.key !== " ") {
+                return;
+            }
+            event.preventDefault();
+            abrirNovamente();
+        });
+    }
+
     if (job?.erro_mensagem) {
         const erro = document.createElement("p");
         erro.classList.add("print-job-error");
@@ -1004,17 +1206,36 @@ function criarItemJob(job) {
         li.appendChild(erro);
     }
 
-    if (jobPodeSerCancelado(job)) {
+    if (podeReutilizar || jobPodeSerCancelado(job)) {
         const acoes = document.createElement("div");
         acoes.classList.add("print-job-actions");
 
-        const btnCancelar = document.createElement("button");
-        btnCancelar.type = "button";
-        btnCancelar.classList.add("print-job-cancel-btn");
-        btnCancelar.innerText = "Cancelar";
-        btnCancelar.addEventListener("click", () => cancelarJobProfessor(job.id, btnCancelar));
+        if (podeReutilizar) {
+            const btnReutilizar = document.createElement("button");
+            btnReutilizar.type = "button";
+            btnReutilizar.classList.add("print-job-reuse-btn");
+            btnReutilizar.innerText = jobHistoricoEstaSelecionado(job) ? "No preview" : "Usar novamente";
+            btnReutilizar.addEventListener("click", (event) => {
+                event.stopPropagation();
+                carregarJobHistoricoNoPreview(job).catch((err) => {
+                    el("msg").innerText = err?.message || "Falha ao buscar o arquivo do histórico.";
+                });
+            });
+            acoes.appendChild(btnReutilizar);
+        }
 
-        acoes.appendChild(btnCancelar);
+        if (jobPodeSerCancelado(job)) {
+            const btnCancelar = document.createElement("button");
+            btnCancelar.type = "button";
+            btnCancelar.classList.add("print-job-cancel-btn");
+            btnCancelar.innerText = "Cancelar";
+            btnCancelar.addEventListener("click", (event) => {
+                event.stopPropagation();
+                cancelarJobProfessor(job.id, btnCancelar);
+            });
+            acoes.appendChild(btnCancelar);
+        }
+
         li.appendChild(acoes);
     }
 
@@ -1047,6 +1268,7 @@ async function carregarFila() {
     jobs.forEach((job) => {
         ul.appendChild(criarItemJob(job));
     });
+    atualizarDestaqueJobSelecionado();
 }
 
 function iniciarPollingFila() {
@@ -1070,9 +1292,11 @@ async function carregarPreview(file) {
     }
 
     if (!file) {
+        jobHistoricoSelecionadoAtual = null;
         arquivoSelecionadoAtual = null;
         sincronizarInputArquivo(null);
         atualizarEstadoArquivoSelecionado();
+        atualizarDestaqueJobSelecionado();
         pdfDoc = null;
         folhaAtual = 1;
         el("intervaloPaginas").value = "";
@@ -1085,9 +1309,11 @@ async function carregarPreview(file) {
     }
 
     if (!arquivoSuportado(file)) {
+        jobHistoricoSelecionadoAtual = null;
         arquivoSelecionadoAtual = null;
         sincronizarInputArquivo(null);
         atualizarEstadoArquivoSelecionado();
+        atualizarDestaqueJobSelecionado();
         pdfDoc = null;
         folhaAtual = 1;
         renderTokenAtual += 1;
@@ -1141,13 +1367,7 @@ async function carregarPreview(file) {
             return;
         }
 
-        pdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        if (cargaAtual !== previewLoadSeq) {
-            return;
-        }
-        folhaAtual = 1;
-        el("intervaloInfo").innerText = "";
-        atualizarPreview();
+        await carregarDocumentoPdfNoPreview(arrayBuffer, cargaAtual);
     } catch (err) {
         if (err && err.name === "AbortError") {
             return;

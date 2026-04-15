@@ -15,9 +15,9 @@ function modulosPermitidos(usuario = {}) {
     }
 
     const cargo = normalizarCargoUsuario(usuario);
-    if (cargo === "ADMIN") return new Set(["impressao", "agendamento", "gestao", "coordenacao", "pcpi", "preconselho"]);
-    if (cargo === "COORDENADOR") return new Set(["coordenacao", "preconselho"]);
-    return new Set(["impressao", "agendamento", "preconselho"]);
+    if (cargo === "ADMIN") return new Set(["impressao", "agendamento", "download", "gestao", "coordenacao", "pcpi", "preconselho"]);
+    if (cargo === "COORDENADOR") return new Set(["download", "coordenacao", "preconselho"]);
+    return new Set(["impressao", "agendamento", "download", "preconselho"]);
 }
 
 function aplicarVisibilidadeModulos(modulos) {

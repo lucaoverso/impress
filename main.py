@@ -18,6 +18,7 @@ import routers.agendamento_router as agendamento_router_module
 import routers.common as common_module
 import routers.config as config_module
 import routers.impressao_router as impressao_router_module
+import routers.download_router as download_router_module
 import routers.pages_router as pages_router_module
 import routers.professores_common as professores_common_module
 import routers.professores_router as professores_router_module
@@ -34,6 +35,7 @@ professores_common_module = importlib.reload(professores_common_module)
 system_router_module = importlib.reload(system_router_module)
 pages_router_module = importlib.reload(pages_router_module)
 impressao_router_module = importlib.reload(impressao_router_module)
+download_router_module = importlib.reload(download_router_module)
 agendamento_router_module = importlib.reload(agendamento_router_module)
 professores_router_module = importlib.reload(professores_router_module)
 admin_router_module = importlib.reload(admin_router_module)
@@ -44,6 +46,7 @@ STATIC_DIR = config_module.STATIC_DIR
 system_router = system_router_module.router
 pages_router = pages_router_module.router
 impressao_router = impressao_router_module.router
+download_router = download_router_module.router
 agendamento_router = agendamento_router_module.router
 professores_router = professores_router_module.router
 admin_router = admin_router_module.router
@@ -58,6 +61,8 @@ servicos_page = pages_router_module.servicos_page
 impressao_page = pages_router_module.impressao_page
 professor_redirect = pages_router_module.professor_redirect
 agendamento_page = pages_router_module.agendamento_page
+download_page = pages_router_module.download_page
+download_details_page = pages_router_module.download_details_page
 pcpi_page = pages_router_module.pcpi_page
 preconselho_page = pages_router_module.preconselho_page
 cadastro_professor_page = pages_router_module.cadastro_professor_page
@@ -156,6 +161,7 @@ app.include_router(auth_router)
 app.include_router(system_router)
 app.include_router(pages_router)
 app.include_router(impressao_router)
+app.include_router(download_router)
 app.include_router(agendamento_router)
 app.include_router(professores_router)
 app.include_router(admin_router)
