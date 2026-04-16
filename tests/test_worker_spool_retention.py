@@ -96,5 +96,24 @@ class WorkerSpoolRetentionTest(unittest.TestCase):
             self.assertTrue(arquivo.exists())
 
 
+class WorkerKeepSpoolDefaultTest(unittest.TestCase):
+    def setUp(self):
+        self._old_keep_spool_files = os.environ.get("KEEP_SPOOL_FILES")
+
+    def tearDown(self):
+        if self._old_keep_spool_files is None:
+            os.environ.pop("KEEP_SPOOL_FILES", None)
+        else:
+            os.environ["KEEP_SPOOL_FILES"] = self._old_keep_spool_files
+        sys.modules.pop("services.worker", None)
+
+    def test_keep_spool_files_ativo_por_padrao(self):
+        os.environ.pop("KEEP_SPOOL_FILES", None)
+
+        worker_mod = _importar_worker()
+
+        self.assertTrue(worker_mod.MANTER_ARQUIVOS_SPOOL)
+
+
 if __name__ == "__main__":
     unittest.main()

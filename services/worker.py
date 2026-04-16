@@ -14,7 +14,11 @@ from services.printer import imprimir_job
 BASE_DIR = Path(__file__).resolve().parent.parent
 INTERVALO = 2  # segundos
 INTERVALO_LIMPEZA_SPOOL_SEGUNDOS = 3600
-MANTER_ARQUIVOS_SPOOL = os.getenv("KEEP_SPOOL_FILES", "").strip().lower() in {"1", "true", "yes"}
+MANTER_ARQUIVOS_SPOOL = os.getenv("KEEP_SPOOL_FILES", "true").strip().lower() in {
+    "1",
+    "true",
+    "yes",
+}
 logger = logging.getLogger(__name__)
 DIRETORIO_SPOOL = Path(os.getenv("SPOOL_DIR", str(BASE_DIR / "spool")))
 ULTIMA_LIMPEZA_SPOOL_MONOTONIC = 0.0
