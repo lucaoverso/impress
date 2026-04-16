@@ -224,6 +224,36 @@ function modalRegistroDocenteAberto() {
     return Boolean(el("preconselhoModalEditor")) && !el("preconselhoModalEditor").hidden;
 }
 
+function resetarScrollModalRegistroDocente() {
+    const modal = el("preconselhoModalEditor");
+    const painel = el("preconselhoPainelEditor");
+    const editor = painel?.querySelector(".preconselho-editor-scroll");
+
+    [modal, painel, editor].forEach((container) => {
+        if (!container) {
+            return;
+        }
+
+        container.scrollTop = 0;
+        if (typeof container.scrollTo === "function") {
+            container.scrollTo({ top: 0, left: 0, behavior: "auto" });
+        }
+    });
+}
+
+function focarInicioModalRegistroDocente() {
+    const painel = el("preconselhoPainelEditor");
+    if (!painel || typeof painel.focus !== "function") {
+        return;
+    }
+
+    try {
+        painel.focus({ preventScroll: true });
+    } catch (_erro) {
+        painel.focus();
+    }
+}
+
 function abrirModalRegistroDocente() {
     const modal = el("preconselhoModalEditor");
     if (!modal) {
@@ -236,6 +266,10 @@ function abrirModalRegistroDocente() {
     }
     modal.hidden = false;
     document.body.classList.add("preconselho-modal-open");
+    window.requestAnimationFrame(() => {
+        resetarScrollModalRegistroDocente();
+        focarInicioModalRegistroDocente();
+    });
 }
 
 function fecharModalRegistroDocente({ limparFormulario = true, restaurarFoco = true } = {}) {
@@ -265,13 +299,6 @@ function abrirModalComEstudante(estudante) {
 
     preencherFormularioComEstudante(estudante);
     abrirModalRegistroDocente();
-    focarEditorDocenteSeNecessario();
-}
-
-function focarEditorDocenteSeNecessario() {
-    window.requestAnimationFrame(() => {
-        el("preconselhoNivelAtencao")?.focus();
-    });
 }
 
 function limparFormularioDocente() {
