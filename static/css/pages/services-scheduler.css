@@ -287,16 +287,17 @@
 
 .download-details-card {
     display: flex;
+    flex-direction: column;
     gap: 18px;
     padding: 18px;
     margin-top: 18px;
 }
 
 .download-details-summary {
-    display: grid;
-    grid-template-columns: minmax(220px, 320px) minmax(0, 1fr);
+    display: flex;
+    align-items: flex-start;
     gap: 18px;
-    align-items: start;
+    width: 100%;
 }
 
 .download-details-actions {
@@ -305,7 +306,7 @@
 }
 
 .download-thumb {
-    width: 100%;
+    width: 45%;
     aspect-ratio: 16 / 9;
     border-radius: 14px;
     object-fit: cover;

@@ -43,8 +43,9 @@ function exibirMensagem(elemento, mensagem, esconder = false) {
 }
 
 function ativarPainel() {
-    const painel = document.querySelector(".download-details");
-    painel.style.display = "grid";
+    if (!elementos.secaoDetalhes) return;
+    elementos.secaoDetalhes.hidden = false;
+    elementos.secaoDetalhes.style.display = "grid";
 }
 
 function alternarEstadoCarregando(botao, carregando, textoNormal, textoCarregando) {
@@ -146,12 +147,48 @@ function preencherDetalhes(info) {
     elementos.previewResolucao.textContent = info.resolucao_maxima_video || "Qualidade não informada";
     configurarOpcoesMp4(info.qualidades_mp4 || []);
     elementos.btnBaixarMp3.disabled = !info.mp3_disponivel;
+    const existeMp4Habilitado = (info.qualidades_mp4 || []).some((item) => item.habilitado);
+    if (!existeMp4Habilitado && !info.mp3_disponivel) {
+        exibirMensagem(
+            elementos.mensagemDetalhes,
+            "Este vídeo precisa de ffmpeg no servidor para liberar os downloads em MP4/MP3.",
+        );
+        return;
+    }
+    if (!existeMp4Habilitado) {
+        exibirMensagem(
+            elementos.mensagemDetalhes,
+            "Nenhuma qualidade MP4 está disponível para este vídeo com a configuração atual do servidor.",
+        );
+        return;
+    }
+    if (!info.mp3_disponivel) {
+        exibirMensagem(
+            elementos.mensagemDetalhes,
+            "MP3 indisponível no momento: instale o ffmpeg no servidor para habilitar a conversão.",
+        );
+        return;
+    }
+    exibirMensagem(elementos.mensagemDetalhes, "");
+}
+
+function mostrarPainelDetalhes() {
+    elementos.secaoFormulario.hidden = true;
+    ativarPainel();
+}
+
+function mostrarFormulario() {
+    elementos.secaoFormulario.hidden = false;
+    if (!elementos.secaoDetalhes) return;
+    elementos.secaoDetalhes.hidden = true;
+    elementos.secaoDetalhes.style.display = "";
 }
 
 async function carregarDetalhes(url) {
     bloquearOpcoesMp4("Carregando...");
     alternarEstadoCarregando(elementos.btnBaixarMp3, true, "Salvar em MP3", "Carregando...");
     exibirMensagem(elementos.mensagemDetalhes, "");
+    mostrarPainelDetalhes();
 
     try {
         const info = await fetchJson("/download/info", {
@@ -164,9 +201,8 @@ async function carregarDetalhes(url) {
         });
 
         preencherDetalhes(info);
-        elementos.secaoFormulario.hidden = true;
-        elementos.secaoDetalhes.hidden = false;
     } catch (erro) {
+        mostrarFormulario();
         exibirMensagem(elementos.mensagemDetalhes, erro.message || "Não foi possível carregar os detalhes do vídeo.");
     } finally {
         if (!infoAtual) {
@@ -265,7 +301,7 @@ function registrarEventos() {
         }
 
         exibirMensagem(elementos.mensagemFormulario, "");
-        window.location.href = `/download/detalhes?url=${encodeURIComponent(url)}`;
+        carregarDetalhes(url);
     });
 
     elementos.radiosMp4.forEach((radio) => {
@@ -287,8 +323,7 @@ function inicializarPagina() {
     registrarEventos();
     const url = obterUrlAtual();
     if (!url) {
-        elementos.secaoFormulario.hidden = false;
-        elementos.secaoDetalhes.hidden = true;
+        mostrarFormulario();
         return;
     }
 
