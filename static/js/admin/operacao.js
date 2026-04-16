@@ -106,7 +106,9 @@ async function carregarProfessores() {
         li.className = "admin-list-item";
 
         const titulo = document.createElement("p");
-        titulo.innerText = `${prof.nome} (${prof.email})`;
+        titulo.innerText = prof.acesso_coordenacao
+            ? `${prof.nome} (${prof.email}) | Professor com acesso à coordenação`
+            : `${prof.nome} (${prof.email})`;
 
         const cadastro = document.createElement("p");
         cadastro.className = "booking-detail";
@@ -286,6 +288,7 @@ async function cadastrarProfessor(event) {
         email: el("profEmail").value.trim(),
         data_nascimento: el("profDataNascimento").value,
         aulas_semanais: Number(el("profAulas").value),
+        acesso_coordenacao: Boolean(el("profAcessoCoordenacao")?.checked),
         turmas,
         disciplinas
     };
@@ -544,4 +547,3 @@ async function carregarRelatorios() {
         setMensagem("msgRelatorios", err.message, true);
     }
 }
-

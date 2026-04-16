@@ -730,6 +730,7 @@ def criar_professor_painel(
             turmas_quantidade=dados["turmas_quantidade"],
             turmas=dados["turmas"],
             disciplinas=dados["disciplinas"],
+            acesso_coordenacao=dados["acesso_coordenacao"],
         )
     except sqlite3.IntegrityError as exc:
         raise HTTPException(409, "Já existe um usuário com este email.") from exc
@@ -760,6 +761,7 @@ def atualizar_professor_painel(
             turmas_quantidade=dados["turmas_quantidade"],
             turmas=dados["turmas"],
             disciplinas=dados["disciplinas"],
+            acesso_coordenacao=dados["acesso_coordenacao"],
         )
     except sqlite3.IntegrityError as exc:
         raise HTTPException(409, "Já existe um usuário com este email.") from exc

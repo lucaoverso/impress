@@ -89,6 +89,10 @@ DISCIPLINAS_PADRAO = [
     "Sociologia",
 ]
 
+
+def _normalizar_booleano_sql(valor) -> int:
+    return 1 if bool(valor) else 0
+
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR_PADRAO = BASE_DIR.parent / "sistema-impress-data"
 DB_PATH_PADRAO = DATA_DIR_PADRAO / "impressao.db"
@@ -297,6 +301,7 @@ def criar_tabelas():
             nt_hash CHAR(32),
             perfil TEXT NOT NULL,
             cargo TEXT NOT NULL DEFAULT 'PROFESSOR',
+            acesso_coordenacao INTEGER NOT NULL DEFAULT 0,
             data_nascimento TEXT,
             ativo INTEGER NOT NULL DEFAULT 1
         )
@@ -1226,6 +1231,10 @@ def _garantir_colunas_usuarios(cursor):
 
     if "cargo" not in colunas:
         cursor.execute("ALTER TABLE usuarios ADD COLUMN cargo TEXT NOT NULL DEFAULT ''")
+    if "acesso_coordenacao" not in colunas:
+        cursor.execute(
+            "ALTER TABLE usuarios ADD COLUMN acesso_coordenacao INTEGER NOT NULL DEFAULT 0"
+        )
     if "data_nascimento" not in colunas:
         cursor.execute("ALTER TABLE usuarios ADD COLUMN data_nascimento TEXT")
     if "nt_hash" not in colunas:
@@ -1264,6 +1273,12 @@ def _garantir_colunas_usuarios(cursor):
         SET ativo = 1
         WHERE ativo IS NULL
            OR TRIM(COALESCE(CAST(ativo AS TEXT), '')) = ''
+    """)
+    cursor.execute("""
+        UPDATE usuarios
+        SET acesso_coordenacao = 0
+        WHERE acesso_coordenacao IS NULL
+           OR TRIM(COALESCE(CAST(acesso_coordenacao AS TEXT), '')) = ''
     """)
 
 
@@ -2704,7 +2719,7 @@ def buscar_usuario_por_token(token: str):
 
     cursor.execute(
         f"""
-        SELECT u.id, u.nome, u.email, u.perfil, u.cargo
+        SELECT u.id, u.nome, u.email, u.perfil, u.cargo, u.acesso_coordenacao
         FROM usuarios u
         JOIN tokens t ON u.id = t.usuario_id
         WHERE t.token = ?
@@ -2775,7 +2790,7 @@ def buscar_usuario_por_id(usuario_id: int, incluir_inativos: bool = False):
     cursor = conn.cursor()
 
     query = """
-        SELECT id, nome, email, perfil, cargo, data_nascimento, ativo
+        SELECT id, nome, email, perfil, cargo, acesso_coordenacao, data_nascimento, ativo
         FROM usuarios
         WHERE id = ?
     """
@@ -2881,6 +2896,7 @@ def criar_professor(
     turmas_quantidade: int = 0,
     turmas: list[str] = None,
     disciplinas: list[str] = None,
+    acesso_coordenacao: bool = False,
 ):
     conn = get_connection()
     cursor = conn.cursor()
@@ -2891,10 +2907,27 @@ def criar_professor(
 
     cursor.execute(
         """
-        INSERT INTO usuarios (nome, email, senha_hash, nt_hash, perfil, cargo, data_nascimento)
-        VALUES (?, ?, ?, ?, 'professor', ?, ?)
+        INSERT INTO usuarios (
+            nome,
+            email,
+            senha_hash,
+            nt_hash,
+            perfil,
+            cargo,
+            acesso_coordenacao,
+            data_nascimento
+        )
+        VALUES (?, ?, ?, ?, 'professor', ?, ?, ?)
     """,
-        (nome, email, senha_hash, nt_hash_final, CARGO_PROFESSOR, data_nascimento or None),
+        (
+            nome,
+            email,
+            senha_hash,
+            nt_hash_final,
+            CARGO_PROFESSOR,
+            _normalizar_booleano_sql(acesso_coordenacao),
+            data_nascimento or None,
+        ),
     )
 
     usuario_id = cursor.lastrowid
@@ -2922,6 +2955,7 @@ def atualizar_professor(
     turmas_quantidade: int = 0,
     turmas: list[str] = None,
     disciplinas: list[str] = None,
+    acesso_coordenacao: bool = False,
 ):
     conn = get_connection()
     cursor = conn.cursor()
@@ -2944,10 +2978,17 @@ def atualizar_professor(
     cursor.execute(
         """
         UPDATE usuarios
-        SET nome = ?, email = ?, cargo = ?, data_nascimento = ?
+        SET nome = ?, email = ?, cargo = ?, acesso_coordenacao = ?, data_nascimento = ?
         WHERE id = ?
     """,
-        (nome, email, CARGO_PROFESSOR, data_nascimento or None, usuario_id),
+        (
+            nome,
+            email,
+            CARGO_PROFESSOR,
+            _normalizar_booleano_sql(acesso_coordenacao),
+            data_nascimento or None,
+            usuario_id,
+        ),
     )
 
     cursor.execute(
@@ -4193,6 +4234,7 @@ def listar_professores_admin(mes: str = None):
             u.nome,
             u.email,
             u.data_nascimento,
+            COALESCE(u.acesso_coordenacao, 0) AS acesso_coordenacao,
             COALESCE(pc.aulas_semanais, 0) AS aulas_semanais,
             COALESCE(pc.turmas_quantidade, 0) AS turmas_quantidade,
             COALESCE(pc.turmas, '[]') AS turmas,
@@ -4212,6 +4254,7 @@ def listar_professores_admin(mes: str = None):
     )
 
     for professor in professores:
+        professor["acesso_coordenacao"] = bool(int(professor.get("acesso_coordenacao") or 0))
         professor["turmas"] = _desserializar_lista_texto(professor.get("turmas"))
         professor["disciplinas"] = _desserializar_lista_texto(professor.get("disciplinas"))
         atribuicoes = atribuicoes_por_usuario.get(int(professor["id"]), [])

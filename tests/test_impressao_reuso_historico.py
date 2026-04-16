@@ -131,6 +131,68 @@ class ImpressaoReusoHistoricoTest(unittest.TestCase):
             self.assertNotEqual(caminho_novo.resolve(), caminho_pdf.resolve())
             self.assertEqual(caminho_novo.read_bytes(), PDF_MINIMO)
 
+    def test_professor_com_acesso_coordenacao_pode_consultar_job_de_outro_professor(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            spool_dir = Path(tmp_dir) / "spool"
+            spool_dir.mkdir(parents=True, exist_ok=True)
+
+            database, impressao_router = _reload_modulos(db_path, str(spool_dir))
+            database.criar_tabelas()
+
+            professor_hibrido_id = int(
+                database.criar_professor(
+                    nome="Professor Hibrido",
+                    email="hibrido@example.com",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1990-01-10",
+                    aulas_semanais=10,
+                    turmas_quantidade=1,
+                    turmas=["7A"],
+                    disciplinas=["Matematica"],
+                    acesso_coordenacao=True,
+                )
+            )
+            professor_colega_id = int(
+                database.criar_professor(
+                    nome="Professora Colega",
+                    email="colega@example.com",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1991-02-20",
+                    aulas_semanais=10,
+                    turmas_quantidade=1,
+                    turmas=["7A"],
+                    disciplinas=["Matematica"],
+                )
+            )
+            usuario_hibrido = database.buscar_usuario_por_email("hibrido@example.com")
+
+            caminho_pdf = spool_dir / "colega.pdf"
+            caminho_pdf.write_bytes(PDF_MINIMO)
+
+            job_id = database.criar_job(
+                usuario_id=professor_colega_id,
+                arquivo="atividade-colega.pdf",
+                arquivo_path=str(caminho_pdf),
+                copias=1,
+                paginas_totais=4,
+            )
+            database.atualizar_status(job_id, "CONCLUIDO")
+
+            jobs = impressao_router.meus_jobs(
+                professor_id=professor_colega_id,
+                usuario=usuario_hibrido,
+            )
+
+            self.assertEqual(len(jobs), 1)
+            self.assertEqual(int(jobs[0]["id"]), int(job_id))
+
+            resposta = impressao_router.preview_job_historico(job_id, usuario=usuario_hibrido)
+
+            self.assertEqual(resposta.media_type, "application/pdf")
+            self.assertEqual(resposta.body, PDF_MINIMO)
+            self.assertEqual(int(usuario_hibrido["id"]), professor_hibrido_id)
+
 
 if __name__ == "__main__":
     unittest.main()

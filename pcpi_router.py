@@ -25,26 +25,18 @@ from services.pcpi_service import (
     nome_turno_pcpi,
     turno_agendamento_pertence_ao_turno_pcpi,
 )
+from routers.common import normalizar_cargo_usuario, usuario_tem_acesso_coordenacao
 
 
 router = APIRouter()
 
 
 def _normalizar_cargo(usuario: dict) -> str:
-    cargo = str(usuario.get("cargo") or "").strip().upper()
-    if cargo:
-        return cargo
-
-    perfil = str(usuario.get("perfil") or "").strip().lower()
-    if perfil == "admin":
-        return "ADMIN"
-    if perfil == "coordenador":
-        return "COORDENADOR"
-    return "PROFESSOR"
+    return normalizar_cargo_usuario(usuario)
 
 
 def _exigir_gestor(usuario: dict):
-    if _normalizar_cargo(usuario) not in {"ADMIN", "COORDENADOR"}:
+    if not usuario_tem_acesso_coordenacao(usuario):
         raise HTTPException(403, "Acesso negado")
     return usuario
 

@@ -27,7 +27,7 @@ from services.pdf_service import contar_paginas_pdf
 from .common import (
     exigir_gestor,
     resolver_usuario_professor_selecionado,
-    usuario_eh_gestor,
+    usuario_pode_gerir_impressoes,
     usuario_tem_cota_ilimitada,
 )
 from .config import DEFAULT_PRINTER_NAME, FORMATOS_UPLOAD_DESCRICAO, SPOOL_DIR
@@ -154,7 +154,7 @@ def obter_job_com_acesso(job_id: int, usuario: dict) -> dict:
 
     usuario_job_raw = job.get("usuario_id")
     usuario_job_id = int(usuario_job_raw) if usuario_job_raw is not None else None
-    eh_gestor = usuario_eh_gestor(usuario)
+    eh_gestor = usuario_pode_gerir_impressoes(usuario)
     eh_dono = usuario_job_id is not None and usuario_job_id == int(usuario["id"])
     if not eh_gestor and not eh_dono:
         raise HTTPException(403, "Você não pode acessar este job.")
@@ -328,6 +328,7 @@ def imprimir(
         usuario,
         professor_id,
         contexto="solicitante da impressão",
+        permitir_professor_com_acesso_coordenacao=True,
     )
 
     conteudo_arquivo = arquivo.file.read()
@@ -480,6 +481,7 @@ def reimprimir_job_historico(
         usuario,
         professor_id,
         contexto="solicitante da reimpressão",
+        permitir_professor_com_acesso_coordenacao=True,
     )
 
     caminho_origem = resolver_caminho_pdf_job(job)
@@ -553,6 +555,7 @@ def meus_jobs(
         usuario,
         professor_id,
         contexto="na impressão",
+        permitir_professor_com_acesso_coordenacao=True,
     )
     return listar_jobs_por_usuario(usuario_consulta["id"])
 
@@ -566,6 +569,7 @@ def minha_cota(
         usuario,
         professor_id,
         contexto="na impressão",
+        permitir_professor_com_acesso_coordenacao=True,
     )
     if usuario_tem_cota_ilimitada(usuario_consulta):
         return {

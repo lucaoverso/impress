@@ -374,6 +374,7 @@ class ProfessorCreateIn(BaseModel):
     aulas_semanais: int = 0
     turmas: list[str] = Field(default_factory=list)
     disciplinas: list[str] = Field(default_factory=list)
+    acesso_coordenacao: bool = False
 
 
 class ProfessorUpdateIn(BaseModel):
@@ -383,6 +384,7 @@ class ProfessorUpdateIn(BaseModel):
     aulas_semanais: int = 0
     turmas: list[str] = Field(default_factory=list)
     disciplinas: list[str] = Field(default_factory=list)
+    acesso_coordenacao: bool = False
 
 
 class CoordenadorCreateIn(BaseModel):

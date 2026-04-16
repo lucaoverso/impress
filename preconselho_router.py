@@ -69,22 +69,14 @@ from services.preconselho_service import (
     validar_nivel_atencao_pre_conselho,
     validar_status_periodo_pre_conselho,
 )
+from routers.common import normalizar_cargo_usuario, usuario_tem_acesso_coordenacao
 
 
 router = APIRouter()
 
 
 def _normalizar_cargo(usuario: dict) -> str:
-    cargo = str(usuario.get("cargo") or "").strip().upper()
-    if cargo:
-        return cargo
-
-    perfil = str(usuario.get("perfil") or "").strip().lower()
-    if perfil == "admin":
-        return "ADMIN"
-    if perfil == "coordenador":
-        return "COORDENADOR"
-    return "PROFESSOR"
+    return normalizar_cargo_usuario(usuario)
 
 
 def _exigir_acesso_preconselho(usuario: dict):
@@ -114,7 +106,7 @@ def _usuario_eh_admin(usuario: dict) -> bool:
 
 
 def _usuario_eh_gestor(usuario: dict) -> bool:
-    return _normalizar_cargo(usuario) in {"ADMIN", "COORDENADOR"}
+    return usuario_tem_acesso_coordenacao(usuario)
 
 
 def _usuario_eh_professor(usuario: dict) -> bool:
@@ -201,11 +193,12 @@ def _resolver_professor(
     usuario_id = _usuario_id(usuario)
 
     if cargo == "PROFESSOR":
-        if professor_id not in (None, usuario_id):
+        if professor_id in (None, usuario_id):
+            return {"id": usuario_id, "nome": str(usuario.get("nome") or "").strip()}
+        if not (permitir_gestor and _usuario_eh_gestor(usuario)):
             raise HTTPException(403, "Acesso negado.")
-        return {"id": usuario_id, "nome": str(usuario.get("nome") or "").strip()}
 
-    if not permitir_gestor or cargo not in {"ADMIN", "COORDENADOR"}:
+    if not permitir_gestor or not _usuario_eh_gestor(usuario):
         raise HTTPException(403, "Acesso negado.")
     if professor_id is None:
         raise HTTPException(400, "Professor obrigatorio.")

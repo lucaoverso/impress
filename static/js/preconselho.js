@@ -4,8 +4,8 @@ const {
     criarHeadersAuth,
     criarHeadersJsonAuth,
     encerrarSessao,
-    normalizarCargoUsuario,
     modulosPermitidos,
+    usuarioEhProfessor,
 } = window.AppAuth;
 const { fetchComAuth, obterMensagemErroResposta } = window.AppApi;
 const { escaparHtml } = window.AppFormat;
@@ -357,13 +357,20 @@ function atualizarEstadoFormularioDocente() {
 
 function renderizarCabecalho() {
     const primeiroNome = obterPrimeiroNome();
-    const cargo = normalizarCargoUsuario(usuarioAtual);
-    el("preconselhoUsuario").textContent = `${primeiroNome} | ${cargo === "PROFESSOR" ? "registro docente" : "visao institucional"}`;
-    el("btnIrAdmin").hidden = cargo !== "ADMIN";
+    const possuiVisaoDocente = Boolean(contextoAtual?.professor_id);
+    const possuiVisaoInstitucional = Boolean(contextoAtual?.pode_consolidar);
+    let descricao = "visao institucional";
+    if (possuiVisaoDocente && possuiVisaoInstitucional) {
+        descricao = "registro docente e visao institucional";
+    } else if (possuiVisaoDocente) {
+        descricao = "registro docente";
+    }
+    el("preconselhoUsuario").textContent = `${primeiroNome} | ${descricao}`;
+    el("btnIrAdmin").hidden = !Boolean(usuarioAtual?.eh_admin);
 }
 
 function renderizarAbasDisponiveis() {
-    const mostrarDocente = normalizarCargoUsuario(usuarioAtual) === "PROFESSOR";
+    const mostrarDocente = Boolean(contextoAtual?.professor_id);
     const mostrarConsolidacao = Boolean(contextoAtual?.pode_consolidar);
     const mostrarConfiguracoes = Boolean(contextoAtual?.pode_configurar);
 
@@ -1391,6 +1398,7 @@ async function carregarContexto() {
 
     contextoAtual = await resposta.json();
 
+    renderizarCabecalho();
     renderizarAbasDisponiveis();
     renderizarSelectPeriodos();
     renderizarSelectsConsolidacao();
@@ -1407,9 +1415,8 @@ async function carregarContexto() {
 }
 
 async function carregarPainelInicial() {
-    if (normalizarCargoUsuario(usuarioAtual) === "PROFESSOR") {
+    if (usuarioEhProfessor(usuarioAtual)) {
         await carregarPainelDocente();
-        return;
     }
 
     if (contextoAtual?.pode_consolidar) {

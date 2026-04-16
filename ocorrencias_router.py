@@ -92,6 +92,7 @@ from services.ocorrencia_disciplina_service import (
     rotulo_gravidade_ocorrencia,
 )
 from services.ocorrencia_pdf_service import gerar_pdf_ocorrencia_registro
+from routers.common import normalizar_cargo_usuario, usuario_tem_acesso_coordenacao
 
 router = APIRouter()
 
@@ -130,20 +131,11 @@ def _model_to_dict(model, *, exclude_unset: bool = False) -> dict:
 
 
 def _normalizar_cargo(usuario: dict) -> str:
-    cargo = str(usuario.get("cargo") or "").strip().upper()
-    if cargo:
-        return cargo
-
-    perfil = str(usuario.get("perfil") or "").strip().lower()
-    if perfil == "admin":
-        return "ADMIN"
-    if perfil == "coordenador":
-        return "COORDENADOR"
-    return "PROFESSOR"
+    return normalizar_cargo_usuario(usuario)
 
 
 def _exigir_gestor(usuario: dict):
-    if _normalizar_cargo(usuario) not in {"ADMIN", "COORDENADOR"}:
+    if not usuario_tem_acesso_coordenacao(usuario):
         raise HTTPException(403, "Acesso negado")
     return usuario
 

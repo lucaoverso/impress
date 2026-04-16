@@ -50,6 +50,33 @@
         return CARGO_PROFESSOR;
     }
 
+    function usuarioEhProfessor(usuario = {}) {
+        if (typeof usuario.eh_professor === "boolean") {
+            return usuario.eh_professor;
+        }
+        return normalizarCargoUsuario(usuario) === CARGO_PROFESSOR;
+    }
+
+    function usuarioTemAcessoCoordenacao(usuario = {}) {
+        if (typeof usuario.tem_acesso_coordenacao === "boolean") {
+            return usuario.tem_acesso_coordenacao;
+        }
+        if (usuarioEhProfessor(usuario)) {
+            return Boolean(usuario.acesso_coordenacao);
+        }
+        const cargo = normalizarCargoUsuario(usuario);
+        return cargo === CARGO_ADMIN || cargo === CARGO_COORDENADOR;
+    }
+
+    function usuarioPodeGerirImpressoes(usuario = {}) {
+        if (typeof usuario.pode_gerir_impressoes === "boolean") {
+            return usuario.pode_gerir_impressoes;
+        }
+        return normalizarCargoUsuario(usuario) === CARGO_ADMIN || (
+            usuarioEhProfessor(usuario) && usuarioTemAcessoCoordenacao(usuario)
+        );
+    }
+
     function modulosPermitidos(usuario = {}) {
         if (Array.isArray(usuario.modulos) && usuario.modulos.length > 0) {
             return new Set(usuario.modulos.map((item) => String(item).trim().toLowerCase()));
@@ -99,6 +126,9 @@
         criarHeadersAuth,
         criarHeadersJsonAuth,
         normalizarCargoUsuario,
+        usuarioEhProfessor,
+        usuarioTemAcessoCoordenacao,
+        usuarioPodeGerirImpressoes,
         modulosPermitidos,
         parseDataSqlUtc,
         sessaoLocalValida,

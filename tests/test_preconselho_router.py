@@ -49,8 +49,19 @@ class PreConselhoRouterTest(unittest.TestCase):
         else:
             os.environ["ENABLE_EMBEDDED_WORKER"] = self._old_embedded_worker
 
-    def _usuario_professor(self, professor_id: int, nome: str) -> dict:
-        return {"id": professor_id, "nome": nome, "cargo": "PROFESSOR"}
+    def _usuario_professor(
+        self,
+        professor_id: int,
+        nome: str,
+        *,
+        acesso_coordenacao: bool = False,
+    ) -> dict:
+        return {
+            "id": professor_id,
+            "nome": nome,
+            "cargo": "PROFESSOR",
+            "acesso_coordenacao": 1 if acesso_coordenacao else 0,
+        }
 
     def _usuario_coord(self, coordenador_id: int, nome: str) -> dict:
         return {"id": coordenador_id, "nome": nome, "cargo": "COORDENADOR"}
@@ -208,6 +219,94 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertEqual(
                 sorted(consolidado["itens_agrupados"][0]["disciplinas"]), ["Historia", "Matematica"]
             )
+
+    def test_professor_com_acesso_coordenacao_tem_visao_docente_e_consolidacao(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, preconselho_router, models = _reload_modulos(db_path)
+            database.criar_tabelas()
+
+            turma_id = int(database.criar_turma("9A", "MATUTINO", 32))
+            disciplina_id = int(database.criar_disciplina("Biologia Experimental", 4))
+            estudante_id = int(database.criar_estudante("Carlos", turma_id))
+
+            professor_hibrido_id = int(
+                database.criar_professor(
+                    nome="Professor Hibrido",
+                    email="hibrido@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1992-02-02",
+                    aulas_semanais=10,
+                    turmas_quantidade=1,
+                    turmas=["9A"],
+                    disciplinas=["Biologia Experimental"],
+                    acesso_coordenacao=True,
+                )
+            )
+            professor_colega_id = int(
+                database.criar_professor(
+                    nome="Professora Colega",
+                    email="colega@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1990-03-03",
+                    aulas_semanais=10,
+                    turmas_quantidade=1,
+                    turmas=["9A"],
+                    disciplinas=["Biologia Experimental"],
+                )
+            )
+            periodo_id = int(
+                database.criar_periodo_pre_conselho(
+                    nome="1o Bimestre 2034",
+                    ano_letivo=2034,
+                    etapa=1,
+                    data_inicio="2034-01-20",
+                    data_fim="2034-04-30",
+                    status="ABERTO",
+                )
+            )
+
+            motivo_id = int(database.listar_motivos_pre_conselho()[0]["id"])
+            preconselho_router.salvar_registro_preconselho_api(
+                payload=models.PreConselhoRegistroSaveIn(
+                    periodo_id=periodo_id,
+                    turma_id=turma_id,
+                    disciplina_id=disciplina_id,
+                    estudante_id=estudante_id,
+                    sinalizar=True,
+                    motivo_ids=[motivo_id],
+                    observacao_professor="precisa revisar os conceitos da unidade",
+                    nivel_atencao="medio",
+                ),
+                usuario=self._usuario_professor(professor_colega_id, "Professora Colega"),
+            )
+
+            usuario_hibrido = self._usuario_professor(
+                professor_hibrido_id,
+                "Professor Hibrido",
+                acesso_coordenacao=True,
+            )
+            contexto = preconselho_router.obter_contexto_preconselho_api(usuario=usuario_hibrido)
+
+            self.assertTrue(contexto["pode_consolidar"])
+            self.assertEqual(contexto["professor_id"], professor_hibrido_id)
+            self.assertEqual([item["nome"] for item in contexto["turmas"]], ["9A"])
+            self.assertEqual(
+                [item["nome"] for item in contexto["disciplinas"]],
+                ["Biologia Experimental"],
+            )
+
+            consolidado = preconselho_router.gerar_consolidado_preconselho_api(
+                periodo_id=periodo_id,
+                turma_id=None,
+                disciplina_id=None,
+                professor_id=professor_colega_id,
+                usuario=usuario_hibrido,
+            )
+
+            self.assertEqual(consolidado["professor_id"], professor_colega_id)
+            self.assertEqual(consolidado["total_registros"], 1)
+            self.assertIn("Carlos", consolidado["texto"])
 
     def test_professor_nao_pode_salvar_em_periodo_fechado(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

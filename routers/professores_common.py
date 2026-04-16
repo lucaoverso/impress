@@ -73,11 +73,12 @@ def validar_payload_cadastro_professor(payload: ProfessorCreateIn):
         disciplinas_bruto=payload.disciplinas,
     )
     dados["senha"] = senha
+    dados["acesso_coordenacao"] = bool(payload.acesso_coordenacao)
     return dados
 
 
 def validar_payload_atualizacao_professor(payload: ProfessorUpdateIn):
-    return _validar_dados_professor_comuns(
+    dados = _validar_dados_professor_comuns(
         nome=payload.nome,
         email=payload.email,
         data_nascimento_txt=payload.data_nascimento,
@@ -85,6 +86,8 @@ def validar_payload_atualizacao_professor(payload: ProfessorUpdateIn):
         turmas_bruto=payload.turmas,
         disciplinas_bruto=payload.disciplinas,
     )
+    dados["acesso_coordenacao"] = bool(payload.acesso_coordenacao)
+    return dados
 
 
 def validar_payload_cadastro_coordenador(payload: CoordenadorCreateIn):

@@ -20,6 +20,7 @@ from .common import (
     exigir_admin,
     resolver_usuario_professor_selecionado,
     usuario_eh_admin,
+    usuario_pode_gerir_impressoes,
     validar_aula,
     validar_data_agendamento,
     validar_tema_aula,
@@ -59,7 +60,8 @@ def opcoes_agendamento(_usuario=Depends(get_usuario_logado)):
 
 @router.get("/agendamento/professores")
 def professores_agendamento(usuario=Depends(get_usuario_logado)):
-    exigir_admin(usuario)
+    if not usuario_pode_gerir_impressoes(usuario):
+        exigir_admin(usuario)
     return listar_professores_agendamento()
 
 

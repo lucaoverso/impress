@@ -9,7 +9,15 @@ from db.schema_migrations import get_pending_migration_names
 from models import RadiusEnsureNtHashIn
 from services.radius_service import ensure_nt_hash_for_radius
 
-from .common import modulos_por_cargo, normalizar_cargo_usuario, usuario_eh_admin, usuario_eh_gestor
+from .common import (
+    modulos_por_usuario,
+    normalizar_cargo_usuario,
+    usuario_eh_admin,
+    usuario_eh_gestor,
+    usuario_eh_professor,
+    usuario_pode_gerir_impressoes,
+    usuario_tem_acesso_coordenacao,
+)
 from .config import ENABLE_EMBEDDED_WORKER, RADIUS_INTERNAL_SECRET
 
 router = APIRouter()
@@ -86,9 +94,12 @@ def eu(usuario=Depends(get_usuario_logado)):
     cargo = normalizar_cargo_usuario(usuario)
     dados = dict(usuario)
     dados["cargo"] = cargo
-    dados["modulos"] = modulos_por_cargo(cargo)
+    dados["modulos"] = modulos_por_usuario(usuario)
     dados["eh_gestor"] = usuario_eh_gestor(usuario)
     dados["eh_admin"] = usuario_eh_admin(usuario)
+    dados["eh_professor"] = usuario_eh_professor(usuario)
+    dados["tem_acesso_coordenacao"] = usuario_tem_acesso_coordenacao(usuario)
+    dados["pode_gerir_impressoes"] = usuario_pode_gerir_impressoes(usuario)
     return dados
 
 

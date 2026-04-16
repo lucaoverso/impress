@@ -190,6 +190,43 @@ def modulos_por_cargo(cargo: str) -> list[str]:
     return list(MODULOS_POR_CARGO.get(cargo, MODULOS_POR_CARGO[CARGO_PROFESSOR]))
 
 
+def _flag_usuario_ativa(usuario: dict, campo: str) -> bool:
+    valor = usuario.get(campo)
+    if isinstance(valor, bool):
+        return valor
+    try:
+        return int(valor or 0) == 1
+    except (TypeError, ValueError):
+        return False
+
+
+def usuario_eh_professor(usuario: dict) -> bool:
+    return normalizar_cargo_usuario(usuario) == CARGO_PROFESSOR
+
+
+def usuario_tem_acesso_coordenacao(usuario: dict) -> bool:
+    cargo = normalizar_cargo_usuario(usuario)
+    if cargo in {CARGO_ADMIN, CARGO_COORDENADOR}:
+        return True
+    return usuario_eh_professor(usuario) and _flag_usuario_ativa(usuario, "acesso_coordenacao")
+
+
+def modulos_por_usuario(usuario: dict) -> list[str]:
+    cargo = normalizar_cargo_usuario(usuario)
+    modulos = modulos_por_cargo(cargo)
+    if cargo == CARGO_PROFESSOR and usuario_tem_acesso_coordenacao(usuario):
+        for modulo in MODULOS_POR_CARGO[CARGO_COORDENADOR]:
+            if modulo not in modulos:
+                modulos.append(modulo)
+    return modulos
+
+
+def usuario_pode_gerir_impressoes(usuario: dict) -> bool:
+    return usuario_eh_admin(usuario) or (
+        usuario_eh_professor(usuario) and usuario_tem_acesso_coordenacao(usuario)
+    )
+
+
 def usuario_eh_admin(usuario: dict) -> bool:
     return normalizar_cargo_usuario(usuario) == CARGO_ADMIN
 
@@ -219,6 +256,7 @@ def resolver_usuario_professor_selecionado(
     professor_id: int | None,
     *,
     contexto: str,
+    permitir_professor_com_acesso_coordenacao: bool = False,
 ) -> dict:
     if professor_id is None:
         return usuario
@@ -228,13 +266,20 @@ def resolver_usuario_professor_selecionado(
         raise HTTPException(400, "Professor inválido.")
 
     if not usuario_eh_admin(usuario):
-        raise HTTPException(403, f"Apenas administrador pode selecionar o professor {contexto}.")
+        if not (
+            permitir_professor_com_acesso_coordenacao
+            and usuario_pode_gerir_impressoes(usuario)
+        ):
+            raise HTTPException(
+                403,
+                f"Apenas administrador pode selecionar o professor {contexto}.",
+            )
 
     professor = buscar_usuario_por_id(professor_id_int)
     if not professor:
         raise HTTPException(404, "Professor não encontrado.")
 
-    if normalizar_cargo_usuario(professor) != CARGO_PROFESSOR:
+    if not usuario_eh_professor(professor):
         raise HTTPException(400, "O usuário selecionado não é professor.")
 
     return professor

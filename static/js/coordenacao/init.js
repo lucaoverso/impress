@@ -1,7 +1,6 @@
 async function validarAcessoGestao() {
     const usuario = await fetchJson("/me", { headers });
-    const cargo = normalizarCargoUsuario(usuario);
-    const ehGestor = cargo === "ADMIN" || cargo === "COORDENADOR";
+    const ehGestor = window.AppAuth.modulosPermitidos(usuario).has("coordenacao");
     if (!ehGestor) {
         window.location.href = "/servicos";
         return false;

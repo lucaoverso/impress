@@ -1,5 +1,10 @@
 const { el } = window.AppDom;
-const { garantirToken, criarHeadersAuth, encerrarSessao } = window.AppAuth;
+const {
+    garantirToken,
+    criarHeadersAuth,
+    encerrarSessao,
+    usuarioPodeGerirImpressoes,
+} = window.AppAuth;
 const { fetchComAuth, obterMensagemErroResposta } = window.AppApi;
 
 const token = garantirToken();
@@ -58,6 +63,10 @@ function usuarioEhAdmin() {
     return String(usuarioAtual.perfil || "").trim().toLowerCase() === "admin";
 }
 
+function usuarioPodeSelecionarProfessorImpressao() {
+    return Boolean(usuarioAtual) && usuarioPodeGerirImpressoes(usuarioAtual);
+}
+
 function obterProfessorSolicitanteSelecionadoId() {
     return Number(el("professorSolicitante")?.value || 0);
 }
@@ -69,7 +78,7 @@ function obterProfessorSelecionado() {
 
 function montarUrlConsultaImpressao(urlBase) {
     const professorId = obterProfessorSolicitanteSelecionadoId();
-    if (!(usuarioEhAdmin() && professorId > 0)) {
+    if (!(usuarioPodeSelecionarProfessorImpressao() && professorId > 0)) {
         return urlBase;
     }
 
@@ -86,7 +95,7 @@ function atualizarTitulosContextoImpressao() {
         return;
     }
 
-    if (!usuarioEhAdmin()) {
+    if (!usuarioPodeSelecionarProfessorImpressao()) {
         tituloCota.innerText = "Sua cota";
         tituloJobs.innerText = "Seus pedidos";
         if (contexto) {
@@ -96,13 +105,22 @@ function atualizarTitulosContextoImpressao() {
     }
 
     const professor = obterProfessorSelecionado();
-    tituloCota.innerText = professor ? `Cota de ${professor.nome}` : "Cota do admin";
-    tituloJobs.innerText = professor ? `Pedidos de ${professor.nome}` : "Pedidos do admin";
+    if (!professor) {
+        tituloCota.innerText = usuarioEhAdmin() ? "Cota do admin" : "Sua cota";
+        tituloJobs.innerText = usuarioEhAdmin() ? "Pedidos do admin" : "Seus pedidos";
+        if (contexto) {
+            contexto.innerText = usuarioEhAdmin()
+                ? "Sem professor selecionado, a impressao usa a cota ilimitada do admin."
+                : "Sem professor selecionado, a impressao usa a sua propria cota.";
+        }
+        return;
+    }
+
+    tituloCota.innerText = `Cota de ${professor.nome}`;
+    tituloJobs.innerText = `Pedidos de ${professor.nome}`;
 
     if (contexto) {
-        contexto.innerText = professor
-            ? `A impressao sera contabilizada para ${professor.nome}.`
-            : "Sem professor selecionado, a impressao usa a cota ilimitada do admin.";
+        contexto.innerText = `A impressao sera contabilizada para ${professor.nome}.`;
     }
 }
 
@@ -137,7 +155,7 @@ async function carregarProfessoresImpressaoAdmin() {
         return;
     }
 
-    if (!usuarioEhAdmin()) {
+    if (!usuarioPodeSelecionarProfessorImpressao()) {
         grupo.style.display = "none";
         professoresImpressao = [];
         select.innerHTML = "";

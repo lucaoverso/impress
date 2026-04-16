@@ -164,10 +164,15 @@ function aplicarPermissoesTela() {
 function atualizarVisibilidadeCamposCargo() {
     const cargo = String(el("profCargo")?.value || CARGO_PROFESSOR).toUpperCase();
     const hint = el("profCargoHint");
+    const wrapperAcessoCoordenacao = el("profAcessoCoordenacaoWrapper");
     if (!hint) {
         return;
     }
-    hint.style.display = cargo === CARGO_COORDENADOR ? "block" : "none";
+    const ehCoordenador = cargo === CARGO_COORDENADOR;
+    hint.style.display = ehCoordenador ? "block" : "none";
+    if (wrapperAcessoCoordenacao) {
+        wrapperAcessoCoordenacao.style.display = ehCoordenador ? "none" : "flex";
+    }
 }
 
 async function carregarUsuarioAtual() {
@@ -366,6 +371,7 @@ function limparFormularioProfessor() {
     el("formProfessor").reset();
     el("profCargo").value = CARGO_PROFESSOR;
     el("profAulas").value = "0";
+    el("profAcessoCoordenacao").checked = false;
     definirSelecionados("profTurmasLista", []);
     definirSelecionados("profDisciplinasLista", []);
     professorEmEdicaoId = null;
@@ -379,6 +385,7 @@ function iniciarEdicaoProfessor(professor) {
     el("profDataNascimento").value = professor.data_nascimento || "";
     el("profCargo").value = CARGO_PROFESSOR;
     el("profAulas").value = String(professor.aulas_semanais ?? 0);
+    el("profAcessoCoordenacao").checked = Boolean(professor.acesso_coordenacao);
     definirSelecionados("profTurmasLista", professor.turmas || []);
     definirSelecionados("profDisciplinasLista", professor.disciplinas || []);
     aplicarModoFormularioProfessor(true);
@@ -450,4 +457,3 @@ function iniciarEdicaoRecurso(recurso) {
     ativarAbaAdmin("recursos");
     el("formRecurso").scrollIntoView({ behavior: "smooth", block: "center" });
 }
-
