@@ -222,25 +222,29 @@ def listar_historico(data_inicio=None, data_fim=None, usuario_id=None):
     cursor = conn.cursor()
 
     query = """
-        SELECT * FROM jobs
+        SELECT
+            j.*,
+            COALESCE(u.nome, '') AS usuario_nome
+        FROM jobs j
+        LEFT JOIN usuarios u ON u.id = j.usuario_id
         WHERE status IN (?, ?)
     """
 
     params = [STATUS_CONCLUIDO, STATUS_FINALIZADO_LEGADO]
 
     if data_inicio:
-        query += " AND criado_em >= ?"
+        query += " AND j.criado_em >= ?"
         params.append(data_inicio)
 
     if data_fim:
-        query += " AND criado_em <= ?"
+        query += " AND j.criado_em <= ?"
         params.append(data_fim)
 
     if usuario_id:
-        query += " AND usuario_id = ?"
+        query += " AND j.usuario_id = ?"
         params.append(usuario_id)
 
-    query += " ORDER BY criado_em DESC"
+    query += " ORDER BY j.criado_em DESC"
 
     cursor.execute(query, params)
 

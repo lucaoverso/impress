@@ -82,7 +82,7 @@ async function buscarHistorico() {
     jobs.forEach((job) => {
         const li = document.createElement("li");
         li.className = "admin-list-item";
-        li.innerText = `${job.criado_em} | ${job.arquivo} | ${job.paginas_totais ?? 0} páginas | ${job.status} | ${job.professor ? `| Professor: ${job.professor.nome}` : ""  }`;
+        li.innerText = `${job.criado_em} | ${job.arquivo} | ${job.paginas_totais ?? 0} páginas | ${job.usuario_nome || "Usuário não informado"}`;
         ul.appendChild(li);
     });
 }
