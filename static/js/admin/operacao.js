@@ -26,8 +26,8 @@ async function carregarFilaAdmin() {
         const li = document.createElement("li");
         li.className = "admin-list-item";
 
-        const descricao = document.createElement("p");
-        descricao.innerText = `${job.arquivo} | ${job.status} | ${job.paginas_totais ?? 0} páginas`;
+        const descricao = document.createElement("p");  
+        descricao.innerText = `${job.arquivo} | ${job.status} | ${job.paginas_totais ?? 0} páginas | ${job.professor ? `Professor: ${job.professor.nome}` : "Sem professor associado"}`
 
         const actions = document.createElement("div");
         actions.className = "admin-inline";
@@ -82,7 +82,7 @@ async function buscarHistorico() {
     jobs.forEach((job) => {
         const li = document.createElement("li");
         li.className = "admin-list-item";
-        li.innerText = `${job.criado_em} | ${job.arquivo} | ${job.paginas_totais ?? 0} páginas | ${job.status}`;
+        li.innerText = `${job.criado_em} | ${job.arquivo} | ${job.paginas_totais ?? 0} páginas | ${job.status} | ${job.professor ? `| Professor: ${job.professor.nome}` : ""  }`;
         ul.appendChild(li);
     });
 }
