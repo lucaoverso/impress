@@ -57,7 +57,7 @@ O projeto nao carrega `.env` automaticamente durante a execucao local. Se precis
 PowerShell:
 
 ```powershell
-$env:DB_PATH = "$PWD\\dados\\impressao-dev.db"
+$env:DB_PATH = (Join-Path (Split-Path -Parent $PWD) "sistema-impress-data\\impressao.db")
 $env:SPOOL_DIR = "$PWD\\spool"
 $env:ENABLE_EMBEDDED_WORKER = "0"
 ```
@@ -65,7 +65,7 @@ $env:ENABLE_EMBEDDED_WORKER = "0"
 Bash:
 
 ```bash
-export DB_PATH="$PWD/dados/impressao-dev.db"
+export DB_PATH="$(cd .. && pwd)/sistema-impress-data/impressao.db"
 export SPOOL_DIR="$PWD/spool"
 export ENABLE_EMBEDDED_WORKER=0
 ```

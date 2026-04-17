@@ -17,16 +17,16 @@ Se voce apenas criar um arquivo `.env` na raiz, ele nao sera carregado sozinho p
 
 Hoje o comportamento local padrao e:
 
-- `run_local_api.ps1` define `DB_PATH=data/impressao-dev.db` se a variavel nao existir.
+- `run_local_api.ps1` define `DB_PATH=../sistema-impress-data/impressao.db` se a variavel nao existir.
 - `run_local_api.ps1` define `SPOOL_DIR=spool` se a variavel nao existir.
 - `run_local_api.ps1` define `ENABLE_EMBEDDED_WORKER=0` se a variavel nao existir, ou `1` quando chamado com `-EmbeddedWorker`.
-- `run_local_worker.ps1` define `DB_PATH=data/impressao-dev.db` se a variavel nao existir.
+- `run_local_worker.ps1` define `DB_PATH=../sistema-impress-data/impressao.db` se a variavel nao existir.
 - `run_local_worker.ps1` define `SPOOL_DIR=spool` se a variavel nao existir.
 
 Se quiser sobrescrever algo localmente, exporte as variaveis antes de subir a aplicacao:
 
 ```powershell
-$env:DB_PATH = "$PWD\\data\\impressao-dev.db"
+$env:DB_PATH = (Join-Path (Split-Path -Parent $PWD) "sistema-impress-data\\impressao.db")
 $env:SPOOL_DIR = "$PWD\\spool"
 $env:ENABLE_EMBEDDED_WORKER = "0"
 .\run_local_api.ps1

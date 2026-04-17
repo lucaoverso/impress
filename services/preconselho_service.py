@@ -28,19 +28,19 @@ MOTIVOS_PRE_CONSELHO_INICIAIS = (
     {
         "categoria": "avaliacao",
         "codigo": "nao_fez_prova_bimestral",
-        "descricao": "Nao fez a prova bimestral",
+        "descricao": "Não fez a prova bimestral",
         "ordem": 10,
     },
     {
         "categoria": "avaliacao",
         "codigo": "nao_entregou_trabalho",
-        "descricao": "Nao entregou o trabalho",
+        "descricao": "Não entregou o trabalho",
         "ordem": 20,
     },
     {
         "categoria": "avaliacao",
         "codigo": "nao_realizou_atividades_avaliativas",
-        "descricao": "Nao realizou atividades avaliativas",
+        "descricao": "Não realizou atividades avaliativas",
         "ordem": 30,
     },
     {
@@ -52,7 +52,7 @@ MOTIVOS_PRE_CONSELHO_INICIAIS = (
     {
         "categoria": "participacao",
         "codigo": "baixa_participacao_aula",
-        "descricao": "Baixa participacao em aula",
+        "descricao": "Baixa participação em aula",
         "ordem": 50,
     },
     {
@@ -64,7 +64,7 @@ MOTIVOS_PRE_CONSELHO_INICIAIS = (
     {
         "categoria": "dificuldades_pedagogicas",
         "codigo": "dificuldade_acompanhar_explicacoes",
-        "descricao": "Dificuldade em acompanhar explicacoes",
+        "descricao": "Dificuldade em acompanhar explicações",
         "ordem": 70,
     },
     {
@@ -76,7 +76,7 @@ MOTIVOS_PRE_CONSELHO_INICIAIS = (
     {
         "categoria": "comportamento",
         "codigo": "nao_respeita_combinados",
-        "descricao": "Nao respeita combinados",
+        "descricao": "Não respeita combinados",
         "ordem": 90,
     },
     {
@@ -94,26 +94,26 @@ MOTIVOS_PRE_CONSELHO_INICIAIS = (
     {
         "categoria": "frequencia",
         "codigo": "ausencias_dias_avaliacao",
-        "descricao": "Ausencias em dias de avaliacao",
+        "descricao": "Ausências em dias de avaliação",
         "ordem": 120,
     },
     {
         "categoria": "frequencia",
         "codigo": "chega_atrasado_frequencia",
-        "descricao": "Chega atrasado com frequencia",
+        "descricao": "Chega atrasado com frequência",
         "ordem": 130,
     },
     {
         "categoria": "organizacao_estudo",
         "codigo": "nao_traz_material",
-        "descricao": "Nao traz material",
+        "descricao": "Não traz material",
         "ordem": 140,
     },
     {
         "categoria": "organizacao_estudo",
         "codigo": "nao_realiza_atividades_casa",
-        "descricao": "Nao realiza atividades de casa",
-        "ordem": 150,
+        "descricao": "Não realiza atividades de casa",
+        "ordem": 150,   
     },
     {
         "categoria": "organizacao_estudo",
@@ -124,19 +124,19 @@ MOTIVOS_PRE_CONSELHO_INICIAIS = (
     {
         "categoria": "dificuldades_pedagogicas",
         "codigo": "dificuldade_leitura_interpretacao",
-        "descricao": "Dificuldade de leitura e interpretacao",
+        "descricao": "Dificuldade de leitura e interpretação",
         "ordem": 170,
     },
     {
         "categoria": "dificuldades_pedagogicas",
         "codigo": "dificuldade_calculos_basicos",
-        "descricao": "Dificuldade em calculos basicos",
+        "descricao": "Dificuldade em cálculos básicos",
         "ordem": 180,
     },
     {
         "categoria": "dificuldades_pedagogicas",
         "codigo": "dificuldade_producao_escrita",
-        "descricao": "Dificuldade na producao escrita",
+        "descricao": "Dificuldade na produção escrita",
         "ordem": 190,
     },
     {
@@ -153,38 +153,38 @@ _CATEGORIAS_ROTULO = {
     "comportamento": "Comportamento",
     "frequencia": "Frequencia",
     "organizacao_estudo": "Organizacao e estudo",
-    "dificuldades_pedagogicas": "Dificuldades pedagogicas",
+    "dificuldades_pedagogicas": "Dificuldades pedagógicas",
 }
 
 _FRASES_CATEGORIA = {
     "avaliacao": "aspectos avaliativos, com {lista}",
-    "participacao": "baixa participacao e engajamento nas aulas, com {lista}",
+    "participacao": "baixa participação e engajamento nas aulas, com {lista}",
     "comportamento": "aspectos comportamentais que interferem no processo de aprendizagem, como {lista}",
-    "frequencia": "frequencia irregular, com {lista}",
-    "organizacao_estudo": "fragilidades de organizacao e rotina de estudos, com {lista}",
-    "dificuldades_pedagogicas": "dificuldades pedagogicas observadas, com {lista}",
+    "frequencia": "frequência irregular, com {lista}",
+    "organizacao_estudo": "fragilidades de organização e rotina de estudos, com {lista}",
+    "dificuldades_pedagogicas": "dificuldades pedagógicas observadas, com {lista}",
 }
 
 _FRASES_MOTIVO = {
-    "nao_fez_prova_bimestral": "ausencia na realizacao da prova bimestral",
-    "nao_entregou_trabalho": "nao entrega de trabalhos propostos",
-    "nao_realizou_atividades_avaliativas": "nao realizacao de atividades avaliativas",
+    "nao_fez_prova_bimestral": "ausência na realização da prova bimestral",
+    "nao_entregou_trabalho": "não entrega de trabalhos propostos",
+    "nao_realizou_atividades_avaliativas": "não realização de atividades avaliativas",
     "nota_abaixo_esperado": "desempenho abaixo do esperado nos instrumentos avaliativos",
-    "baixa_participacao_aula": "baixa participacao nas aulas",
+    "baixa_participacao_aula": "baixa participação nas aulas",
     "pouco_engajamento_atividades": "pouco engajamento nas atividades propostas",
-    "dificuldade_acompanhar_explicacoes": "dificuldade em acompanhar explicacoes e conteudos",
+    "dificuldade_acompanhar_explicacoes": "dificuldade em acompanhar explicações e conteúdos",
     "conversas_excessivas_em_aula": "conversas excessivas durante as aulas",
-    "nao_respeita_combinados": "dificuldade em respeitar os combinados de convivencia",
+    "nao_respeita_combinados": "dificuldade em respeitar os combinados de convivência",
     "comportamento_inadequado_sala": "comportamento inadequado em sala",
     "faltas_frequentes": "frequencia irregular",
-    "ausencias_dias_avaliacao": "ausencia em dias de avaliacao",
+    "ausencias_dias_avaliacao": "ausência em dias de avaliacao",
     "chega_atrasado_frequencia": "atrasos frequentes",
-    "nao_traz_material": "falta de material necessario para as aulas",
-    "nao_realiza_atividades_casa": "nao realizacao das atividades de casa",
+    "nao_traz_material": "falta de material necessário para as aulas",
+    "nao_realiza_atividades_casa": "não realização das atividades de casa",
     "falta_rotina_estudos": "fragilidade na rotina de estudos",
-    "dificuldade_leitura_interpretacao": "dificuldade de leitura e interpretacao",
-    "dificuldade_calculos_basicos": "dificuldade em calculos basicos",
-    "dificuldade_producao_escrita": "dificuldade na producao escrita",
+    "dificuldade_leitura_interpretacao": "dificuldade de leitura e interpretação",
+    "dificuldade_calculos_basicos": "dificuldade em cálculos básicos",
+    "dificuldade_producao_escrita": "dificuldade na produção escrita",
     "necessita_acompanhamento_individualizado": "necessidade de acompanhamento mais individualizado",
 }
 
@@ -271,13 +271,13 @@ def validar_nivel_atencao_pre_conselho(nivel_atencao: str | None) -> str:
 
     niveis_validos = {item["id"] for item in NIVEIS_ATENCAO_PRE_CONSELHO}
     if texto not in niveis_validos:
-        raise ValueError("Nivel de atencao invalido.")
+        raise ValueError("Nivel de atenção inválido.")
     return texto
 
 
 def nome_periodo_pre_conselho(ano_letivo: int, etapa: int) -> str:
     etapa_valor = validar_etapa_pre_conselho(etapa)
-    return f"{etapa_valor}o Bimestre {int(ano_letivo)}"
+    return f"{etapa_valor}º Bimestre {int(ano_letivo)}"
 
 
 def periodo_editavel_para_cargo(status: str, cargo: str) -> bool:
@@ -360,11 +360,11 @@ def _descricao_disciplinas(disciplinas: list[str]) -> str:
 
 def _texto_recomendacao_nivel(nivel_atencao: str) -> str:
     if nivel_atencao == "alto":
-        return "Recomenda-se prioridade no acompanhamento individualizado e articulacao com a equipe pedagogica."
+        return "Recomenda-se prioridade no acompanhamento individualizado e articulação com a equipe pedagógica."
     if nivel_atencao == "medio":
-        return "Recomenda-se monitoramento sistematico e intervencoes pedagogicas ao longo do periodo seguinte."
+        return "Recomenda-se monitoramento sistemático e intervenções pedagógicas ao longo do período seguinte."
     if nivel_atencao == "baixo":
-        return "Recomenda-se acompanhamento continuo e retomada orientada dos conteudos essenciais."
+        return "Recomenda-se acompanhamento contínuo e retomada orientada dos conteúdos essenciais."
     return ""
 
 
@@ -381,7 +381,7 @@ def gerar_texto_pre_conselho_individual(
     nivel_limpo = validar_nivel_atencao_pre_conselho(nivel_atencao)
     fragmentos_motivos = _listar_fragmentos_motivos(motivos)
     if not fragmentos_motivos:
-        raise ValueError("Nao foi possivel gerar o texto com os motivos selecionados.")
+        raise ValueError("Não foi possível gerar o texto com os motivos selecionados.")
 
     sujeito = (
         f"O estudante {_texto_limpo(estudante_nome)}"
@@ -390,7 +390,7 @@ def gerar_texto_pre_conselho_individual(
     )
     abertura = (
         f"{sujeito} obteve baixo rendimento {_descricao_disciplinas([disciplina_nome])}, "
-        f"em razao de {_formatar_lista_pt_br(fragmentos_motivos)}."
+        f"em razão de {_formatar_lista_pt_br(fragmentos_motivos)}."
     )
 
     complemento_nivel = _texto_recomendacao_nivel(nivel_limpo)
@@ -452,7 +452,7 @@ def _resumir_registros_por_disciplina(registros: list[dict]) -> list[dict]:
 
     for registro in registros or []:
         disciplina_nome = (
-            _texto_limpo(registro.get("disciplina_nome")) or "Disciplina nao informada"
+            _texto_limpo(registro.get("disciplina_nome")) or "Disciplina não informada"
         )
         if disciplina_nome not in agrupados:
             agrupados[disciplina_nome] = {
@@ -532,7 +532,6 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
         parte
         for parte in (
             abertura,
-            detalhes_disciplina,
             recomendacao,
             observacao_txt,
         )
