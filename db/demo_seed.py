@@ -365,7 +365,7 @@ def _obter_periodo_pre_conselho_ativo(database) -> dict:
         return database.buscar_periodo_pre_conselho_por_id(int(periodo["id"]))
 
     periodo_id = database.criar_periodo_pre_conselho(
-        nome=f"1o Bimestre {ano_atual}",
+        nome=f"1º Bimestre {ano_atual}",
         ano_letivo=ano_atual,
         etapa=1,
         data_inicio=f"{ano_atual}-01-20",

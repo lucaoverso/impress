@@ -138,7 +138,7 @@ class PreConselhoRouterTest(unittest.TestCase):
             )
             periodo_id = int(
                 database.criar_periodo_pre_conselho(
-                    nome="1o Bimestre 2032",
+                    nome="1º Bimestre 2032",
                     ano_letivo=2032,
                     etapa=1,
                     data_inicio="2032-01-20",
@@ -211,7 +211,7 @@ class PreConselhoRouterTest(unittest.TestCase):
 
             self.assertEqual(consolidado["total_registros"], 2)
             self.assertEqual(consolidado["total_estudantes"], 1)
-            self.assertIn("1o Bimestre 2032", consolidado["texto"])
+            self.assertIn("1º Bimestre 2032", consolidado["texto"])
             self.assertIn("Ana", consolidado["texto"])
             self.assertIn("Historia", consolidado["texto"])
             self.assertIn("Matematica", consolidado["texto"])
@@ -257,7 +257,7 @@ class PreConselhoRouterTest(unittest.TestCase):
             )
             periodo_id = int(
                 database.criar_periodo_pre_conselho(
-                    nome="1o Bimestre 2034",
+                    nome="1º Bimestre 2034",
                     ano_letivo=2034,
                     etapa=1,
                     data_inicio="2034-01-20",
@@ -331,7 +331,7 @@ class PreConselhoRouterTest(unittest.TestCase):
             )
             periodo_id = int(
                 database.criar_periodo_pre_conselho(
-                    nome="1o Bimestre 2033",
+                    nome="1º Bimestre 2033",
                     ano_letivo=2033,
                     etapa=1,
                     data_inicio="2033-01-20",
@@ -384,7 +384,7 @@ class PreConselhoRouterTest(unittest.TestCase):
             )
             periodo_id = int(
                 database.criar_periodo_pre_conselho(
-                    nome="1o Bimestre 2035",
+                    nome="1º Bimestre 2035",
                     ano_letivo=2035,
                     etapa=1,
                     data_inicio="2035-01-20",

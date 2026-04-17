@@ -12,17 +12,17 @@ class PreConselhoServiceTest(unittest.TestCase):
             {
                 "categoria": "avaliacao",
                 "codigo": "nao_fez_prova_bimestral",
-                "descricao": "Nao fez a prova bimestral",
+                "descricao": "Não fez a prova bimestral",
             },
             {
                 "categoria": "avaliacao",
                 "codigo": "nao_entregou_trabalho",
-                "descricao": "Nao entregou o trabalho",
+                "descricao": "Não entregou o trabalho",
             },
             {
                 "categoria": "participacao",
                 "codigo": "baixa_participacao_aula",
-                "descricao": "Baixa participacao em aula",
+                "descricao": "Baixa participação em aula",
             },
         ]
 
@@ -38,9 +38,9 @@ class PreConselhoServiceTest(unittest.TestCase):
             "O estudante Ana obteve baixo rendimento na disciplina de Matematica",
             resultado["texto"],
         )
-        self.assertIn("ausencia na realizacao da prova bimestral", resultado["texto"])
-        self.assertIn("nao entrega de trabalhos propostos", resultado["texto"])
-        self.assertIn("baixa participacao nas aulas", resultado["texto"])
+        self.assertIn("ausência na realização da prova bimestral", resultado["texto"])
+        self.assertIn("não entrega de trabalhos propostos", resultado["texto"])
+        self.assertIn("baixa participação nas aulas", resultado["texto"])
         self.assertIn("Como relato complementar do professor", resultado["texto"])
         self.assertIn("prioridade no acompanhamento individualizado", resultado["texto"])
         self.assertGreaterEqual(len(resultado["fragmentos"]), 2)
@@ -59,10 +59,10 @@ class PreConselhoServiceTest(unittest.TestCase):
                 "professor_nome": "Prof. Ana",
                 "nivel_atencao": "medio",
                 "motivos": [
-                    {"codigo": "nao_fez_prova_bimestral", "descricao": "Nao fez a prova bimestral"},
+                    {"codigo": "nao_fez_prova_bimestral", "descricao": "Não fez a prova bimestral"},
                     {
                         "codigo": "baixa_participacao_aula",
-                        "descricao": "Baixa participacao em aula",
+                        "descricao": "Baixa participação em aula",
                     },
                 ],
                 "observacao_professor": "precisa retomar a rotina de estudos",
@@ -75,14 +75,14 @@ class PreConselhoServiceTest(unittest.TestCase):
                 "professor_nome": "Prof. Ana",
                 "nivel_atencao": "alto",
                 "motivos": [
-                    {"codigo": "nao_entregou_trabalho", "descricao": "Nao entregou o trabalho"},
+                    {"codigo": "nao_entregou_trabalho", "descricao": "Não entregou o trabalho"},
                 ],
                 "observacao_professor": "",
             },
         ]
 
         resultado = gerar_texto_consolidado_pre_conselho(
-            periodo_nome="1o Bimestre 2032",
+            periodo_nome="1º Bimestre 2032",
             turma_nome="7A",
             disciplina_nome="Todas as disciplinas",
             registros=registros,
@@ -91,11 +91,11 @@ class PreConselhoServiceTest(unittest.TestCase):
 
         self.assertEqual(resultado["total_registros"], 2)
         self.assertEqual(resultado["total_estudantes"], 1)
-        self.assertIn("1o Bimestre 2032", resultado["texto"])
+        self.assertIn("1º Bimestre 2032", resultado["texto"])
         self.assertIn("7A", resultado["texto"])
         self.assertIn("Matematica e Historia", resultado["texto"])
         self.assertIn("Prof. Ana", resultado["texto"])
-        self.assertIn("Nao fez a prova bimestral", resultado["motivos_frequentes"][0])
+        self.assertIn("Não fez a prova bimestral", resultado["motivos_frequentes"][0])
         self.assertEqual(len(resultado["itens_agrupados"]), 1)
         self.assertEqual(resultado["itens_agrupados"][0]["estudante_nome"], "Ana")
         self.assertIn(

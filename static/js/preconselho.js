@@ -93,7 +93,7 @@ function formatarDataBr(valor) {
 }
 
 function rotuloPeriodo(periodo = {}) {
-    return String(periodo.nome || "").trim() || `${Number(periodo.etapa || 0)}o Bimestre ${Number(periodo.ano_letivo || 0)}`;
+    return String(periodo.nome || "").trim() || `${Number(periodo.etapa || 0)}º Bimestre ${Number(periodo.ano_letivo || 0)}`;
 }
 
 function preencherSelect(select, itens, obterValor, obterRotulo, placeholder, opcoes = {}) {
