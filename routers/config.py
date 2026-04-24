@@ -59,7 +59,7 @@ def render_template_response(
     if extra_context:
         context.update(extra_context)
 
-    response = templates.TemplateResponse(template_name, context)
+    response = templates.TemplateResponse(request, template_name, context)
     if cache_control:
         response.headers["Cache-Control"] = cache_control
     return response
