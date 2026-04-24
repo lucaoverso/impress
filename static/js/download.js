@@ -25,6 +25,7 @@ const elementos = {
 };
 
 let infoAtual = null;
+let temporizadorBarraProgresso = null;
 
 function obterUrlAtual() {
     return new URLSearchParams(window.location.search).get("url") || "";
@@ -48,16 +49,64 @@ function ativarPainel() {
     elementos.secaoDetalhes.style.display = "grid";
 }
 
+function obterElementoRotuloBotao(botao) {
+    return botao?.querySelector(".download-progress-label") || null;
+}
+
+function definirTextoBotao(botao, texto) {
+    if (!botao) return;
+    const rotuloElemento = obterElementoRotuloBotao(botao);
+    if (rotuloElemento) {
+        rotuloElemento.textContent = texto;
+        return;
+    }
+    botao.textContent = texto;
+}
+
 function alternarEstadoCarregando(botao, carregando, textoNormal, textoCarregando) {
     if (!botao) return;
     botao.disabled = carregando;
-    botao.textContent = carregando ? textoCarregando : textoNormal;
+    definirTextoBotao(botao, carregando ? textoCarregando : textoNormal);
 }
 
 function definirBotaoDesabilitado(botao, desabilitado, textoNormal) {
     if (!botao) return;
     botao.disabled = desabilitado;
-    botao.textContent = textoNormal;
+    botao.classList.remove("is-busy", "is-complete");
+    definirTextoBotao(botao, textoNormal);
+}
+
+function limparTemporizadorBarraProgresso() {
+    if (!temporizadorBarraProgresso) return;
+    window.clearTimeout(temporizadorBarraProgresso);
+    temporizadorBarraProgresso = null;
+}
+
+function iniciarBarraProgresso(botao, texto = "Preparando download...") {
+    if (!botao) return;
+    limparTemporizadorBarraProgresso();
+    botao.disabled = true;
+    botao.classList.remove("is-complete");
+    botao.classList.add("is-busy");
+    definirTextoBotao(botao, texto);
+}
+
+function concluirBarraProgresso(botao, texto = "Download iniciado") {
+    if (!botao) return;
+    limparTemporizadorBarraProgresso();
+    botao.classList.remove("is-busy");
+    botao.classList.add("is-complete");
+    definirTextoBotao(botao, texto);
+    temporizadorBarraProgresso = window.setTimeout(() => {
+        botao.classList.remove("is-complete");
+    }, 700);
+}
+
+function obterRotuloPadraoBotao(formato, botao) {
+    if (formato === "mp3") {
+        return "Baixar Audio (MP3)";
+    }
+    return botao?.dataset.rotuloPadrao || "Baixar Vídeo";
 }
 
 function obterQualidadeMp4Selecionada() {
@@ -71,11 +120,14 @@ function atualizarResumoMp4() {
     const opcaoSelecionada = opcoes.find((item) => item.valor === qualidadeSelecionada);
 
     if (!qualidadeSelecionada || !opcaoSelecionada) {
+        elementos.btnBaixarMp4.dataset.rotuloPadrao = "Baixar Vídeo";
         definirBotaoDesabilitado(elementos.btnBaixarMp4, true, "Baixar Vídeo");
         return;
     }
 
-    definirBotaoDesabilitado(elementos.btnBaixarMp4, false, `Baixar Vídeo em ${opcaoSelecionada.rotulo}`);
+    const rotulo = `Baixar Vídeo em ${opcaoSelecionada.rotulo}`;
+    elementos.btnBaixarMp4.dataset.rotuloPadrao = rotulo;
+    definirBotaoDesabilitado(elementos.btnBaixarMp4, false, rotulo);
 }
 
 function configurarOpcoesMp4(opcoes = []) {
@@ -245,10 +297,8 @@ async function iniciarDownload(formato, qualidade = null) {
     const botao = formato === "mp3"
         ? elementos.btnBaixarMp3
         : elementos.btnBaixarMp4;
-    const rotulo = formato === "mp3"
-        ? "Salvar em MP3"
-        : botao?.textContent || "Baixar MP4";
-    alternarEstadoCarregando(botao, true, rotulo, "Preparando...");
+    const rotulo = obterRotuloPadraoBotao(formato, botao);
+    iniciarBarraProgresso(botao, "Preparando download...");
     exibirMensagem(elementos.mensagemDetalhes, "");
 
     try {
@@ -261,7 +311,9 @@ async function iniciarDownload(formato, qualidade = null) {
             body: JSON.stringify({ url: infoAtual.url, formato, qualidade }),
         });
 
+        definirTextoBotao(botao, "Baixando arquivo...");
         const blob = await resposta.blob();
+        concluirBarraProgresso(botao, "Download iniciado");
         const nomeArquivo = obterNomeArquivo(resposta, `youtube.${formato}`);
         const urlBlob = window.URL.createObjectURL(blob);
         const link = document.createElement("a");
@@ -272,6 +324,7 @@ async function iniciarDownload(formato, qualidade = null) {
         link.remove();
         window.URL.revokeObjectURL(urlBlob);
     } catch (erro) {
+        botao.classList.remove("is-busy", "is-complete");
         exibirMensagem(elementos.mensagemDetalhes, erro.message || "Falha ao baixar o arquivo.");
     } finally {
         if (formato === "mp3") {

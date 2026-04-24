@@ -253,6 +253,59 @@
     padding: 0 16px;
 }
 
+.download-progress-button {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.download-progress-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: 0;
+    background:
+        linear-gradient(90deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.12)),
+        linear-gradient(90deg, rgba(15, 23, 42, 0.12), rgba(15, 23, 42, 0.26));
+    transform: translateX(-100%);
+    transition: width 0.25s ease, opacity 0.2s ease;
+    opacity: 0;
+    z-index: 0;
+}
+
+.download-progress-label {
+    position: relative;
+    z-index: 1;
+}
+
+.download-progress-button.is-busy .download-progress-fill {
+    width: 100%;
+    opacity: 1;
+    animation: download-progress-slide 1.3s ease-in-out infinite;
+}
+
+.download-progress-button.is-busy .download-progress-label {
+    color: inherit;
+}
+
+.download-progress-button.is-complete .download-progress-fill {
+    width: 100%;
+    opacity: 1;
+    transform: translateX(0);
+    animation: none;
+}
+
+@keyframes download-progress-slide {
+    0% {
+        transform: translateX(-100%);
+    }
+    55% {
+        transform: translateX(-18%);
+    }
+    100% {
+        transform: translateX(0%);
+    }
+}
+
 .btn-primario {
     background: var(--brand);
     border-color: var(--brand);
