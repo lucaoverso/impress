@@ -57,7 +57,7 @@ class PreConselhoServiceTest(unittest.TestCase):
                 "estudante_id": 1,
                 "turma_nome": "7A",
                 "disciplina_nome": "Matematica",
-                "professor_nome": "Prof. Ana",
+                "professor_nome": "João Batista Gomes",
                 "nivel_atencao": "medio",
                 "motivos": [
                     {"codigo": "nao_fez_prova_bimestral", "descricao": "Não fez a prova bimestral"},
@@ -73,8 +73,32 @@ class PreConselhoServiceTest(unittest.TestCase):
                 "estudante_id": 1,
                 "turma_nome": "7A",
                 "disciplina_nome": "Historia",
-                "professor_nome": "Prof. Ana",
+                "professor_nome": "Pamela Sabrina Araujo Silva",
                 "nivel_atencao": "alto",
+                "motivos": [
+                    {"codigo": "nao_entregou_trabalho", "descricao": "Não entregou o trabalho"},
+                ],
+                "observacao_professor": "",
+            },
+            {
+                "estudante_nome": "Beatriz",
+                "estudante_id": 2,
+                "turma_nome": "7A",
+                "disciplina_nome": "Lingua Portuguesa",
+                "professor_nome": "Alex Borges",
+                "nivel_atencao": "baixo",
+                "motivos": [
+                    {"codigo": "nao_entregou_trabalho", "descricao": "Não entregou o trabalho"},
+                ],
+                "observacao_professor": "",
+            },
+            {
+                "estudante_nome": "Clara",
+                "estudante_id": 3,
+                "turma_nome": "7A",
+                "disciplina_nome": "R.A Lingua Portuguesa",
+                "professor_nome": "Alex Borges",
+                "nivel_atencao": "baixo",
                 "motivos": [
                     {"codigo": "nao_entregou_trabalho", "descricao": "Não entregou o trabalho"},
                 ],
@@ -87,23 +111,32 @@ class PreConselhoServiceTest(unittest.TestCase):
             turma_nome="7A",
             disciplina_nome="Todas as disciplinas",
             registros=registros,
-            professor_nome="Prof. Ana",
+            professor_nome="João Batista Gomes",
         )
 
-        self.assertEqual(resultado["total_registros"], 2)
-        self.assertEqual(resultado["total_estudantes"], 1)
+        self.assertEqual(resultado["total_registros"], 4)
+        self.assertEqual(resultado["total_estudantes"], 3)
         self.assertIn("No período 1º Bimestre 2032", resultado["texto"])
         self.assertIn("7A", resultado["texto"])
-        self.assertIn("Matematica e Historia", resultado["texto"])
-        self.assertIn("Prof. Ana", resultado["texto"])
-        self.assertIn("Não fez a prova bimestral", resultado["motivos_frequentes"][0])
-        self.assertEqual(len(resultado["itens_agrupados"]), 1)
+        self.assertIn(
+            "A turma do 7A, composta pelo seguinte corpo docente:",
+            resultado["texto"],
+        )
+        self.assertIn("João Batista Gomes (Matematica)", resultado["texto"])
+        self.assertIn("Pamela Sabrina Araujo Silva (Historia)", resultado["texto"])
+        self.assertIn(
+            "Alex Borges (Lingua Portuguesa e R.A Lingua Portuguesa)",
+            resultado["texto"],
+        )
+        self.assertIn("João Batista Gomes", resultado["texto"])
+        self.assertIn("Não entregou o trabalho", resultado["motivos_frequentes"][0])
+        self.assertEqual(len(resultado["itens_agrupados"]), 3)
         self.assertEqual(resultado["itens_agrupados"][0]["estudante_nome"], "Ana")
         self.assertIn(
             "Relatos complementares registrados", resultado["itens_agrupados"][0]["texto"]
         )
         self.assertIn(
-            "em Matematica, Prof. Ana relatou que precisa retomar a rotina de estudos",
+            "em Matematica, Prof João relatou que precisa retomar a rotina de estudos",
             resultado["itens_agrupados"][0]["texto"],
         )
         self.assertIn("em razão de", resultado["itens_agrupados"][0]["texto"])

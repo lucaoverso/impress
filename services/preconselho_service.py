@@ -246,9 +246,18 @@ def _texto_relato_complementar_consolidado(
         return ""
 
     disciplina = _texto_limpo(disciplina_nome) or "Disciplina não informada"
-    professor = _texto_limpo(professor_nome).split()[0]
+    professor = _texto_limpo(professor_nome)
     if professor:
-        return f"em {disciplina}, Prof {professor} relatou que {observacao}"
+        partes_nome = [parte.strip(".,;:") for parte in professor.split() if parte.strip(".,;:")]
+        prefixos = {"prof", "professor", "professora"}
+        primeiro_nome = ""
+        for parte in partes_nome:
+            if parte.casefold() in prefixos:
+                continue
+            primeiro_nome = parte
+            break
+        if primeiro_nome:
+            return f"em {disciplina}, Prof {primeiro_nome} relatou que {observacao}"
     return f"em {disciplina}, foi relatado que {observacao}"
 
 
@@ -575,6 +584,7 @@ def _texto_abertura_consolidado(
     turma_nome: str,
     disciplina_nome: str,
     professor_nome: str,
+    registros: list[dict],
     *,
     total_registros: int,
     total_estudantes: int,
@@ -598,10 +608,17 @@ def _texto_abertura_consolidado(
     if professor_limpo:
         partes.append(f"com registros vinculados ao professor {professor_limpo}")
 
-    return (
+    abertura = (
         ", ".join(partes)
         + f", foram consolidados {total_registros} registro(s) de {total_estudantes} estudante(s) sinalizado(s)."
     )
+
+    if turma_limpa and turma_limpa != "Todas as turmas":
+        corpo_docente = _texto_corpo_docente_turma(registros)
+        if corpo_docente:
+            abertura += f" A turma do {turma_limpa}, composta pelo seguinte corpo docente: {corpo_docente}."
+
+    return abertura
 
 
 def _nomes_estudantes_resumidos(registros: list[dict], *, limite: int = 8) -> str:
@@ -612,6 +629,27 @@ def _nomes_estudantes_resumidos(registros: list[dict], *, limite: int = 8) -> st
         return _formatar_lista_pt_br(nomes)
     prefixo = nomes[:limite] + ["demais estudantes sinalizados"]
     return _formatar_lista_pt_br(prefixo)
+
+
+def _texto_corpo_docente_turma(registros: list[dict]) -> str:
+    docentes = {}
+    ordem_docentes = []
+
+    for registro in registros or []:
+        professor = _texto_limpo(registro.get("professor_nome"))
+        disciplina = _texto_limpo(registro.get("disciplina_nome")) or "Disciplina não informada"
+        if not professor:
+            continue
+        if professor not in docentes:
+            docentes[professor] = []
+            ordem_docentes.append(professor)
+        if disciplina not in docentes[professor]:
+            docentes[professor].append(disciplina)
+
+    itens = []
+    for professor in ordem_docentes:
+        itens.append(f"{professor} ({_formatar_lista_pt_br(docentes[professor])})")
+    return _formatar_lista_pt_br(itens)
 
 
 def _resolver_periodo_atual() -> tuple[int, int]:
@@ -688,6 +726,7 @@ def gerar_texto_consolidado_pre_conselho(
         turma_nome,
         disciplina_nome,
         professor_nome,
+        itens,
         total_registros=total_registros,
         total_estudantes=total_estudantes,
     )
