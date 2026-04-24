@@ -8,7 +8,12 @@ router = APIRouter()
 
 @router.get("/login-page")
 def login_page(request: Request):
-    return render_template_response(request, "login.html")
+    return render_template_response(
+        request,
+        "login.html",
+        {"asset_version": ASSET_VERSION},
+        cache_control="no-store",
+    )
 
 
 @router.get("/servicos")
@@ -91,7 +96,12 @@ def preconselho_page(request: Request):
 
 @router.get("/cadastro-professor")
 def cadastro_professor_page(request: Request):
-    return render_template_response(request, "cadastro_professor.html")
+    return render_template_response(
+        request,
+        "cadastro_professor.html",
+        {"asset_version": ASSET_VERSION},
+        cache_control="no-store",
+    )
 
 
 @router.get("/admin")
