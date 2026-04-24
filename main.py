@@ -1,5 +1,6 @@
 import importlib
 import logging
+import sys
 import threading
 from datetime import datetime, UTC
 from contextlib import asynccontextmanager
@@ -29,16 +30,26 @@ from services.worker import worker_loop
 setup_logging()
 logger = logging.getLogger(__name__)
 
-config_module = importlib.reload(config_module)
-common_module = importlib.reload(common_module)
-professores_common_module = importlib.reload(professores_common_module)
-system_router_module = importlib.reload(system_router_module)
-pages_router_module = importlib.reload(pages_router_module)
-impressao_router_module = importlib.reload(impressao_router_module)
-download_router_module = importlib.reload(download_router_module)
-agendamento_router_module = importlib.reload(agendamento_router_module)
-professores_router_module = importlib.reload(professores_router_module)
-admin_router_module = importlib.reload(admin_router_module)
+def _reload_or_import(module):
+    nome_modulo = module.__name__
+    modulo_registrado = sys.modules.get(nome_modulo)
+
+    if modulo_registrado is not module:
+        module = importlib.import_module(nome_modulo)
+
+    return importlib.reload(module)
+
+
+config_module = _reload_or_import(config_module)
+common_module = _reload_or_import(common_module)
+professores_common_module = _reload_or_import(professores_common_module)
+system_router_module = _reload_or_import(system_router_module)
+pages_router_module = _reload_or_import(pages_router_module)
+impressao_router_module = _reload_or_import(impressao_router_module)
+download_router_module = _reload_or_import(download_router_module)
+agendamento_router_module = _reload_or_import(agendamento_router_module)
+professores_router_module = _reload_or_import(professores_router_module)
+admin_router_module = _reload_or_import(admin_router_module)
 
 ENABLE_EMBEDDED_WORKER = config_module.ENABLE_EMBEDDED_WORKER
 STATIC_DIR = config_module.STATIC_DIR
