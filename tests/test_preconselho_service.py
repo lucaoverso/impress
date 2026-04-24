@@ -102,6 +102,10 @@ class PreConselhoServiceTest(unittest.TestCase):
         self.assertIn(
             "Relatos complementares registrados", resultado["itens_agrupados"][0]["texto"]
         )
+        self.assertIn(
+            "em Matematica, Prof. Ana relatou que precisa retomar a rotina de estudos",
+            resultado["itens_agrupados"][0]["texto"],
+        )
         self.assertIn("em razão de", resultado["itens_agrupados"][0]["texto"])
 
     def test_gera_texto_consolidado_vazio_com_acentuacao(self):

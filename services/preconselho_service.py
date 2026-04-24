@@ -236,6 +236,22 @@ def _texto_para_observacao(observacao_professor: str) -> str:
     return _garantir_ponto_final(f"Como relato complementar do professor, destaca-se que {texto}")
 
 
+def _texto_relato_complementar_consolidado(
+    disciplina_nome: str,
+    professor_nome: str,
+    observacao_professor: str,
+) -> str:
+    observacao = _texto_lista_observacao(observacao_professor)
+    if not observacao:
+        return ""
+
+    disciplina = _texto_limpo(disciplina_nome) or "Disciplina não informada"
+    professor = _texto_limpo(professor_nome)
+    if professor:
+        return f"em {disciplina}, {professor} relatou que {observacao}"
+    return f"em {disciplina}, foi relatado que {observacao}"
+
+
 def listar_niveis_atencao_pre_conselho() -> list[dict]:
     return [dict(item) for item in NIVEIS_ATENCAO_PRE_CONSELHO]
 
@@ -496,9 +512,12 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
         fragmento for item in disciplinas_resumidas for fragmento in item["motivos"]
     )
     observacoes = _lista_unica_texto(
-        f"em {item['disciplina']}, {observacao}"
-        for item in disciplinas_resumidas
-        for observacao in item["observacoes"]
+        _texto_relato_complementar_consolidado(
+            registro.get("disciplina_nome"),
+            registro.get("professor_nome"),
+            registro.get("observacao_professor"),
+        )
+        for registro in registros
     )
     professores = _lista_unica_texto(item.get("professor_nome") for item in registros)
     nivel_atencao = _nivel_mais_critico(registros)
