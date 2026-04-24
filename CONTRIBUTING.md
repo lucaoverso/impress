@@ -237,6 +237,19 @@ Enquanto houver legado em producao, os helpers `_garantir_colunas_*` continuam c
 2. Rode `make check` antes de abrir ou atualizar um PR.
 3. Evite misturar refatoração estrutural com mudança de regra de negócio na mesma entrega.
 
+## Commits e alteracoes
+
+Para manter o historico mais facil de revisar e dar manutencao, siga tambem o padrao de commits e agrupamento de mudancas descrito em:
+
+- [docs/guia-commits-e-alteracoes.md](/Users/lucassbaraini/sistema-impress/docs/guia-commits-e-alteracoes.md)
+
+Resumo curto do esperado:
+
+- prefira commits pequenos e com um unico objetivo
+- use mensagens no formato `tipo(escopo): resumo`
+- nao misture refatoracao, regra de negocio e ajuste visual sem necessidade
+- inclua testes e documentacao quando houver mudanca de comportamento ou fluxo
+
 ## Documentacao de arquitetura
 
 Para entender a organizacao atual do repositorio e o padrao esperado para novas entregas, consulte:
