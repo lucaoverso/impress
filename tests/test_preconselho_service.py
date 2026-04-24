@@ -38,6 +38,7 @@ class PreConselhoServiceTest(unittest.TestCase):
             "O estudante Ana obteve baixo rendimento na disciplina de Matematica",
             resultado["texto"],
         )
+        self.assertIn("em razão de", resultado["texto"])
         self.assertIn("ausência na realização da prova bimestral", resultado["texto"])
         self.assertIn("não entrega de trabalhos propostos", resultado["texto"])
         self.assertIn("baixa participação nas aulas", resultado["texto"])
@@ -91,7 +92,7 @@ class PreConselhoServiceTest(unittest.TestCase):
 
         self.assertEqual(resultado["total_registros"], 2)
         self.assertEqual(resultado["total_estudantes"], 1)
-        self.assertIn("1º Bimestre 2032", resultado["texto"])
+        self.assertIn("No período 1º Bimestre 2032", resultado["texto"])
         self.assertIn("7A", resultado["texto"])
         self.assertIn("Matematica e Historia", resultado["texto"])
         self.assertIn("Prof. Ana", resultado["texto"])
@@ -101,6 +102,19 @@ class PreConselhoServiceTest(unittest.TestCase):
         self.assertIn(
             "Relatos complementares registrados", resultado["itens_agrupados"][0]["texto"]
         )
+        self.assertIn("em razão de", resultado["itens_agrupados"][0]["texto"])
+
+    def test_gera_texto_consolidado_vazio_com_acentuacao(self):
+        resultado = gerar_texto_consolidado_pre_conselho(
+            periodo_nome="1º Bimestre 2032",
+            turma_nome="7A",
+            disciplina_nome="Matematica",
+            registros=[],
+        )
+
+        self.assertEqual(resultado["total_registros"], 0)
+        self.assertIn("No período 1º Bimestre 2032", resultado["texto"])
+        self.assertIn("não há registros de estudantes sinalizados no pré-conselho", resultado["texto"])
 
 
 if __name__ == "__main__":

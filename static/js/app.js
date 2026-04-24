@@ -2,10 +2,11 @@ const { el } = window.AppDom;
 const {
     limparSessaoLocal,
     normalizarCargoUsuario,
-    parseDataSqlUtc,
     sessaoLocalValida,
     validarSenhaForte,
 } = window.AppAuth;
+
+let ultimoElementoFocadoRecuperacao = null;
 
 function setErroLogin(texto) {
     const erro = el("erro");
@@ -20,23 +21,67 @@ function setMensagemRecuperacao(texto, erro = false) {
     alvo.style.color = erro ? "#dc2626" : "#0f766e";
 }
 
-function painelRecuperacaoAberto() {
-    const painel = document.querySelector("auth-recovery");
-    return Boolean(painel) && painel.style.display == "flex";
+function modalRecuperacaoAberto() {
+    const modal = el("modalRecuperacaoSenha");
+    return Boolean(modal) && !modal.hidden;
 }
 
-function atualizarBotaoRecuperacao() {
+function atualizarBotaoRecuperacao(aberto) {
     const botao = el("btnMostrarRecuperacao");
     if (!botao) return;
-    botao.innerText = painelRecuperacaoAberto()
-        ? "Ocultar recuperacao"
-        : "Esqueci minha senha";
+    botao.setAttribute("aria-expanded", aberto ? "true" : "false");
 }
 
-function alternarPainelRecuperacao() {
-    const painel = document.querySelector("auth-recovery");
-    painel.style.display = "flex";
-    atualizarBotaoRecuperacao();
+function obterCampoInicialRecuperacao() {
+    const campos = [
+        el("recEmail"),
+        el("recDataNascimento"),
+        el("recNovaSenha"),
+        el("recConfirmacaoSenha"),
+    ].filter(Boolean);
+
+    return campos.find((campo) => !campo.value.trim()) || campos[0] || el("painelRecuperacaoSenha");
+}
+
+function abrirModalRecuperacao() {
+    const modal = el("modalRecuperacaoSenha");
+    if (!modal || !modal.hidden) return;
+
+    const focoAtual = document.activeElement;
+    ultimoElementoFocadoRecuperacao = focoAtual && typeof focoAtual.focus === "function" ? focoAtual : null;
+
+    const emailLogin = String(el("email")?.value || "").trim().toLowerCase();
+    const recEmail = el("recEmail");
+    if (recEmail && emailLogin && !recEmail.value.trim()) {
+        recEmail.value = emailLogin;
+    }
+
+    setMensagemRecuperacao("");
+    modal.hidden = false;
+    document.body.classList.add("auth-modal-open");
+    atualizarBotaoRecuperacao(true);
+
+    requestAnimationFrame(() => {
+        const campoInicial = obterCampoInicialRecuperacao();
+        if (campoInicial && typeof campoInicial.focus === "function") {
+            campoInicial.focus();
+        }
+    });
+}
+
+function fecharModalRecuperacao({ restaurarFoco = true } = {}) {
+    const modal = el("modalRecuperacaoSenha");
+    if (!modal || modal.hidden) return;
+
+    modal.hidden = true;
+    setMensagemRecuperacao("");
+    document.body.classList.remove("auth-modal-open");
+    atualizarBotaoRecuperacao(false);
+
+    if (restaurarFoco && ultimoElementoFocadoRecuperacao && typeof ultimoElementoFocadoRecuperacao.focus === "function") {
+        ultimoElementoFocadoRecuperacao.focus();
+    }
+    ultimoElementoFocadoRecuperacao = null;
 }
 
 async function recuperarSenhaProfessor() {
@@ -165,22 +210,38 @@ function configurarLoginPage() {
 
     const btnMostrarRecuperacao = el("btnMostrarRecuperacao");
     if (btnMostrarRecuperacao) {
-        btnMostrarRecuperacao.addEventListener("click", alternarPainelRecuperacao);
+        btnMostrarRecuperacao.addEventListener("click", abrirModalRecuperacao);
     }
 
-    const btnRecuperarSenha = el("btnRecuperarSenha");
-    if (btnRecuperarSenha) {
-        btnRecuperarSenha.addEventListener("click", recuperarSenhaProfessor);
-    }
-
-    ["recEmail", "recDataNascimento", "recNovaSenha", "recConfirmacaoSenha"].forEach((idCampo) => {
-        const campo = el(idCampo);
-        if (!campo) return;
-        campo.addEventListener("keydown", (event) => {
-            if (event.key !== "Enter") return;
+    const formRecuperacao = el("formRecuperacaoSenha");
+    if (formRecuperacao) {
+        formRecuperacao.addEventListener("submit", async (event) => {
             event.preventDefault();
-            recuperarSenhaProfessor();
+            await recuperarSenhaProfessor();
         });
+    }
+
+    ["btnFecharRecuperacao", "btnCancelarRecuperacao"].forEach((idBotao) => {
+        const botao = el(idBotao);
+        if (!botao) return;
+        botao.addEventListener("click", () => {
+            fecharModalRecuperacao();
+        });
+    });
+
+    const modalRecuperacao = el("modalRecuperacaoSenha");
+    if (modalRecuperacao) {
+        modalRecuperacao.addEventListener("click", (event) => {
+            if (event.target === modalRecuperacao) {
+                fecharModalRecuperacao();
+            }
+        });
+    }
+
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && modalRecuperacaoAberto()) {
+            fecharModalRecuperacao();
+        }
     });
 
     const emailInput = el("email");
@@ -190,7 +251,7 @@ function configurarLoginPage() {
         emailInput.value = emailPrefill;
     }
 
-    atualizarBotaoRecuperacao();
+    atualizarBotaoRecuperacao(false);
 }
 
 window.addEventListener("DOMContentLoaded", configurarLoginPage);

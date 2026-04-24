@@ -11,7 +11,7 @@ STATUS_PERIODO_PRE_CONSELHO_VALIDOS = (
 
 NIVEIS_ATENCAO_PRE_CONSELHO = (
     {"id": "baixo", "nome": "Baixo"},
-    {"id": "medio", "nome": "Medio"},
+    {"id": "medio", "nome": "Médio"},
     {"id": "alto", "nome": "Alto"},
 )
 
@@ -148,11 +148,11 @@ MOTIVOS_PRE_CONSELHO_INICIAIS = (
 )
 
 _CATEGORIAS_ROTULO = {
-    "avaliacao": "Avaliacao",
-    "participacao": "Participacao",
+    "avaliacao": "Avaliação",
+    "participacao": "Participação",
     "comportamento": "Comportamento",
-    "frequencia": "Frequencia",
-    "organizacao_estudo": "Organizacao e estudo",
+    "frequencia": "Frequência",
+    "organizacao_estudo": "Organização e estudo",
     "dificuldades_pedagogicas": "Dificuldades pedagógicas",
 }
 
@@ -176,8 +176,8 @@ _FRASES_MOTIVO = {
     "conversas_excessivas_em_aula": "conversas excessivas durante as aulas",
     "nao_respeita_combinados": "dificuldade em respeitar os combinados de convivência",
     "comportamento_inadequado_sala": "comportamento inadequado em sala",
-    "faltas_frequentes": "frequencia irregular",
-    "ausencias_dias_avaliacao": "ausência em dias de avaliacao",
+    "faltas_frequentes": "frequência irregular",
+    "ausencias_dias_avaliacao": "ausência em dias de avaliação",
     "chega_atrasado_frequencia": "atrasos frequentes",
     "nao_traz_material": "falta de material necessário para as aulas",
     "nao_realiza_atividades_casa": "não realização das atividades de casa",
@@ -243,7 +243,7 @@ def listar_niveis_atencao_pre_conselho() -> list[dict]:
 def validar_status_periodo_pre_conselho(status: str) -> str:
     status_limpo = _texto_limpo(status).upper()
     if status_limpo not in STATUS_PERIODO_PRE_CONSELHO_VALIDOS:
-        raise ValueError("Status de periodo invalido.")
+        raise ValueError("Status de período inválido.")
     return status_limpo
 
 
@@ -251,16 +251,16 @@ def validar_etapa_pre_conselho(etapa: int) -> int:
     try:
         etapa_valor = int(etapa)
     except (TypeError, ValueError) as exc:
-        raise ValueError("Etapa invalida.") from exc
+        raise ValueError("Etapa inválida.") from exc
     if etapa_valor not in {1, 2, 3, 4}:
-        raise ValueError("Etapa invalida.")
+        raise ValueError("Etapa inválida.")
     return etapa_valor
 
 
 def validar_categoria_motivo_pre_conselho(categoria: str) -> str:
     categoria_limpa = _texto_limpo(categoria)
     if categoria_limpa not in CATEGORIAS_MOTIVO_PRE_CONSELHO:
-        raise ValueError("Categoria de motivo invalida.")
+        raise ValueError("Categoria de motivo inválida.")
     return categoria_limpa
 
 
@@ -300,7 +300,7 @@ def codigo_motivo_pre_conselho_valido(codigo: str) -> str:
     codigo_limpo = _texto_limpo(codigo)
     codigos = {item["codigo"] for item in MOTIVOS_PRE_CONSELHO_INICIAIS}
     if codigo_limpo not in codigos:
-        raise ValueError("Codigo de motivo invalido.")
+        raise ValueError("Código de motivo inválido.")
     return codigo_limpo
 
 
@@ -352,7 +352,7 @@ def _agrupar_motivos_por_categoria(motivos: list[dict]) -> list[str]:
 def _descricao_disciplinas(disciplinas: list[str]) -> str:
     disciplinas_unicas = _lista_unica_texto(disciplinas)
     if not disciplinas_unicas:
-        return "no periodo"
+        return "no período"
     if len(disciplinas_unicas) == 1:
         return f"na disciplina de {disciplinas_unicas[0]}"
     return f"nas disciplinas de {_formatar_lista_pt_br(disciplinas_unicas)}"
@@ -503,10 +503,10 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
     professores = _lista_unica_texto(item.get("professor_nome") for item in registros)
     nivel_atencao = _nivel_mais_critico(registros)
 
-    estudante_nome = _texto_limpo(base.get("estudante_nome")) or "Estudante nao identificado"
+    estudante_nome = _texto_limpo(base.get("estudante_nome")) or "Estudante não identificado"
     abertura = (
         f"O estudante {estudante_nome} obteve baixo rendimento {_descricao_disciplinas(disciplinas)}, "
-        f"em razao de {_formatar_lista_pt_br(motivos)}."
+        f"em razão de {_formatar_lista_pt_br(motivos)}."
     )
 
     detalhes_disciplina = ""
@@ -560,7 +560,7 @@ def _texto_abertura_consolidado(
     total_registros: int,
     total_estudantes: int,
 ) -> str:
-    partes = [f"No periodo {periodo_nome}"]
+    partes = [f"No período {periodo_nome}"]
 
     turma_limpa = _texto_limpo(turma_nome)
     disciplina_limpa = _texto_limpo(disciplina_nome)
@@ -653,8 +653,8 @@ def gerar_texto_consolidado_pre_conselho(
 
     if total_registros == 0:
         texto = (
-            f"No periodo {periodo_nome}, na turma {turma_nome}, na disciplina de {disciplina_nome}, "
-            "nao ha registros de estudantes sinalizados no pre-conselho."
+            f"No período {periodo_nome}, na turma {turma_nome}, na disciplina de {disciplina_nome}, "
+            "não há registros de estudantes sinalizados no pré-conselho."
         )
         return {
             "total_registros": 0,

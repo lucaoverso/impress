@@ -95,9 +95,9 @@ def _usuario_id(usuario: dict) -> int:
     try:
         valor = int(usuario.get("id"))
     except (TypeError, ValueError) as exc:
-        raise HTTPException(401, "Usuario invalido.") from exc
+        raise HTTPException(401, "Usuário inválido.") from exc
     if valor <= 0:
-        raise HTTPException(401, "Usuario invalido.")
+        raise HTTPException(401, "Usuário inválido.")
     return valor
 
 
@@ -116,7 +116,7 @@ def _usuario_eh_professor(usuario: dict) -> bool:
 def _texto_obrigatorio(valor: str, campo: str, *, max_len: int = 255) -> str:
     texto = str(valor or "").strip()
     if not texto:
-        raise HTTPException(400, f"{campo} e obrigatorio.")
+        raise HTTPException(400, f"{campo} é obrigatório.")
     if len(texto) > max_len:
         raise HTTPException(400, f"{campo} excede o limite de {max_len} caracteres.")
     return texto
@@ -136,7 +136,7 @@ def _validar_data_iso(valor: str, campo: str) -> str:
     try:
         data = datetime.strptime(texto, "%Y-%m-%d").date()
     except ValueError as exc:
-        raise HTTPException(400, f"{campo} invalida. Use o formato YYYY-MM-DD.") from exc
+        raise HTTPException(400, f"{campo} inválida. Use o formato YYYY-MM-DD.") from exc
     return data.isoformat()
 
 
@@ -144,10 +144,10 @@ def _validar_periodo(periodo_id: int) -> dict:
     try:
         periodo_id_valor = int(periodo_id)
     except (TypeError, ValueError) as exc:
-        raise HTTPException(400, "Periodo invalido.") from exc
+        raise HTTPException(400, "Período inválido.") from exc
     periodo = buscar_periodo_pre_conselho_por_id(periodo_id_valor)
     if not periodo:
-        raise HTTPException(404, "Periodo nao encontrado.")
+        raise HTTPException(404, "Período não encontrado.")
     return periodo
 
 
@@ -155,10 +155,10 @@ def _validar_turma(turma_id: int) -> dict:
     try:
         turma_id_valor = int(turma_id)
     except (TypeError, ValueError) as exc:
-        raise HTTPException(400, "Turma invalida.") from exc
+        raise HTTPException(400, "Turma inválida.") from exc
     turma = buscar_turma_por_id(turma_id_valor)
     if not turma:
-        raise HTTPException(404, "Turma nao encontrada.")
+        raise HTTPException(404, "Turma não encontrada.")
     return turma
 
 
@@ -166,10 +166,10 @@ def _validar_disciplina(disciplina_id: int) -> dict:
     try:
         disciplina_id_valor = int(disciplina_id)
     except (TypeError, ValueError) as exc:
-        raise HTTPException(400, "Disciplina invalida.") from exc
+        raise HTTPException(400, "Disciplina inválida.") from exc
     disciplina = buscar_disciplina_por_id(disciplina_id_valor)
     if not disciplina:
-        raise HTTPException(404, "Disciplina nao encontrada.")
+        raise HTTPException(404, "Disciplina não encontrada.")
     return disciplina
 
 
@@ -177,12 +177,12 @@ def _validar_estudante_na_turma(estudante_id: int, turma_id: int) -> dict:
     try:
         estudante_id_valor = int(estudante_id)
     except (TypeError, ValueError) as exc:
-        raise HTTPException(400, "Estudante invalido.") from exc
+        raise HTTPException(400, "Estudante inválido.") from exc
     estudante = buscar_estudante_por_id(estudante_id_valor)
     if not estudante:
-        raise HTTPException(404, "Estudante nao encontrado.")
+        raise HTTPException(404, "Estudante não encontrado.")
     if int(estudante.get("turma_id") or 0) != int(turma_id):
-        raise HTTPException(400, "O estudante nao pertence a turma selecionada.")
+        raise HTTPException(400, "O estudante não pertence à turma selecionada.")
     return estudante
 
 
@@ -201,11 +201,11 @@ def _resolver_professor(
     if not permitir_gestor or not _usuario_eh_gestor(usuario):
         raise HTTPException(403, "Acesso negado.")
     if professor_id is None:
-        raise HTTPException(400, "Professor obrigatorio.")
+        raise HTTPException(400, "Professor obrigatório.")
 
     professor = buscar_usuario_por_id(int(professor_id))
     if not professor or _normalizar_cargo(professor) != "PROFESSOR":
-        raise HTTPException(404, "Professor nao encontrado.")
+        raise HTTPException(404, "Professor não encontrado.")
     return {"id": int(professor["id"]), "nome": professor["nome"]}
 
 
@@ -330,7 +330,7 @@ def _validar_escopo_professor(professor_id: int, turma_id: int, disciplina_id: i
             (int(item["turma_id"]), int(item["disciplina_id"])) for item in escopo["combinacoes"]
         }
         if (turma_id_valor, disciplina_id_valor) not in combinacoes:
-            raise HTTPException(403, "Disciplina fora da atribuicao docente da turma selecionada.")
+            raise HTTPException(403, "Disciplina fora da atribuição docente da turma selecionada.")
     return escopo["turmas"], escopo["disciplinas"]
 
 
@@ -353,7 +353,7 @@ def _validar_filtros_professor(
             (int(item["turma_id"]), int(item["disciplina_id"])) for item in escopo["combinacoes"]
         }
         if (int(turma_id), int(disciplina_id)) not in combinacoes:
-            raise HTTPException(403, "Disciplina fora da atribuicao docente da turma selecionada.")
+            raise HTTPException(403, "Disciplina fora da atribuição docente da turma selecionada.")
 
 
 def _motivos_ativos_validos(motivo_ids: list[int]) -> list[dict]:
@@ -361,7 +361,7 @@ def _motivos_ativos_validos(motivo_ids: list[int]) -> list[dict]:
     ids_recebidos = {int(valor) for valor in motivo_ids or [] if int(valor) > 0}
     ids_encontrados = {int(item["id"]) for item in motivos if int(item.get("ativo") or 0) == 1}
     if ids_recebidos != ids_encontrados:
-        raise HTTPException(400, "Existe motivo invalido ou inativo na selecao.")
+        raise HTTPException(400, "Existe motivo inválido ou inativo na seleção.")
     return motivos
 
 
@@ -549,7 +549,7 @@ def salvar_registro_preconselho_api(
     if _usuario_eh_professor(usuario) and not periodo_editavel_para_cargo(
         periodo.get("status"), "PROFESSOR"
     ):
-        raise HTTPException(403, "Periodo fechado para edicao do professor.")
+        raise HTTPException(403, "Período fechado para edição do professor.")
 
     if not payload.sinalizar:
         existente = next(
@@ -566,7 +566,7 @@ def salvar_registro_preconselho_api(
             None,
         )
         if not existente:
-            raise HTTPException(400, "Nao existe registro salvo para remover.")
+            raise HTTPException(400, "Não existe registro salvo para remover.")
         if not _registro_editavel_usuario(usuario, existente):
             raise HTTPException(403, "Acesso negado.")
         excluir_registro_pre_conselho(
@@ -577,7 +577,7 @@ def salvar_registro_preconselho_api(
 
     motivos = _motivos_ativos_validos(payload.motivo_ids)
     observacao_professor = _texto_opcional(
-        payload.observacao_professor, "Observacao do professor", max_len=1000
+        payload.observacao_professor, "Observação do professor", max_len=1000
     )
     try:
         nivel_atencao = validar_nivel_atencao_pre_conselho(payload.nivel_atencao)
@@ -617,7 +617,7 @@ def excluir_registro_preconselho_api(registro_id: int, usuario=Depends(get_usuar
     _exigir_acesso_preconselho(usuario)
     registro = buscar_registro_pre_conselho_por_id(registro_id)
     if not registro:
-        raise HTTPException(404, "Registro nao encontrado.")
+        raise HTTPException(404, "Registro não encontrado.")
     if not _registro_editavel_usuario(usuario, registro):
         raise HTTPException(403, "Acesso negado.")
 
@@ -742,7 +742,7 @@ def criar_periodo_preconselho_api(
         )
     except IntegrityError as exc:
         raise HTTPException(
-            400, "Ja existe um periodo cadastrado para este ano letivo e etapa."
+            400, "Já existe um período cadastrado para este ano letivo e etapa."
         ) from exc
     periodo = buscar_periodo_pre_conselho_por_id(periodo_id)
     return {**periodo, "editavel": True}
@@ -768,10 +768,10 @@ def atualizar_periodo_preconselho_api(
             data_inicio=_validar_data_iso(payload.data_inicio, "Data inicial"),
             data_fim=_validar_data_iso(payload.data_fim, "Data final"),
         ):
-            raise HTTPException(404, "Periodo nao encontrado.")
+            raise HTTPException(404, "Período não encontrado.")
     except IntegrityError as exc:
         raise HTTPException(
-            400, "Ja existe um periodo cadastrado para este ano letivo e etapa."
+            400, "Já existe um período cadastrado para este ano letivo e etapa."
         ) from exc
     periodo = buscar_periodo_pre_conselho_por_id(periodo_id)
     return {**periodo, "editavel": True}
@@ -789,7 +789,7 @@ def atualizar_status_periodo_preconselho_api(
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
     if not atualizar_status_periodo_pre_conselho(periodo_id, status):
-        raise HTTPException(404, "Periodo nao encontrado.")
+        raise HTTPException(404, "Período não encontrado.")
     periodo = buscar_periodo_pre_conselho_por_id(periodo_id)
     return {**periodo, "editavel": True}
 
@@ -817,14 +817,14 @@ def criar_motivo_preconselho_api(
     try:
         motivo_id = criar_motivo_pre_conselho(
             categoria=categoria,
-            codigo=_texto_obrigatorio(payload.codigo, "Codigo", max_len=120)
+            codigo=_texto_obrigatorio(payload.codigo, "Código", max_len=120)
             .lower()
             .replace(" ", "_"),
-            descricao=_texto_obrigatorio(payload.descricao, "Descricao", max_len=255),
+            descricao=_texto_obrigatorio(payload.descricao, "Descrição", max_len=255),
             ordem=int(payload.ordem or 0),
         )
     except IntegrityError as exc:
-        raise HTTPException(400, "Ja existe um motivo cadastrado com este codigo.") from exc
+        raise HTTPException(400, "Já existe um motivo cadastrado com este código.") from exc
     motivo = buscar_motivo_pre_conselho_por_id(motivo_id)
     return motivo
 
@@ -843,10 +843,10 @@ def atualizar_motivo_preconselho_api(
     if not atualizar_motivo_pre_conselho_dados(
         motivo_id,
         categoria=categoria,
-        descricao=_texto_obrigatorio(payload.descricao, "Descricao", max_len=255),
+        descricao=_texto_obrigatorio(payload.descricao, "Descrição", max_len=255),
         ordem=int(payload.ordem or 0),
     ):
-        raise HTTPException(404, "Motivo nao encontrado.")
+        raise HTTPException(404, "Motivo não encontrado.")
     motivo = buscar_motivo_pre_conselho_por_id(motivo_id)
     return motivo
 
@@ -859,7 +859,7 @@ def atualizar_status_motivo_preconselho_api(
 ):
     _exigir_admin(usuario)
     if not atualizar_status_motivo_pre_conselho(motivo_id, payload.ativo):
-        raise HTTPException(404, "Motivo nao encontrado.")
+        raise HTTPException(404, "Motivo não encontrado.")
     motivo = buscar_motivo_pre_conselho_por_id(motivo_id)
     return motivo
 

@@ -105,6 +105,7 @@ class PreConselhoRouterTest(unittest.TestCase):
             )
             self.assertGreater(len(resposta["periodos"]), 0)
             self.assertGreater(len(resposta["motivos"]), 0)
+            self.assertIn("Médio", [item["nome"] for item in resposta["niveis_atencao"]])
 
     def test_professor_salva_registro_e_coordenacao_consolida(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -173,6 +174,7 @@ class PreConselhoRouterTest(unittest.TestCase):
                 "O estudante Ana obteve baixo rendimento na disciplina de Matematica",
                 salvo["texto_gerado"],
             )
+            self.assertIn("em razão de", salvo["texto_gerado"])
 
             salvo_historia = preconselho_router.salvar_registro_preconselho_api(
                 payload=models.PreConselhoRegistroSaveIn(
@@ -211,7 +213,7 @@ class PreConselhoRouterTest(unittest.TestCase):
 
             self.assertEqual(consolidado["total_registros"], 2)
             self.assertEqual(consolidado["total_estudantes"], 1)
-            self.assertIn("1º Bimestre 2032", consolidado["texto"])
+            self.assertIn("No período 1º Bimestre 2032", consolidado["texto"])
             self.assertIn("Ana", consolidado["texto"])
             self.assertIn("Historia", consolidado["texto"])
             self.assertIn("Matematica", consolidado["texto"])
@@ -357,7 +359,7 @@ class PreConselhoRouterTest(unittest.TestCase):
                 )
 
             self.assertEqual(ctx.exception.status_code, 403)
-            self.assertIn("Periodo fechado", str(ctx.exception.detail))
+            self.assertIn("Período fechado", str(ctx.exception.detail))
 
     def test_atribuicao_docente_exata_restringe_combinacoes_do_preconselho(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -429,7 +431,7 @@ class PreConselhoRouterTest(unittest.TestCase):
                 )
 
             self.assertEqual(ctx.exception.status_code, 403)
-            self.assertIn("atribuicao docente", str(ctx.exception.detail))
+            self.assertIn("atribuição docente", str(ctx.exception.detail))
 
     def test_admin_cria_e_atualiza_periodos_e_motivos(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

@@ -15,12 +15,12 @@ const headers = criarHeadersAuth(token);
 const headersJson = criarHeadersJsonAuth(token);
 
 const CATEGORIAS_MOTIVO = [
-    { id: "avaliacao", nome: "Avaliacao" },
-    { id: "participacao", nome: "Participacao" },
+    { id: "avaliacao", nome: "Avaliação" },
+    { id: "participacao", nome: "Participação" },
     { id: "comportamento", nome: "Comportamento" },
-    { id: "frequencia", nome: "Frequencia" },
-    { id: "organizacao_estudo", nome: "Organizacao e estudo" },
-    { id: "dificuldades_pedagogicas", nome: "Dificuldades pedagogicas" }
+    { id: "frequencia", nome: "Frequência" },
+    { id: "organizacao_estudo", nome: "Organização e estudo" },
+    { id: "dificuldades_pedagogicas", nome: "Dificuldades pedagógicas" }
 ];
 
 let usuarioAtual = null;
@@ -131,7 +131,7 @@ function preencherSelect(select, itens, obterValor, obterRotulo, placeholder, op
 }
 
 function obterPrimeiroNome() {
-    return String(usuarioAtual?.nome || "").trim().split(" ")[0] || "Usuario";
+    return String(usuarioAtual?.nome || "").trim().split(" ")[0] || "Usuário";
 }
 
 function obterPeriodos() {
@@ -359,9 +359,9 @@ function renderizarCabecalho() {
     const primeiroNome = obterPrimeiroNome();
     const possuiVisaoDocente = Boolean(contextoAtual?.professor_id);
     const possuiVisaoInstitucional = Boolean(contextoAtual?.pode_consolidar);
-    let descricao = "visao institucional";
+    let descricao = "visão institucional";
     if (possuiVisaoDocente && possuiVisaoInstitucional) {
-        descricao = "registro docente e visao institucional";
+        descricao = "registro docente e visão institucional";
     } else if (possuiVisaoDocente) {
         descricao = "registro docente";
     }
@@ -479,7 +479,7 @@ function renderizarSelectNivelAtencao() {
         Array.isArray(contextoAtual?.niveis_atencao) ? contextoAtual.niveis_atencao : [],
         (item) => item.id,
         (item) => item.nome,
-        "Nao informado",
+        "Não informado",
         {
             valorSelecionado: ""
         }
@@ -610,7 +610,7 @@ function renderizarEstudantesDocente() {
                     <span class="pcpi-item-note">${escaparHtml(
                         item.sinalizado
                             ? `${item.motivos.length} motivo(s) selecionado(s)`
-                            + (nivel ? ` • Atencao ${nivel}` : "")
+                            + (nivel ? ` • Atenção ${nivel}` : "")
                             + (item.motivos.length
                                 ? `\n${item.motivos.map((m) => `- ${escaparHtml(m.descricao || "")}`).join("\n")}`
                                 : ""
@@ -750,7 +750,7 @@ async function atualizarPreviewDocente() {
         });
 
         if (!resposta.ok) {
-            throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel gerar a pre-visualizacao."));
+            throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível gerar a pré-visualização."));
         }
 
         const dados = await resposta.json();
@@ -758,7 +758,7 @@ async function atualizarPreviewDocente() {
         atualizarEstadoFormularioDocente();
     } catch (erro) {
         el("preconselhoTextoPreview").value = "";
-        el("preconselhoPreviewAjuda").textContent = erro.message || "Nao foi possivel gerar a pre-visualizacao.";
+        el("preconselhoPreviewAjuda").textContent = erro.message || "Não foi possível gerar a pré-visualização.";
     }
 }
 
@@ -781,7 +781,7 @@ async function carregarCombosDocente() {
 
     const resposta = await fetchComAuth(`/preconselho/minhas-turmas-disciplinas?periodo_id=${Number(estadoDocente.periodoId)}`, { headers });
     if (!resposta.ok) {
-        throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel carregar as turmas e disciplinas do professor."));
+        throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível carregar as turmas e disciplinas do professor."));
     }
 
     estadoDocente.combos = await resposta.json();
@@ -816,7 +816,7 @@ async function carregarEstudantesDocente() {
 
     const resposta = await fetchComAuth(`/preconselho/estudantes?${params.toString()}`, { headers });
     if (!resposta.ok) {
-        throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel carregar os estudantes."));
+        throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível carregar os estudantes."));
     }
 
     estadoDocente.estudantes = await resposta.json();
@@ -842,7 +842,7 @@ async function carregarRegistrosDocente() {
 
     const resposta = await fetchComAuth(`/preconselho/registros?${params.toString()}`, { headers });
     if (!resposta.ok) {
-        throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel carregar os registros salvos."));
+        throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível carregar os registros salvos."));
     }
 
     const dados = await resposta.json();
@@ -878,7 +878,7 @@ async function carregarPainelDocente(estudanteIdParaReabrir = null) {
         renderizarEstudantesDocente();
         renderizarRegistrosDocente();
         limparFormularioDocente();
-        definirMensagem("msgPreconselhoDocente", erro.message || "Nao foi possivel carregar o painel docente.", true);
+        definirMensagem("msgPreconselhoDocente", erro.message || "Não foi possível carregar o painel docente.", true);
         return false;
     }
 }
@@ -922,7 +922,7 @@ function renderizarConsolidacao() {
 
     const itensAgrupados = Array.isArray(dados.itens_agrupados) ? dados.itens_agrupados : [];
     if (itensAgrupados.length === 0) {
-        lista.innerHTML = criarEstadoVazio("Nao ha estudantes sinalizados para os filtros aplicados.");
+        lista.innerHTML = criarEstadoVazio("Não há estudantes sinalizados para os filtros aplicados.");
         return;
     }
 
@@ -970,16 +970,16 @@ async function carregarConsolidacao() {
     try {
         const resposta = await fetchComAuth(`/preconselho/consolidado?${construirParametrosConsolidacao().toString()}`, { headers });
         if (!resposta.ok) {
-            throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel gerar a consolidacao."));
+            throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível gerar a consolidação."));
         }
 
         estadoConsolidacao.dados = await resposta.json();
         renderizarConsolidacao();
-        definirMensagem("msgPreconselhoConsolidacao", "Consolidacao atualizada.");
+        definirMensagem("msgPreconselhoConsolidacao", "Consolidação atualizada.");
     } catch (erro) {
         estadoConsolidacao.dados = null;
         renderizarConsolidacao();
-        definirMensagem("msgPreconselhoConsolidacao", erro.message || "Nao foi possivel carregar a consolidacao.", true);
+        definirMensagem("msgPreconselhoConsolidacao", erro.message || "Não foi possível carregar a consolidação.", true);
     }
 }
 
@@ -997,7 +997,7 @@ function renderizarTabelaPeriodos() {
 
     tbody.innerHTML = periodos.map((item) => `
         <tr>
-            <td data-label="Periodo">
+            <td data-label="Período">
                 <strong>${escaparHtml(rotuloPeriodo(item))}</strong>
                 <div class="preconselho-table-meta">${Number(item.ano_letivo || 0)} • etapa ${Number(item.etapa || 0)}</div>
             </td>
@@ -1007,7 +1007,7 @@ function renderizarTabelaPeriodos() {
             <td data-label="Datas">
                 ${escaparHtml(formatarDataBr(item.data_inicio))} a ${escaparHtml(formatarDataBr(item.data_fim))}
             </td>
-            <td data-label="Acoes">
+            <td data-label="Ações">
                 <div class="preconselho-table-actions">
                     <button type="button" data-action="editar-periodo" data-periodo-id="${Number(item.id)}">Editar</button>
                     <button type="button" data-action="status-periodo" data-periodo-id="${Number(item.id)}" data-status="${escaparHtml(item.status || "")}">
@@ -1037,7 +1037,7 @@ function renderizarTabelaMotivos() {
                 <strong>${escaparHtml(rotuloCategoria(item.categoria))}</strong>
                 <div class="preconselho-table-meta">${escaparHtml(item.codigo || "")}</div>
             </td>
-            <td data-label="Descricao">
+            <td data-label="Descrição">
                 ${escaparHtml(item.descricao || "")}
             </td>
             <td data-label="Status">
@@ -1045,7 +1045,7 @@ function renderizarTabelaMotivos() {
                     ${Number(item.ativo ?? 1) === 1 ? "Ativo" : "Inativo"}
                 </span>
             </td>
-            <td data-label="Acoes">
+            <td data-label="Ações">
                 <div class="preconselho-table-actions">
                     <button type="button" data-action="editar-motivo" data-motivo-id="${Number(item.id)}">Editar</button>
                     <button type="button" data-action="status-motivo" data-motivo-id="${Number(item.id)}" data-ativo="${Number(item.ativo ?? 1)}">
@@ -1108,7 +1108,7 @@ function carregarMotivoNoFormulario(motivoId) {
 async function recarregarPeriodos() {
     const resposta = await fetchComAuth("/preconselho/periodos", { headers });
     if (!resposta.ok) {
-        throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel atualizar os periodos."));
+        throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível atualizar os períodos."));
     }
 
     const periodos = await resposta.json();
@@ -1125,7 +1125,7 @@ async function recarregarMotivos() {
     const sufixo = incluirInativos ? "?incluir_inativos=true" : "";
     const resposta = await fetchComAuth(`/preconselho/motivos${sufixo}`, { headers });
     if (!resposta.ok) {
-        throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel atualizar os motivos."));
+        throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível atualizar os motivos."));
     }
 
     const motivos = await resposta.json();
@@ -1171,7 +1171,7 @@ async function salvarPeriodo(event) {
         }
 
         if (!resposta.ok) {
-            throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel salvar o periodo."));
+            throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível salvar o período."));
         }
 
         const periodoSalvo = await resposta.json();
@@ -1182,16 +1182,16 @@ async function salvarPeriodo(event) {
                 body: JSON.stringify({ status: statusDesejado })
             });
             if (!respostaStatus.ok) {
-                throw new Error(await obterMensagemErroResposta(respostaStatus, "O periodo foi salvo, mas o status nao foi atualizado."));
+                throw new Error(await obterMensagemErroResposta(respostaStatus, "O período foi salvo, mas o status não foi atualizado."));
             }
         }
 
         await recarregarPeriodos();
         renderizarSelectsConsolidacao();
         limparFormularioPeriodo();
-        definirMensagem("msgPreconselhoPeriodo", periodoId > 0 ? "Periodo atualizado com sucesso." : "Periodo criado com sucesso.");
+        definirMensagem("msgPreconselhoPeriodo", periodoId > 0 ? "Período atualizado com sucesso." : "Período criado com sucesso.");
     } catch (erro) {
-        definirMensagem("msgPreconselhoPeriodo", erro.message || "Erro ao salvar o periodo.", true);
+        definirMensagem("msgPreconselhoPeriodo", erro.message || "Erro ao salvar o período.", true);
     }
 }
 
@@ -1207,14 +1207,14 @@ async function alternarStatusPeriodo(periodoId, statusAtual) {
         });
 
         if (!resposta.ok) {
-            throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel atualizar o status do periodo."));
+            throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível atualizar o status do período."));
         }
 
         await recarregarPeriodos();
         renderizarSelectsConsolidacao();
-        definirMensagem("msgPreconselhoPeriodo", "Status do periodo atualizado.");
+        definirMensagem("msgPreconselhoPeriodo", "Status do período atualizado.");
     } catch (erro) {
-        definirMensagem("msgPreconselhoPeriodo", erro.message || "Erro ao atualizar o status do periodo.", true);
+        definirMensagem("msgPreconselhoPeriodo", erro.message || "Erro ao atualizar o status do período.", true);
     }
 }
 
@@ -1249,7 +1249,7 @@ async function salvarMotivo(event) {
         }
 
         if (!resposta.ok) {
-            throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel salvar o motivo."));
+            throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível salvar o motivo."));
         }
 
         await recarregarMotivos();
@@ -1272,7 +1272,7 @@ async function alternarStatusMotivo(motivoId, ativoAtual) {
         });
 
         if (!resposta.ok) {
-            throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel atualizar o status do motivo."));
+            throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível atualizar o status do motivo."));
         }
 
         await recarregarMotivos();
@@ -1328,13 +1328,13 @@ async function salvarRegistroDocente(event) {
         });
 
         if (!resposta.ok) {
-            throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel salvar o registro."));
+            throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível salvar o registro."));
         }
 
         const salvo = await resposta.json();
         const painelAtualizado = await carregarPainelDocente(Number(salvo.estudante_id));
         if (!painelAtualizado) {
-            definirMensagem("msgPreconselhoRegistro", "Registro salvo, mas o painel nao foi recarregado corretamente.", true);
+            definirMensagem("msgPreconselhoRegistro", "Registro salvo, mas o painel não foi recarregado corretamente.", true);
             return;
         }
         definirMensagem("msgPreconselhoDocente", `Registro de ${String(salvo.estudante_nome || "estudante")} salvo com sucesso.`);
@@ -1350,7 +1350,7 @@ async function excluirRegistroDocente(registroId) {
         headers
     });
     if (!resposta.ok) {
-        throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel excluir o registro."));
+        throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível excluir o registro."));
     }
 }
 
@@ -1358,7 +1358,7 @@ async function copiarTexto(idCampo, idMensagem, sucesso) {
     const campo = el(idCampo);
     const texto = String(campo?.value || "").trim();
     if (!texto) {
-        definirMensagem(idMensagem, "Nao ha texto disponivel para copiar.", true);
+        definirMensagem(idMensagem, "Não há texto disponível para copiar.", true);
         return;
     }
 
@@ -1371,14 +1371,14 @@ async function copiarTexto(idCampo, idMensagem, sucesso) {
         }
         definirMensagem(idMensagem, sucesso);
     } catch (_erro) {
-        definirMensagem(idMensagem, "Nao foi possivel copiar o texto.", true);
+        definirMensagem(idMensagem, "Não foi possível copiar o texto.", true);
     }
 }
 
 async function carregarUsuario() {
     const resposta = await fetchComAuth("/me", { headers });
     if (!resposta.ok) {
-        throw new Error("Nao foi possivel carregar o usuario.");
+        throw new Error("Não foi possível carregar o usuário.");
     }
 
     usuarioAtual = await resposta.json();
@@ -1393,7 +1393,7 @@ async function carregarUsuario() {
 async function carregarContexto() {
     const resposta = await fetchComAuth("/preconselho/contexto", { headers });
     if (!resposta.ok) {
-        throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel carregar o contexto do pre-conselho."));
+        throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível carregar o contexto do pré-conselho."));
     }
 
     contextoAtual = await resposta.json();
@@ -1513,10 +1513,10 @@ function registrarEventos() {
                 await excluirRegistroDocente(registro.id);
                 const painelAtualizado = await carregarPainelDocente();
                 if (!painelAtualizado) {
-                    definirMensagem("msgPreconselhoRegistro", "Registro excluido, mas o painel nao foi recarregado corretamente.", true);
+                    definirMensagem("msgPreconselhoRegistro", "Registro excluído, mas o painel não foi recarregado corretamente.", true);
                     return;
                 }
-                definirMensagem("msgPreconselhoDocente", "Registro excluido com sucesso.");
+                definirMensagem("msgPreconselhoDocente", "Registro excluído com sucesso.");
                 fecharModalRegistroDocente({ restaurarFoco: false });
             } catch (erro) {
                 definirMensagem("msgPreconselhoRegistro", erro.message || "Erro ao excluir o registro.", true);
@@ -1532,7 +1532,7 @@ function registrarEventos() {
     el("btnExcluirRegistroDocente").addEventListener("click", async () => {
         const registro = registroDocenteAtual();
         if (!registro) {
-            definirMensagem("msgPreconselhoRegistro", "Nao ha registro salvo para excluir.", true);
+            definirMensagem("msgPreconselhoRegistro", "Não há registro salvo para excluir.", true);
             return;
         }
         if (!window.confirm("Deseja realmente excluir este registro do pré-conselho?")) {
@@ -1543,10 +1543,10 @@ function registrarEventos() {
             await excluirRegistroDocente(registro.id);
             const painelAtualizado = await carregarPainelDocente();
             if (!painelAtualizado) {
-                definirMensagem("msgPreconselhoRegistro", "Registro excluido, mas o painel nao foi recarregado corretamente.", true);
+                definirMensagem("msgPreconselhoRegistro", "Registro excluído, mas o painel não foi recarregado corretamente.", true);
                 return;
             }
-            definirMensagem("msgPreconselhoDocente", "Registro excluido com sucesso.");
+            definirMensagem("msgPreconselhoDocente", "Registro excluído com sucesso.");
             fecharModalRegistroDocente({ restaurarFoco: false });
         } catch (erro) {
             definirMensagem("msgPreconselhoRegistro", erro.message || "Erro ao excluir o registro.", true);
@@ -1649,8 +1649,8 @@ async function iniciarModulo() {
         await carregarContexto();
         await carregarPainelInicial();
     } catch (erro) {
-        definirMensagem("msgPreconselhoDocente", erro.message || "Nao foi possivel carregar o modulo de pre-conselho.", true);
-        definirMensagem("msgPreconselhoConsolidacao", erro.message || "Nao foi possivel carregar o modulo de pre-conselho.", true);
+        definirMensagem("msgPreconselhoDocente", erro.message || "Não foi possível carregar o módulo de pré-conselho.", true);
+        definirMensagem("msgPreconselhoConsolidacao", erro.message || "Não foi possível carregar o módulo de pré-conselho.", true);
     }
 }
 

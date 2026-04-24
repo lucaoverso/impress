@@ -88,11 +88,7 @@
 
 .auth-recovery {
     margin-top: 4px;
-    padding: 12px;
-    border: 1px solid var(--line-soft);
-    border-radius: var(--radius-md);
-    background: var(--surface-1);
-    display: none;
+    display: flex;
     flex-direction: column;
     gap: 10px;
 }
@@ -101,10 +97,76 @@
     font-size: 16px;
 }
 
+.auth-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    display: grid;
+    place-items: center;
+    padding: 20px 16px;
+    background: rgba(15, 23, 42, 0.52);
+    backdrop-filter: blur(4px);
+}
+
+.auth-modal[hidden] {
+    display: none;
+}
+
+.auth-modal-card {
+    width: min(100%, 520px);
+    max-height: min(calc(100vh - 32px), 760px);
+    display: grid;
+    gap: 16px;
+    padding: 22px;
+    border: 1px solid rgba(255, 255, 255, 0.82);
+    border-radius: 22px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.24);
+    overflow: auto;
+}
+
+.auth-modal-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.auth-modal-header h2 {
+    font-size: 26px;
+    line-height: 1.1;
+    margin: 8px 0 6px;
+}
+
+.auth-modal-header p:last-child {
+    color: var(--text-muted);
+}
+
+.auth-modal-close {
+    min-width: 108px;
+}
+
+.auth-modal-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 2px;
+}
+
+.auth-modal-actions .btn-destaque,
+.auth-modal-actions .register-secondary-btn {
+    flex: 1 1 180px;
+    margin-top: 0;
+}
+
 #msgRecuperacao {
     min-height: 20px;
     font-size: 14px;
     text-align: center;
+}
+
+body.auth-modal-open {
+    overflow: hidden;
 }
 
 .register-page {
@@ -239,5 +301,37 @@
     .form {
         justify-content: center;
         padding: 34px 30px;
+    }
+
+    .auth-modal {
+        padding: 32px;
+    }
+
+    .auth-modal-card {
+        padding: 28px;
+    }
+}
+
+@media (max-width: 767px) {
+    .auth-modal {
+        align-items: end;
+        padding: 12px;
+    }
+
+    .auth-modal-card {
+        width: 100%;
+        max-height: calc(100vh - 24px);
+        padding: 20px 16px 18px;
+        border-radius: 22px 22px 18px 18px;
+    }
+
+    .auth-modal-header {
+        flex-direction: column;
+    }
+
+    .auth-modal-close,
+    .auth-modal-actions .btn-destaque,
+    .auth-modal-actions .register-secondary-btn {
+        width: 100%;
     }
 }
