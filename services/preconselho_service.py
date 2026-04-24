@@ -246,9 +246,9 @@ def _texto_relato_complementar_consolidado(
         return ""
 
     disciplina = _texto_limpo(disciplina_nome) or "Disciplina não informada"
-    professor = _texto_limpo(professor_nome)
+    professor = _texto_limpo(professor_nome).split()[0]
     if professor:
-        return f"em {disciplina}, {professor} relatou que {observacao}"
+        return f"em {disciplina}, Prof {professor} relatou que {observacao}"
     return f"em {disciplina}, foi relatado que {observacao}"
 
 
