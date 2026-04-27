@@ -106,6 +106,8 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertGreater(len(resposta["periodos"]), 0)
             self.assertGreater(len(resposta["motivos"]), 0)
             self.assertIn("Médio", [item["nome"] for item in resposta["niveis_atencao"]])
+            self.assertIn("recuperado", resposta["motivos_pos_preconselho"])
+            self.assertIn("nao_recuperado", resposta["motivos_pos_preconselho"])
 
     def test_professor_salva_registro_e_coordenacao_consolida(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -127,6 +129,18 @@ class PreConselhoRouterTest(unittest.TestCase):
                     turmas_quantidade=1,
                     turmas=["7A"],
                     disciplinas=["Matematica", "Historia"],
+                )
+            )
+            professor_sem_registro_id = int(
+                database.criar_professor(
+                    nome="Professora Sem Registro",
+                    email="sem.registro@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1992-09-15",
+                    aulas_semanais=8,
+                    turmas_quantidade=1,
+                    turmas=["7A"],
+                    disciplinas=["Geografia"],
                 )
             )
             coordenador_id = int(
@@ -160,6 +174,8 @@ class PreConselhoRouterTest(unittest.TestCase):
                 motivo_ids=motivo_ids,
                 observacao_professor="precisa retomar a rotina de estudos",
                 nivel_atencao="medio",
+                pos_preconselho_recuperado=False,
+                pos_preconselho_observacao="segue precisando de retomada individual",
             )
 
             salvo = preconselho_router.salvar_registro_preconselho_api(
@@ -175,6 +191,8 @@ class PreConselhoRouterTest(unittest.TestCase):
                 salvo["texto_gerado"],
             )
             self.assertIn("em razão de", salvo["texto_gerado"])
+            self.assertFalse(salvo["pos_preconselho_recuperado"])
+            self.assertIn("manteve baixo rendimento", salvo["texto_gerado"].lower())
 
             salvo_historia = preconselho_router.salvar_registro_preconselho_api(
                 payload=models.PreConselhoRegistroSaveIn(
@@ -186,6 +204,7 @@ class PreConselhoRouterTest(unittest.TestCase):
                     motivo_ids=[motivo_ids[0]],
                     observacao_professor="apresentou dificuldade para retomar os conteudos",
                     nivel_atencao="alto",
+                    pos_preconselho_recuperado=True,
                 ),
                 usuario=self._usuario_professor(professor_id, "Professor Registro"),
             )
@@ -202,6 +221,7 @@ class PreConselhoRouterTest(unittest.TestCase):
 
             self.assertEqual(listagem["total_registros"], 1)
             self.assertEqual(listagem["itens"][0]["estudante_nome"], "Ana")
+            self.assertFalse(listagem["itens"][0]["pos_preconselho_recuperado"])
 
             consolidado = preconselho_router.gerar_consolidado_preconselho_api(
                 periodo_id=periodo_id,
@@ -220,6 +240,18 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertEqual(len(consolidado["itens_agrupados"]), 1)
             self.assertEqual(
                 sorted(consolidado["itens_agrupados"][0]["disciplinas"]), ["Historia", "Matematica"]
+            )
+            self.assertEqual(
+                consolidado["itens_agrupados"][0]["professores"],
+                ["Professor Registro", "Professora Sem Registro"],
+            )
+            self.assertIn(
+                "No pós-pré-conselho, registrou-se que",
+                consolidado["itens_agrupados"][0]["texto"],
+            )
+            self.assertIn(
+                "Os professores que atuam na turma são Professor Registro e Professora Sem Registro",
+                consolidado["itens_agrupados"][0]["texto"],
             )
 
     def test_professor_com_acesso_coordenacao_tem_visao_docente_e_consolidacao(self):

@@ -183,7 +183,17 @@ function resolverEstudanteParaFormulario(estudanteId) {
         observacao_professor: String(registro.observacao_professor || ""),
         texto_gerado: String(registro.texto_gerado || ""),
         motivo_ids: Array.isArray(registro.motivo_ids) ? registro.motivo_ids : [],
-        motivos: Array.isArray(registro.motivos) ? registro.motivos : []
+        motivos: Array.isArray(registro.motivos) ? registro.motivos : [],
+        pos_preconselho_recuperado: typeof registro.pos_preconselho_recuperado === "boolean"
+            ? registro.pos_preconselho_recuperado
+            : null,
+        pos_preconselho_motivo_ids: Array.isArray(registro.pos_preconselho_motivo_ids)
+            ? registro.pos_preconselho_motivo_ids
+            : [],
+        pos_preconselho_motivos: Array.isArray(registro.pos_preconselho_motivos)
+            ? registro.pos_preconselho_motivos
+            : [],
+        pos_preconselho_observacao: String(registro.pos_preconselho_observacao || "")
     };
 }
 
@@ -198,6 +208,56 @@ function aplicarSelecaoMotivosDocente(motivoIds = []) {
     document.querySelectorAll(".preconselho-motivo-checkbox").forEach((checkbox) => {
         checkbox.checked = ids.has(Number(checkbox.value || 0));
     });
+}
+
+function definirStatusPosPreConselhoDocente(valor = "") {
+    const status = valor === "sim" || valor === "nao" ? valor : "";
+    el("preconselhoPosPreConselhoStatus").value = status;
+
+    document.querySelectorAll(".preconselho-choice-btn").forEach((botao) => {
+        const ativo = botao.dataset.valor === status;
+        botao.classList.toggle("is-active", ativo);
+        botao.setAttribute("aria-pressed", ativo ? "true" : "false");
+    });
+
+    if (status === "sim") {
+        el("preconselhoPosPreConselhoAjuda").textContent =
+            "O texto informará que o estudante foi recuperado pela recuperação paralela.";
+        return;
+    }
+    if (status === "nao") {
+        el("preconselhoPosPreConselhoAjuda").textContent =
+            "O texto informará que o estudante manteve baixo rendimento após a recuperação paralela.";
+        return;
+    }
+    el("preconselhoPosPreConselhoAjuda").textContent =
+        "Use “Sim” quando houve recuperação e “Não” quando o estudante manteve baixo rendimento.";
+}
+
+function obterStatusPosPreConselhoDocente() {
+    const valor = String(el("preconselhoPosPreConselhoStatus").value || "").trim().toLowerCase();
+    if (valor === "sim") {
+        return true;
+    }
+    if (valor === "nao") {
+        return false;
+    }
+    return null;
+}
+
+function resumoPosPreConselho(item = {}) {
+    const status = typeof item.pos_preconselho_recuperado === "boolean"
+        ? item.pos_preconselho_recuperado
+        : null;
+    if (status === null) {
+        return "";
+    }
+
+    const base = status
+        ? "Recuperado pela recuperação paralela"
+        : "Manteve baixo rendimento após a recuperação paralela";
+    const observacao = String(item.pos_preconselho_observacao || "").trim();
+    return observacao ? `${base}: ${observacao}` : base;
 }
 
 function atualizarStatusSinalizacaoDocente({ possuiEstudante = false, possuiRegistro = false } = {}) {
@@ -310,6 +370,8 @@ function limparFormularioDocente() {
     el("preconselhoSinalizarEstudante").checked = false;
     el("preconselhoNivelAtencao").value = "";
     el("preconselhoObservacaoProfessor").value = "";
+    definirStatusPosPreConselhoDocente("");
+    el("preconselhoObservacaoPosPreConselho").value = "";
     aplicarSelecaoMotivosDocente([]);
     el("preconselhoTextoPreview").value = "";
     el("preconselhoPreviewAjuda").textContent = "Selecione um estudante e marque os motivos para gerar a pré-visualização.";
@@ -327,8 +389,12 @@ function definirBotoesDocenteHabilitados() {
 
     el("preconselhoNivelAtencao").disabled = !camposHabilitados;
     el("preconselhoObservacaoProfessor").disabled = !camposHabilitados;
+    el("preconselhoObservacaoPosPreConselho").disabled = !camposHabilitados;
     document.querySelectorAll(".preconselho-motivo-checkbox").forEach((checkbox) => {
         checkbox.disabled = !camposHabilitados;
+    });
+    document.querySelectorAll(".preconselho-choice-btn").forEach((botao) => {
+        botao.disabled = !camposHabilitados;
     });
 
     el("btnSalvarRegistroDocente").disabled = !possuiEstudante || !podeEditar;
@@ -598,6 +664,7 @@ function renderizarEstudantesDocente() {
     lista.innerHTML = estadoDocente.estudantes.map((item) => {
         const selecionado = Number(item.estudante_id) === Number(estadoDocente.estudanteId);
         const nivel = rotuloNivelAtencao(item.nivel_atencao);
+        const resumoPos = resumoPosPreConselho(item);
         return `
             <li class="pcpi-item ${item.sinalizado ? "pcpi-item-manual" : "pcpi-item-automatico"}">
                 <button type="button" class="preconselho-list-button ${selecionado ? "is-active" : ""}" data-estudante-id="${Number(item.estudante_id)}">
@@ -615,6 +682,7 @@ function renderizarEstudantesDocente() {
                                 ? `\n${item.motivos.map((m) => `- ${escaparHtml(m.descricao || "")}`).join("\n")}`
                                 : ""
                             )
+                            + (resumoPos ? `\n${resumoPos}` : "")
                             : "Clique para abrir um relato.")}
                     </span>
                 </button>
@@ -678,6 +746,7 @@ function renderizarRegistrosDocente() {
                     </div>
                     <p class="pcpi-item-line">${escaparHtml(item.disciplina_nome || "")}</p>
                     <p class="pcpi-item-note">${escaparHtml(formatarMotivosRegistro(item.motivos || []))}</p>
+                    ${resumoPosPreConselho(item) ? `<p class="pcpi-item-note">${escaparHtml(resumoPosPreConselho(item))}</p>` : ""}
                     ${item.texto_gerado ? `<p class="pcpi-item-note is-secondary">${escaparHtml(item.texto_gerado)}</p>` : ""}
                     <div class="preconselho-item-actions">
                         <button type="button" class="preconselho-btn-link" data-action="editar-registro" data-estudante-id="${Number(item.estudante_id)}">Editar</button>
@@ -707,6 +776,14 @@ function preencherFormularioComEstudante(estudante) {
     el("preconselhoSinalizarEstudante").checked = true;
     el("preconselhoNivelAtencao").value = String(estudante.nivel_atencao || "");
     el("preconselhoObservacaoProfessor").value = String(estudante.observacao_professor || "");
+    definirStatusPosPreConselhoDocente(
+        estudante.pos_preconselho_recuperado === true
+            ? "sim"
+            : estudante.pos_preconselho_recuperado === false
+                ? "nao"
+                : ""
+    );
+    el("preconselhoObservacaoPosPreConselho").value = String(estudante.pos_preconselho_observacao || "");
     aplicarSelecaoMotivosDocente(estudante.motivo_ids || []);
     atualizarStatusSinalizacaoDocente({
         possuiEstudante: true,
@@ -744,6 +821,9 @@ async function atualizarPreviewDocente() {
                 motivo_ids: motivoIds,
                 observacao_professor: String(el("preconselhoObservacaoProfessor").value || "").trim(),
                 nivel_atencao: String(el("preconselhoNivelAtencao").value || "").trim() || null,
+                pos_preconselho_recuperado: obterStatusPosPreConselhoDocente(),
+                pos_preconselho_motivo_ids: [],
+                pos_preconselho_observacao: String(el("preconselhoObservacaoPosPreConselho").value || "").trim(),
                 estudante_nome: String(estudante?.nome || "").trim(),
                 disciplina_nome: String(combo?.disciplina_nome || "").trim()
             })
@@ -948,7 +1028,7 @@ function renderizarConsolidacao() {
                     </div>
                     <p class="pcpi-item-line">${escaparHtml(item.turma_nome || "")}${disciplinas ? ` • ${escaparHtml(disciplinas)}` : ""}</p>
                     ${motivos ? `<p class="pcpi-item-note">${escaparHtml(motivos)}</p>` : ""}
-                    ${professores ? `<p class="pcpi-item-note">${escaparHtml(`Professores envolvidos: ${professores}`)}</p>` : ""}
+                    ${professores ? `<p class="pcpi-item-note">${escaparHtml(`Professores da turma: ${professores}`)}</p>` : ""}
                     ${observacoes ? `<p class="pcpi-item-note">${escaparHtml(`Relatos complementares: ${observacoes}`)}</p>` : ""}
                     ${item.texto ? `<p class="pcpi-item-note is-secondary">${escaparHtml(item.texto)}</p>` : ""}
                 </div>
@@ -1292,6 +1372,8 @@ async function salvarRegistroDocente(event) {
     const motivoIds = obterMotivosSelecionadosDocente();
     const observacao = String(el("preconselhoObservacaoProfessor").value || "").trim();
     const nivelAtencao = String(el("preconselhoNivelAtencao").value || "").trim() || null;
+    const posPreConselhoRecuperado = obterStatusPosPreConselhoDocente();
+    const posPreConselhoObservacao = String(el("preconselhoObservacaoPosPreConselho").value || "").trim();
 
     if (!periodo || !combo) {
         definirMensagem("msgPreconselhoRegistro", "Selecione um período e uma turma/disciplina antes de salvar.", true);
@@ -1323,7 +1405,10 @@ async function salvarRegistroDocente(event) {
                 sinalizar: true,
                 motivo_ids: motivoIds,
                 observacao_professor: observacao,
-                nivel_atencao: nivelAtencao
+                nivel_atencao: nivelAtencao,
+                pos_preconselho_recuperado: posPreConselhoRecuperado,
+                pos_preconselho_motivo_ids: [],
+                pos_preconselho_observacao: posPreConselhoObservacao
             })
         });
 
@@ -1405,6 +1490,7 @@ async function carregarContexto() {
     renderizarSelectNivelAtencao();
     renderizarSelectCategoriasMotivo();
     renderizarMotivosDocente();
+    definirStatusPosPreConselhoDocente("");
     renderizarTabelaPeriodos();
     renderizarTabelaMotivos();
 
@@ -1576,6 +1662,20 @@ function registrarEventos() {
         if (!event.target.closest(".preconselho-motivo-checkbox")) {
             return;
         }
+        atualizarEstadoFormularioDocente();
+        agendarPreviewDocente();
+    });
+    document.querySelectorAll(".preconselho-choice-btn").forEach((botao) => {
+        botao.addEventListener("click", () => {
+            const valorAtual = String(el("preconselhoPosPreConselhoStatus").value || "");
+            const proximoValor = valorAtual === botao.dataset.valor ? "" : String(botao.dataset.valor || "");
+            definirStatusPosPreConselhoDocente(proximoValor);
+            atualizarEstadoFormularioDocente();
+            agendarPreviewDocente();
+        });
+    });
+    el("preconselhoObservacaoPosPreConselho").addEventListener("input", agendarPreviewDocente);
+    el("preconselhoPosPreConselhoStatus").addEventListener("change", () => {
         atualizarEstadoFormularioDocente();
         agendarPreviewDocente();
     });

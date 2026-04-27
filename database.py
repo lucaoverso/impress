@@ -12,7 +12,9 @@ from services.ocorrencia_disciplina_service import ACAO_OCORRENCIA_VALIDAS
 from services.preconselho_service import (
     STATUS_PERIODO_PRE_CONSELHO_ABERTO,
     catalogo_motivos_iniciais_pre_conselho,
+    descrever_motivos_pos_pre_conselho,
     nome_periodo_pre_conselho,
+    normalizar_status_pos_pre_conselho,
     periodos_padrao_pre_conselho,
 )
 
@@ -533,6 +535,9 @@ def criar_tabelas():
             motivos TEXT NOT NULL DEFAULT '[]',
             observacoes TEXT NOT NULL DEFAULT '',
             observacao_professor TEXT NOT NULL DEFAULT '',
+            pos_preconselho_recuperado INTEGER,
+            pos_preconselho_motivos TEXT NOT NULL DEFAULT '[]',
+            pos_preconselho_observacao TEXT NOT NULL DEFAULT '',
             texto_gerado TEXT NOT NULL DEFAULT '',
             criado_em TEXT NOT NULL DEFAULT (datetime('now')),
             atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
@@ -1749,6 +1754,16 @@ def _garantir_colunas_pre_conselho_registros(cursor):
         cursor.execute(
             "ALTER TABLE pre_conselho_registros ADD COLUMN observacao_professor TEXT NOT NULL DEFAULT ''"
         )
+    if "pos_preconselho_recuperado" not in colunas:
+        cursor.execute("ALTER TABLE pre_conselho_registros ADD COLUMN pos_preconselho_recuperado INTEGER")
+    if "pos_preconselho_motivos" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN pos_preconselho_motivos TEXT NOT NULL DEFAULT '[]'"
+        )
+    if "pos_preconselho_observacao" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN pos_preconselho_observacao TEXT NOT NULL DEFAULT ''"
+        )
     if "texto_gerado" not in colunas:
         cursor.execute(
             "ALTER TABLE pre_conselho_registros ADD COLUMN texto_gerado TEXT NOT NULL DEFAULT ''"
@@ -1768,6 +1783,16 @@ def _garantir_colunas_pre_conselho_registros(cursor):
         UPDATE pre_conselho_registros
         SET observacao_professor = COALESCE(observacoes, '')
         WHERE TRIM(COALESCE(observacao_professor, '')) = ''
+    """)
+    cursor.execute("""
+        UPDATE pre_conselho_registros
+        SET pos_preconselho_motivos = '[]'
+        WHERE TRIM(COALESCE(pos_preconselho_motivos, '')) = ''
+    """)
+    cursor.execute("""
+        UPDATE pre_conselho_registros
+        SET pos_preconselho_observacao = ''
+        WHERE pos_preconselho_observacao IS NULL
     """)
     cursor.execute("""
         UPDATE pre_conselho_registros
@@ -2869,6 +2894,27 @@ def _desserializar_lista_texto(valor):
         if texto and texto not in normalizados:
             normalizados.append(texto)
     return normalizados
+
+
+def _normalizar_booleano_tristate(valor):
+    if valor is None:
+        return None
+
+    if isinstance(valor, bool):
+        return valor
+
+    texto = str(valor).strip().lower()
+    if not texto:
+        return None
+    if texto in {"1", "true", "t", "sim"}:
+        return True
+    if texto in {"0", "false", "f", "nao", "não"}:
+        return False
+
+    try:
+        return bool(int(valor))
+    except (TypeError, ValueError):
+        return None
 
 
 def _normalizar_texto_chave(valor: str) -> str:
@@ -7858,11 +7904,28 @@ def _carregar_motivos_pre_conselho_por_registro_ids(
     return mapa
 
 
+def _normalizar_campos_pos_preconselho(item: dict) -> dict:
+    motivo_ids = _desserializar_lista_texto(item.get("pos_preconselho_motivos"))
+    observacao = item.get("pos_preconselho_observacao", "") or ""
+    recuperado = normalizar_status_pos_pre_conselho(
+        _normalizar_booleano_tristate(item.get("pos_preconselho_recuperado")),
+        motivo_ids,
+        observacao,
+    )
+    return {
+        "pos_preconselho_recuperado": recuperado,
+        "pos_preconselho_motivo_ids": motivo_ids if recuperado is not None else [],
+        "pos_preconselho_motivos": descrever_motivos_pos_pre_conselho(motivo_ids, recuperado),
+        "pos_preconselho_observacao": observacao,
+    }
+
+
 def _normalizar_linha_registro_pre_conselho(
     item: dict, motivos_map: dict[int, list[dict]] | None = None
 ) -> dict:
     registro_id = int(item["id"])
     motivos = list(motivos_map.get(registro_id, [])) if motivos_map else []
+    pos_preconselho = _normalizar_campos_pos_preconselho(item)
     return {
         "id": registro_id,
         "periodo_id": int(item.get("periodo_id") or 0) or None,
@@ -7885,6 +7948,7 @@ def _normalizar_linha_registro_pre_conselho(
         "motivo_ids": [int(motivo["id"]) for motivo in motivos],
         "motivos": motivos,
         "periodo_status": item.get("periodo_status", "") or "",
+        **pos_preconselho,
     }
 
 
@@ -7902,6 +7966,9 @@ def criar_ou_atualizar_registro_pre_conselho(
     texto_gerado: str,
     observacao_professor: str = "",
     nivel_atencao: str = "",
+    pos_preconselho_recuperado: bool | None = None,
+    pos_preconselho_motivo_ids: list[str] | None = None,
+    pos_preconselho_observacao: str = "",
 ):
     conn = get_connection()
     cursor = conn.cursor()
@@ -7916,6 +7983,13 @@ def criar_ou_atualizar_registro_pre_conselho(
     disciplina_nome_limpo = _normalizar_nome_catalogo(disciplina_nome)
     observacao_limpa = _normalizar_nome_catalogo(observacao_professor)
     nivel_atencao_limpo = _normalizar_nome_catalogo(nivel_atencao) or None
+    pos_preconselho_recuperado_limpo = normalizar_status_pos_pre_conselho(
+        pos_preconselho_recuperado,
+        pos_preconselho_motivo_ids,
+        pos_preconselho_observacao,
+    )
+    pos_preconselho_motivos_json = _serializar_lista_texto(pos_preconselho_motivo_ids)
+    pos_preconselho_observacao_limpa = _normalizar_nome_catalogo(pos_preconselho_observacao)
     texto_gerado_limpo = str(texto_gerado or "").strip()
 
     motivo_ids_validos = []
@@ -7959,6 +8033,9 @@ def criar_ou_atualizar_registro_pre_conselho(
                 motivos = ?,
                 observacoes = ?,
                 observacao_professor = ?,
+                pos_preconselho_recuperado = ?,
+                pos_preconselho_motivos = ?,
+                pos_preconselho_observacao = ?,
                 texto_gerado = ?,
                 atualizado_em = datetime('now')
             WHERE id = ?
@@ -7976,6 +8053,9 @@ def criar_ou_atualizar_registro_pre_conselho(
                 motivos_json,
                 observacao_limpa,
                 observacao_limpa,
+                None if pos_preconselho_recuperado_limpo is None else int(pos_preconselho_recuperado_limpo),
+                pos_preconselho_motivos_json,
+                pos_preconselho_observacao_limpa,
                 texto_gerado_limpo,
                 int(registro_id),
             ),
@@ -7996,11 +8076,14 @@ def criar_ou_atualizar_registro_pre_conselho(
                 motivos,
                 observacoes,
                 observacao_professor,
+                pos_preconselho_recuperado,
+                pos_preconselho_motivos,
+                pos_preconselho_observacao,
                 texto_gerado,
                 criado_em,
                 atualizado_em
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
         """,
             (
                 periodo_id_valor,
@@ -8015,6 +8098,9 @@ def criar_ou_atualizar_registro_pre_conselho(
                 motivos_json,
                 observacao_limpa,
                 observacao_limpa,
+                None if pos_preconselho_recuperado_limpo is None else int(pos_preconselho_recuperado_limpo),
+                pos_preconselho_motivos_json,
+                pos_preconselho_observacao_limpa,
                 texto_gerado_limpo,
             ),
         )
@@ -8055,6 +8141,9 @@ def listar_registros_pre_conselho(
             COALESCE(e.nome, '') AS estudante_nome,
             COALESCE(r.nivel_atencao, '') AS nivel_atencao,
             COALESCE(r.observacao_professor, r.observacoes, '') AS observacao_professor,
+            r.pos_preconselho_recuperado,
+            COALESCE(r.pos_preconselho_motivos, '[]') AS pos_preconselho_motivos,
+            COALESCE(r.pos_preconselho_observacao, '') AS pos_preconselho_observacao,
             COALESCE(r.texto_gerado, '') AS texto_gerado,
             r.criado_em,
             r.atualizado_em
@@ -8126,6 +8215,9 @@ def buscar_registro_pre_conselho_por_id(registro_id: int):
             COALESCE(e.nome, '') AS estudante_nome,
             COALESCE(r.nivel_atencao, '') AS nivel_atencao,
             COALESCE(r.observacao_professor, r.observacoes, '') AS observacao_professor,
+            r.pos_preconselho_recuperado,
+            COALESCE(r.pos_preconselho_motivos, '[]') AS pos_preconselho_motivos,
+            COALESCE(r.pos_preconselho_observacao, '') AS pos_preconselho_observacao,
             COALESCE(r.texto_gerado, '') AS texto_gerado,
             r.criado_em,
             r.atualizado_em
@@ -8172,6 +8264,9 @@ def listar_estudantes_pre_conselho_painel(
             r.id AS registro_id,
             COALESCE(r.nivel_atencao, '') AS nivel_atencao,
             COALESCE(r.observacao_professor, r.observacoes, '') AS observacao_professor,
+            r.pos_preconselho_recuperado,
+            COALESCE(r.pos_preconselho_motivos, '[]') AS pos_preconselho_motivos,
+            COALESCE(r.pos_preconselho_observacao, '') AS pos_preconselho_observacao,
             COALESCE(r.texto_gerado, '') AS texto_gerado
         FROM estudantes e
         LEFT JOIN turmas t ON t.id = e.turma_id
@@ -8215,6 +8310,7 @@ def listar_estudantes_pre_conselho_painel(
         item = dict(row)
         registro_id = int(item["registro_id"]) if item["registro_id"] is not None else None
         motivos = list(motivos_map.get(int(registro_id), [])) if registro_id else []
+        pos_preconselho = _normalizar_campos_pos_preconselho(item)
         itens.append(
             {
                 "estudante_id": int(item["estudante_id"]),
@@ -8228,6 +8324,7 @@ def listar_estudantes_pre_conselho_painel(
                 "texto_gerado": item.get("texto_gerado", "") or "",
                 "motivo_ids": [int(motivo["id"]) for motivo in motivos],
                 "motivos": motivos,
+                **pos_preconselho,
             }
         )
     return itens

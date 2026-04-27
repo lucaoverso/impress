@@ -178,6 +178,36 @@
                                         <div id="preconselhoMotivosDocente" class="preconselho-motivos-board"></div>
                                     </div>
 
+                                    <div class="preconselho-status-banner pcpi-field pcpi-field-wide">
+                                        <span>Pós pré conselho</span>
+                                        <strong>Resultado após a recuperação paralela</strong>
+                                        <small>Use esta seção para registrar se o estudante foi recuperado ou se
+                                            manteve baixo rendimento após as intervenções. Se ainda não quiser lançar
+                                            esse desfecho, deixe a área em branco.</small>
+                                    </div>
+
+                                    <div class="preconselho-toggle-field pcpi-field pcpi-field-wide">
+                                        <input id="preconselhoPosPreConselhoStatus" type="hidden">
+                                        <div class="preconselho-choice-group" role="group"
+                                            aria-label="Resultado após a recuperação paralela">
+                                            <button id="preconselhoPosPreConselhoBtnSim"
+                                                class="preconselho-choice-btn" data-valor="sim" type="button"
+                                                aria-pressed="false">Sim</button>
+                                            <button id="preconselhoPosPreConselhoBtnNao"
+                                                class="preconselho-choice-btn" data-valor="nao" type="button"
+                                                aria-pressed="false">Não</button>
+                                        </div>
+                                        <small id="preconselhoPosPreConselhoAjuda" class="pcpi-hint">Marque quando
+                                            houver recuperação. Use “Não” quando o estudante manteve baixo
+                                            rendimento.</small>
+                                    </div>
+
+                                    <label class="pcpi-field pcpi-field-wide" for="preconselhoObservacaoPosPreConselho">
+                                        <span>Observação do pós pré conselho</span>
+                                        <textarea id="preconselhoObservacaoPosPreConselho" rows="3" maxlength="1000"
+                                            placeholder="Opcional. Use este campo para registrar um desfecho adicional da recuperação paralela."></textarea>
+                                    </label>
+
                                     <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
                                         <button id="btnSalvarRegistroDocente" class="btn-destaque" type="submit">Salvar
                                             registro</button>

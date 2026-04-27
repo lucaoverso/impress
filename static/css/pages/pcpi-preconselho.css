@@ -564,6 +564,35 @@
     height: 18px;
 }
 
+.preconselho-choice-group {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.preconselho-choice-btn {
+    min-width: 88px;
+    min-height: 40px;
+    padding: 0 16px;
+    border: 1px solid #c7d5e4;
+    border-radius: 999px;
+    background: #ffffff;
+    color: #29486d;
+    font-weight: 700;
+    transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.preconselho-choice-btn.is-active {
+    background: #0f766e;
+    border-color: #0f766e;
+    color: #ffffff;
+}
+
+.preconselho-choice-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .preconselho-motivos-board {
     display: grid;
     gap: 12px;

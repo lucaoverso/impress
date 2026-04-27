@@ -147,6 +147,45 @@ MOTIVOS_PRE_CONSELHO_INICIAIS = (
     },
 )
 
+MOTIVOS_POS_PRE_CONSELHO = {
+    "recuperado": (
+        {
+            "id": "participou_e_avancou_recuperacao",
+            "descricao": "Participou da recuperação paralela e apresentou avanços",
+        },
+        {
+            "id": "retomou_conteudos_essenciais",
+            "descricao": "Retomou os conteúdos essenciais da disciplina",
+        },
+        {
+            "id": "melhorou_resultados_avaliativos",
+            "descricao": "Melhorou os resultados nas atividades e avaliações de recuperação",
+        },
+        {
+            "id": "ampliou_participacao_compromisso",
+            "descricao": "Demonstrou mais participação, compromisso e entrega das atividades",
+        },
+    ),
+    "nao_recuperado": (
+        {
+            "id": "manteve_baixo_rendimento",
+            "descricao": "Manteve baixo rendimento mesmo após a recuperação paralela",
+        },
+        {
+            "id": "nao_concluiu_atividades_recuperacao",
+            "descricao": "Não concluiu as atividades propostas na recuperação paralela",
+        },
+        {
+            "id": "baixa_frequencia_recuperacao",
+            "descricao": "Apresentou baixa frequência nos momentos de recuperação",
+        },
+        {
+            "id": "dificuldades_persistem_conteudos",
+            "descricao": "As dificuldades nos conteúdos essenciais persistem",
+        },
+    ),
+}
+
 _CATEGORIAS_ROTULO = {
     "avaliacao": "Avaliação",
     "participacao": "Participação",
@@ -300,6 +339,71 @@ def validar_nivel_atencao_pre_conselho(nivel_atencao: str | None) -> str:
     return texto
 
 
+def listar_motivos_pos_pre_conselho() -> dict[str, list[dict]]:
+    return {
+        "recuperado": [dict(item) for item in MOTIVOS_POS_PRE_CONSELHO["recuperado"]],
+        "nao_recuperado": [dict(item) for item in MOTIVOS_POS_PRE_CONSELHO["nao_recuperado"]],
+    }
+
+
+def normalizar_status_pos_pre_conselho(
+    recuperado: bool | None,
+    motivo_ids: list[str] | None = None,
+    observacao: str = "",
+) -> bool | None:
+    possui_dados = bool(_lista_unica_texto(motivo_ids) or _texto_limpo(observacao))
+    if recuperado is None:
+        return False if possui_dados else None
+    return bool(recuperado)
+
+
+def descrever_motivos_pos_pre_conselho(
+    motivo_ids: list[str] | None,
+    recuperado: bool | None,
+) -> list[str]:
+    status = normalizar_status_pos_pre_conselho(recuperado, motivo_ids)
+    if status is None:
+        return []
+
+    chave = "recuperado" if status else "nao_recuperado"
+    catalogo = {
+        _texto_limpo(item["id"]): _texto_limpo(item["descricao"])
+        for item in MOTIVOS_POS_PRE_CONSELHO[chave]
+    }
+    descricoes = []
+    for motivo_id in _lista_unica_texto(motivo_ids):
+        descricao = catalogo.get(motivo_id)
+        if descricao and descricao not in descricoes:
+            descricoes.append(descricao)
+    return descricoes
+
+
+def validar_motivos_pos_pre_conselho(
+    motivo_ids: list[str] | None,
+    recuperado: bool | None,
+    observacao: str = "",
+) -> tuple[bool | None, list[str], list[str]]:
+    status = normalizar_status_pos_pre_conselho(recuperado, motivo_ids, observacao)
+    ids_normalizados = _lista_unica_texto(motivo_ids)
+    if status is None:
+        if ids_normalizados:
+            raise ValueError("Os motivos do pós pré-conselho exigem a definição do resultado.")
+        return None, [], []
+
+    chave = "recuperado" if status else "nao_recuperado"
+    catalogo = {_texto_limpo(item["id"]): item for item in MOTIVOS_POS_PRE_CONSELHO[chave]}
+    ids_invalidos = [motivo_id for motivo_id in ids_normalizados if motivo_id not in catalogo]
+    if ids_invalidos:
+        raise ValueError("Existe motivo inválido na etapa de pós pré-conselho.")
+
+    descricoes = [
+        _texto_limpo(catalogo[motivo_id]["descricao"])
+        for motivo_id in ids_normalizados
+        if _texto_limpo(catalogo[motivo_id]["descricao"])
+    ]
+    return status, ids_normalizados, descricoes
+
+
 def nome_periodo_pre_conselho(ano_letivo: int, etapa: int) -> str:
     etapa_valor = validar_etapa_pre_conselho(etapa)
     return f"{etapa_valor}º Bimestre {int(ano_letivo)}"
@@ -393,12 +497,56 @@ def _texto_recomendacao_nivel(nivel_atencao: str) -> str:
     return ""
 
 
+def _texto_professores_turma(professores: list[str]) -> str:
+    nomes = _lista_unica_texto(professores)
+    if not nomes:
+        return ""
+    if len(nomes) == 1:
+        return _garantir_ponto_final(f"O professor que atua na turma é {nomes[0]}")
+    return _garantir_ponto_final(
+        f"Os professores que atuam na turma são {_formatar_lista_pt_br(nomes)}"
+    )
+
+
+def _texto_pos_pre_conselho(
+    recuperado: bool | None,
+    motivos_pos_pre_conselho: list[str] | None = None,
+    observacao_pos_pre_conselho: str = "",
+) -> str:
+    status = normalizar_status_pos_pre_conselho(
+        recuperado,
+        motivos_pos_pre_conselho,
+        observacao_pos_pre_conselho,
+    )
+    if status is None:
+        return ""
+
+    observacao = _texto_lista_observacao(observacao_pos_pre_conselho)
+
+    if status:
+        abertura = "Após o pré-conselho, o estudante foi recuperado por meio da recuperação paralela"
+    else:
+        abertura = "Após o pré-conselho, o estudante manteve baixo rendimento, mesmo após a recuperação paralela"
+
+    partes = [_garantir_ponto_final(abertura)]
+    if observacao:
+        partes.append(
+            _garantir_ponto_final(
+                f"No pós-pré-conselho, observou-se ainda que {observacao}"
+            )
+        )
+    return " ".join(parte for parte in partes if parte)
+
+
 def gerar_texto_pre_conselho_individual(
     motivos: list[dict],
     observacao_professor: str = "",
     nivel_atencao: str | None = None,
     estudante_nome: str = "",
     disciplina_nome: str = "",
+    pos_preconselho_recuperado: bool | None = None,
+    pos_preconselho_motivos: list[str] | None = None,
+    pos_preconselho_observacao: str = "",
 ) -> dict:
     if not motivos:
         raise ValueError("Selecione ao menos um motivo para gerar o texto.")
@@ -420,12 +568,18 @@ def gerar_texto_pre_conselho_individual(
 
     complemento_nivel = _texto_recomendacao_nivel(nivel_limpo)
     observacao = _texto_para_observacao(observacao_professor)
+    pos_preconselho = _texto_pos_pre_conselho(
+        pos_preconselho_recuperado,
+        pos_preconselho_motivos,
+        pos_preconselho_observacao,
+    )
     texto = " ".join(
         parte
         for parte in (
             abertura,
             complemento_nivel,
             observacao,
+            pos_preconselho,
         )
         if parte
     )
@@ -496,6 +650,19 @@ def _resumir_registros_por_disciplina(registros: list[dict]) -> list[dict]:
         if observacao and observacao not in bloco["observacoes"]:
             bloco["observacoes"].append(observacao)
 
+        status_pos = normalizar_status_pos_pre_conselho(
+            registro.get("pos_preconselho_recuperado"),
+            registro.get("pos_preconselho_motivo_ids"),
+            registro.get("pos_preconselho_observacao"),
+        )
+        if status_pos is not None:
+            bloco.setdefault("pos_preconselho", []).append(
+                {
+                    "recuperado": status_pos,
+                    "observacao": _texto_limpo(registro.get("pos_preconselho_observacao")),
+                }
+            )
+
     return [agrupados[chave] for chave in ordem]
 
 
@@ -528,7 +695,15 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
         )
         for registro in registros
     )
-    professores = _lista_unica_texto(item.get("professor_nome") for item in registros)
+    professores = _lista_unica_texto(
+        nome
+        for item in registros
+        for nome in (
+            item.get("professores_turma")
+            if isinstance(item.get("professores_turma"), list)
+            else [item.get("professor_nome")]
+        )
+    )
     nivel_atencao = _nivel_mais_critico(registros)
 
     estudante_nome = _texto_limpo(base.get("estudante_nome")) or "Estudante não identificado"
@@ -550,18 +725,48 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
             )
 
     recomendacao = _texto_recomendacao_nivel(nivel_atencao)
+    professores_txt = _texto_professores_turma(professores)
     observacao_txt = ""
     if observacoes:
         observacao_txt = _garantir_ponto_final(
             "Relatos complementares registrados: " + "; ".join(observacoes)
         )
 
+    pos_preconselho_txt = ""
+    detalhes_pos_preconselho = []
+    for item in disciplinas_resumidas:
+        registros_pos = item.get("pos_preconselho") or []
+        if not registros_pos:
+            continue
+
+        recuperado = any(bool(registro.get("recuperado")) for registro in registros_pos)
+        observacoes_pos = _lista_unica_texto(
+            registro.get("observacao") for registro in registros_pos
+        )
+
+        frase = (
+            f"em {item['disciplina']}, houve recuperação por meio da recuperação paralela"
+            if recuperado
+            else f"em {item['disciplina']}, o estudante manteve baixo rendimento após a recuperação paralela"
+        )
+        if observacoes_pos:
+            frase += f", com observação de que {_formatar_lista_pt_br(observacoes_pos)}"
+        detalhes_pos_preconselho.append(frase)
+
+    if detalhes_pos_preconselho:
+        pos_preconselho_txt = _garantir_ponto_final(
+            "No pós-pré-conselho, registrou-se que " + "; ".join(detalhes_pos_preconselho)
+        )
+
     texto = " ".join(
         parte
         for parte in (
             abertura,
+            professores_txt,
             recomendacao,
+            detalhes_disciplina,
             observacao_txt,
+            pos_preconselho_txt,
         )
         if parte
     )

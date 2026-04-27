@@ -32,6 +32,8 @@ class PreConselhoServiceTest(unittest.TestCase):
             nivel_atencao="alto",
             estudante_nome="Ana",
             disciplina_nome="Matematica",
+            pos_preconselho_recuperado=True,
+            pos_preconselho_observacao="conseguiu responder melhor as atividades de retomada",
         )
 
         self.assertIn(
@@ -44,6 +46,8 @@ class PreConselhoServiceTest(unittest.TestCase):
         self.assertIn("baixa participação nas aulas", resultado["texto"])
         self.assertIn("Como relato complementar do professor", resultado["texto"])
         self.assertIn("prioridade no acompanhamento individualizado", resultado["texto"])
+        self.assertIn("foi recuperado por meio da recuperação paralela", resultado["texto"])
+        self.assertIn("No pós-pré-conselho, observou-se ainda que", resultado["texto"])
         self.assertGreaterEqual(len(resultado["fragmentos"]), 2)
 
     def test_texto_individual_exige_motivo(self):
@@ -57,7 +61,7 @@ class PreConselhoServiceTest(unittest.TestCase):
                 "estudante_id": 1,
                 "turma_nome": "7A",
                 "disciplina_nome": "Matematica",
-                "professor_nome": "João Batista Gomes",
+                "professor_nome": "Prof. Ana",
                 "nivel_atencao": "medio",
                 "motivos": [
                     {"codigo": "nao_fez_prova_bimestral", "descricao": "Não fez a prova bimestral"},
@@ -67,18 +71,22 @@ class PreConselhoServiceTest(unittest.TestCase):
                     },
                 ],
                 "observacao_professor": "precisa retomar a rotina de estudos",
+                "pos_preconselho_recuperado": False,
+                "pos_preconselho_observacao": "segue precisando de retomada frequente",
             },
             {
                 "estudante_nome": "Ana",
                 "estudante_id": 1,
                 "turma_nome": "7A",
                 "disciplina_nome": "Historia",
-                "professor_nome": "Pamela Sabrina Araujo Silva",
+                "professor_nome": "Prof. Ana",
                 "nivel_atencao": "alto",
                 "motivos": [
                     {"codigo": "nao_entregou_trabalho", "descricao": "Não entregou o trabalho"},
                 ],
                 "observacao_professor": "",
+                "pos_preconselho_recuperado": True,
+                "pos_preconselho_observacao": "",
             },
             {
                 "estudante_nome": "Beatriz",
@@ -132,6 +140,7 @@ class PreConselhoServiceTest(unittest.TestCase):
         self.assertIn("Não entregou o trabalho", resultado["motivos_frequentes"][0])
         self.assertEqual(len(resultado["itens_agrupados"]), 3)
         self.assertEqual(resultado["itens_agrupados"][0]["estudante_nome"], "Ana")
+        self.assertEqual(resultado["itens_agrupados"][0]["professores"], ["Prof. Ana", "Prof. Bruno"])
         self.assertIn(
             "Relatos complementares registrados", resultado["itens_agrupados"][0]["texto"]
         )
@@ -140,6 +149,8 @@ class PreConselhoServiceTest(unittest.TestCase):
             resultado["itens_agrupados"][0]["texto"],
         )
         self.assertIn("em razão de", resultado["itens_agrupados"][0]["texto"])
+        self.assertIn("No pós-pré-conselho, registrou-se que", resultado["itens_agrupados"][0]["texto"])
+        self.assertIn("Os professores que atuam na turma são Prof. Ana e Prof. Bruno", resultado["itens_agrupados"][0]["texto"])
 
     def test_gera_texto_consolidado_vazio_com_acentuacao(self):
         resultado = gerar_texto_consolidado_pre_conselho(

@@ -265,6 +265,7 @@ class PreConselhoContextoOut(BaseModel):
     motivos: list[PreConselhoMotivoOut] = Field(default_factory=list)
     professores: list[PreConselhoProfessorOut] = Field(default_factory=list)
     niveis_atencao: list[dict] = Field(default_factory=list)
+    motivos_pos_preconselho: dict[str, list[dict[str, str]]] = Field(default_factory=dict)
     minhas_turmas_disciplinas: list[PreConselhoTurmaDisciplinaOut] = Field(default_factory=list)
 
 
@@ -280,6 +281,10 @@ class PreConselhoEstudantePainelOut(BaseModel):
     texto_gerado: str = ""
     motivo_ids: list[int] = Field(default_factory=list)
     motivos: list[PreConselhoMotivoOut] = Field(default_factory=list)
+    pos_preconselho_recuperado: bool | None = None
+    pos_preconselho_motivo_ids: list[str] = Field(default_factory=list)
+    pos_preconselho_motivos: list[str] = Field(default_factory=list)
+    pos_preconselho_observacao: str = ""
 
 
 class PreConselhoRegistroSaveIn(BaseModel):
@@ -291,6 +296,9 @@ class PreConselhoRegistroSaveIn(BaseModel):
     motivo_ids: list[int] = Field(default_factory=list)
     observacao_professor: str = ""
     nivel_atencao: str | None = None
+    pos_preconselho_recuperado: bool | None = None
+    pos_preconselho_motivo_ids: list[str] = Field(default_factory=list)
+    pos_preconselho_observacao: str = ""
     professor_id: int | None = None
 
 
@@ -300,6 +308,9 @@ class PreConselhoTextoPreviewIn(BaseModel):
     nivel_atencao: str | None = None
     estudante_nome: str = ""
     disciplina_nome: str = ""
+    pos_preconselho_recuperado: bool | None = None
+    pos_preconselho_motivo_ids: list[str] = Field(default_factory=list)
+    pos_preconselho_observacao: str = ""
 
 
 class PreConselhoRegistroOut(BaseModel):
@@ -323,6 +334,10 @@ class PreConselhoRegistroOut(BaseModel):
     texto_gerado: str = ""
     motivo_ids: list[int] = Field(default_factory=list)
     motivos: list[PreConselhoMotivoOut] = Field(default_factory=list)
+    pos_preconselho_recuperado: bool | None = None
+    pos_preconselho_motivo_ids: list[str] = Field(default_factory=list)
+    pos_preconselho_motivos: list[str] = Field(default_factory=list)
+    pos_preconselho_observacao: str = ""
     editavel: bool = False
 
 

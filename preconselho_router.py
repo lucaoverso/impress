@@ -10,7 +10,7 @@ from db.catalogos import (
     listar_disciplinas_ativas,
     listar_turmas_ativas,
 )
-from db.docencia import listar_atribuicoes_docentes_por_usuario_ids
+from db.docencia import listar_atribuicoes_docentes, listar_atribuicoes_docentes_por_usuario_ids
 from db.ocorrencias import buscar_estudante_por_id, listar_estudantes
 from db.preconselho import (
     atualizar_motivo_pre_conselho_dados,
@@ -62,9 +62,11 @@ from services.preconselho_service import (
     STATUS_PERIODO_PRE_CONSELHO_ABERTO,
     gerar_texto_consolidado_pre_conselho,
     gerar_texto_pre_conselho_individual,
+    listar_motivos_pos_pre_conselho,
     listar_niveis_atencao_pre_conselho,
     periodo_editavel_para_cargo,
     validar_categoria_motivo_pre_conselho,
+    validar_motivos_pos_pre_conselho,
     validar_etapa_pre_conselho,
     validar_nivel_atencao_pre_conselho,
     validar_status_periodo_pre_conselho,
@@ -379,6 +381,74 @@ def _enriquecer_editavel(usuario: dict, itens: list[dict]) -> list[dict]:
     return [{**item, "editavel": _registro_editavel_usuario(usuario, item)} for item in itens]
 
 
+def _lista_texto_unica(valores) -> list[str]:
+    itens = []
+    for valor in valores or []:
+        texto = str(valor or "").strip()
+        if texto and texto not in itens:
+            itens.append(texto)
+    return itens
+
+
+def _mapa_professores_por_turma(registros: list[dict]) -> dict[int, list[str]]:
+    turmas = {}
+    for registro in registros or []:
+        turma_id = int(registro.get("turma_id") or 0)
+        turma_nome = str(registro.get("turma_nome") or "").strip()
+        if turma_id > 0 and turma_nome:
+            turmas[turma_id] = turma_nome
+
+    if not turmas:
+        return {}
+
+    professores_por_turma = {turma_id: [] for turma_id in turmas}
+
+    for turma_id in sorted(turmas):
+        atribuicoes = listar_atribuicoes_docentes(turma_id=turma_id, incluir_inativos=False)
+        professores_por_turma[turma_id] = _lista_texto_unica(
+            item.get("professor_nome") for item in atribuicoes
+        )
+
+    professores = listar_professores_agendamento()
+    cargas = listar_cargas_professores_por_usuario_ids(
+        [int(item["id"]) for item in professores if int(item.get("id") or 0) > 0]
+    )
+    for turma_id, turma_nome in turmas.items():
+        turma_nome_casefold = turma_nome.casefold()
+        nomes_atuais = list(professores_por_turma.get(turma_id, []))
+
+        for professor in professores:
+            professor_id = int(professor.get("id") or 0)
+            if professor_id <= 0:
+                continue
+
+            carga = cargas.get(professor_id, {})
+            turmas_carga = {
+                str(item or "").strip().casefold()
+                for item in (carga.get("turmas") or [])
+                if str(item or "").strip()
+            }
+            if turma_nome_casefold in turmas_carga:
+                nome = str(professor.get("nome") or "").strip()
+                if nome and nome not in nomes_atuais:
+                    nomes_atuais.append(nome)
+
+        professores_por_turma[turma_id] = nomes_atuais
+
+    return {turma_id: nomes for turma_id, nomes in professores_por_turma.items() if nomes}
+
+
+def _enriquecer_professores_turma_registros(registros: list[dict]) -> list[dict]:
+    mapa = _mapa_professores_por_turma(registros)
+    return [
+        {
+            **item,
+            "professores_turma": list(mapa.get(int(item.get("turma_id") or 0), [])),
+        }
+        for item in (registros or [])
+    ]
+
+
 def _minhas_turmas_disciplinas(periodo_id: int, professor_id: int) -> list[dict]:
     escopo = _escopo_professor(professor_id)
     registros = contar_registros_pre_conselho_por_professor_periodo(periodo_id, professor_id)
@@ -466,6 +536,7 @@ def obter_contexto_preconselho_api(usuario=Depends(get_usuario_logado)):
         if _usuario_eh_gestor(usuario)
         else [],
         "niveis_atencao": listar_niveis_atencao_pre_conselho(),
+        "motivos_pos_preconselho": listar_motivos_pos_pre_conselho(),
         "minhas_turmas_disciplinas": minhas_turmas_disciplinas,
     }
 
@@ -518,13 +589,30 @@ def gerar_texto_preview_preconselho_api(
 ):
     _exigir_acesso_preconselho(usuario)
     motivos = _motivos_ativos_validos(payload.motivo_ids)
+    observacao_pos_preconselho = _texto_opcional(
+        payload.pos_preconselho_observacao,
+        "Observação do pós pré-conselho",
+        max_len=1000,
+    )
     try:
+        (
+            pos_preconselho_recuperado,
+            _pos_preconselho_motivo_ids,
+            pos_preconselho_motivos,
+        ) = validar_motivos_pos_pre_conselho(
+            payload.pos_preconselho_motivo_ids,
+            payload.pos_preconselho_recuperado,
+            observacao_pos_preconselho,
+        )
         retorno = gerar_texto_pre_conselho_individual(
             motivos=motivos,
             observacao_professor=payload.observacao_professor,
             nivel_atencao=payload.nivel_atencao,
             estudante_nome=payload.estudante_nome,
             disciplina_nome=payload.disciplina_nome,
+            pos_preconselho_recuperado=pos_preconselho_recuperado,
+            pos_preconselho_motivos=pos_preconselho_motivos,
+            pos_preconselho_observacao=observacao_pos_preconselho,
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -579,14 +667,31 @@ def salvar_registro_preconselho_api(
     observacao_professor = _texto_opcional(
         payload.observacao_professor, "Observação do professor", max_len=1000
     )
+    observacao_pos_preconselho = _texto_opcional(
+        payload.pos_preconselho_observacao,
+        "Observação do pós pré-conselho",
+        max_len=1000,
+    )
     try:
         nivel_atencao = validar_nivel_atencao_pre_conselho(payload.nivel_atencao)
+        (
+            pos_preconselho_recuperado,
+            pos_preconselho_motivo_ids,
+            pos_preconselho_motivos,
+        ) = validar_motivos_pos_pre_conselho(
+            payload.pos_preconselho_motivo_ids,
+            payload.pos_preconselho_recuperado,
+            observacao_pos_preconselho,
+        )
         texto = gerar_texto_pre_conselho_individual(
             motivos=motivos,
             observacao_professor=observacao_professor,
             nivel_atencao=nivel_atencao,
             estudante_nome=str(estudante["nome"]),
             disciplina_nome=str(disciplina["nome"]),
+            pos_preconselho_recuperado=pos_preconselho_recuperado,
+            pos_preconselho_motivos=pos_preconselho_motivos,
+            pos_preconselho_observacao=observacao_pos_preconselho,
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -604,6 +709,9 @@ def salvar_registro_preconselho_api(
         texto_gerado=texto["texto"],
         observacao_professor=observacao_professor,
         nivel_atencao=nivel_atencao,
+        pos_preconselho_recuperado=pos_preconselho_recuperado,
+        pos_preconselho_motivo_ids=pos_preconselho_motivo_ids,
+        pos_preconselho_observacao=observacao_pos_preconselho,
     )
 
     registro = buscar_registro_pre_conselho_por_id(registro_id)
@@ -684,6 +792,7 @@ def gerar_consolidado_preconselho_api(
         professor_usuario_id=int(professor["id"]) if professor else None,
     )
     itens = _enriquecer_editavel(usuario, itens)
+    itens = _enriquecer_professores_turma_registros(itens)
     consolidado = gerar_texto_consolidado_pre_conselho(
         periodo_nome=str(periodo["nome"]),
         turma_nome=str(turma["nome"]) if turma else "Todas as turmas",
