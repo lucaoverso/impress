@@ -118,6 +118,7 @@ class PreConselhoRouterTest(unittest.TestCase):
             turma_id = int(database.criar_turma("7A", "MATUTINO", 30))
             disciplina_id = int(database.criar_disciplina("Matematica", 5))
             disciplina_historia_id = int(database.criar_disciplina("Historia", 3))
+            disciplina_geografia_id = int(database.criar_disciplina("Geografia Aplicada", 2))
             estudante_id = int(database.criar_estudante("Ana", turma_id))
             professor_id = int(
                 database.criar_professor(
@@ -140,7 +141,19 @@ class PreConselhoRouterTest(unittest.TestCase):
                     aulas_semanais=8,
                     turmas_quantidade=1,
                     turmas=["7A"],
-                    disciplinas=["Geografia"],
+                    disciplinas=["Geografia Aplicada"],
+                )
+            )
+            professor_estrutura_id = int(
+                database.criar_professor(
+                    nome="Professora Estrutural",
+                    email="estrutural@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1990-12-20",
+                    aulas_semanais=6,
+                    turmas_quantidade=0,
+                    turmas=[],
+                    disciplinas=[],
                 )
             )
             coordenador_id = int(
@@ -161,6 +174,25 @@ class PreConselhoRouterTest(unittest.TestCase):
                     status="ABERTO",
                 )
             )
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_id,
+                disciplina_id=disciplina_geografia_id,
+                carga_horaria=2,
+                professor_usuario_id=professor_estrutura_id,
+            )
+            conn = database.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                DELETE FROM professores_turmas_disciplinas
+                WHERE professor_usuario_id = ?
+                  AND turma_id = ?
+                  AND disciplina_id = ?
+                """,
+                (professor_estrutura_id, turma_id, disciplina_geografia_id),
+            )
+            conn.commit()
+            conn.close()
 
             motivos = database.listar_motivos_pre_conselho()
             motivo_ids = [int(motivos[0]["id"]), int(motivos[1]["id"]), int(motivos[4]["id"])]
@@ -237,22 +269,29 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertIn("Ana", consolidado["texto"])
             self.assertIn("Historia", consolidado["texto"])
             self.assertIn("Matematica", consolidado["texto"])
+            self.assertIn("A turma do 7A, composta pelo seguinte corpo docente:", consolidado["texto"])
+            self.assertIn("Professora Estrutural (Geografia Aplicada)", consolidado["texto"])
             self.assertEqual(len(consolidado["itens_agrupados"]), 1)
             self.assertEqual(
                 sorted(consolidado["itens_agrupados"][0]["disciplinas"]), ["Historia", "Matematica"]
             )
             self.assertEqual(
-                consolidado["itens_agrupados"][0]["professores"],
-                ["Professor Registro", "Professora Sem Registro"],
+                sorted(consolidado["itens_agrupados"][0]["professores"]),
+                sorted(
+                    [
+                        "Professor Registro",
+                        "Professora Sem Registro",
+                        "Professora Estrutural",
+                    ]
+                ),
             )
             self.assertIn(
                 "No pós-pré-conselho, registrou-se que",
                 consolidado["itens_agrupados"][0]["texto"],
             )
-            self.assertIn(
-                "Os professores que atuam na turma são Professor Registro e Professora Sem Registro",
-                consolidado["itens_agrupados"][0]["texto"],
-            )
+            self.assertIn("Professor Registro", consolidado["itens_agrupados"][0]["texto"])
+            self.assertIn("Professora Sem Registro", consolidado["itens_agrupados"][0]["texto"])
+            self.assertIn("Professora Estrutural", consolidado["itens_agrupados"][0]["texto"])
 
     def test_professor_com_acesso_coordenacao_tem_visao_docente_e_consolidacao(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

@@ -62,6 +62,15 @@ class PreConselhoServiceTest(unittest.TestCase):
                 "turma_nome": "7A",
                 "disciplina_nome": "Matematica",
                 "professor_nome": "Prof. Ana",
+                "professores_turma": ["Prof. Ana", "Prof. Bruno"],
+                "corpo_docente_turma": [
+                    {"professor_nome": "João Batista Gomes", "disciplinas": ["Matematica"]},
+                    {"professor_nome": "Pamela Sabrina Araujo Silva", "disciplinas": ["Historia"]},
+                    {
+                        "professor_nome": "Alex Borges",
+                        "disciplinas": ["Lingua Portuguesa", "R.A Lingua Portuguesa"],
+                    },
+                ],
                 "nivel_atencao": "medio",
                 "motivos": [
                     {"codigo": "nao_fez_prova_bimestral", "descricao": "Não fez a prova bimestral"},
@@ -80,6 +89,7 @@ class PreConselhoServiceTest(unittest.TestCase):
                 "turma_nome": "7A",
                 "disciplina_nome": "Historia",
                 "professor_nome": "Prof. Ana",
+                "professores_turma": ["Prof. Ana", "Prof. Bruno"],
                 "nivel_atencao": "alto",
                 "motivos": [
                     {"codigo": "nao_entregou_trabalho", "descricao": "Não entregou o trabalho"},
@@ -145,7 +155,7 @@ class PreConselhoServiceTest(unittest.TestCase):
             "Relatos complementares registrados", resultado["itens_agrupados"][0]["texto"]
         )
         self.assertIn(
-            "em Matematica, Prof João relatou que precisa retomar a rotina de estudos",
+            "em Matematica, Prof Ana relatou que precisa retomar a rotina de estudos",
             resultado["itens_agrupados"][0]["texto"],
         )
         self.assertIn("em razão de", resultado["itens_agrupados"][0]["texto"])

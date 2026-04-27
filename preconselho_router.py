@@ -10,7 +10,11 @@ from db.catalogos import (
     listar_disciplinas_ativas,
     listar_turmas_ativas,
 )
-from db.docencia import listar_atribuicoes_docentes, listar_atribuicoes_docentes_por_usuario_ids
+from db.docencia import (
+    listar_atribuicoes_docentes,
+    listar_atribuicoes_docentes_por_usuario_ids,
+    listar_turmas_disciplinas_admin,
+)
 from db.ocorrencias import buscar_estudante_por_id, listar_estudantes
 from db.preconselho import (
     atualizar_motivo_pre_conselho_dados,
@@ -390,7 +394,7 @@ def _lista_texto_unica(valores) -> list[str]:
     return itens
 
 
-def _mapa_professores_por_turma(registros: list[dict]) -> dict[int, list[str]]:
+def _mapa_professores_por_turma(registros: list[dict]) -> dict[int, dict]:
     turmas = {}
     for registro in registros or []:
         turma_id = int(registro.get("turma_id") or 0)
@@ -401,13 +405,60 @@ def _mapa_professores_por_turma(registros: list[dict]) -> dict[int, list[str]]:
     if not turmas:
         return {}
 
-    professores_por_turma = {turma_id: [] for turma_id in turmas}
+    professores_por_turma = {
+        turma_id: {
+            "nomes": [],
+            "corpo_docente": [],
+        }
+        for turma_id in turmas
+    }
+
+    def registrar_docente(turma_id: int, professor_nome: str, disciplinas=None):
+        nome = str(professor_nome or "").strip()
+        disciplinas_lista = _lista_texto_unica(disciplinas or [])
+        if not nome:
+            return
+
+        bloco = professores_por_turma.setdefault(
+            turma_id,
+            {"nomes": [], "corpo_docente": []},
+        )
+        if nome not in bloco["nomes"]:
+            bloco["nomes"].append(nome)
+            bloco["corpo_docente"].append(
+                {
+                    "professor_nome": nome,
+                    "disciplinas": list(disciplinas_lista),
+                }
+            )
+            return
+
+        for item in bloco["corpo_docente"]:
+            if item.get("professor_nome") != nome:
+                continue
+            item["disciplinas"] = _lista_texto_unica(
+                list(item.get("disciplinas") or []) + list(disciplinas_lista)
+            )
+            break
 
     for turma_id in sorted(turmas):
         atribuicoes = listar_atribuicoes_docentes(turma_id=turma_id, incluir_inativos=False)
-        professores_por_turma[turma_id] = _lista_texto_unica(
-            item.get("professor_nome") for item in atribuicoes
+        turmas_disciplinas = listar_turmas_disciplinas_admin(
+            turma_id=turma_id,
+            incluir_inativos=False,
         )
+        for item in atribuicoes:
+            registrar_docente(
+                turma_id,
+                item.get("professor_nome"),
+                [item.get("disciplina_nome")],
+            )
+        for item in turmas_disciplinas:
+            registrar_docente(
+                turma_id,
+                item.get("professor_nome"),
+                [item.get("disciplina_nome")],
+            )
 
     professores = listar_professores_agendamento()
     cargas = listar_cargas_professores_por_usuario_ids(
@@ -415,8 +466,6 @@ def _mapa_professores_por_turma(registros: list[dict]) -> dict[int, list[str]]:
     )
     for turma_id, turma_nome in turmas.items():
         turma_nome_casefold = turma_nome.casefold()
-        nomes_atuais = list(professores_por_turma.get(turma_id, []))
-
         for professor in professores:
             professor_id = int(professor.get("id") or 0)
             if professor_id <= 0:
@@ -429,13 +478,17 @@ def _mapa_professores_por_turma(registros: list[dict]) -> dict[int, list[str]]:
                 if str(item or "").strip()
             }
             if turma_nome_casefold in turmas_carga:
-                nome = str(professor.get("nome") or "").strip()
-                if nome and nome not in nomes_atuais:
-                    nomes_atuais.append(nome)
+                registrar_docente(
+                    turma_id,
+                    professor.get("nome"),
+                    carga.get("disciplinas") or [],
+                )
 
-        professores_por_turma[turma_id] = nomes_atuais
-
-    return {turma_id: nomes for turma_id, nomes in professores_por_turma.items() if nomes}
+    return {
+        turma_id: dados
+        for turma_id, dados in professores_por_turma.items()
+        if dados.get("nomes")
+    }
 
 
 def _enriquecer_professores_turma_registros(registros: list[dict]) -> list[dict]:
@@ -443,7 +496,12 @@ def _enriquecer_professores_turma_registros(registros: list[dict]) -> list[dict]
     return [
         {
             **item,
-            "professores_turma": list(mapa.get(int(item.get("turma_id") or 0), [])),
+            "professores_turma": list(
+                (mapa.get(int(item.get("turma_id") or 0), {}) or {}).get("nomes", [])
+            ),
+            "corpo_docente_turma": list(
+                (mapa.get(int(item.get("turma_id") or 0), {}) or {}).get("corpo_docente", [])
+            ),
         }
         for item in (registros or [])
     ]

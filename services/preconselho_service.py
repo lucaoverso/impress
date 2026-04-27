@@ -837,6 +837,25 @@ def _nomes_estudantes_resumidos(registros: list[dict], *, limite: int = 8) -> st
 
 
 def _texto_corpo_docente_turma(registros: list[dict]) -> str:
+    corpo_docente = []
+    for registro in registros or []:
+        if isinstance(registro.get("corpo_docente_turma"), list) and registro.get("corpo_docente_turma"):
+            corpo_docente = registro.get("corpo_docente_turma")
+            break
+
+    if corpo_docente:
+        itens = []
+        for item in corpo_docente:
+            professor = _texto_limpo(item.get("professor_nome"))
+            disciplinas = _lista_unica_texto(item.get("disciplinas") or [])
+            if not professor:
+                continue
+            if disciplinas:
+                itens.append(f"{professor} ({_formatar_lista_pt_br(disciplinas)})")
+            else:
+                itens.append(professor)
+        return _formatar_lista_pt_br(itens)
+
     docentes = {}
     ordem_docentes = []
 
@@ -909,6 +928,15 @@ def gerar_texto_consolidado_pre_conselho(
     total_registros = len(itens)
     total_estudantes = len(_lista_unica_texto(item.get("estudante_nome") for item in itens))
     motivos_frequentes = _motivos_frequentes(itens)
+    professores_turma = _lista_unica_texto(
+        nome
+        for item in itens
+        for nome in (
+            item.get("professores_turma")
+            if isinstance(item.get("professores_turma"), list)
+            else [item.get("professor_nome")]
+        )
+    )
     itens_agrupados = [
         _texto_estudante_consolidado(grupo) for grupo in _agrupar_registros_por_estudante(itens)
     ]
@@ -940,6 +968,16 @@ def gerar_texto_consolidado_pre_conselho(
     if motivos_frequentes:
         fatores = f"Os motivos mais recorrentes foram {_formatar_lista_pt_br(motivos_frequentes)}."
 
+    professores_txt = ""
+    if professores_turma:
+        if len(professores_turma) == 1:
+            professores_txt = f"O professor que atua na turma é {professores_turma[0]}."
+        else:
+            professores_txt = (
+                "Os professores que atuam na turma são "
+                f"{_formatar_lista_pt_br(professores_turma)}."
+            )
+
     estudantes_txt = "\n\n".join(
         item["texto"] for item in itens_agrupados if _texto_limpo(item.get("texto"))
     )
@@ -949,5 +987,7 @@ def gerar_texto_consolidado_pre_conselho(
         "total_estudantes": total_estudantes,
         "motivos_frequentes": motivos_frequentes,
         "itens_agrupados": itens_agrupados,
-        "texto": "\n\n".join(parte for parte in (abertura, fatores, estudantes_txt) if parte),
+        "texto": "\n\n".join(
+            parte for parte in (abertura, professores_txt, fatores, estudantes_txt) if parte
+        ),
     }
