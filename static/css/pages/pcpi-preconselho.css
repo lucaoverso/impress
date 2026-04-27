@@ -344,6 +344,14 @@
     gap: 12px;
 }
 
+.preconselho-summary-grid-report {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.preconselho-summary-grid-turma {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .preconselho-summary-card {
     display: grid;
     gap: 6px;
@@ -430,6 +438,23 @@
 
 .preconselho-docente-column {
     min-height: 0;
+}
+
+.preconselho-relatorio-body {
+    gap: 16px;
+}
+
+.preconselho-report-columns {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    align-items: start;
+}
+
+.preconselho-report-column {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
 }
 
 .preconselho-rail-scroll {
@@ -721,8 +746,11 @@ body.preconselho-modal-open {
     .preconselho-workspace-grid,
     .preconselho-config-grid,
     .preconselho-summary-grid,
+    .preconselho-summary-grid-report,
+    .preconselho-summary-grid-turma,
     .preconselho-editor-grid,
-    .preconselho-docente-board {
+    .preconselho-docente-board,
+    .preconselho-report-columns {
         grid-template-columns: 1fr;
     }
 

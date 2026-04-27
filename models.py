@@ -256,6 +256,7 @@ class PreConselhoContextoOut(BaseModel):
     cargo: str = ""
     pode_configurar: bool = False
     pode_consolidar: bool = False
+    pode_relatorio: bool = False
     pode_editar_periodo_fechado: bool = False
     professor_id: int | None = None
     professor_nome: str = ""
@@ -379,6 +380,46 @@ class PreConselhoConsolidadoOut(BaseModel):
     texto: str = ""
     itens_agrupados: list[PreConselhoConsolidadoEstudanteOut] = Field(default_factory=list)
     itens: list[PreConselhoRegistroOut] = Field(default_factory=list)
+
+
+class PreConselhoRelatorioItemOut(BaseModel):
+    id: int | None = None
+    nome: str = ""
+    total_registros: int = 0
+    extra: str = ""
+
+
+class PreConselhoRelatorioTurmaOut(BaseModel):
+    turma_id: int
+    turma_nome: str = ""
+    turno: str = ""
+    quantidade_estudantes: int = 0
+    total_registros: int = 0
+    total_estudantes_sinalizados: int = 0
+    professor_destaque: PreConselhoRelatorioItemOut = Field(
+        default_factory=PreConselhoRelatorioItemOut
+    )
+    estudantes_destaque: list[PreConselhoRelatorioItemOut] = Field(default_factory=list)
+    professores_relacionados: list[PreConselhoRelatorioItemOut] = Field(default_factory=list)
+    motivos_frequentes: list[PreConselhoRelatorioItemOut] = Field(default_factory=list)
+    pontos_atencao: list[str] = Field(default_factory=list)
+
+
+class PreConselhoRelatorioOut(BaseModel):
+    periodo_id: int | None = None
+    periodo_nome: str = ""
+    total_registros: int = 0
+    total_estudantes_sinalizados: int = 0
+    total_turmas_com_registros: int = 0
+    total_professores_com_registros: int = 0
+    turma_destaque: PreConselhoRelatorioItemOut = Field(default_factory=PreConselhoRelatorioItemOut)
+    professor_destaque: PreConselhoRelatorioItemOut = Field(
+        default_factory=PreConselhoRelatorioItemOut
+    )
+    motivos_frequentes: list[PreConselhoRelatorioItemOut] = Field(default_factory=list)
+    pontos_criticos: list[str] = Field(default_factory=list)
+    estudantes_destaque: list[PreConselhoRelatorioItemOut] = Field(default_factory=list)
+    turmas: list[PreConselhoRelatorioTurmaOut] = Field(default_factory=list)
 
 
 class ProfessorCreateIn(BaseModel):

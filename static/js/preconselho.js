@@ -22,6 +22,12 @@ const CATEGORIAS_MOTIVO = [
     { id: "organizacao_estudo", nome: "Organização e estudo" },
     { id: "dificuldades_pedagogicas", nome: "Dificuldades pedagógicas" }
 ];
+const TURNO_LABEL = {
+    MATUTINO: "Matutino",
+    VESPERTINO: "Vespertino",
+    VESPERTINO_EM: "Vespertino E.M.",
+    INTEGRAL: "Período integral"
+};
 
 let usuarioAtual = null;
 let contextoAtual = null;
@@ -41,6 +47,11 @@ const estadoDocente = {
 
 const estadoConsolidacao = {
     dados: null
+};
+
+const estadoRelatorio = {
+    dados: null,
+    turmasExpandidas: new Set()
 };
 
 function limparMensagem(id) {
@@ -78,6 +89,10 @@ function statusPeriodoClasse(status) {
 
 function rotuloStatusPeriodo(status) {
     return String(status || "").trim().toUpperCase() === "ABERTO" ? "Aberto" : "Fechado";
+}
+
+function nomeTurno(turno) {
+    return TURNO_LABEL[turno] || turno || "Não informado";
 }
 
 function formatarDataBr(valor) {
@@ -438,15 +453,18 @@ function renderizarCabecalho() {
 function renderizarAbasDisponiveis() {
     const mostrarDocente = Boolean(contextoAtual?.professor_id);
     const mostrarConsolidacao = Boolean(contextoAtual?.pode_consolidar);
+    const mostrarRelatorio = Boolean(contextoAtual?.pode_relatorio);
     const mostrarConfiguracoes = Boolean(contextoAtual?.pode_configurar);
 
     el("tabBtnDocente").hidden = !mostrarDocente;
     el("tabBtnConsolidacao").hidden = !mostrarConsolidacao;
+    el("tabBtnRelatorio").hidden = !mostrarRelatorio;
     el("tabBtnConfiguracoes").hidden = !mostrarConfiguracoes;
 
     const ordem = [
         { aba: "docente", visivel: mostrarDocente },
         { aba: "consolidacao", visivel: mostrarConsolidacao },
+        { aba: "relatorio", visivel: mostrarRelatorio },
         { aba: "configuracoes", visivel: mostrarConfiguracoes }
     ].filter((item) => item.visivel);
 
@@ -494,6 +512,18 @@ function renderizarSelectPeriodos() {
         {
             permitirVazio: false,
             valorSelecionado: el("preconselhoPeriodoConsolidacao")?.value || periodos[0]?.id || ""
+        }
+    );
+
+    preencherSelect(
+        el("preconselhoPeriodoRelatorio"),
+        periodos,
+        (item) => item.id,
+        (item) => rotuloPeriodo(item),
+        "Selecione um período",
+        {
+            permitirVazio: false,
+            valorSelecionado: el("preconselhoPeriodoRelatorio")?.value || periodos[0]?.id || ""
         }
     );
 
@@ -1063,6 +1093,236 @@ async function carregarConsolidacao() {
     }
 }
 
+function construirParametrosRelatorio() {
+    return new URLSearchParams({
+        periodo_id: String(el("preconselhoPeriodoRelatorio").value || "")
+    });
+}
+
+function registrarTurmasRelatorioExpandidas() {
+    const container = el("listaRelatorioTurmasPreconselho");
+    if (!container) {
+        return;
+    }
+
+    estadoRelatorio.turmasExpandidas = new Set(
+        Array.from(container.querySelectorAll("details[data-turma-id][open]"))
+            .map((details) => String(details.dataset.turmaId || "").trim())
+            .filter(Boolean)
+    );
+}
+
+function renderizarItensRankingRelatorio(itens = [], mensagemVazia = "Nenhum dado disponível.") {
+    if (!Array.isArray(itens) || itens.length === 0) {
+        return criarEstadoVazio(mensagemVazia);
+    }
+
+    return itens.map((item) => {
+        const total = Number(item?.total_registros || 0);
+        const extra = String(item?.extra || "").trim();
+        return `
+            <li class="pcpi-item pcpi-item-manual">
+                <div class="pcpi-checkbox-row">
+                    <div class="pcpi-item-body">
+                        <div class="pcpi-item-top">
+                            <strong>${escaparHtml(item?.nome || "Sem identificação")}</strong>
+                            <div class="pcpi-tag-group">
+                                <span class="pcpi-chip pcpi-chip-manual">${total} ${total === 1 ? "registro" : "registros"}</span>
+                            </div>
+                        </div>
+                        ${extra ? `<p class="pcpi-item-note">${escaparHtml(extra)}</p>` : ""}
+                    </div>
+                </div>
+            </li>
+        `;
+    }).join("");
+}
+
+function renderizarItensTextoRelatorio(itens = [], mensagemVazia = "Nenhum destaque disponível.") {
+    if (!Array.isArray(itens) || itens.length === 0) {
+        return criarEstadoVazio(mensagemVazia);
+    }
+
+    return itens.map((texto) => `
+        <li class="pcpi-item pcpi-item-automatico">
+            <div class="pcpi-checkbox-row">
+                <div class="pcpi-item-body">
+                    <p class="pcpi-item-note">${escaparHtml(String(texto || ""))}</p>
+                </div>
+            </div>
+        </li>
+    `).join("");
+}
+
+function renderizarTurmasRelatorio(turmas = []) {
+    const container = el("listaRelatorioTurmasPreconselho");
+    if (!container) {
+        return;
+    }
+
+    registrarTurmasRelatorioExpandidas();
+
+    if (!Array.isArray(turmas) || turmas.length === 0) {
+        container.innerHTML = '<p class="preconselho-empty-state">Nenhuma turma disponível para o período selecionado.</p>';
+        return;
+    }
+
+    container.innerHTML = turmas.map((turma) => {
+        const totalRegistros = Number(turma?.total_registros || 0);
+        const totalEstudantes = Number(turma?.total_estudantes_sinalizados || 0);
+        const quantidadeEstudantes = Number(turma?.quantidade_estudantes || 0);
+        const professorDestaque = turma?.professor_destaque || {};
+        const motivos = Array.isArray(turma?.motivos_frequentes) ? turma.motivos_frequentes : [];
+        const motivoTopo = motivos[0] || null;
+        const turno = String(turma?.turno || "").trim();
+        const metaTurma = [
+            turno ? nomeTurno(turno) : "",
+            `${quantidadeEstudantes} estudante(s) cadastrados`,
+            `${totalEstudantes} sinalizado(s)`
+        ].filter(Boolean).join(" | ");
+
+        return `
+            <details class="admin-accordion-item preconselho-relatorio-accordion" data-turma-id="${Number(turma?.turma_id || 0)}">
+                <summary class="admin-accordion-summary">
+                    <div class="admin-accordion-title">
+                        <strong>${escaparHtml(turma?.turma_nome || "Turma")}</strong>
+                        <span>${escaparHtml(metaTurma)}</span>
+                    </div>
+                    <span class="admin-accordion-badge">${totalRegistros} ${totalRegistros === 1 ? "registro" : "registros"}</span>
+                </summary>
+                <div class="admin-accordion-body preconselho-relatorio-body">
+                    <div class="preconselho-summary-grid preconselho-summary-grid-turma">
+                        <article class="preconselho-summary-card">
+                            <span>Registros</span>
+                            <strong>${totalRegistros}</strong>
+                            <small>Total de apontamentos lançados na turma.</small>
+                        </article>
+                        <article class="preconselho-summary-card">
+                            <span>Professor em destaque</span>
+                            <strong>${escaparHtml(professorDestaque?.nome || "Sem registros")}</strong>
+                            <small>${escaparHtml(professorDestaque?.extra || "Nenhum professor registrou apontamentos nesta turma.")}</small>
+                        </article>
+                        <article class="preconselho-summary-card">
+                            <span>Motivo recorrente</span>
+                            <strong>${escaparHtml(motivoTopo?.nome || "Sem recorrência")}</strong>
+                            <small>${motivoTopo ? `${Number(motivoTopo.total_registros || 0)} ocorrência(s) no período.` : "Sem registros suficientes para ranqueamento."}</small>
+                        </article>
+                    </div>
+
+                    <div class="preconselho-report-columns">
+                        <section class="preconselho-report-column">
+                            <div class="pcpi-subsection-header">
+                                <h3>Pontos de atenção</h3>
+                            </div>
+                            <ul class="pcpi-list">
+                                ${renderizarItensTextoRelatorio(turma?.pontos_atencao || [], "Nenhum ponto crítico destacado para esta turma.")}
+                            </ul>
+                        </section>
+
+                        <section class="preconselho-report-column">
+                            <div class="pcpi-subsection-header">
+                                <h3>Estudantes com mais registros</h3>
+                            </div>
+                            <ul class="pcpi-list">
+                                ${renderizarItensRankingRelatorio(turma?.estudantes_destaque || [], "Nenhum estudante sinalizado nesta turma.")}
+                            </ul>
+                        </section>
+
+                        <section class="preconselho-report-column">
+                            <div class="pcpi-subsection-header">
+                                <h3>Professores relacionados</h3>
+                            </div>
+                            <ul class="pcpi-list">
+                                ${renderizarItensRankingRelatorio(turma?.professores_relacionados || [], "Nenhum professor relacionado foi encontrado para esta turma.")}
+                            </ul>
+                        </section>
+                    </div>
+                </div>
+            </details>
+        `;
+    }).join("");
+
+    const detalhes = Array.from(container.querySelectorAll("details[data-turma-id]"));
+    detalhes.forEach((details, index) => {
+        const turmaId = String(details.dataset.turmaId || "").trim();
+        const manterAberto = estadoRelatorio.turmasExpandidas.has(turmaId) || (
+            estadoRelatorio.turmasExpandidas.size === 0 && index === 0
+        );
+        details.open = manterAberto;
+        details.addEventListener("toggle", () => {
+            if (details.open) {
+                estadoRelatorio.turmasExpandidas.add(turmaId);
+            } else {
+                estadoRelatorio.turmasExpandidas.delete(turmaId);
+            }
+        });
+    });
+}
+
+function renderizarRelatorio() {
+    const dados = estadoRelatorio.dados;
+    const listaPontos = el("listaPontosCriticosPreconselho");
+    const listaEstudantes = el("listaEstudantesDestaqueRelatorio");
+
+    if (!dados) {
+        el("preconselhoResumoRelatorioRegistros").textContent = "0";
+        el("preconselhoResumoRelatorioEstudantes").textContent = "0";
+        el("preconselhoResumoRelatorioTurma").textContent = "Nenhuma";
+        el("preconselhoResumoRelatorioTurmaMeta").textContent = "Sem dados para o período.";
+        el("preconselhoResumoRelatorioProfessor").textContent = "Nenhum";
+        el("preconselhoResumoRelatorioProfessorMeta").textContent = "Sem dados para o período.";
+        listaPontos.innerHTML = criarEstadoVazio("A leitura crítica do período aparecerá aqui.");
+        listaEstudantes.innerHTML = criarEstadoVazio("O ranking geral dos estudantes aparecerá aqui.");
+        renderizarTurmasRelatorio([]);
+        return;
+    }
+
+    const turmaDestaque = dados?.turma_destaque || {};
+    const professorDestaque = dados?.professor_destaque || {};
+
+    el("preconselhoResumoRelatorioRegistros").textContent = String(Number(dados?.total_registros || 0));
+    el("preconselhoResumoRelatorioEstudantes").textContent = String(Number(dados?.total_estudantes_sinalizados || 0));
+    el("preconselhoResumoRelatorioTurma").textContent = turmaDestaque?.nome || "Nenhuma";
+    el("preconselhoResumoRelatorioTurmaMeta").textContent = turmaDestaque?.extra || "Sem dados para o período.";
+    el("preconselhoResumoRelatorioProfessor").textContent = professorDestaque?.nome || "Nenhum";
+    el("preconselhoResumoRelatorioProfessorMeta").textContent = professorDestaque?.extra || "Sem dados para o período.";
+
+    listaPontos.innerHTML = renderizarItensTextoRelatorio(
+        dados?.pontos_criticos || [],
+        "Nenhum ponto crítico foi identificado para o período."
+    );
+    listaEstudantes.innerHTML = renderizarItensRankingRelatorio(
+        dados?.estudantes_destaque || [],
+        "Nenhum estudante foi sinalizado neste período."
+    );
+    renderizarTurmasRelatorio(Array.isArray(dados?.turmas) ? dados.turmas : []);
+}
+
+async function carregarRelatorio() {
+    limparMensagem("msgPreconselhoRelatorio");
+    const periodoId = Number(el("preconselhoPeriodoRelatorio").value || 0);
+    if (!periodoId) {
+        estadoRelatorio.dados = null;
+        renderizarRelatorio();
+        return;
+    }
+
+    try {
+        const resposta = await fetchComAuth(`/preconselho/relatorio?${construirParametrosRelatorio().toString()}`, { headers });
+        if (!resposta.ok) {
+            throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível carregar o relatório."));
+        }
+
+        estadoRelatorio.dados = await resposta.json();
+        renderizarRelatorio();
+        definirMensagem("msgPreconselhoRelatorio", "Relatório atualizado.");
+    } catch (erro) {
+        estadoRelatorio.dados = null;
+        renderizarRelatorio();
+        definirMensagem("msgPreconselhoRelatorio", erro.message || "Não foi possível carregar o relatório.", true);
+    }
+}
+
 function renderizarTabelaPeriodos() {
     const tbody = el("tbodyPeriodosPreconselho");
     if (!tbody) {
@@ -1268,6 +1528,12 @@ async function salvarPeriodo(event) {
 
         await recarregarPeriodos();
         renderizarSelectsConsolidacao();
+        if (contextoAtual?.pode_consolidar) {
+            await carregarConsolidacao();
+        }
+        if (contextoAtual?.pode_relatorio) {
+            await carregarRelatorio();
+        }
         limparFormularioPeriodo();
         definirMensagem("msgPreconselhoPeriodo", periodoId > 0 ? "Período atualizado com sucesso." : "Período criado com sucesso.");
     } catch (erro) {
@@ -1292,6 +1558,12 @@ async function alternarStatusPeriodo(periodoId, statusAtual) {
 
         await recarregarPeriodos();
         renderizarSelectsConsolidacao();
+        if (contextoAtual?.pode_consolidar) {
+            await carregarConsolidacao();
+        }
+        if (contextoAtual?.pode_relatorio) {
+            await carregarRelatorio();
+        }
         definirMensagem("msgPreconselhoPeriodo", "Status do período atualizado.");
     } catch (erro) {
         definirMensagem("msgPreconselhoPeriodo", erro.message || "Erro ao atualizar o status do período.", true);
@@ -1498,16 +1770,26 @@ async function carregarContexto() {
         const periodoAberto = obterPeriodos().find((item) => item.status === "ABERTO");
         el("preconselhoPeriodoConsolidacao").value = String(periodoAberto?.id || obterPeriodos()[0].id);
     }
+    if (!el("preconselhoPeriodoRelatorio").value && obterPeriodos().length > 0) {
+        const periodoAberto = obterPeriodos().find((item) => item.status === "ABERTO");
+        el("preconselhoPeriodoRelatorio").value = String(periodoAberto?.id || obterPeriodos()[0].id);
+    }
+
+    renderizarRelatorio();
 }
 
 async function carregarPainelInicial() {
+    const tarefas = [];
     if (usuarioEhProfessor(usuarioAtual)) {
-        await carregarPainelDocente();
+        tarefas.push(carregarPainelDocente());
     }
-
     if (contextoAtual?.pode_consolidar) {
-        await carregarConsolidacao();
+        tarefas.push(carregarConsolidacao());
     }
+    if (contextoAtual?.pode_relatorio) {
+        tarefas.push(carregarRelatorio());
+    }
+    await Promise.all(tarefas);
 }
 
 function registrarEventos() {
@@ -1701,6 +1983,14 @@ function registrarEventos() {
         await copiarTexto("preconselhoTextoConsolidado", "msgPreconselhoConsolidacao", "Texto consolidado copiado.");
     });
 
+    el("formRelatorioPreconselho").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await carregarRelatorio();
+    });
+    el("preconselhoPeriodoRelatorio").addEventListener("change", async () => {
+        await carregarRelatorio();
+    });
+
     el("formPeriodoPreconselho").addEventListener("submit", salvarPeriodo);
     el("btnLimparPeriodoPreconselho").addEventListener("click", () => {
         limparMensagem("msgPreconselhoPeriodo");
@@ -1751,6 +2041,7 @@ async function iniciarModulo() {
     } catch (erro) {
         definirMensagem("msgPreconselhoDocente", erro.message || "Não foi possível carregar o módulo de pré-conselho.", true);
         definirMensagem("msgPreconselhoConsolidacao", erro.message || "Não foi possível carregar o módulo de pré-conselho.", true);
+        definirMensagem("msgPreconselhoRelatorio", erro.message || "Não foi possível carregar o módulo de pré-conselho.", true);
     }
 }
 

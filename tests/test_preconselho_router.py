@@ -108,6 +108,7 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertIn("Médio", [item["nome"] for item in resposta["niveis_atencao"]])
             self.assertIn("recuperado", resposta["motivos_pos_preconselho"])
             self.assertIn("nao_recuperado", resposta["motivos_pos_preconselho"])
+            self.assertFalse(resposta["pode_relatorio"])
 
     def test_professor_salva_registro_e_coordenacao_consolida(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -362,6 +363,7 @@ class PreConselhoRouterTest(unittest.TestCase):
             contexto = preconselho_router.obter_contexto_preconselho_api(usuario=usuario_hibrido)
 
             self.assertTrue(contexto["pode_consolidar"])
+            self.assertTrue(contexto["pode_relatorio"])
             self.assertEqual(contexto["professor_id"], professor_hibrido_id)
             self.assertEqual([item["nome"] for item in contexto["turmas"]], ["9A"])
             self.assertEqual(
@@ -380,6 +382,174 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertEqual(consolidado["professor_id"], professor_colega_id)
             self.assertEqual(consolidado["total_registros"], 1)
             self.assertIn("Carlos", consolidado["texto"])
+
+    def test_relatorio_institucional_destaca_turmas_estudantes_e_professores_relacionados(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, preconselho_router, models = _reload_modulos(db_path)
+            database.criar_tabelas()
+
+            turma_a_id = int(database.criar_turma("7A", "MATUTINO", 30))
+            turma_b_id = int(database.criar_turma("8A", "VESPERTINO", 26))
+            matematica_id = int(database.criar_disciplina("Matematica", 5))
+            historia_id = int(database.criar_disciplina("Historia", 3))
+            ciencias_id = int(database.criar_disciplina("Ciencias", 4))
+
+            ana_id = int(database.criar_estudante("Ana", turma_a_id))
+            bruno_id = int(database.criar_estudante("Bruno", turma_a_id))
+
+            professor_principal_id = int(
+                database.criar_professor(
+                    nome="Professor Principal",
+                    email="principal.relatorio@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1989-01-10",
+                    aulas_semanais=12,
+                    turmas_quantidade=1,
+                    turmas=["7A"],
+                    disciplinas=["Matematica", "Historia"],
+                )
+            )
+            professora_apoio_id = int(
+                database.criar_professor(
+                    nome="Professora Apoio",
+                    email="apoio.relatorio@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1990-02-20",
+                    aulas_semanais=8,
+                    turmas_quantidade=1,
+                    turmas=["7A"],
+                    disciplinas=["Ciencias"],
+                )
+            )
+            professor_turma_b_id = int(
+                database.criar_professor(
+                    nome="Professor Turma B",
+                    email="turmab.relatorio@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1991-03-30",
+                    aulas_semanais=6,
+                    turmas_quantidade=1,
+                    turmas=["8A"],
+                    disciplinas=["Ciencias"],
+                )
+            )
+            coordenador_id = int(
+                database.criar_coordenador(
+                    nome="Coordenadora Relatorio",
+                    email="coord.relatorio@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1985-04-12",
+                )
+            )
+            periodo_id = int(
+                database.criar_periodo_pre_conselho(
+                    nome="2º Bimestre 2036",
+                    ano_letivo=2036,
+                    etapa=2,
+                    data_inicio="2036-05-01",
+                    data_fim="2036-06-30",
+                    status="ABERTO",
+                )
+            )
+
+            database.criar_atribuicao_docente(professor_principal_id, turma_a_id, matematica_id)
+            database.criar_atribuicao_docente(professor_principal_id, turma_a_id, historia_id)
+            database.criar_atribuicao_docente(professora_apoio_id, turma_a_id, ciencias_id)
+            database.criar_atribuicao_docente(professor_turma_b_id, turma_b_id, ciencias_id)
+
+            motivos = database.listar_motivos_pre_conselho()
+            motivo_a = int(motivos[0]["id"])
+            motivo_b = int(motivos[1]["id"])
+
+            preconselho_router.salvar_registro_preconselho_api(
+                payload=models.PreConselhoRegistroSaveIn(
+                    periodo_id=periodo_id,
+                    turma_id=turma_a_id,
+                    disciplina_id=matematica_id,
+                    estudante_id=ana_id,
+                    sinalizar=True,
+                    motivo_ids=[motivo_a],
+                    nivel_atencao="alto",
+                ),
+                usuario=self._usuario_professor(professor_principal_id, "Professor Principal"),
+            )
+            preconselho_router.salvar_registro_preconselho_api(
+                payload=models.PreConselhoRegistroSaveIn(
+                    periodo_id=periodo_id,
+                    turma_id=turma_a_id,
+                    disciplina_id=historia_id,
+                    estudante_id=ana_id,
+                    sinalizar=True,
+                    motivo_ids=[motivo_b],
+                    nivel_atencao="medio",
+                ),
+                usuario=self._usuario_professor(professor_principal_id, "Professor Principal"),
+            )
+            preconselho_router.salvar_registro_preconselho_api(
+                payload=models.PreConselhoRegistroSaveIn(
+                    periodo_id=periodo_id,
+                    turma_id=turma_a_id,
+                    disciplina_id=ciencias_id,
+                    estudante_id=bruno_id,
+                    sinalizar=True,
+                    motivo_ids=[motivo_a],
+                    nivel_atencao="medio",
+                    pos_preconselho_recuperado=False,
+                ),
+                usuario=self._usuario_professor(professora_apoio_id, "Professora Apoio"),
+            )
+
+            relatorio = preconselho_router.gerar_relatorio_preconselho_api(
+                periodo_id=periodo_id,
+                usuario=self._usuario_coord(coordenador_id, "Coordenadora Relatorio"),
+            )
+
+            self.assertEqual(relatorio["total_registros"], 3)
+            self.assertEqual(relatorio["total_estudantes_sinalizados"], 2)
+            self.assertEqual(relatorio["turma_destaque"]["nome"], "7A")
+            self.assertEqual(relatorio["turma_destaque"]["total_registros"], 3)
+            self.assertEqual(relatorio["professor_destaque"]["nome"], "Professor Principal")
+            self.assertEqual(relatorio["professor_destaque"]["total_registros"], 2)
+            self.assertTrue(
+                any(
+                    item["nome"] == "Ana" and int(item["total_registros"]) == 2
+                    for item in relatorio["estudantes_destaque"]
+                )
+            )
+            self.assertTrue(
+                any("Motivos mais frequentes" in ponto for ponto in relatorio["pontos_criticos"])
+            )
+
+            turma_a = next(item for item in relatorio["turmas"] if item["turma_nome"] == "7A")
+            turma_b = next(item for item in relatorio["turmas"] if item["turma_nome"] == "8A")
+
+            self.assertEqual(turma_a["professor_destaque"]["nome"], "Professor Principal")
+            self.assertEqual(turma_a["total_estudantes_sinalizados"], 2)
+            self.assertTrue(
+                any(
+                    item["nome"] == "Ana" and int(item["total_registros"]) == 2
+                    for item in turma_a["estudantes_destaque"]
+                )
+            )
+            self.assertTrue(
+                any(
+                    item["nome"] == "Professora Apoio" and int(item["total_registros"]) == 1
+                    for item in turma_a["professores_relacionados"]
+                )
+            )
+
+            self.assertEqual(turma_b["total_registros"], 0)
+            self.assertTrue(
+                any(
+                    item["nome"] == "Professor Turma B" and int(item["total_registros"]) == 0
+                    for item in turma_b["professores_relacionados"]
+                )
+            )
+            self.assertEqual(
+                turma_b["pontos_atencao"],
+                ["Nenhum registro lançado para esta turma no período selecionado."],
+            )
 
     def test_professor_nao_pode_salvar_em_periodo_fechado(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

@@ -33,6 +33,10 @@
                 aria-controls="preconselho-tab-consolidacao" aria-selected="false" type="button" hidden>
                 Consolidação
             </button>
+            <button id="tabBtnRelatorio" class="admin-tab-btn" data-preconselho-tab-trigger="relatorio"
+                aria-controls="preconselho-tab-relatorio" aria-selected="false" type="button" hidden>
+                Relatório
+            </button>
             <button id="tabBtnConfiguracoes" class="admin-tab-btn" data-preconselho-tab-trigger="configuracoes"
                 aria-controls="preconselho-tab-configuracoes" aria-selected="false" type="button" hidden>
                 Configurações
@@ -346,6 +350,99 @@
                         <p id="preconselhoMotivosFrequentes" class="pcpi-hint"></p>
                         <textarea id="preconselhoTextoConsolidado" class="pcpi-textarea" rows="16" readonly
                             placeholder="A consolidação aparecerá aqui após a aplicação dos filtros."></textarea>
+                    </article>
+                </section>
+            </section>
+
+            <section id="preconselho-tab-relatorio" class="admin-tab-panel" data-preconselho-tab-panel="relatorio"
+                hidden>
+                <section class="preconselho-workspace-grid">
+                    <article class="calendar-card pcpi-card pcpi-card-full">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">Coordenação</p>
+                                <h2>Relatório institucional</h2>
+                                <p>Acompanhe a turma com mais registros, o professor que mais sinalizou e os principais
+                                    pontos de atenção do período.</p>
+                            </div>
+                        </div>
+
+                        <form id="formRelatorioPreconselho" class="pcpi-filter-grid">
+                            <label class="pcpi-field" for="preconselhoPeriodoRelatorio">
+                                <span>Período</span>
+                                <select id="preconselhoPeriodoRelatorio" required></select>
+                            </label>
+
+                            <div class="pcpi-inline-actions pcpi-field">
+                                <button id="btnAtualizarRelatorioPreconselho" class="btn-destaque" type="submit">
+                                    Atualizar relatório
+                                </button>
+                            </div>
+                        </form>
+
+                        <div class="preconselho-summary-grid preconselho-summary-grid-report">
+                            <article class="preconselho-summary-card">
+                                <span>Registros</span>
+                                <strong id="preconselhoResumoRelatorioRegistros">0</strong>
+                                <small>Total de registros lançados no período selecionado.</small>
+                            </article>
+                            <article class="preconselho-summary-card">
+                                <span>Estudantes sinalizados</span>
+                                <strong id="preconselhoResumoRelatorioEstudantes">0</strong>
+                                <small>Total de estudantes únicos com apontamentos.</small>
+                            </article>
+                            <article class="preconselho-summary-card">
+                                <span>Turma com mais registros</span>
+                                <strong id="preconselhoResumoRelatorioTurma">Nenhuma</strong>
+                                <small id="preconselhoResumoRelatorioTurmaMeta">Sem dados para o período.</small>
+                            </article>
+                            <article class="preconselho-summary-card">
+                                <span>Professor com mais registros</span>
+                                <strong id="preconselhoResumoRelatorioProfessor">Nenhum</strong>
+                                <small id="preconselhoResumoRelatorioProfessorMeta">Sem dados para o período.</small>
+                            </article>
+                        </div>
+
+                        <p id="msgPreconselhoRelatorio" class="pcpi-status-copy"></p>
+                    </article>
+
+                    <article class="calendar-card pcpi-card">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">Panorama</p>
+                                <h2>Pontos críticos</h2>
+                                <p>Leitura rápida dos sinais que mais merecem acompanhamento institucional no
+                                    período.</p>
+                            </div>
+                        </div>
+
+                        <ul id="listaPontosCriticosPreconselho" class="pcpi-list" aria-live="polite"></ul>
+                    </article>
+
+                    <article class="calendar-card pcpi-card">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">Panorama</p>
+                                <h2>Estudantes com mais registros</h2>
+                                <p>Ranking geral do período para localizar recorrências antes da reunião de
+                                    pré-conselho.</p>
+                            </div>
+                        </div>
+
+                        <ul id="listaEstudantesDestaqueRelatorio" class="pcpi-list" aria-live="polite"></ul>
+                    </article>
+
+                    <article class="calendar-card pcpi-card pcpi-card-full">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">Turmas</p>
+                                <h2>Detalhamento por turma</h2>
+                                <p>Abra cada turma para visualizar estudantes com mais registros, professores
+                                    relacionados e os principais pontos de atenção.</p>
+                            </div>
+                        </div>
+
+                        <div id="listaRelatorioTurmasPreconselho" class="admin-accordion-list"></div>
                     </article>
                 </section>
             </section>
