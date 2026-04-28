@@ -1,10 +1,13 @@
 import ssl
+import tempfile
 import unittest
 from pathlib import Path
 from urllib.error import URLError
 from unittest.mock import patch
 
 from services.youtube_download_service import (
+    _INFO_VIDEO_CACHE,
+    _INFO_VIDEO_CACHE_LOCK,
     QUALIDADES_MP4_FIXAS,
     YoutubeDownloadError,
     _traduzir_erro_rede,
@@ -12,12 +15,18 @@ from services.youtube_download_service import (
     formatar_duracao,
     montar_opcoes_qualidade_mp4,
     normalizar_qualidade_mp4,
+    obter_info_video,
+    preparar_solicitacao_download,
     sanitizar_nome_arquivo,
     validar_url_youtube,
 )
 
 
 class YoutubeDownloadServiceTest(unittest.TestCase):
+    def tearDown(self):
+        with _INFO_VIDEO_CACHE_LOCK:
+            _INFO_VIDEO_CACHE.clear()
+
     def test_formatar_duracao_sem_horas(self):
         self.assertEqual(formatar_duracao(125), "02:05")
 
@@ -25,7 +34,7 @@ class YoutubeDownloadServiceTest(unittest.TestCase):
         self.assertEqual(formatar_duracao(3723), "01:02:03")
 
     def test_sanitizar_nome_remove_caracteres_invalidos(self):
-        self.assertEqual(sanitizar_nome_arquivo('Aula: frações / 6º ano?'), "Aula_fraes_6_ano")
+        self.assertEqual(sanitizar_nome_arquivo("Aula: frações / 6º ano?"), "Aula_fraes_6_ano")
 
     def test_validar_url_rejeita_texto_sem_http(self):
         with self.assertRaises(YoutubeDownloadError):
@@ -34,6 +43,17 @@ class YoutubeDownloadServiceTest(unittest.TestCase):
     def test_normalizar_qualidade_mp4_rejeita_valor_invalido(self):
         with self.assertRaises(YoutubeDownloadError):
             normalizar_qualidade_mp4("480p")
+
+    def test_preparar_solicitacao_download_normaliza_campos(self):
+        url, formato, qualidade = preparar_solicitacao_download(
+            " https://www.youtube.com/watch?v=abc ",
+            "MP4",
+            "1080p",
+        )
+
+        self.assertEqual(url, "https://www.youtube.com/watch?v=abc")
+        self.assertEqual(formato, "mp4")
+        self.assertEqual(qualidade, "1080p")
 
     def test_montar_opcoes_qualidade_mp4_respeita_ffmpeg(self):
         opcoes = montar_opcoes_qualidade_mp4({"720p"}, {"1080p", "2160p"}, ffmpeg_ativo=False)
@@ -50,140 +70,129 @@ class YoutubeDownloadServiceTest(unittest.TestCase):
         self.assertIsInstance(mensagem, YoutubeDownloadError)
         self.assertIn("SSL", str(mensagem))
 
-    def test_baixar_arquivo_mp4_progressivo_retorna_arquivo_final(self):
-        pasta = Path.cwd() / "fake_spool"
-        yt = _FakeYoutube("Aula Teste")
-        stream = _FakeStream(
-            retorno_download=pasta / "Aula_Teste_720p_token.mp4",
-            subtype="mp4",
-            resolution="720p",
-        )
+    def test_obter_info_video_reaproveita_cache_curto(self):
+        info_bruta = {
+            "title": "Aula Teste",
+            "duration": 125,
+            "thumbnail": "https://img.example/thumb.jpg",
+            "channel": "Canal Teste",
+            "formats": [
+                {
+                    "ext": "mp4",
+                    "height": 720,
+                    "vcodec": "avc1",
+                    "acodec": "mp4a",
+                },
+                {
+                    "ext": "mp4",
+                    "height": 1080,
+                    "vcodec": "avc1",
+                    "acodec": "none",
+                },
+                {
+                    "ext": "m4a",
+                    "vcodec": "none",
+                    "acodec": "mp4a",
+                    "abr": 128,
+                },
+            ],
+        }
+        url = "https://www.youtube.com/watch?v=abc"
 
-        with (
-            patch("services.youtube_download_service._criar_objeto_youtube", return_value=yt),
-            patch("services.youtube_download_service.garantir_diretorio_download", return_value=pasta),
-            patch("services.youtube_download_service.uuid.uuid4", return_value=_FakeUuid("token")),
-            patch("services.youtube_download_service._obter_stream_video_por_qualidade", return_value=(stream, False)),
-        ):
-            caminho, nome_arquivo, media_type = baixar_arquivo(
-                "https://www.youtube.com/watch?v=abc",
-                "mp4",
-                "720p",
-            )
+        with patch("services.youtube_download_service._extrair_info_bruta", return_value=info_bruta) as extrair:
+            with patch("services.youtube_download_service.ffmpeg_disponivel", return_value=True):
+                info1 = obter_info_video(url)
+                info2 = obter_info_video(url)
 
-        self.assertEqual(caminho, pasta / "Aula_Teste_720p_token.mp4")
+        self.assertEqual(extrair.call_count, 1)
+        self.assertEqual(info1["titulo"], "Aula Teste")
+        self.assertEqual(info2["titulo"], "Aula Teste")
+        self.assertEqual(info2["resolucao_maxima_video"], "1080p")
+        self.assertEqual(info2["audio_bitrate"], "128kbps")
+        self.assertTrue(info2["mp3_disponivel"])
+
+    def test_baixar_arquivo_mp4_retorna_arquivo_final(self):
+        info = {
+            "titulo": "Aula Teste",
+            "mp3_disponivel": True,
+            "qualidades_mp4": [
+                {"valor": "720p", "disponivel": True, "habilitado": True},
+            ],
+        }
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            pasta = Path(tmp_dir)
+
+            def fake_download(_url: str, _opts: dict):
+                (pasta / "Aula_Teste_720p_token.mp4").write_text("video", encoding="utf-8")
+                return {}
+
+            with (
+                patch("services.youtube_download_service.obter_info_video", return_value=info),
+                patch("services.youtube_download_service.garantir_diretorio_download", return_value=pasta),
+                patch("services.youtube_download_service.uuid.uuid4", return_value=_FakeUuid("token")),
+                patch("services.youtube_download_service.ffmpeg_disponivel", return_value=True),
+                patch("services.youtube_download_service._executar_download_yt_dlp", side_effect=fake_download),
+            ):
+                caminho, nome_arquivo, media_type = baixar_arquivo(
+                    "https://www.youtube.com/watch?v=abc",
+                    "mp4",
+                    "720p",
+                )
+
+        self.assertEqual(caminho.name, "Aula_Teste_720p_token.mp4")
         self.assertEqual(nome_arquivo, "Aula_Teste_720p.mp4")
         self.assertEqual(media_type, "video/mp4")
-        self.assertEqual(
-            stream.download_calls,
-            [(str(pasta), "Aula_Teste_720p_token.mp4")],
-        )
 
-    def test_baixar_arquivo_mp4_adaptativo_sem_ffmpeg_falha(self):
-        yt = _FakeYoutube("Aula Teste")
-        stream = _FakeStream(retorno_download=Path("video.mp4"), subtype="mp4", resolution="1080p")
+    def test_baixar_arquivo_mp4_sem_ffmpeg_quando_qualidade_desabilitada_falha(self):
+        info = {
+            "titulo": "Aula Teste",
+            "mp3_disponivel": False,
+            "qualidades_mp4": [
+                {"valor": "1080p", "disponivel": True, "habilitado": False},
+            ],
+        }
 
-        with (
-            patch("services.youtube_download_service._criar_objeto_youtube", return_value=yt),
-            patch("services.youtube_download_service._obter_stream_video_por_qualidade", return_value=(stream, True)),
-            patch("services.youtube_download_service.ffmpeg_disponivel", return_value=False),
-        ):
+        with patch("services.youtube_download_service.obter_info_video", return_value=info):
             with self.assertRaises(YoutubeDownloadError) as contexto:
                 baixar_arquivo("https://www.youtube.com/watch?v=abc", "mp4", "1080p")
 
         self.assertIn("ffmpeg", str(contexto.exception))
 
-    def test_baixar_arquivo_mp4_adaptativo_mescla_video_e_audio(self):
-        pasta = Path.cwd() / "fake_spool"
-        yt = _FakeYoutube("Aula Teste")
-        stream_video = _FakeStream(
-            retorno_download=pasta / "Aula_Teste_video_1080p_token.mp4",
-            subtype="mp4",
-            resolution="1080p",
-        )
-        stream_audio = _FakeStream(
-            retorno_download=pasta / "Aula_Teste_audio_token.mp4",
-            subtype="mp4",
-        )
+    def test_baixar_arquivo_mp3_retorna_arquivo_convertido(self):
+        info = {
+            "titulo": "Aula Teste",
+            "mp3_disponivel": True,
+            "qualidades_mp4": [],
+        }
 
-        with (
-            patch("services.youtube_download_service._criar_objeto_youtube", return_value=yt),
-            patch("services.youtube_download_service.garantir_diretorio_download", return_value=pasta),
-            patch("services.youtube_download_service.uuid.uuid4", return_value=_FakeUuid("token")),
-            patch("services.youtube_download_service._obter_stream_video_por_qualidade", return_value=(stream_video, True)),
-            patch("services.youtube_download_service._obter_stream_audio", return_value=stream_audio),
-            patch("services.youtube_download_service.ffmpeg_disponivel", return_value=True),
-            patch("services.youtube_download_service._executar_ffmpeg_mp4") as executar_ffmpeg,
-            patch("services.youtube_download_service.remover_arquivo_se_existir") as remover_arquivo,
-        ):
-            caminho, nome_arquivo, media_type = baixar_arquivo(
-                "https://www.youtube.com/watch?v=abc",
-                "mp4",
-                "1080p",
-            )
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            pasta = Path(tmp_dir)
 
-        caminho_video = pasta / "Aula_Teste_video_1080p_token.mp4"
-        caminho_audio = pasta / "Aula_Teste_audio_token.mp4"
-        caminho_saida = pasta / "Aula_Teste_1080p_token.mp4"
-        self.assertEqual(caminho, caminho_saida)
-        self.assertEqual(nome_arquivo, "Aula_Teste_1080p.mp4")
-        self.assertEqual(media_type, "video/mp4")
-        executar_ffmpeg.assert_called_once_with(caminho_video, caminho_audio, caminho_saida)
-        self.assertEqual(remover_arquivo.call_count, 2)
-        remover_arquivo.assert_any_call(caminho_video)
-        remover_arquivo.assert_any_call(caminho_audio)
+            def fake_download(_url: str, _opts: dict):
+                (pasta / "Aula_Teste_token.mp3").write_text("audio", encoding="utf-8")
+                return {}
 
-    def test_baixar_arquivo_mp3_converte_e_remove_temporario(self):
-        pasta = Path.cwd() / "fake_spool"
-        yt = _FakeYoutube("Aula Teste")
-        stream_audio = _FakeStream(
-            retorno_download=pasta / "Aula_Teste_token.webm",
-            subtype="webm",
-        )
+            with (
+                patch("services.youtube_download_service.obter_info_video", return_value=info),
+                patch("services.youtube_download_service.garantir_diretorio_download", return_value=pasta),
+                patch("services.youtube_download_service.uuid.uuid4", return_value=_FakeUuid("token")),
+                patch("services.youtube_download_service.ffmpeg_disponivel", return_value=True),
+                patch("services.youtube_download_service._executar_download_yt_dlp", side_effect=fake_download),
+            ):
+                caminho, nome_arquivo, media_type = baixar_arquivo(
+                    "https://www.youtube.com/watch?v=abc",
+                    "mp3",
+                )
 
-        with (
-            patch("services.youtube_download_service._criar_objeto_youtube", return_value=yt),
-            patch("services.youtube_download_service.garantir_diretorio_download", return_value=pasta),
-            patch("services.youtube_download_service.uuid.uuid4", return_value=_FakeUuid("token")),
-            patch("services.youtube_download_service._obter_stream_audio", return_value=stream_audio),
-            patch("services.youtube_download_service.ffmpeg_disponivel", return_value=True),
-            patch("services.youtube_download_service._executar_ffmpeg_mp3") as executar_ffmpeg,
-            patch("services.youtube_download_service.remover_arquivo_se_existir") as remover_arquivo,
-        ):
-            caminho, nome_arquivo, media_type = baixar_arquivo(
-                "https://www.youtube.com/watch?v=abc",
-                "mp3",
-            )
-
-        caminho_temporario = pasta / "Aula_Teste_token.webm"
-        caminho_saida = pasta / "Aula_Teste_token.mp3"
-        self.assertEqual(caminho, caminho_saida)
+        self.assertEqual(caminho.name, "Aula_Teste_token.mp3")
         self.assertEqual(nome_arquivo, "Aula_Teste.mp3")
         self.assertEqual(media_type, "audio/mpeg")
-        executar_ffmpeg.assert_called_once_with(caminho_temporario, caminho_saida)
-        remover_arquivo.assert_called_once_with(caminho_temporario)
-
-
-class _FakeYoutube:
-    def __init__(self, title):
-        self.title = title
 
 
 class _FakeUuid:
     def __init__(self, hex_value):
         self.hex = hex_value
-
-
-class _FakeStream:
-    def __init__(self, retorno_download: Path, subtype: str, resolution: str | None = None):
-        self.retorno_download = Path(retorno_download)
-        self.subtype = subtype
-        self.resolution = resolution
-        self.download_calls = []
-
-    def download(self, output_path: str, filename: str):
-        self.download_calls.append((output_path, filename))
-        return str(self.retorno_download)
 
 
 if __name__ == "__main__":

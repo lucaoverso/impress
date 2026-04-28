@@ -2,11 +2,12 @@ import os
 import re
 import shutil
 import ssl
-import subprocess
+import threading
+import time
 import uuid
+from copy import deepcopy
 from pathlib import Path
 from urllib.error import URLError
-from urllib.request import urlopen as urllib_urlopen
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 DOWNLOAD_DIR = Path(os.getenv("SPOOL_DIR", str(BASE_DIR / "spool"))) / "youtube"
@@ -16,10 +17,31 @@ QUALIDADES_MP4_FIXAS = (
     ("1080p", "1080p"),
     ("2160p", "2160p (4K)"),
 )
+QUALIDADE_ALTURAS_MP4 = {
+    "720p": 720,
+    "1080p": 1080,
+    "2160p": 2160,
+}
+FORMATOS_VALIDOS_DOWNLOAD = {"mp4", "mp3"}
+_INFO_VIDEO_CACHE: dict[str, tuple[float, dict]] = {}
+_INFO_VIDEO_CACHE_LOCK = threading.Lock()
 
 
 class YoutubeDownloadError(RuntimeError):
     pass
+
+
+def _resolver_env_int(nome: str, padrao: int, minimo: int = 0) -> int:
+    valor_bruto = str(os.getenv(nome, str(padrao)) or "").strip()
+    try:
+        valor = int(valor_bruto)
+    except ValueError:
+        return padrao
+    return max(valor, minimo)
+
+
+_INFO_VIDEO_CACHE_TTL_SEGUNDOS = _resolver_env_int("YOUTUBE_INFO_CACHE_TTL_SECONDS", 600, 0)
+_YTDLP_FRAGMENTOS_CONCORRENTES = _resolver_env_int("YTDLP_CONCURRENT_FRAGMENTS", 4, 1)
 
 
 def remover_arquivo_se_existir(caminho: Path):
@@ -62,12 +84,31 @@ def ffmpeg_disponivel() -> bool:
     return shutil.which("ffmpeg") is not None
 
 
+def normalizar_formato_download(formato: str | None) -> str:
+    formato_limpo = str(formato or "").strip().lower()
+    if formato_limpo not in FORMATOS_VALIDOS_DOWNLOAD:
+        raise YoutubeDownloadError("Formato invalido. Escolha MP4 ou MP3.")
+    return formato_limpo
+
+
 def normalizar_qualidade_mp4(qualidade: str | None) -> str:
     qualidade_limpa = str(qualidade or "").strip().lower()
     qualidades_validas = {valor for valor, _rotulo in QUALIDADES_MP4_FIXAS}
     if qualidade_limpa not in qualidades_validas:
         raise YoutubeDownloadError("Selecione uma qualidade MP4 valida: 720p, 1080p ou 2160p.")
     return qualidade_limpa
+
+
+def preparar_solicitacao_download(
+    url: str,
+    formato: str | None,
+    qualidade: str | None = None,
+) -> tuple[str, str, str | None]:
+    url_validada = validar_url_youtube(url)
+    formato_limpo = normalizar_formato_download(formato)
+    if formato_limpo == "mp4":
+        return url_validada, formato_limpo, normalizar_qualidade_mp4(qualidade)
+    return url_validada, formato_limpo, None
 
 
 def montar_opcoes_qualidade_mp4(
@@ -105,20 +146,14 @@ def montar_opcoes_qualidade_mp4(
     return opcoes
 
 
-def _configurar_ssl_pytubefix():
+def _importar_yt_dlp():
     try:
-        import certifi
-        import pytubefix.request as pytubefix_request
-    except ImportError:
-        return
-
-    contexto = ssl.create_default_context(cafile=certifi.where())
-
-    def _urlopen_com_contexto(*args, **kwargs):
-        kwargs.setdefault("context", contexto)
-        return urllib_urlopen(*args, **kwargs)
-
-    pytubefix_request.urlopen = _urlopen_com_contexto
+        import yt_dlp
+    except ImportError as exc:
+        raise YoutubeDownloadError(
+            "A dependencia yt-dlp nao esta instalada. Adicione-a ao ambiente antes de usar este modulo."
+        ) from exc
+    return yt_dlp
 
 
 def _traduzir_erro_rede(exc: Exception) -> YoutubeDownloadError:
@@ -132,245 +167,365 @@ def _traduzir_erro_rede(exc: Exception) -> YoutubeDownloadError:
     )
 
 
-def _importar_youtube():
-    _configurar_ssl_pytubefix()
-    try:
-        from pytubefix import YouTube
-    except ImportError as exc:
-        raise YoutubeDownloadError(
-            "A dependencia pytubefix nao esta instalada. Adicione-a ao ambiente antes de usar este modulo."
-        ) from exc
-    return YouTube
+def _traduzir_erro_ytdlp(exc: Exception) -> YoutubeDownloadError:
+    if isinstance(exc, YoutubeDownloadError):
+        return exc
+
+    motivo = getattr(exc, "reason", exc)
+    if isinstance(exc, (URLError, ssl.SSLError)) or isinstance(motivo, ssl.SSLCertVerificationError):
+        return _traduzir_erro_rede(exc)
+
+    mensagem = str(exc or "").strip()
+    mensagem_lower = mensagem.lower()
+
+    if "requested format is not available" in mensagem_lower:
+        return YoutubeDownloadError("A qualidade solicitada nao esta disponivel para este video.")
+    if "ffmpeg is not installed" in mensagem_lower or "ffprobe is not installed" in mensagem_lower:
+        return YoutubeDownloadError(
+            "Este download exige ffmpeg no servidor para combinar ou converter as midias."
+        )
+    if "unsupported url" in mensagem_lower or "invalid url" in mensagem_lower:
+        return YoutubeDownloadError("Cole um link valido do YouTube para continuar.")
+    if "private video" in mensagem_lower or "sign in to confirm your age" in mensagem_lower:
+        return YoutubeDownloadError("Este video nao permite download com a configuracao atual do servidor.")
+    if "video unavailable" in mensagem_lower or "unable to extract" in mensagem_lower:
+        return YoutubeDownloadError(
+            "Nao foi possivel ler os dados do video. Verifique se o link esta correto e tente novamente."
+        )
+
+    return YoutubeDownloadError(
+        "Nao foi possivel acessar o YouTube no momento. Verifique a conexao do servidor e tente novamente."
+    )
 
 
-def _criar_objeto_youtube(url: str):
-    YouTube = _importar_youtube()
-    try:
-        return YouTube(validar_url_youtube(url))
-    except URLError as exc:
-        raise _traduzir_erro_rede(exc) from exc
-    except ssl.SSLError as exc:
-        raise _traduzir_erro_rede(exc) from exc
-    except Exception as exc:
+def _opcoes_ytdlp_base() -> dict:
+    return {
+        "quiet": True,
+        "no_warnings": True,
+        "noprogress": True,
+        "noplaylist": True,
+        "cachedir": False,
+        "extract_flat": False,
+        "retries": 3,
+        "fragment_retries": 3,
+        "socket_timeout": 15,
+        "concurrent_fragment_downloads": _YTDLP_FRAGMENTOS_CONCORRENTES,
+        "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
+    }
+
+
+def _normalizar_info_extraida(info):
+    info_normalizada = info
+    if isinstance(info_normalizada, dict) and info_normalizada.get("_type") == "playlist":
+        for entrada in info_normalizada.get("entries") or []:
+            if isinstance(entrada, dict):
+                info_normalizada = entrada
+                break
+
+    if not isinstance(info_normalizada, dict):
         raise YoutubeDownloadError(
             "Nao foi possivel ler os dados do video. Verifique se o link esta correto e tente novamente."
-        ) from exc
+        )
+
+    return info_normalizada
 
 
-def _obter_stream_mp4(yt):
-    stream = yt.streams.filter(progressive=True, file_extension="mp4").order_by("resolution").desc().first()
-    if stream is None:
-        raise YoutubeDownloadError("Nenhum stream MP4 compativel foi encontrado para este video.")
-    return stream
+def _extrair_info_bruta(url: str, *, download: bool = False, extra_opts: dict | None = None) -> dict:
+    yt_dlp = _importar_yt_dlp()
+    opcoes = _opcoes_ytdlp_base()
+    if extra_opts:
+        opcoes.update(extra_opts)
+
+    try:
+        with yt_dlp.YoutubeDL(opcoes) as ydl:
+            info = ydl.extract_info(url, download=download)
+            if isinstance(info, dict):
+                try:
+                    info = ydl.sanitize_info(info)
+                except Exception:
+                    pass
+            return _normalizar_info_extraida(info)
+    except Exception as exc:
+        raise _traduzir_erro_ytdlp(exc) from exc
 
 
-def _listar_streams_progressivos_mp4(yt):
-    return yt.streams.filter(progressive=True, subtype="mp4").order_by("resolution").desc()
+def _executar_download_yt_dlp(url: str, opcoes: dict) -> dict:
+    return _extrair_info_bruta(url, download=True, extra_opts=opcoes)
 
 
-def _listar_streams_video_adaptativos_mp4(yt):
-    return yt.streams.filter(adaptive=True, only_video=True, subtype="mp4").order_by("resolution").desc()
+def _buscar_info_video_em_cache(url: str) -> dict | None:
+    if _INFO_VIDEO_CACHE_TTL_SEGUNDOS <= 0:
+        return None
+
+    agora = time.time()
+    with _INFO_VIDEO_CACHE_LOCK:
+        item = _INFO_VIDEO_CACHE.get(url)
+        if not item:
+            return None
+
+        expiracao, info = item
+        if expiracao <= agora:
+            _INFO_VIDEO_CACHE.pop(url, None)
+            return None
+
+        return deepcopy(info)
 
 
-def _obter_stream_video_por_qualidade(yt, qualidade: str):
-    stream_progressivo = (
-        yt.streams.filter(progressive=True, subtype="mp4", resolution=qualidade).order_by("fps").desc().first()
+def _salvar_info_video_em_cache(url: str, info: dict):
+    if _INFO_VIDEO_CACHE_TTL_SEGUNDOS <= 0:
+        return
+
+    expiracao = time.time() + _INFO_VIDEO_CACHE_TTL_SEGUNDOS
+    with _INFO_VIDEO_CACHE_LOCK:
+        _INFO_VIDEO_CACHE[url] = (expiracao, deepcopy(info))
+
+
+def _normalizar_codec(valor) -> str:
+    return str(valor or "").strip().lower()
+
+
+def _normalizar_ext(valor) -> str:
+    return str(valor or "").strip().lower()
+
+
+def _extrair_altura(formato: dict) -> int:
+    try:
+        return int(formato.get("height") or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _extrair_abr(formato: dict) -> float:
+    try:
+        return float(formato.get("abr") or 0)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _eh_formato_audio(formato: dict) -> bool:
+    acodec = _normalizar_codec(formato.get("acodec"))
+    vcodec = _normalizar_codec(formato.get("vcodec"))
+    return acodec not in {"", "none"} and vcodec in {"", "none"}
+
+
+def _eh_formato_video(formato: dict) -> bool:
+    return _normalizar_codec(formato.get("vcodec")) not in {"", "none"} and _extrair_altura(formato) > 0
+
+
+def _eh_formato_mp4_progressivo(formato: dict) -> bool:
+    return (
+        _eh_formato_video(formato)
+        and _normalizar_ext(formato.get("ext")) == "mp4"
+        and _normalizar_codec(formato.get("acodec")) not in {"", "none"}
     )
-    if stream_progressivo is not None:
-        return stream_progressivo, False
 
-    stream_adaptativo = (
-        yt.streams.filter(adaptive=True, only_video=True, subtype="mp4", resolution=qualidade)
-        .order_by("fps")
-        .desc()
-        .first()
+
+def _eh_formato_mp4_adaptativo(formato: dict) -> bool:
+    return (
+        _eh_formato_video(formato)
+        and _normalizar_ext(formato.get("ext")) == "mp4"
+        and _normalizar_codec(formato.get("acodec")) in {"", "none"}
     )
-    if stream_adaptativo is not None:
-        return stream_adaptativo, True
-
-    return None, False
 
 
-def _resolucao_stream(stream) -> str:
-    return str(getattr(stream, "resolution", "") or "").strip()
+def _rotulo_qualidade_por_altura(altura: int) -> str | None:
+    if altura in {720, 1080, 2160}:
+        return f"{altura}p"
+    return None
 
 
-def _listar_qualidades(streams) -> set[str]:
-    return {_resolucao_stream(stream) for stream in streams if _resolucao_stream(stream)}
+def _rotulo_resolucao_video_maxima(formatos: list[dict]) -> str:
+    melhor_altura = max((_extrair_altura(formato) for formato in formatos if _eh_formato_video(formato)), default=0)
+    if melhor_altura <= 0:
+        return "-"
+    return f"{melhor_altura}p"
 
 
-def _obter_melhor_stream_video_mp4(yt):
-    stream_adaptativo = _listar_streams_video_adaptativos_mp4(yt).first()
-    if stream_adaptativo is not None:
-        return stream_adaptativo
-    return _listar_streams_progressivos_mp4(yt).first()
+def _audio_bitrate_melhor(formatos: list[dict]) -> str:
+    melhor_abr = max((_extrair_abr(formato) for formato in formatos if _eh_formato_audio(formato)), default=0.0)
+    if melhor_abr <= 0:
+        return "-"
+    return f"{int(round(melhor_abr))}kbps"
 
 
-def _obter_stream_audio(yt):
-    stream = yt.streams.filter(only_audio=True, subtype="mp4").order_by("abr").desc().first()
-    if stream is None:
-        stream = yt.streams.filter(only_audio=True).order_by("abr").desc().first()
-    if stream is None:
-        raise YoutubeDownloadError("Nenhum stream de audio compativel foi encontrado para este video.")
-    return stream
+def _mapear_qualidades_mp4(formatos: list[dict]) -> tuple[set[str], set[str], bool]:
+    qualidades_progressivas = set()
+    qualidades_adaptativas = set()
+    audio_disponivel = any(_eh_formato_audio(formato) for formato in formatos)
+
+    for formato in formatos:
+        altura = _extrair_altura(formato)
+        rotulo = _rotulo_qualidade_por_altura(altura)
+        if not rotulo:
+            continue
+        if _eh_formato_mp4_progressivo(formato):
+            qualidades_progressivas.add(rotulo)
+        elif _eh_formato_mp4_adaptativo(formato):
+            qualidades_adaptativas.add(rotulo)
+
+    return qualidades_progressivas, qualidades_adaptativas, audio_disponivel
+
+
+def _obter_formatos(info: dict) -> list[dict]:
+    formatos = info.get("formats") or []
+    return [formato for formato in formatos if isinstance(formato, dict)]
 
 
 def obter_info_video(url: str) -> dict:
-    yt = _criar_objeto_youtube(url)
-    try:
-        stream_video_maximo = _obter_melhor_stream_video_mp4(yt)
-        audio_stream = _obter_stream_audio(yt)
-        qualidades_progressivas = _listar_qualidades(_listar_streams_progressivos_mp4(yt))
-        qualidades_adaptativas = _listar_qualidades(_listar_streams_video_adaptativos_mp4(yt))
-        ffmpeg_ativo = ffmpeg_disponivel()
-        return {
-            "url": validar_url_youtube(url),
-            "titulo": str(yt.title or "Video sem titulo").strip(),
-            "duracao_segundos": int(yt.length or 0),
-            "duracao_texto": formatar_duracao(yt.length),
-            "miniatura_url": str(yt.thumbnail_url or "").strip(),
-            "autor": str(getattr(yt, "author", "") or "").strip(),
-            "resolucao_maxima_video": _resolucao_stream(stream_video_maximo) or "-",
-            "audio_bitrate": str(getattr(audio_stream, "abr", "") or "").strip(),
-            "mp3_disponivel": ffmpeg_ativo,
-            "qualidades_mp4": montar_opcoes_qualidade_mp4(
-                qualidades_progressivas,
-                qualidades_adaptativas,
-                ffmpeg_ativo,
-            ),
-        }
-    except URLError as exc:
-        raise _traduzir_erro_rede(exc) from exc
-    except ssl.SSLError as exc:
-        raise _traduzir_erro_rede(exc) from exc
+    url_validada = validar_url_youtube(url)
+    info_cache = _buscar_info_video_em_cache(url_validada)
+    if info_cache is not None:
+        return info_cache
+
+    info_bruta = _extrair_info_bruta(url_validada, download=False)
+    formatos = _obter_formatos(info_bruta)
+    qualidades_progressivas, qualidades_adaptativas, audio_disponivel = _mapear_qualidades_mp4(formatos)
+    ffmpeg_ativo = ffmpeg_disponivel()
+
+    info = {
+        "url": url_validada,
+        "titulo": str(info_bruta.get("title") or "Video sem titulo").strip(),
+        "duracao_segundos": int(info_bruta.get("duration") or 0),
+        "duracao_texto": formatar_duracao(info_bruta.get("duration")),
+        "miniatura_url": str(info_bruta.get("thumbnail") or "").strip(),
+        "autor": str(info_bruta.get("channel") or info_bruta.get("uploader") or "").strip(),
+        "resolucao_maxima_video": _rotulo_resolucao_video_maxima(formatos),
+        "audio_bitrate": _audio_bitrate_melhor(formatos),
+        "mp3_disponivel": ffmpeg_ativo and audio_disponivel,
+        "qualidades_mp4": montar_opcoes_qualidade_mp4(
+            qualidades_progressivas,
+            qualidades_adaptativas,
+            ffmpeg_ativo,
+        ),
+    }
+    _salvar_info_video_em_cache(url_validada, info)
+    return info
 
 
-def _executar_ffmpeg_mp3(origem: Path, destino: Path):
-    comando = [
-        "ffmpeg",
-        "-y",
-        "-i",
-        str(origem),
-        "-vn",
-        "-codec:a",
-        "libmp3lame",
-        "-q:a",
-        "0",
-        str(destino),
-    ]
-    try:
-        subprocess.run(comando, check=True, capture_output=True, text=True)
-    except FileNotFoundError as exc:
-        raise YoutubeDownloadError(
-            "Conversao para MP3 indisponivel neste servidor. Instale o ffmpeg para habilitar essa opcao."
-        ) from exc
-    except subprocess.CalledProcessError as exc:
-        raise YoutubeDownloadError("Falha ao converter o audio para MP3.") from exc
+def _montar_outtmpl(caminho_base: Path) -> str:
+    return str(caminho_base.parent / f"{caminho_base.name}.%(ext)s")
 
 
-def _executar_ffmpeg_mp4(video_path: Path, audio_path: Path, destino: Path):
-    comando = [
-        "ffmpeg",
-        "-y",
-        "-i",
-        str(video_path),
-        "-i",
-        str(audio_path),
-        "-map",
-        "0:v:0",
-        "-map",
-        "1:a:0",
-        "-c:v",
-        "copy",
-        "-c:a",
-        "aac",
-        "-b:a",
-        "192k",
-        "-movflags",
-        "+faststart",
-        str(destino),
-    ]
-    try:
-        subprocess.run(comando, check=True, capture_output=True, text=True)
-    except FileNotFoundError as exc:
-        raise YoutubeDownloadError(
-            "Qualidades MP4 em HD exigem ffmpeg para mesclar video e audio."
-        ) from exc
-    except subprocess.CalledProcessError as exc:
-        raise YoutubeDownloadError("Falha ao montar o arquivo MP4 na qualidade selecionada.") from exc
+def _montar_seletor_progressivo_mp4(altura: int) -> str:
+    return (
+        f"best[ext=mp4][vcodec!=none][acodec!=none][height={altura}]"
+        f"/best[ext=mp4][vcodec!=none][acodec!=none][height<={altura}]"
+    )
+
+
+def _montar_seletor_mp4(altura: int, ffmpeg_ativo: bool) -> str:
+    seletor_progressivo = _montar_seletor_progressivo_mp4(altura)
+    if not ffmpeg_ativo:
+        return seletor_progressivo
+
+    return (
+        f"bestvideo[ext=mp4][height={altura}]+bestaudio[ext=m4a]"
+        f"/bestvideo[ext=mp4][height={altura}]+bestaudio"
+        f"/bestvideo[ext=mp4][height<={altura}]+bestaudio[ext=m4a]"
+        f"/bestvideo[ext=mp4][height<={altura}]+bestaudio"
+        f"/{seletor_progressivo}"
+    )
+
+
+def _montar_seletor_mp3() -> str:
+    return "bestaudio[ext=m4a]/bestaudio/best"
+
+
+def _localizar_arquivo_saida(
+    pasta_destino: Path,
+    prefixo: str,
+    extensoes_preferidas: tuple[str, ...],
+) -> Path:
+    ignoradas = {
+        ".part",
+        ".ytdl",
+        ".json",
+        ".info.json",
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".webp",
+        ".vtt",
+        ".srt",
+    }
+    candidatos = []
+    for caminho in pasta_destino.glob(f"{prefixo}*"):
+        if not caminho.is_file():
+            continue
+        if any(caminho.name.endswith(sufixo) for sufixo in ignoradas):
+            continue
+        candidatos.append(caminho)
+
+    if not candidatos:
+        raise YoutubeDownloadError("O servidor nao encontrou o arquivo final gerado pelo yt-dlp.")
+
+    for extensao in extensoes_preferidas:
+        extensao_normalizada = f".{extensao.lstrip('.').lower()}"
+        candidatos_ext = [caminho for caminho in candidatos if caminho.suffix.lower() == extensao_normalizada]
+        if candidatos_ext:
+            return max(candidatos_ext, key=lambda item: item.stat().st_mtime)
+
+    return max(candidatos, key=lambda item: item.stat().st_mtime)
+
+
+def _obter_opcao_qualidade(info: dict, qualidade: str) -> dict | None:
+    for opcao in info.get("qualidades_mp4") or []:
+        if opcao.get("valor") == qualidade:
+            return opcao
+    return None
 
 
 def baixar_arquivo(url: str, formato: str, qualidade: str | None = None) -> tuple[Path, str, str]:
-    formato_limpo = str(formato or "").strip().lower()
-    if formato_limpo not in {"mp4", "mp3"}:
-        raise YoutubeDownloadError("Formato invalido. Escolha MP4 ou MP3.")
+    url_validada, formato_limpo, qualidade_mp4 = preparar_solicitacao_download(url, formato, qualidade)
+    info = obter_info_video(url_validada)
+    pasta_destino = garantir_diretorio_download()
+    nome_base = sanitizar_nome_arquivo(info.get("titulo"))
+    token = uuid.uuid4().hex
+    ffmpeg_ativo = ffmpeg_disponivel()
 
-    yt = _criar_objeto_youtube(url)
-    try:
-        pasta_destino = garantir_diretorio_download()
-        nome_base = sanitizar_nome_arquivo(yt.title)
-        token = uuid.uuid4().hex
-
-        if formato_limpo == "mp4":
-            qualidade_mp4 = normalizar_qualidade_mp4(qualidade)
-            stream_video, requer_mescla = _obter_stream_video_por_qualidade(yt, qualidade_mp4)
-            if stream_video is None:
-                raise YoutubeDownloadError(
-                    f"A qualidade {qualidade_mp4} nao esta disponivel para este video."
-                )
-
-            if not requer_mescla:
-                nome_saida = f"{nome_base}_{qualidade_mp4}_{token}.mp4"
-                caminho_saida = Path(
-                    stream_video.download(output_path=str(pasta_destino), filename=nome_saida)
-                )
-                return caminho_saida, f"{nome_base}_{qualidade_mp4}.mp4", "video/mp4"
-
-            if not ffmpeg_disponivel():
-                raise YoutubeDownloadError(
-                    "As qualidades MP4 em HD e 4K exigem ffmpeg para mesclar video e audio."
-                )
-
-            stream_audio = _obter_stream_audio(yt)
-            video_temporario = pasta_destino / f"{nome_base}_video_{qualidade_mp4}_{token}.{stream_video.subtype}"
-            audio_temporario = pasta_destino / f"{nome_base}_audio_{token}.{stream_audio.subtype}"
-            caminho_saida = pasta_destino / f"{nome_base}_{qualidade_mp4}_{token}.mp4"
-
-            caminho_video = Path(
-                stream_video.download(output_path=str(pasta_destino), filename=video_temporario.name)
-            )
-            caminho_audio = Path(
-                stream_audio.download(output_path=str(pasta_destino), filename=audio_temporario.name)
-            )
-
-            try:
-                _executar_ffmpeg_mp4(caminho_video, caminho_audio, caminho_saida)
-            finally:
-                remover_arquivo_se_existir(caminho_video)
-                remover_arquivo_se_existir(caminho_audio)
-
-            return caminho_saida, f"{nome_base}_{qualidade_mp4}.mp4", "video/mp4"
-
-        if not ffmpeg_disponivel():
+    if formato_limpo == "mp4":
+        opcao = _obter_opcao_qualidade(info, qualidade_mp4)
+        if not opcao or not opcao.get("disponivel"):
+            raise YoutubeDownloadError(f"A qualidade {qualidade_mp4} nao esta disponivel para este video.")
+        if not opcao.get("habilitado"):
             raise YoutubeDownloadError(
-                "Conversao para MP3 indisponivel neste servidor. Instale o ffmpeg para habilitar essa opcao."
+                "As qualidades MP4 em HD e 4K exigem ffmpeg para mesclar video e audio."
             )
 
-        stream_audio = _obter_stream_audio(yt)
-        extensao_origem = str(getattr(stream_audio, "subtype", "") or "mp4").strip() or "mp4"
-        nome_temporario = f"{nome_base}_{token}.{extensao_origem}"
-        caminho_temporario = Path(
-            stream_audio.download(output_path=str(pasta_destino), filename=nome_temporario)
+        altura = QUALIDADE_ALTURAS_MP4[qualidade_mp4]
+        prefixo = f"{nome_base}_{qualidade_mp4}_{token}"
+        _executar_download_yt_dlp(
+            url_validada,
+            {
+                "format": _montar_seletor_mp4(altura, ffmpeg_ativo),
+                "outtmpl": _montar_outtmpl(pasta_destino / prefixo),
+                "merge_output_format": "mp4",
+                "overwrites": True,
+            },
         )
-        caminho_saida = pasta_destino / f"{nome_base}_{token}.mp3"
+        caminho_saida = _localizar_arquivo_saida(pasta_destino, prefixo, ("mp4",))
+        return caminho_saida, f"{nome_base}_{qualidade_mp4}.mp4", "video/mp4"
 
-        try:
-            _executar_ffmpeg_mp3(caminho_temporario, caminho_saida)
-        finally:
-            remover_arquivo_se_existir(caminho_temporario)
+    if not info.get("mp3_disponivel"):
+        raise YoutubeDownloadError(
+            "Conversao para MP3 indisponivel neste servidor. Instale o ffmpeg para habilitar essa opcao."
+        )
 
-        return caminho_saida, f"{nome_base}.mp3", "audio/mpeg"
-    except URLError as exc:
-        raise _traduzir_erro_rede(exc) from exc
-    except ssl.SSLError as exc:
-        raise _traduzir_erro_rede(exc) from exc
+    prefixo = f"{nome_base}_{token}"
+    _executar_download_yt_dlp(
+        url_validada,
+        {
+            "format": _montar_seletor_mp3(),
+            "outtmpl": _montar_outtmpl(pasta_destino / prefixo),
+            "postprocessors": [
+                {
+                    "key": "FFmpegExtractAudio",
+                    "preferredcodec": "mp3",
+                    "preferredquality": "0",
+                }
+            ],
+            "overwrites": True,
+        },
+    )
+    caminho_saida = _localizar_arquivo_saida(pasta_destino, prefixo, ("mp3",))
+    return caminho_saida, f"{nome_base}.mp3", "audio/mpeg"

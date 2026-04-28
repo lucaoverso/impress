@@ -12,6 +12,21 @@
         return `Erro ${res.status}`;
     }
 
+    function pareceHtml(texto) {
+        const conteudo = String(texto || "").trim().toLowerCase();
+        return conteudo.startsWith("<!doctype html") || conteudo.startsWith("<html");
+    }
+
+    function mensagemAmigavelHttp(res) {
+        if (res.status === 502 || res.status === 503 || res.status === 504) {
+            return "O servidor demorou para responder ou ficou indisponível. Tente novamente em alguns minutos.";
+        }
+        if (res.status >= 500) {
+            return "O servidor encontrou um erro temporário. Tente novamente em alguns minutos.";
+        }
+        return `Erro ${res.status}`;
+    }
+
     async function parseJsonSeguro(res) {
         try {
             return await res.json();
@@ -63,21 +78,23 @@
         }
 
         if (!res.ok) {
-            let detalhe = `Erro ${res.status}`;
+            let detalhe = mensagemAmigavelHttp(res);
             const tipoConteudo = String(res.headers.get("content-type") || "").toLowerCase();
             if (tipoConteudo.includes("application/json")) {
                 try {
                     const body = await res.json();
                     detalhe = normalizarErro(res, body);
                 } catch (_err) {
-                    detalhe = `Erro ${res.status}`;
+                    detalhe = mensagemAmigavelHttp(res);
                 }
             } else {
                 try {
                     const texto = (await res.text()).trim();
-                    if (texto) detalhe = texto;
+                    if (texto && !pareceHtml(texto)) {
+                        detalhe = texto;
+                    }
                 } catch (_err) {
-                    detalhe = `Erro ${res.status}`;
+                    detalhe = mensagemAmigavelHttp(res);
                 }
             }
 

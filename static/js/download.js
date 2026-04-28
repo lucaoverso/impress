@@ -1,8 +1,10 @@
 const { garantirToken, criarHeadersAuth, encerrarSessao } = window.AppAuth;
-const { fetchJson, fetchResposta } = window.AppApi;
+const { fetchJson } = window.AppApi;
 
 const token = garantirToken();
 const headers = criarHeadersAuth(token);
+const INTERVALO_POLLING_DOWNLOAD_MS = 2000;
+const TIMEOUT_POLLING_DOWNLOAD_MS = 15 * 60 * 1000;
 
 const elementos = {
     secaoFormulario: document.getElementById("secaoFormulario"),
@@ -26,6 +28,12 @@ const elementos = {
 
 let infoAtual = null;
 let temporizadorBarraProgresso = null;
+
+function esperar(ms) {
+    return new Promise((resolve) => {
+        window.setTimeout(resolve, ms);
+    });
+}
 
 function obterUrlAtual() {
     return new URLSearchParams(window.location.search).get("url") || "";
@@ -107,6 +115,17 @@ function obterRotuloPadraoBotao(formato, botao) {
         return "Baixar Audio (MP3)";
     }
     return botao?.dataset.rotuloPadrao || "Baixar Vídeo";
+}
+
+function obterTextoBotaoDownloadPorStatus(formato, status) {
+    const statusNormalizado = String(status || "").trim().toUpperCase();
+    if (statusNormalizado === "PENDENTE") {
+        return "Entrando na fila...";
+    }
+    if (statusNormalizado === "PROCESSANDO") {
+        return formato === "mp3" ? "Convertendo audio..." : "Preparando arquivo...";
+    }
+    return "Preparando download...";
 }
 
 function obterQualidadeMp4Selecionada() {
@@ -268,21 +287,6 @@ async function carregarDetalhes(url) {
     }
 }
 
-function obterNomeArquivo(resposta, fallback) {
-    const contentDisposition = String(resposta.headers.get("content-disposition") || "");
-    const matchUtf = contentDisposition.match(/filename\*=UTF-8''([^;]+)/i);
-    if (matchUtf?.[1]) {
-        return decodeURIComponent(matchUtf[1]);
-    }
-
-    const matchSimples = contentDisposition.match(/filename="([^"]+)"/i);
-    if (matchSimples?.[1]) {
-        return matchSimples[1];
-    }
-
-    return fallback;
-}
-
 async function iniciarDownload(formato, qualidade = null) {
     if (!infoAtual?.url) {
         exibirMensagem(elementos.mensagemDetalhes, "Carregue os detalhes do vídeo antes de baixar.");
@@ -302,7 +306,7 @@ async function iniciarDownload(formato, qualidade = null) {
     exibirMensagem(elementos.mensagemDetalhes, "");
 
     try {
-        const resposta = await fetchResposta("/download/arquivo", {
+        const job = await fetchJson("/download/jobs", {
             method: "POST",
             headers: {
                 ...headers,
@@ -311,18 +315,53 @@ async function iniciarDownload(formato, qualidade = null) {
             body: JSON.stringify({ url: infoAtual.url, formato, qualidade }),
         });
 
-        definirTextoBotao(botao, "Baixando arquivo...");
-        const blob = await resposta.blob();
-        concluirBarraProgresso(botao, "Download iniciado");
-        const nomeArquivo = obterNomeArquivo(resposta, `youtube.${formato}`);
-        const urlBlob = window.URL.createObjectURL(blob);
+        let jobAtual = job;
+        if (jobAtual?.mensagem_status) {
+            exibirMensagem(elementos.mensagemDetalhes, jobAtual.mensagem_status);
+        }
+        if (String(jobAtual?.status || "").toUpperCase() === "ERRO") {
+            throw new Error(jobAtual?.erro_mensagem || jobAtual?.mensagem_status || "Falha ao preparar o download.");
+        }
+
+        const inicioPolling = Date.now();
+        while (!jobAtual?.pronto) {
+            if ((Date.now() - inicioPolling) >= TIMEOUT_POLLING_DOWNLOAD_MS) {
+                throw new Error("O download demorou mais do que o esperado. Tente novamente.");
+            }
+
+            definirTextoBotao(botao, obterTextoBotaoDownloadPorStatus(formato, jobAtual?.status));
+            await esperar(INTERVALO_POLLING_DOWNLOAD_MS);
+            jobAtual = await fetchJson(`/download/jobs/${encodeURIComponent(job.id)}`, {
+                headers,
+            });
+
+            if (jobAtual?.mensagem_status) {
+                exibirMensagem(elementos.mensagemDetalhes, jobAtual.mensagem_status);
+            }
+
+            if (String(jobAtual?.status || "").toUpperCase() === "ERRO") {
+                throw new Error(jobAtual?.erro_mensagem || jobAtual?.mensagem_status || "Falha ao preparar o download.");
+            }
+        }
+
+        definirTextoBotao(botao, "Liberando download...");
+        const ticket = await fetchJson(`/download/jobs/${encodeURIComponent(job.id)}/ticket`, {
+            method: "POST",
+            headers,
+        });
+
+        definirTextoBotao(botao, "Iniciando download...");
         const link = document.createElement("a");
-        link.href = urlBlob;
-        link.download = nomeArquivo;
+        link.href = ticket.download_url;
+        if (ticket.arquivo_nome) {
+            link.download = ticket.arquivo_nome;
+        }
+        link.rel = "noopener";
         document.body.appendChild(link);
         link.click();
         link.remove();
-        window.URL.revokeObjectURL(urlBlob);
+        concluirBarraProgresso(botao, "Download iniciado");
+        exibirMensagem(elementos.mensagemDetalhes, "");
     } catch (erro) {
         botao.classList.remove("is-busy", "is-complete");
         exibirMensagem(elementos.mensagemDetalhes, erro.message || "Falha ao baixar o arquivo.");
