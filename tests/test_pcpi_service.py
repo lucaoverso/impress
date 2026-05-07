@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from services.pcpi_ollama_service import PcpiOllamaError
 from services.pcpi_service import (
@@ -161,9 +161,12 @@ class PcpiServiceTest(unittest.TestCase):
             )
         ]
 
-        with (
-            patch("services.pcpi_service.ollama_pcpi_habilitado", return_value=True),
-            patch("services.pcpi_service.gerar_texto_pcpi_ollama", return_value="Texto final reescrito pela IA."),
+        with patch.dict(
+            gerar_texto_pcpi.__globals__,
+            {
+                "ollama_pcpi_habilitado": lambda: True,
+                "gerar_texto_pcpi_ollama": lambda _contexto: "Texto final reescrito pela IA.",
+            },
         ):
             resultado = gerar_texto_pcpi("2026-04-03", "MATUTINO", itens, [])
 
@@ -184,9 +187,15 @@ class PcpiServiceTest(unittest.TestCase):
             )
         ]
 
-        with (
-            patch("services.pcpi_service.ollama_pcpi_habilitado", return_value=True),
-            patch("services.pcpi_service.gerar_texto_pcpi_ollama", side_effect=PcpiOllamaError("erro")),
+        def _falhar_ollama(_contexto):
+            raise PcpiOllamaError("erro")
+
+        with patch.dict(
+            gerar_texto_pcpi.__globals__,
+            {
+                "ollama_pcpi_habilitado": lambda: True,
+                "gerar_texto_pcpi_ollama": _falhar_ollama,
+            },
         ):
             resultado = gerar_texto_pcpi("2026-04-03", "MATUTINO", itens, [])
 
@@ -205,9 +214,13 @@ class PcpiServiceTest(unittest.TestCase):
             )
         ]
 
-        with (
-            patch("services.pcpi_service.ollama_pcpi_habilitado", return_value=True),
-            patch("services.pcpi_service.gerar_texto_pcpi_ollama") as gerar_ia,
+        gerar_ia = Mock()
+        with patch.dict(
+            gerar_texto_base_pcpi.__globals__,
+            {
+                "ollama_pcpi_habilitado": lambda: True,
+                "gerar_texto_pcpi_ollama": gerar_ia,
+            },
         ):
             texto_base = gerar_texto_base_pcpi("2026-04-03", "MATUTINO", itens, [])
 
