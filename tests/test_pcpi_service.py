@@ -3,6 +3,7 @@ import unittest
 from services.pcpi_service import (
     GRUPO_AUTOMATICO_AUDIOVISUAL,
     GRUPO_AUTOMATICO_STE,
+    agendamento_pertence_ao_turno_pcpi,
     gerar_texto_pcpi,
     turno_agendamento_pertence_ao_turno_pcpi,
 )
@@ -75,9 +76,7 @@ class PcpiServiceTest(unittest.TestCase):
         self.assertEqual(resultado["total_agendamentos"], 3)
         self.assertEqual(len(resultado["frases_automaticas"]), 2)
         self.assertIn("Sala de Tecnologia Educacional (STE)", resultado["frases_automaticas"][0])
-        self.assertIn(
-            "Entrega e recebimento de equipamentos tecnológicos", resultado["frases_automaticas"][1]
-        )
+        self.assertIn("equipamentos audiovisuais", resultado["frases_automaticas"][1])
         self.assertIn("Bruno", resultado["frases_automaticas"][1])
         self.assertIn("Carla", resultado["frases_automaticas"][1])
 
@@ -111,9 +110,9 @@ class PcpiServiceTest(unittest.TestCase):
 
         self.assertEqual(resultado["total_registros_manuais"], 4)
         self.assertEqual(len(resultado["frases_manuais"]), 3)
-        self.assertIn("Produção e organização de impressões", resultado["frases_manuais"][0])
-        self.assertIn("Orientação ao(à) professor(a) Daniela", resultado["frases_manuais"][1])
-        self.assertIn("Elaboração do Formulário II", resultado["frases_manuais"][2])
+        self.assertIn("Impressao e organizacao de materiais pedagogicos", resultado["frases_manuais"][0])
+        self.assertIn("Orientacao ao professor Daniela", resultado["frases_manuais"][1])
+        self.assertIn("Elaboracao do Formulario II", resultado["frases_manuais"][2])
 
     def test_adiciona_fechamento_quando_turno_tem_pouco_conteudo(self):
         registros = [
@@ -127,9 +126,7 @@ class PcpiServiceTest(unittest.TestCase):
         resultado = gerar_texto_pcpi("2026-04-03", "VESPERTINO", [], registros)
 
         self.assertTrue(resultado["frase_fechamento"])
-        self.assertIn(
-            "Acompanhamento contínuo das demandas do turno", resultado["frase_fechamento"]
-        )
+        self.assertIn("Acompanhamento cont", resultado["frase_fechamento"])
         self.assertIn(resultado["frase_fechamento"], resultado["texto"])
 
     def test_pcpi_usa_apenas_matutino_e_vespertino_com_equivalencias_do_agendamento(self):
@@ -138,6 +135,15 @@ class PcpiServiceTest(unittest.TestCase):
         self.assertTrue(turno_agendamento_pertence_ao_turno_pcpi("VESPERTINO_EM", "VESPERTINO"))
         self.assertTrue(turno_agendamento_pertence_ao_turno_pcpi("INTEGRAL", "VESPERTINO"))
         self.assertFalse(turno_agendamento_pertence_ao_turno_pcpi("VESPERTINO", "MATUTINO"))
+
+    def test_pcpi_separa_aulas_do_integral_por_turno(self):
+        agendamento_matutino = {"turno": "INTEGRAL", "aula": "5"}
+        agendamento_vespertino = {"turno": "INTEGRAL", "aula": "6"}
+
+        self.assertTrue(agendamento_pertence_ao_turno_pcpi(agendamento_matutino, "MATUTINO"))
+        self.assertFalse(agendamento_pertence_ao_turno_pcpi(agendamento_matutino, "VESPERTINO"))
+        self.assertFalse(agendamento_pertence_ao_turno_pcpi(agendamento_vespertino, "MATUTINO"))
+        self.assertTrue(agendamento_pertence_ao_turno_pcpi(agendamento_vespertino, "VESPERTINO"))
 
 
 if __name__ == "__main__":

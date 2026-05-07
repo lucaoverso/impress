@@ -20,6 +20,7 @@ from models import (
 )
 from services.pcpi_service import (
     TURNOS_PCPI_CONFIG,
+    agendamento_pertence_ao_turno_pcpi,
     gerar_texto_pcpi,
     montar_sugestoes_pcpi,
     nome_turno_pcpi,
@@ -95,7 +96,7 @@ def _carregar_contexto_pcpi(data: str, turno: str) -> tuple[dict, list[dict]]:
     agendamentos_turno = [
         item
         for item in agendamentos_dia
-        if turno_agendamento_pertence_ao_turno_pcpi(item.get("turno"), turno)
+        if agendamento_pertence_ao_turno_pcpi(item, turno)
     ]
 
     cargas = listar_cargas_professores_por_usuario_ids(

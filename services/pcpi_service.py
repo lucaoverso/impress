@@ -12,6 +12,10 @@ TURNOS_AGENDAMENTO_POR_TURNO_PCPI = {
     "MATUTINO": {"MATUTINO", "INTEGRAL"},
     "VESPERTINO": {"VESPERTINO", "VESPERTINO_EM", "INTEGRAL"},
 }
+_AULAS_INTEGRAL_POR_TURNO_PCPI = {
+    "MATUTINO": set(range(1, 6)),
+    "VESPERTINO": set(range(6, 9)),
+}
 
 TIPOS_ACAO_PCPI = (
     "reuniao",
@@ -52,6 +56,33 @@ def turno_agendamento_pertence_ao_turno_pcpi(turno_agendamento: str, turno_pcpi:
     turno_agendamento_norm = str(turno_agendamento or "").strip().upper()
     turnos_equivalentes = TURNOS_AGENDAMENTO_POR_TURNO_PCPI.get(turno_pcpi_norm, {turno_pcpi_norm})
     return turno_agendamento_norm in turnos_equivalentes
+
+
+def _aula_agendamento_para_int(valor) -> int | None:
+    texto = _texto_limpo(valor)
+    if not texto.isdigit():
+        return None
+    numero = int(texto)
+    return numero if numero > 0 else None
+
+
+def agendamento_pertence_ao_turno_pcpi(agendamento: dict, turno_pcpi: str) -> bool:
+    turno_agendamento = _texto_limpo((agendamento or {}).get("turno")).upper()
+    turno_pcpi_norm = _texto_limpo(turno_pcpi).upper()
+    if not turno_agendamento_pertence_ao_turno_pcpi(turno_agendamento, turno_pcpi_norm):
+        return False
+
+    if turno_agendamento != "INTEGRAL":
+        return True
+
+    aula = _aula_agendamento_para_int((agendamento or {}).get("aula"))
+    if aula is None:
+        return True
+
+    aulas_permitidas = _AULAS_INTEGRAL_POR_TURNO_PCPI.get(turno_pcpi_norm)
+    if not aulas_permitidas:
+        return False
+    return aula in aulas_permitidas
 
 
 def _texto_limpo(valor) -> str:
@@ -148,13 +179,13 @@ def _coletar_descritores_docentes(itens: list[dict]) -> list[str]:
 def _formatar_docentes_referencia(itens: list[dict]) -> str:
     descritores = _coletar_descritores_docentes(itens)
     if not descritores:
-        return "docentes atendidos(as) no turno"
+        return "aos docentes atendidos no turno"
     if len(descritores) == 1:
-        return f"o(a) professor(a) {descritores[0]}"
+        return f"ao professor {descritores[0]}"
 
     resumo = "demais docentes do turno" if len(descritores) > 3 else ""
     lista = _formatar_lista_resumida(descritores, limite=3, resumo=resumo)
-    return f"os(as) professores(as) {lista}"
+    return f"aos professores {lista}"
 
 
 def _formatar_docentes_destinatarios(itens: list[dict]) -> str:
@@ -569,6 +600,226 @@ def _frases_genericas(registros: list[dict]) -> list[str]:
             f"com suporte pedagógico e tecnológico no turno{observacoes}"
         )
         frases.append(_garantir_ponto_final(frase))
+    return frases
+
+
+def _formatar_docentes_destinatarios(itens: list[dict]) -> str:
+    return _formatar_docentes_referencia(itens)
+
+
+def _frase_automatica_ste(itens: list[dict]) -> str:
+    docentes = _formatar_docentes_referencia(itens)
+    aulas = _formatar_aulas_referencia(itens)
+    turmas = _formatar_turmas_referencia(itens)
+    frase = (
+        "Atendimento na Sala de Tecnologia Educacional (STE), "
+        f"com suporte {docentes}{aulas}{turmas} para realizacao das atividades digitais"
+    )
+    return _garantir_ponto_final(frase)
+
+
+def _frase_automatica_tecnologia(itens: list[dict]) -> str:
+    docentes = _formatar_docentes_referencia(itens)
+    aulas = _formatar_aulas_referencia(itens)
+    turmas = _formatar_turmas_referencia(itens)
+    frase = (
+        "Disponibilizacao e acompanhamento de recursos de tecnologia educacional, "
+        f"com suporte {docentes}{aulas}{turmas} durante as atividades planejadas"
+    )
+    return _garantir_ponto_final(frase)
+
+
+def _frase_automatica_audiovisual(itens: list[dict]) -> str:
+    destinatarios = _formatar_docentes_destinatarios(itens)
+    recursos = _formatar_recursos_referencia(itens)
+    turmas = _formatar_turmas_referencia(itens)
+    recursos_txt = f", com organizacao do uso de {recursos}" if recursos else ""
+    frase = (
+        "Entrega, organizacao e recolhimento de equipamentos audiovisuais "
+        f"{destinatarios}{turmas}{recursos_txt}, para atendimento das aulas do turno"
+    )
+    return _garantir_ponto_final(frase)
+
+
+def _frase_automatica_apoio(itens: list[dict]) -> str:
+    recursos = _formatar_recursos_referencia(itens)
+    turmas = _formatar_turmas_referencia(itens)
+    complemento_recursos = f", com organizacao do uso de {recursos}" if recursos else ""
+    frase = (
+        "Organizacao de recursos de apoio pedagogico no turno"
+        f"{turmas}{complemento_recursos}, garantindo atendimento as demandas apresentadas"
+    )
+    return _garantir_ponto_final(frase)
+
+
+def _frases_reuniao(registros: list[dict]) -> list[str]:
+    frases = []
+    for registro in registros:
+        participantes = (
+            _texto_limpo(registro.get("professor_nome"))
+            or "setores e profissionais da unidade escolar"
+        )
+        finalidade = (
+            _texto_limpo(registro.get("descricao_curta"))
+            or "alinhamento de demandas institucionais"
+        )
+        observacoes = _complemento_observacoes(registro.get("observacoes"))
+        frases.append(_garantir_ponto_final(f"Reuniao com {participantes} para {finalidade}{observacoes}"))
+    return frases
+
+
+def _frases_orientacao(registros: list[dict]) -> list[str]:
+    frases = []
+    for registro in registros:
+        professor = _texto_limpo(registro.get("professor_nome"))
+        recurso = _texto_limpo(registro.get("componente")) or _texto_limpo(
+            registro.get("descricao_curta")
+        )
+        if not recurso:
+            recurso = "recursos e ferramentas digitais"
+        finalidade = _texto_limpo(registro.get("descricao_curta"))
+        complemento_finalidade = ""
+        if finalidade and _normalizar_texto_chave(finalidade) != _normalizar_texto_chave(recurso):
+            complemento_finalidade = f", com foco em {finalidade}"
+        observacoes = _complemento_observacoes(registro.get("observacoes"))
+
+        if professor:
+            frase = (
+                f"Orientacao ao professor {professor} sobre o uso de {recurso}"
+                f"{complemento_finalidade}{observacoes}"
+            )
+        else:
+            frase = f"Orientacao sobre o uso de {recurso}{complemento_finalidade}{observacoes}"
+        frases.append(_garantir_ponto_final(frase))
+    return frases
+
+
+def _frases_registro(registros: list[dict]) -> list[str]:
+    descricoes = _coletar_descricoes_registros(registros)
+    observacoes = _coletar_observacoes_registros(registros)
+    frase = "Registro e organizacao das demandas do turno, com atualizacao das informacoes"
+    if descricoes:
+        frase += f", contemplando {descricoes}"
+    if observacoes:
+        frase += f", considerando {observacoes}"
+    return [_garantir_ponto_final(frase)]
+
+
+def _frases_impressao(registros: list[dict]) -> list[str]:
+    descricoes = _coletar_descricoes_registros(registros)
+    observacoes = _coletar_observacoes_registros(registros)
+    frase = "Impressao e organizacao de materiais pedagogicos solicitados no turno"
+    if descricoes:
+        frase += f", contemplando {descricoes}"
+    if observacoes:
+        frase += f", considerando {observacoes}"
+    return [_garantir_ponto_final(frase)]
+
+
+def _frases_adequacao_impressao(registros: list[dict]) -> list[str]:
+    descricoes = _coletar_descricoes_registros(registros)
+    observacoes = _coletar_observacoes_registros(registros)
+    frase = "Adequacao de materiais impressos conforme necessidades pedagogicas especificas do turno"
+    if descricoes:
+        frase += f", com atendimento a {descricoes}"
+    if observacoes:
+        frase += f", considerando {observacoes}"
+    return [_garantir_ponto_final(frase)]
+
+
+def _frases_rede_social(registros: list[dict]) -> list[str]:
+    descricoes = _coletar_descricoes_registros(registros)
+    observacoes = _coletar_observacoes_registros(registros)
+    frase = "Criacao de conteudos digitais para divulgacao institucional das acoes da escola"
+    if descricoes:
+        frase += f", com destaque para {descricoes}"
+    if observacoes:
+        frase += f", considerando {observacoes}"
+    return [_garantir_ponto_final(frase)]
+
+
+def _frases_projeto(registros: list[dict]) -> list[str]:
+    frases = []
+    for registro in registros:
+        nome_projeto = _texto_limpo(registro.get("componente")) or _texto_limpo(
+            registro.get("descricao_curta")
+        )
+        if not nome_projeto:
+            nome_projeto = "acoes do turno"
+        observacoes = _complemento_observacoes(registro.get("observacoes"))
+        frases.append(_garantir_ponto_final(f"Acompanhamento das acoes do projeto {nome_projeto}{observacoes}"))
+    return frases
+
+
+def _frases_gremio(registros: list[dict]) -> list[str]:
+    descricoes = _coletar_descricoes_registros(registros)
+    observacoes = _coletar_observacoes_registros(registros)
+    frase = "Acompanhamento das acoes do Gremio Estudantil, com apoio aos encaminhamentos do turno"
+    if descricoes:
+        frase += f", contemplando {descricoes}"
+    if observacoes:
+        frase += f", considerando {observacoes}"
+    return [_garantir_ponto_final(frase)]
+
+
+def _frases_colaboracao(registros: list[dict]) -> list[str]:
+    frases = []
+    for registro in registros:
+        referencia = _texto_limpo(registro.get("professor_nome")) or _texto_limpo(
+            registro.get("descricao_curta")
+        )
+        observacoes = _complemento_observacoes(registro.get("observacoes"))
+        if referencia:
+            frase = f"Colaboracao com {referencia} nas acoes pedagogicas e tecnologicas do turno{observacoes}"
+        else:
+            frase = f"Colaboracao nas acoes pedagogicas e tecnologicas do turno{observacoes}"
+        frases.append(_garantir_ponto_final(frase))
+    return frases
+
+
+def _frases_evento(registros: list[dict]) -> list[str]:
+    frases = []
+    for registro in registros:
+        evento = _texto_limpo(registro.get("descricao_curta")) or _texto_limpo(
+            registro.get("componente")
+        )
+        if not evento:
+            evento = "atividade institucional"
+        observacoes = _complemento_observacoes(registro.get("observacoes"))
+        frases.append(_garantir_ponto_final(f"Organizacao e apoio ao evento {evento}{observacoes}"))
+    return frases
+
+
+def _frases_planejamento(registros: list[dict]) -> list[str]:
+    descricoes = _coletar_descricoes_registros(registros)
+    observacoes = _coletar_observacoes_registros(registros)
+    frase = "Planejamento e organizacao das acoes pedagogicas e tecnologicas do turno"
+    if descricoes:
+        frase += f", contemplando {descricoes}"
+    if observacoes:
+        frase += f", considerando {observacoes}"
+    return [_garantir_ponto_final(frase)]
+
+
+def _frases_formulario2(registros: list[dict]) -> list[str]:
+    frases = []
+    for registro in registros:
+        projeto = _texto_limpo(registro.get("descricao_curta")) or _texto_limpo(
+            registro.get("componente")
+        )
+        if not projeto:
+            projeto = "atividade pedagogica em desenvolvimento"
+        observacoes = _complemento_observacoes(registro.get("observacoes"))
+        frases.append(_garantir_ponto_final(f"Elaboracao do Formulario II referente ao projeto {projeto}{observacoes}"))
+    return frases
+
+
+def _frases_genericas(registros: list[dict]) -> list[str]:
+    frases = []
+    for registro in registros:
+        descricao = _texto_limpo(registro.get("descricao_curta")) or "demanda do turno"
+        observacoes = _complemento_observacoes(registro.get("observacoes"))
+        frases.append(_garantir_ponto_final(f"Atendimento a demanda relacionada a {descricao}{observacoes}"))
     return frases
 
 

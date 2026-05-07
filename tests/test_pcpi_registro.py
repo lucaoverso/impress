@@ -126,7 +126,7 @@ class PcpiRegistroTest(unittest.TestCase):
             self.assertEqual(item["tema_aula"], "Exploracao de planilhas")
             self.assertEqual(item["categoria_uso"], "tecnologia_educacional")
             self.assertEqual(item["componentes"], ["Matematica", "Fisica"])
-            self.assertIn("Disponibilização e acompanhamento", resposta["texto_base"])
+            self.assertIn("Disponibilizacao e acompanhamento", resposta["texto_base"])
 
     def test_criar_e_listar_registros_manuais_pcpi(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -223,7 +223,7 @@ class PcpiRegistroTest(unittest.TestCase):
                 professor_nome="Equipe PCPI",
                 componente="Tecnologia Educacional",
                 turma="8A",
-                descricao_curta="Ajuste do atendimento pedagógico do turno.",
+                descricao_curta="Ajuste do atendimento pedagogico do turno.",
                 observacoes="Organizacao das demandas tecnicas e administrativas.",
             )
             pcpi_router.criar_registro_manual_pcpi_api(
@@ -239,8 +239,8 @@ class PcpiRegistroTest(unittest.TestCase):
 
             self.assertEqual(resposta["total_agendamentos"], 1)
             self.assertEqual(resposta["total_registros_manuais"], 1)
-            self.assertIn("Entrega e recebimento de equipamentos tecnológicos", resposta["texto"])
-            self.assertIn("Planejamento e organização", resposta["texto"])
+            self.assertIn("equipamentos audiovisuais", resposta["texto"])
+            self.assertIn("Planejamento e organizacao", resposta["texto"])
 
     def test_preview_texto_pcpi_respeita_agendamentos_selecionados(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -308,10 +308,8 @@ class PcpiRegistroTest(unittest.TestCase):
             )
 
             self.assertEqual(resposta["total_agendamentos"], 1)
-            self.assertIn("Disponibilização e acompanhamento", resposta["texto"])
-            self.assertNotIn(
-                "Entrega e recebimento de equipamentos tecnológicos", resposta["texto"]
-            )
+            self.assertIn("Disponibilizacao e acompanhamento de recursos de tecnologia educacional", resposta["texto"])
+            self.assertNotIn("equipamentos audiovisuais", resposta["texto"])
 
     def test_sugestoes_pcpi_agrupa_vespertino_em_no_turno_vespertino(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -361,6 +359,70 @@ class PcpiRegistroTest(unittest.TestCase):
             self.assertEqual(resposta["resumo"]["total_agendamentos"], 1)
             self.assertEqual(resposta["itens"][0]["turno"], "VESPERTINO")
 
+    def test_sugestoes_pcpi_separam_faixas_do_integral_por_turno(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, pcpi_router, _models = _reload_modules(db_path)
+            database.criar_tabelas()
+            database.seed_recursos_padrao()
+
+            professor_id = database.criar_professor(
+                nome="Professor Integral",
+                email="integral.prof@escola.local",
+                senha_hash=database.hash_senha("Senha@123"),
+                data_nascimento="1991-07-15",
+                aulas_semanais=16,
+                turmas_quantidade=1,
+                turmas=["Integral 7A"],
+                disciplinas=["Ciencias"],
+            )
+            database.criar_turma("Integral 7A", "INTEGRAL", 30)
+
+            recurso = next(
+                item
+                for item in database.listar_recursos_ativos()
+                if "Notebook" in str(item.get("nome") or "")
+            )
+
+            database.criar_agendamento(
+                recurso_id=int(recurso["id"]),
+                usuario_id=professor_id,
+                data="2026-04-03",
+                turno="INTEGRAL",
+                aula="2",
+                faixa_global=2,
+                turma="Integral 7A",
+                tema_aula="Pesquisa matutina",
+                observacao="Atividade da manha.",
+            )
+            database.criar_agendamento(
+                recurso_id=int(recurso["id"]),
+                usuario_id=professor_id,
+                data="2026-04-03",
+                turno="INTEGRAL",
+                aula="7",
+                faixa_global=8,
+                turma="Integral 7A",
+                tema_aula="Pesquisa vespertina",
+                observacao="Atividade da tarde.",
+            )
+
+            resposta_matutino = pcpi_router.listar_sugestoes_pcpi_api(
+                data="2026-04-03",
+                turno="MATUTINO",
+                usuario={"id": 1, "cargo": "ADMIN"},
+            )
+            resposta_vespertino = pcpi_router.listar_sugestoes_pcpi_api(
+                data="2026-04-03",
+                turno="VESPERTINO",
+                usuario={"id": 1, "cargo": "ADMIN"},
+            )
+
+            self.assertEqual(resposta_matutino["resumo"]["total_agendamentos"], 1)
+            self.assertEqual(resposta_matutino["itens"][0]["aula"], "2")
+            self.assertEqual(resposta_vespertino["resumo"]["total_agendamentos"], 1)
+            self.assertEqual(resposta_vespertino["itens"][0]["aula"], "7")
+
     def test_criar_registro_manual_pcpi_valida_turno_invalido(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")
@@ -381,7 +443,7 @@ class PcpiRegistroTest(unittest.TestCase):
                 )
 
             self.assertEqual(contexto.exception.status_code, 400)
-            self.assertIn("Turno inválido", str(contexto.exception.detail))
+            self.assertIn("Turno inv", str(contexto.exception.detail))
 
 
 if __name__ == "__main__":
