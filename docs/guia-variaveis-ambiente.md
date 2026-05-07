@@ -59,6 +59,10 @@ Por isso, no servidor, vale a pena manter um arquivo `/opt/sistema-impress/.env`
 | `CUPS_LP_COMMAND` | `services/printer.py` | `lp` | Nome do comando ou caminho absoluto. Em servidor Linux, usar `/usr/bin/lp` pode deixar o ambiente mais previsivel. |
 | `CUPS_LP_TIMEOUT_SECONDS` | `services/printer.py` | `30` | Deve ser inteiro valido. Diferente de outras variaveis numericas, aqui um valor invalido pode quebrar a inicializacao do processo. |
 | `LIBREOFFICE_COMMAND` | `services/file_service.py` | autodeteccao | Usada para conversao de `DOC` e `DOCX` em PDF. Se `soffice` nao estiver no `PATH`, informe o caminho absoluto. |
+| `PCPI_OLLAMA_ENABLED` | `services/pcpi_ollama_service.py`, `services/pcpi_service.py` | `false` | Ativa a reescrita do texto final do PCPI via Ollama. Se estiver desligada ou se o Ollama falhar, o sistema usa o texto deterministico local. |
+| `PCPI_OLLAMA_BASE_URL` | `services/pcpi_ollama_service.py` | `http://127.0.0.1:11434` | Base URL da API do Ollama. O codigo chama automaticamente o endpoint `/api/generate`. |
+| `PCPI_OLLAMA_MODEL` | `services/pcpi_ollama_service.py` | `qwen2.5:7b` | Modelo usado para reescrever o texto do PCPI. Ajuste para o modelo local que estiver carregado no servidor. |
+| `PCPI_OLLAMA_TIMEOUT_SECONDS` | `services/pcpi_ollama_service.py` | `15` | Timeout da chamada ao Ollama. Valores invalidos voltam para `15`. A temperatura esta fixada em `0.2` no codigo. |
 
 ## Sugestao de `.env` para o servidor
 
@@ -78,6 +82,10 @@ RADIUS_INTERNAL_SECRET=
 CUPS_LP_COMMAND=/usr/bin/lp
 CUPS_LP_TIMEOUT_SECONDS=30
 LIBREOFFICE_COMMAND=/usr/bin/soffice
+PCPI_OLLAMA_ENABLED=false
+PCPI_OLLAMA_BASE_URL=http://127.0.0.1:11434
+PCPI_OLLAMA_MODEL=qwen2.5:7b
+PCPI_OLLAMA_TIMEOUT_SECONDS=15
 # STATIC_ASSET_VERSION=release-2026-04-13
 ```
 
@@ -89,6 +97,7 @@ LIBREOFFICE_COMMAND=/usr/bin/soffice
 - Configure `SPOOL_RETENTION_DAYS` com um prazo curto, como `7`, para evitar crescimento indefinido do spool.
 - Preencha `RADIUS_INTERNAL_SECRET` apenas se a integracao com FreeRADIUS estiver ativa.
 - Se a impressao de `DOC` e `DOCX` for necessaria, instale o LibreOffice e configure `LIBREOFFICE_COMMAND` de forma explicita.
+- Ative `PCPI_OLLAMA_ENABLED=true` apenas quando o Ollama estiver disponivel no host e o modelo escolhido ja tiver sido baixado.
 - Considere fixar `STATIC_ASSET_VERSION` por release se quiser evitar invalidez de cache a cada restart.
 - Use `TOKEN_TTL_DIAS=7` como padrao mais conservador.
 

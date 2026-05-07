@@ -1,0 +1,87 @@
+import json
+import os
+import unittest
+from unittest.mock import patch
+
+from services.pcpi_ollama_service import (
+    PCPI_OLLAMA_TEMPERATURE,
+    PcpiOllamaError,
+    gerar_texto_pcpi_ollama,
+    ollama_pcpi_habilitado,
+)
+
+
+class _FakeHttpResponse:
+    def __init__(self, payload: dict):
+        self._body = json.dumps(payload).encode("utf-8")
+
+    def read(self) -> bytes:
+        return self._body
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        return False
+
+
+class PcpiOllamaServiceTest(unittest.TestCase):
+    def setUp(self):
+        self._old_enabled = os.environ.get("PCPI_OLLAMA_ENABLED")
+        self._old_base_url = os.environ.get("PCPI_OLLAMA_BASE_URL")
+        self._old_model = os.environ.get("PCPI_OLLAMA_MODEL")
+        self._old_timeout = os.environ.get("PCPI_OLLAMA_TIMEOUT_SECONDS")
+
+    def tearDown(self):
+        self._restaurar_env("PCPI_OLLAMA_ENABLED", self._old_enabled)
+        self._restaurar_env("PCPI_OLLAMA_BASE_URL", self._old_base_url)
+        self._restaurar_env("PCPI_OLLAMA_MODEL", self._old_model)
+        self._restaurar_env("PCPI_OLLAMA_TIMEOUT_SECONDS", self._old_timeout)
+
+    def _restaurar_env(self, nome: str, valor_antigo: str | None):
+        if valor_antigo is None:
+            os.environ.pop(nome, None)
+        else:
+            os.environ[nome] = valor_antigo
+
+    def test_ollama_habilitado_respeita_variavel_de_ambiente(self):
+        os.environ["PCPI_OLLAMA_ENABLED"] = "true"
+        self.assertTrue(ollama_pcpi_habilitado())
+
+        os.environ["PCPI_OLLAMA_ENABLED"] = "false"
+        self.assertFalse(ollama_pcpi_habilitado())
+
+    def test_gerar_texto_pcpi_ollama_envia_prompt_com_temperatura_fixa(self):
+        os.environ["PCPI_OLLAMA_BASE_URL"] = "http://127.0.0.1:11434"
+        os.environ["PCPI_OLLAMA_MODEL"] = "qwen2.5:7b"
+
+        contexto = {"texto_base": "Texto base do PCPI.", "turno": "MATUTINO"}
+
+        with patch(
+            "services.pcpi_ollama_service.request.urlopen",
+            return_value=_FakeHttpResponse({"response": "Texto final do Ollama."}),
+        ) as urlopen:
+            texto = gerar_texto_pcpi_ollama(contexto)
+
+        requisicao = urlopen.call_args.args[0]
+        payload = json.loads(requisicao.data.decode("utf-8"))
+
+        self.assertEqual(texto, "Texto final do Ollama.")
+        self.assertEqual(payload["model"], "qwen2.5:7b")
+        self.assertEqual(payload["options"]["temperature"], PCPI_OLLAMA_TEMPERATURE)
+        self.assertFalse(payload["stream"])
+
+    def test_gerar_texto_pcpi_ollama_falha_com_resposta_vazia(self):
+        os.environ["PCPI_OLLAMA_BASE_URL"] = "http://127.0.0.1:11434"
+        os.environ["PCPI_OLLAMA_MODEL"] = "qwen2.5:7b"
+
+        with patch(
+            "services.pcpi_ollama_service.request.urlopen",
+            return_value=_FakeHttpResponse({"response": ""}),
+        ):
+            with self.assertRaises(PcpiOllamaError):
+                gerar_texto_pcpi_ollama({"texto_base": "Texto base."})
+
+
+if __name__ == "__main__":
+    unittest.main()
