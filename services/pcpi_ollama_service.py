@@ -25,7 +25,9 @@ def ollama_pcpi_habilitado() -> bool:
 
 
 def _ollama_base_url() -> str:
-    return str(os.getenv("PCPI_OLLAMA_BASE_URL", PCPI_OLLAMA_BASE_URL_PADRAO) or "").strip().rstrip("/")
+    return str(
+        os.getenv("PCPI_OLLAMA_BASE_URL", PCPI_OLLAMA_BASE_URL_PADRAO) or ""
+    ).strip().rstrip("/")
 
 
 def _ollama_generate_url() -> str:
@@ -40,7 +42,9 @@ def _ollama_model() -> str:
 
 
 def _ollama_timeout_seconds() -> int:
-    valor = str(os.getenv("PCPI_OLLAMA_TIMEOUT_SECONDS", str(PCPI_OLLAMA_TIMEOUT_PADRAO)) or "").strip()
+    valor = str(
+        os.getenv("PCPI_OLLAMA_TIMEOUT_SECONDS", str(PCPI_OLLAMA_TIMEOUT_PADRAO)) or ""
+    ).strip()
     try:
         timeout = int(valor)
     except ValueError:
@@ -60,50 +64,20 @@ def _normalizar_texto_resposta(texto: str) -> str:
 
 
 def _montar_prompt_pcpi(contexto: dict) -> str:
-    contexto_json = json.dumps(contexto, ensure_ascii=False, indent=2, sort_keys=True)
-
+    contexto_json = json.dumps(
+        contexto,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        sort_keys=True,
+    )
     return (
-        "Você é responsável pela redação de registros administrativos do Professor Coordenador de Práticas Inovadoras (PCPI), "
-        "seguindo as orientações oficiais da SED/MS para lançamento de rotina no e-SGDE.\n"
-        "\n"
-        "Objetivo:\n"
-        "Transformar as informações do contexto em um único texto corrido, formal, coeso e adequado ao padrão institucional utilizado "
-        "nos registros do PCPI.\n"
-        "\n"
-        "Orientações de escrita:\n"
-        "- O foco do texto deve ser a ação do PCPI e não apenas a ação do professor.\n"
-        "- Priorize linguagem administrativa, pedagógica e objetiva.\n"
-        "- Sempre que possível, inicie períodos com substantivos de ação, como:\n"
-        "  Participação, Orientação, Atendimento, Disponibilização, Acompanhamento,\n"
-        "  Organização, Produção, Registro, Elaboração, Colaboração, Entrega e recebimento.\n"
-        "- Atividades técnicas semelhantes devem ser agrupadas em um único trecho.\n"
-        "- Valorize o caráter pedagógico das ações realizadas.\n"
-        "- Quando houver uso da STE, recursos tecnológicos ou apoio a docentes, evidencie suporte técnico e pedagógico.\n"
-        "- Quando houver reuniões, conselhos ou alinhamentos, destaque observação das demandas pedagógicas e organização dos encaminhamentos.\n"
-        "- Quando houver impressões ou organização de materiais, relacione ao apoio às atividades pedagógicas.\n"
-        "- O texto deve soar natural, institucional e pronto para uso no SGDE.\n"
-        "\n"
-        "Regras obrigatórias:\n"
-        "- Não invente fatos.\n"
-        "- Não adicionar professores, turmas, disciplinas, horários ou recursos ausentes no contexto.\n"
-        "- Não criar projetos ou reuniões inexistentes.\n"
-        "- Não utilizar linguagem informal.\n"
-        "- Não usar caixa alta.\n"
-        "- Não repetir informações desnecessariamente.\n"
-        "- Preserve todos os fatos centrais presentes no contexto.\n"
-        "- Caso existam múltiplas ações semelhantes, agrupe de forma coesa.\n"
-        "- O resultado deve conter apenas um único parágrafo.\n"
-        "- Retorne somente o texto final, sem títulos, comentários ou explicações.\n"
-        "\n"
-        "Exemplos esperados de construção:\n"
-        "- 'Disponibilização e acompanhamento na Sala de Tecnologia Educacional (STE)...'\n"
-        "- 'Entrega e recebimento de equipamentos tecnológicos...'\n"
-        "- 'Produção e organização de impressões de materiais pedagógicos...'\n"
-        "- 'Participação em reunião para alinhamento das demandas pedagógicas...'\n"
-        "- 'Orientação ao professor quanto ao uso pedagógico de recurso tecnológico...'\n"
-        "\n"
-        "Contexto estruturado:\n"
-        f"{contexto_json}\n"
+        "Reescreva o registro do PCPI em um unico paragrafo, com linguagem formal, "
+        "objetiva e institucional.\n"
+        "Foque na acao do PCPI, preserve os fatos centrais e agrupe atividades semelhantes.\n"
+        "Nao invente informacoes e nao adicione professores, turmas, recursos ou acoes "
+        "ausentes no contexto.\n"
+        "Retorne somente o texto final.\n"
+        f"Contexto:{contexto_json}"
     )
 
 
