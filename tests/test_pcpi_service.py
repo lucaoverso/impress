@@ -1,12 +1,8 @@
 import unittest
-from unittest.mock import Mock, patch
-
-from services.pcpi_ollama_service import PcpiOllamaError
 from services.pcpi_service import (
     GRUPO_AUTOMATICO_AUDIOVISUAL,
     GRUPO_AUTOMATICO_STE,
     agendamento_pertence_ao_turno_pcpi,
-    gerar_texto_base_pcpi,
     gerar_texto_pcpi,
     turno_agendamento_pertence_ao_turno_pcpi,
 )
@@ -76,8 +72,6 @@ class PcpiServiceTest(unittest.TestCase):
 
         resultado = gerar_texto_pcpi("2026-04-03", "MATUTINO", itens, [])
 
-        self.assertEqual(resultado["origem_texto"], "local")
-        self.assertEqual(resultado["motivo_origem_texto"], "disabled")
         self.assertEqual(resultado["total_agendamentos"], 3)
         self.assertEqual(len(resultado["frases_automaticas"]), 2)
         self.assertIn("Sala de Tecnologia Educacional (STE)", resultado["frases_automaticas"][0])
@@ -113,8 +107,6 @@ class PcpiServiceTest(unittest.TestCase):
 
         resultado = gerar_texto_pcpi("2026-04-03", "MATUTINO", [], registros)
 
-        self.assertEqual(resultado["origem_texto"], "local")
-        self.assertEqual(resultado["motivo_origem_texto"], "disabled")
         self.assertEqual(resultado["total_registros_manuais"], 4)
         self.assertEqual(len(resultado["frases_manuais"]), 3)
         self.assertIn("Impressao e organizacao de materiais pedagogicos", resultado["frases_manuais"][0])
@@ -132,8 +124,6 @@ class PcpiServiceTest(unittest.TestCase):
 
         resultado = gerar_texto_pcpi("2026-04-03", "VESPERTINO", [], registros)
 
-        self.assertEqual(resultado["origem_texto"], "local")
-        self.assertEqual(resultado["motivo_origem_texto"], "disabled")
         self.assertTrue(resultado["frase_fechamento"])
         self.assertIn("Acompanhamento cont", resultado["frase_fechamento"])
         self.assertIn(resultado["frase_fechamento"], resultado["texto"])
@@ -153,128 +143,6 @@ class PcpiServiceTest(unittest.TestCase):
         self.assertFalse(agendamento_pertence_ao_turno_pcpi(agendamento_matutino, "VESPERTINO"))
         self.assertFalse(agendamento_pertence_ao_turno_pcpi(agendamento_vespertino, "MATUTINO"))
         self.assertTrue(agendamento_pertence_ao_turno_pcpi(agendamento_vespertino, "VESPERTINO"))
-
-    def test_pcpi_usa_ollama_quando_habilitado(self):
-        itens = [
-            _agendamento(
-                agendamento_id=1,
-                categoria_uso=GRUPO_AUTOMATICO_STE,
-                professor_nome="Ana",
-                componentes=["Matematica"],
-                turma="7A",
-                aula="1",
-                recurso_nome="STE Sala 1",
-            )
-        ]
-
-        with patch.dict(
-            gerar_texto_pcpi.__globals__,
-            {
-                "ollama_pcpi_habilitado": lambda: True,
-                "gerar_texto_pcpi_ollama": lambda _contexto: "Texto final reescrito pela IA.",
-            },
-        ):
-            resultado = gerar_texto_pcpi("2026-04-03", "MATUTINO", itens, [])
-
-        self.assertEqual(resultado["origem_texto"], "ollama")
-        self.assertEqual(resultado["motivo_origem_texto"], "ollama")
-        self.assertEqual(resultado["texto"], "Texto final reescrito pela IA.")
-        self.assertEqual(resultado["total_agendamentos"], 1)
-        self.assertTrue(resultado["frases_automaticas"])
-
-    def test_pcpi_mantem_fallback_local_quando_ollama_falha(self):
-        itens = [
-            _agendamento(
-                agendamento_id=1,
-                categoria_uso=GRUPO_AUTOMATICO_STE,
-                professor_nome="Ana",
-                componentes=["Matematica"],
-                turma="7A",
-                aula="1",
-                recurso_nome="STE Sala 1",
-            )
-        ]
-
-        def _falhar_ollama(_contexto):
-            raise PcpiOllamaError("erro")
-
-        with patch.dict(
-            gerar_texto_pcpi.__globals__,
-            {
-                "ollama_pcpi_habilitado": lambda: True,
-                "gerar_texto_pcpi_ollama": _falhar_ollama,
-            },
-        ):
-            resultado = gerar_texto_pcpi("2026-04-03", "MATUTINO", itens, [])
-
-        self.assertEqual(resultado["origem_texto"], "local")
-        self.assertEqual(resultado["motivo_origem_texto"], "ollama_error")
-        self.assertIn("Sala de Tecnologia Educacional", resultado["texto"])
-
-    def test_pcpi_mantem_fallback_local_quando_ollama_retorna_texto_invalido(self):
-        itens = [
-            _agendamento(
-                agendamento_id=1,
-                categoria_uso=GRUPO_AUTOMATICO_STE,
-                professor_nome="Ana",
-                componentes=["Matematica"],
-                turma="7A",
-                aula="1",
-                recurso_nome="STE Sala 1",
-            )
-        ]
-
-        with patch.dict(
-            gerar_texto_pcpi.__globals__,
-            {
-                "ollama_pcpi_habilitado": lambda: True,
-                "gerar_texto_pcpi_ollama": lambda _contexto: "x" * 3001,
-            },
-        ):
-            resultado = gerar_texto_pcpi("2026-04-03", "MATUTINO", itens, [])
-
-        self.assertEqual(resultado["origem_texto"], "local")
-        self.assertEqual(resultado["motivo_origem_texto"], "invalid_response")
-        self.assertIn("Sala de Tecnologia Educacional", resultado["texto"])
-
-    def test_pcpi_informa_no_context_quando_ollama_esta_habilitado_sem_itens_ou_registros(self):
-        with patch.dict(
-            gerar_texto_pcpi.__globals__,
-            {
-                "ollama_pcpi_habilitado": lambda: True,
-            },
-        ):
-            resultado = gerar_texto_pcpi("2026-04-03", "MATUTINO", [], [])
-
-        self.assertEqual(resultado["origem_texto"], "local")
-        self.assertEqual(resultado["motivo_origem_texto"], "no_context")
-        self.assertIn("sem acoes automaticas ou lancamentos manuais", resultado["texto"])
-
-    def test_texto_base_pcpi_permanece_deterministico_mesmo_com_ollama_habilitado(self):
-        itens = [
-            _agendamento(
-                agendamento_id=1,
-                categoria_uso=GRUPO_AUTOMATICO_STE,
-                professor_nome="Ana",
-                componentes=["Matematica"],
-                turma="7A",
-                aula="1",
-                recurso_nome="STE Sala 1",
-            )
-        ]
-
-        gerar_ia = Mock()
-        with patch.dict(
-            gerar_texto_base_pcpi.__globals__,
-            {
-                "ollama_pcpi_habilitado": lambda: True,
-                "gerar_texto_pcpi_ollama": gerar_ia,
-            },
-        ):
-            texto_base = gerar_texto_base_pcpi("2026-04-03", "MATUTINO", itens, [])
-
-        gerar_ia.assert_not_called()
-        self.assertIn("Sala de Tecnologia Educacional", texto_base)
 
 
 if __name__ == "__main__":

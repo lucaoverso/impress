@@ -344,36 +344,6 @@ function atualizarResumoTexto() {
     el("pcpiResumoTexto").textContent = `Texto baseado em ${selecionados} agendamento(s) selecionado(s) e ${totalManuais} registro(s) manual(is) salvo(s).`;
 }
 
-function atualizarOrigemTextoPcpi(origemTexto = "", motivoOrigemTexto = "") {
-    const origem = String(origemTexto || "").trim().toLowerCase();
-    const motivo = String(motivoOrigemTexto || "").trim().toLowerCase();
-
-    if (origem === "ollama") {
-        el("pcpiOrigemTexto").textContent = "Texto gerado por Ollama.";
-        return;
-    }
-    if (origem === "local") {
-        if (motivo === "disabled") {
-            el("pcpiOrigemTexto").textContent = "Texto gerado via modo determinístico local porque o Ollama está desabilitado.";
-            return;
-        }
-        if (motivo === "no_context") {
-            el("pcpiOrigemTexto").textContent = "Texto gerado via modo determinístico local porque não havia contexto suficiente para usar o Ollama.";
-            return;
-        }
-        if (motivo === "ollama_error") {
-            el("pcpiOrigemTexto").textContent = "Texto gerado via modo determinístico local porque houve falha ao consultar o Ollama.";
-            return;
-        }
-        if (motivo === "invalid_response") {
-            el("pcpiOrigemTexto").textContent = "Texto gerado via modo determinístico local porque a resposta do Ollama foi inválida.";
-            return;
-        }
-        el("pcpiOrigemTexto").textContent = "Texto gerado via modo determinístico local.";
-        return;
-    }
-    el("pcpiOrigemTexto").textContent = "";
-}
 
 function aplicarAjudaTipoAcao() {
     const config = obterConfigTipoAcao(el("pcpiTipoAcao").value);
@@ -477,7 +447,6 @@ async function carregarContextoPcpi({ gerarTextoAutomaticamente = true } = {}) {
         el("pcpiResumoTurno").textContent = "";
         el("pcpiResumoAutomatico").textContent = "0 de 0 agendamento(s) marcados | 0 professor(es) | 0 turma(s).";
         el("pcpiResumoManual").textContent = "0 registros";
-        atualizarOrigemTextoPcpi();
         atualizarResumoTexto();
         definirMensagem("msgPcpiGeral", erro.message || "Erro ao carregar o módulo PCPI.", true);
     }
@@ -485,8 +454,6 @@ async function carregarContextoPcpi({ gerarTextoAutomaticamente = true } = {}) {
 
 async function gerarTextoPcpi() {
     limparMensagem("msgPcpiGeral");
-    atualizarOrigemTextoPcpi();
-
     let filtros;
     try {
         filtros = validarFiltrosSelecionados();
@@ -512,10 +479,8 @@ async function gerarTextoPcpi() {
 
         const dados = await resposta.json();
         el("pcpiTextoFinal").value = String(dados.texto || "");
-        atualizarOrigemTextoPcpi(dados.origem_texto, dados.motivo_origem_texto);
         definirMensagem("msgPcpiGeral", "Texto gerado com sucesso.");
     } catch (erro) {
-        atualizarOrigemTextoPcpi();
         definirMensagem("msgPcpiGeral", erro.message || "Falha ao gerar o texto do PCPI.", true);
     }
 }

@@ -1,15 +1,6 @@
-import logging
 import unicodedata
 from collections import defaultdict
 from datetime import datetime
-
-from services.pcpi_ollama_service import (
-    PcpiOllamaError,
-    gerar_texto_pcpi_ollama,
-    ollama_pcpi_habilitado,
-)
-
-logger = logging.getLogger(__name__)
 
 TURNOS_PCPI_CONFIG = {
     "MATUTINO": {"nome": "Matutino", "aulas": 5},
@@ -49,8 +40,6 @@ FECHAMENTO_PCPI_PADRAO = (
     "Acompanhamento continuo das demandas do turno, com suporte pedagogico e "
     "tecnologico as acoes planejadas pela unidade escolar."
 )
-
-_TEXTO_PCPI_IA_MAX_CHARS = 2500
 
 
 def _texto_limpo(valor) -> str:
@@ -633,8 +622,6 @@ def _gerar_texto_pcpi_deterministico(
         "data": data,
         "turno": _texto_limpo(turno).upper(),
         "turno_nome": nome_turno_pcpi(turno),
-        "origem_texto": "local",
-        "motivo_origem_texto": "disabled",
         "total_agendamentos": len(itens_automaticos or []),
         "total_registros_manuais": len(registros),
         "frases_automaticas": frases_automaticas,
@@ -644,95 +631,18 @@ def _gerar_texto_pcpi_deterministico(
     }
 
 
-def _montar_contexto_ollama_pcpi(
-    data: str,
-    turno: str,
-    itens_automaticos: list[dict],
-    registros_manuais: list[dict],
-    resultado_local: dict,
-) -> dict:
-    return {
-        "data": data,
-        "turno": _texto_limpo(turno).upper(),
-        "turno_nome": nome_turno_pcpi(turno),
-        "texto_base": _texto_limpo(resultado_local.get("texto")),
-        "frases_automaticas": list(resultado_local.get("frases_automaticas") or []),
-        "frases_manuais": list(resultado_local.get("frases_manuais") or []),
-        "frase_fechamento": _texto_limpo(resultado_local.get("frase_fechamento")),
-        "agendamentos": [
-            {
-                "recurso_nome": _texto_limpo(item.get("recurso_nome")),
-                "categoria_uso": _texto_limpo(item.get("categoria_uso")),
-                "professor_nome": _texto_limpo(item.get("professor_nome")),
-                "componentes": _lista_unica_texto(item.get("componentes") or []),
-                "turma": _texto_limpo(item.get("turma")),
-                "aula": _texto_limpo(item.get("aula")),
-                "tema_aula": _texto_limpo(item.get("tema_aula")),
-                "observacao": _texto_limpo(item.get("observacao")),
-            }
-            for item in itens_automaticos or []
-        ],
-        "registros_manuais": [
-            {
-                "tipo_acao": _texto_limpo(item.get("tipo_acao")),
-                "professor_nome": _texto_limpo(item.get("professor_nome")),
-                "componente": _texto_limpo(item.get("componente")),
-                "turma": _texto_limpo(item.get("turma")),
-                "descricao_curta": _texto_limpo(item.get("descricao_curta")),
-                "observacoes": _texto_limpo(item.get("observacoes")),
-            }
-            for item in registros_manuais or []
-        ],
-    }
-
-
-def _texto_ia_pcpi_valido(texto: str) -> bool:
-    texto_limpo = _texto_limpo(texto)
-    if not texto_limpo:
-        return False
-    return len(texto_limpo) <= _TEXTO_PCPI_IA_MAX_CHARS
-
-
 def gerar_texto_pcpi(
     data: str,
     turno: str,
     itens_automaticos: list[dict],
     registros_manuais: list[dict] | None = None,
 ) -> dict:
-    registros = registros_manuais or []
-    resultado_local = _gerar_texto_pcpi_deterministico(data, turno, itens_automaticos, registros)
-
-    if not ollama_pcpi_habilitado():
-        return resultado_local
-
-    if not resultado_local.get("texto") or not ((itens_automaticos or []) or registros):
-        resultado_local["motivo_origem_texto"] = "no_context"
-        return resultado_local
-
-    contexto = _montar_contexto_ollama_pcpi(
-        data=data,
-        turno=turno,
-        itens_automaticos=itens_automaticos or [],
-        registros_manuais=registros,
-        resultado_local=resultado_local,
+    return _gerar_texto_pcpi_deterministico(
+        data,
+        turno,
+        itens_automaticos,
+        registros_manuais,
     )
-
-    try:
-        texto_ia = gerar_texto_pcpi_ollama(contexto)
-    except PcpiOllamaError as exc:
-        logger.warning("Falha ao gerar texto do PCPI com Ollama: %s", exc)
-        resultado_local["motivo_origem_texto"] = "ollama_error"
-        return resultado_local
-
-    if not _texto_ia_pcpi_valido(texto_ia):
-        logger.warning("Ollama retornou texto invalido para o PCPI; mantendo fallback local.")
-        resultado_local["motivo_origem_texto"] = "invalid_response"
-        return resultado_local
-
-    resultado_local["texto"] = _garantir_ponto_final(texto_ia)
-    resultado_local["origem_texto"] = "ollama"
-    resultado_local["motivo_origem_texto"] = "ollama"
-    return resultado_local
 
 
 def gerar_texto_base_pcpi(
