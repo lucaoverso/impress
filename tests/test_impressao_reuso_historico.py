@@ -6,6 +6,8 @@ import types
 import unittest
 from pathlib import Path
 
+from fastapi import HTTPException
+
 PDF_MINIMO = b"%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"
 
 
@@ -192,6 +194,76 @@ class ImpressaoReusoHistoricoTest(unittest.TestCase):
             self.assertEqual(resposta.media_type, "application/pdf")
             self.assertEqual(resposta.body, PDF_MINIMO)
             self.assertEqual(int(usuario_hibrido["id"]), professor_hibrido_id)
+
+    def test_criar_job_pdf_invalido_retorna_http_500_controlado(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            spool_dir = Path(tmp_dir) / "spool"
+            spool_dir.mkdir(parents=True, exist_ok=True)
+
+            database, impressao_router = _reload_modulos(db_path, str(spool_dir))
+            database.criar_tabelas()
+            database.criar_usuario("Admin", "admin@example.com", "senha123", "admin")
+            admin = database.buscar_usuario_por_email("admin@example.com")
+
+            caminho_pdf = spool_dir / "quebrado.pdf"
+            caminho_pdf.write_bytes(PDF_MINIMO)
+
+            contar_paginas_original = impressao_router.contar_paginas_pdf
+            impressao_router.contar_paginas_pdf = lambda _caminho: (_ for _ in ()).throw(RuntimeError("pdf quebrado"))
+            try:
+                with self.assertRaises(HTTPException) as ctx:
+                    impressao_router.criar_job_a_partir_pdf_pronto(
+                        caminho_arquivo=caminho_pdf,
+                        nome_arquivo_exibicao="quebrado.pdf",
+                        copias=1,
+                        paginas_por_folha=1,
+                        duplex=False,
+                        orientacao="retrato",
+                        intervalo_paginas="",
+                        usuario_responsavel=admin,
+                    )
+            finally:
+                impressao_router.contar_paginas_pdf = contar_paginas_original
+
+            self.assertEqual(ctx.exception.status_code, 500)
+            self.assertEqual(ctx.exception.detail, "Falha ao ler o PDF preparado para impressao.")
+            self.assertFalse(caminho_pdf.exists())
+
+    def test_criar_job_falha_no_banco_retorna_http_500_controlado(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            spool_dir = Path(tmp_dir) / "spool"
+            spool_dir.mkdir(parents=True, exist_ok=True)
+
+            database, impressao_router = _reload_modulos(db_path, str(spool_dir))
+            database.criar_tabelas()
+            database.criar_usuario("Admin", "admin@example.com", "senha123", "admin")
+            admin = database.buscar_usuario_por_email("admin@example.com")
+
+            caminho_pdf = spool_dir / "ok.pdf"
+            caminho_pdf.write_bytes(PDF_MINIMO)
+
+            criar_job_original = impressao_router.criar_job
+            impressao_router.criar_job = lambda **_kwargs: (_ for _ in ()).throw(RuntimeError("db indisponivel"))
+            try:
+                with self.assertRaises(HTTPException) as ctx:
+                    impressao_router.criar_job_a_partir_pdf_pronto(
+                        caminho_arquivo=caminho_pdf,
+                        nome_arquivo_exibicao="ok.pdf",
+                        copias=1,
+                        paginas_por_folha=1,
+                        duplex=False,
+                        orientacao="retrato",
+                        intervalo_paginas="",
+                        usuario_responsavel=admin,
+                    )
+            finally:
+                impressao_router.criar_job = criar_job_original
+
+            self.assertEqual(ctx.exception.status_code, 500)
+            self.assertEqual(ctx.exception.detail, "Falha ao registrar o job de impressao.")
+            self.assertFalse(caminho_pdf.exists())
 
 
 if __name__ == "__main__":

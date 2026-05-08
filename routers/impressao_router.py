@@ -1,4 +1,5 @@
 import json
+import logging
 import os
 import re
 import shutil
@@ -33,6 +34,7 @@ from .common import (
 from .config import DEFAULT_PRINTER_NAME, FORMATOS_UPLOAD_DESCRICAO, SPOOL_DIR
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def contar_paginas_intervalo(intervalo: str, total_paginas: int) -> int:
@@ -217,16 +219,30 @@ def criar_job_a_partir_pdf_pronto(
 
     try:
         paginas_pdf = contar_paginas_pdf(str(caminho_arquivo))
-    except Exception:
+    except HTTPException:
         limpar_em_falha()
         raise
+    except Exception as exc:
+        limpar_em_falha()
+        logger.exception("Falha ao contar paginas do PDF preparado para impressao: %s", caminho_arquivo)
+        raise HTTPException(
+            500,
+            "Falha ao ler o PDF preparado para impressao.",
+        ) from exc
 
     intervalo_normalizado = (intervalo_paginas or "").strip()
     try:
         paginas_selecionadas = contar_paginas_intervalo(intervalo_normalizado, paginas_pdf)
-    except Exception:
+    except HTTPException:
         limpar_em_falha()
         raise
+    except Exception as exc:
+        limpar_em_falha()
+        logger.exception("Falha ao validar intervalo de paginas para impressao: %s", caminho_arquivo)
+        raise HTTPException(
+            400,
+            "Intervalo de paginas invalido para este documento.",
+        ) from exc
 
     folhas_por_copia = ceil(paginas_selecionadas / paginas_por_folha)
     if duplex:
@@ -241,9 +257,19 @@ def criar_job_a_partir_pdf_pronto(
                 usuario_id=usuario_responsavel["id"],
                 paginas=paginas_totais,
             )
-        except Exception:
+        except HTTPException:
             limpar_em_falha()
             raise
+        except Exception as exc:
+            limpar_em_falha()
+            logger.exception(
+                "Falha ao validar/consumir cota para usuario %s no envio de impressao",
+                usuario_responsavel.get("id"),
+            )
+            raise HTTPException(
+                500,
+                "Falha ao validar a cota de impressao.",
+            ) from exc
 
         if not autorizado:
             limpar_em_falha()
@@ -273,9 +299,19 @@ def criar_job_a_partir_pdf_pronto(
             printer_name=DEFAULT_PRINTER_NAME,
             cups_options=json.dumps(opcoes_cups, ensure_ascii=True),
         )
-    except Exception:
+    except HTTPException:
         limpar_em_falha()
         raise
+    except Exception as exc:
+        limpar_em_falha()
+        logger.exception(
+            "Falha ao registrar job de impressao para usuario %s",
+            usuario_responsavel.get("id"),
+        )
+        raise HTTPException(
+            500,
+            "Falha ao registrar o job de impressao.",
+        ) from exc
 
     return {
         "mensagem": "Job criado com sucesso",
