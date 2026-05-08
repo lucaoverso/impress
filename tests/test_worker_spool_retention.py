@@ -132,6 +132,8 @@ class WorkerQueueNormalizationTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")
             os.environ["DB_PATH"] = db_path
+            for nome_modulo in ("database", "db.core", "db.schema_migrations"):
+                sys.modules.pop(nome_modulo, None)
 
             database = importlib.import_module("database")
             database.criar_tabelas()
