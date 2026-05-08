@@ -138,15 +138,18 @@
             throw new Error(fallback);
         }
 
-        if (
-            resposta.redirected
-            || /\/login-page(?:[/?#]|$)/i.test(String(resposta.url || ""))
-            || pareceHtml(texto)
-        ) {
+        const urlResposta = String(resposta.url || "");
+        const redirecionouParaLogin = /\/login-page(?:[/?#]|$)/i.test(urlResposta);
+
+        if (redirecionouParaLogin) {
             encerrarSessaoFallback();
             const erroSessao = new Error("Sessao expirada.");
             erroSessao.status = 401;
             throw erroSessao;
+        }
+
+        if (pareceHtml(texto)) {
+            throw new Error(fallback);
         }
 
         throw new Error(texto || fallback);
