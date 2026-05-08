@@ -344,13 +344,31 @@ function atualizarResumoTexto() {
     el("pcpiResumoTexto").textContent = `Texto baseado em ${selecionados} agendamento(s) selecionado(s) e ${totalManuais} registro(s) manual(is) salvo(s).`;
 }
 
-function atualizarOrigemTextoPcpi(origemTexto = "") {
+function atualizarOrigemTextoPcpi(origemTexto = "", motivoOrigemTexto = "") {
     const origem = String(origemTexto || "").trim().toLowerCase();
+    const motivo = String(motivoOrigemTexto || "").trim().toLowerCase();
+
     if (origem === "ollama") {
         el("pcpiOrigemTexto").textContent = "Texto gerado por Ollama.";
         return;
     }
     if (origem === "local") {
+        if (motivo === "disabled") {
+            el("pcpiOrigemTexto").textContent = "Texto gerado via modo determinístico local porque o Ollama está desabilitado.";
+            return;
+        }
+        if (motivo === "no_context") {
+            el("pcpiOrigemTexto").textContent = "Texto gerado via modo determinístico local porque não havia contexto suficiente para usar o Ollama.";
+            return;
+        }
+        if (motivo === "ollama_error") {
+            el("pcpiOrigemTexto").textContent = "Texto gerado via modo determinístico local porque houve falha ao consultar o Ollama.";
+            return;
+        }
+        if (motivo === "invalid_response") {
+            el("pcpiOrigemTexto").textContent = "Texto gerado via modo determinístico local porque a resposta do Ollama foi inválida.";
+            return;
+        }
         el("pcpiOrigemTexto").textContent = "Texto gerado via modo determinístico local.";
         return;
     }
@@ -494,7 +512,7 @@ async function gerarTextoPcpi() {
 
         const dados = await resposta.json();
         el("pcpiTextoFinal").value = String(dados.texto || "");
-        atualizarOrigemTextoPcpi(dados.origem_texto);
+        atualizarOrigemTextoPcpi(dados.origem_texto, dados.motivo_origem_texto);
         definirMensagem("msgPcpiGeral", "Texto gerado com sucesso.");
     } catch (erro) {
         atualizarOrigemTextoPcpi();

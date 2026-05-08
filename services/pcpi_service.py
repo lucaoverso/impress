@@ -634,6 +634,7 @@ def _gerar_texto_pcpi_deterministico(
         "turno": _texto_limpo(turno).upper(),
         "turno_nome": nome_turno_pcpi(turno),
         "origem_texto": "local",
+        "motivo_origem_texto": "disabled",
         "total_agendamentos": len(itens_automaticos or []),
         "total_registros_manuais": len(registros),
         "frases_automaticas": frases_automaticas,
@@ -705,6 +706,7 @@ def gerar_texto_pcpi(
         return resultado_local
 
     if not resultado_local.get("texto") or not ((itens_automaticos or []) or registros):
+        resultado_local["motivo_origem_texto"] = "no_context"
         return resultado_local
 
     contexto = _montar_contexto_ollama_pcpi(
@@ -719,14 +721,17 @@ def gerar_texto_pcpi(
         texto_ia = gerar_texto_pcpi_ollama(contexto)
     except PcpiOllamaError as exc:
         logger.warning("Falha ao gerar texto do PCPI com Ollama: %s", exc)
+        resultado_local["motivo_origem_texto"] = "ollama_error"
         return resultado_local
 
     if not _texto_ia_pcpi_valido(texto_ia):
         logger.warning("Ollama retornou texto invalido para o PCPI; mantendo fallback local.")
+        resultado_local["motivo_origem_texto"] = "invalid_response"
         return resultado_local
 
     resultado_local["texto"] = _garantir_ponto_final(texto_ia)
     resultado_local["origem_texto"] = "ollama"
+    resultado_local["motivo_origem_texto"] = "ollama"
     return resultado_local
 
 
