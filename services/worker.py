@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from db.impressao import (
     buscar_proximo_job,
+    normalizar_jobs_impressao_pendentes,
     atualizar_status,
     atualizar_job_cups,
     atualizar_erro_job,
@@ -166,6 +167,17 @@ def limpar_spool_expirado_se_necessario():
 
 
 def worker_loop():
+    try:
+        normalizacao = normalizar_jobs_impressao_pendentes()
+        if normalizacao["processando_normalizados"] or normalizacao["datas_normalizadas"]:
+            logger.warning(
+                "Normalizacao inicial da fila de impressao ajustou %s job(s) PROCESSANDO e %s job(s) com criado_em no futuro.",
+                normalizacao["processando_normalizados"],
+                normalizacao["datas_normalizadas"],
+            )
+    except Exception:
+        logger.exception("Falha ao normalizar jobs pendentes antes de iniciar o worker")
+
     logger.info(
         "Worker de impressao iniciado (janela de cancelamento: %ss, retencao do spool: %s)",
         JANELA_CANCELAMENTO_SEGUNDOS,

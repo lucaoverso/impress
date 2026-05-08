@@ -275,6 +275,47 @@ def listar_arquivo_paths_jobs_em_andamento():
     return [str(row["arquivo_path"]).strip() for row in rows if str(row["arquivo_path"] or "").strip()]
 
 
+def normalizar_jobs_impressao_pendentes(
+    *,
+    tolerancia_futuro_segundos: int = 300,
+) -> dict[str, int]:
+    try:
+        tolerancia = max(int(tolerancia_futuro_segundos), 0)
+    except (TypeError, ValueError):
+        tolerancia = 300
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        UPDATE jobs
+        SET status = 'PENDENTE'
+        WHERE status = 'PROCESSANDO'
+          AND finalizado_em IS NULL
+    """
+    )
+    processando_normalizados = int(cursor.rowcount or 0)
+
+    cursor.execute(
+        """
+        UPDATE jobs
+        SET criado_em = datetime('now')
+        WHERE status = 'PENDENTE'
+          AND datetime(criado_em) > datetime('now', ?)
+    """,
+        (f"+{tolerancia} seconds",),
+    )
+    datas_normalizadas = int(cursor.rowcount or 0)
+
+    conn.commit()
+    conn.close()
+    return {
+        "processando_normalizados": processando_normalizados,
+        "datas_normalizadas": datas_normalizadas,
+    }
+
+
 def listar_jobs_por_usuario(usuario_id):
     conn = get_connection()
     cursor = conn.cursor()

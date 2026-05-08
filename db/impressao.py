@@ -23,6 +23,7 @@ listar_historico = proxy("listar_historico")
 listar_arquivo_paths_jobs_em_andamento = proxy("listar_arquivo_paths_jobs_em_andamento")
 listar_jobs_ativos = proxy("listar_jobs_ativos")
 listar_jobs_por_usuario = proxy("listar_jobs_por_usuario")
+normalizar_jobs_impressao_pendentes = proxy("normalizar_jobs_impressao_pendentes")
 obter_regras_cota = proxy("obter_regras_cota")
 recalcular_cotas_mes = proxy("recalcular_cotas_mes")
 
@@ -50,6 +51,7 @@ __all__ = [
     "listar_arquivo_paths_jobs_em_andamento",
     "listar_jobs_ativos",
     "listar_jobs_por_usuario",
+    "normalizar_jobs_impressao_pendentes",
     "obter_regras_cota",
     "recalcular_cotas_mes",
 ]
