@@ -121,6 +121,37 @@
         return fallback;
     }
 
+    async function lerJsonResposta(resposta, fallback = "Resposta invalida do servidor.") {
+        const tipoConteudo = String(resposta.headers.get("content-type") || "").toLowerCase();
+        if (tipoConteudo.includes("application/json")) {
+            try {
+                return await resposta.json();
+            } catch (_erro) {
+                throw new Error(fallback);
+            }
+        }
+
+        let texto = "";
+        try {
+            texto = (await resposta.text()).trim();
+        } catch (_erro) {
+            throw new Error(fallback);
+        }
+
+        if (
+            resposta.redirected
+            || /\/login-page(?:[/?#]|$)/i.test(String(resposta.url || ""))
+            || pareceHtml(texto)
+        ) {
+            encerrarSessaoFallback();
+            const erroSessao = new Error("Sessao expirada.");
+            erroSessao.status = 401;
+            throw erroSessao;
+        }
+
+        throw new Error(texto || fallback);
+    }
+
     function baixarArquivoTexto(nomeArquivo, conteudo, tipo = "text/plain;charset=utf-8") {
         const blob = new Blob(["\uFEFF", conteudo], { type: tipo });
         const url = window.URL.createObjectURL(blob);
@@ -139,6 +170,7 @@
         fetchComAuth,
         fetchResposta,
         obterMensagemErroResposta,
+        lerJsonResposta,
         baixarArquivoTexto,
     });
 })(window);
