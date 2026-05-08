@@ -5,6 +5,7 @@ from urllib import error, request
 PCPI_OLLAMA_BASE_URL_PADRAO = "http://127.0.0.1:11434"
 PCPI_OLLAMA_MODEL_PADRAO = "qwen2.5:7b"
 PCPI_OLLAMA_TIMEOUT_PADRAO = 15
+PCPI_OLLAMA_KEEP_ALIVE_PADRAO = "30m"
 PCPI_OLLAMA_TEMPERATURE = 0.2
 
 
@@ -45,6 +46,13 @@ def _ollama_timeout_seconds() -> int:
     except ValueError:
         timeout = PCPI_OLLAMA_TIMEOUT_PADRAO
     return timeout if timeout > 0 else PCPI_OLLAMA_TIMEOUT_PADRAO
+
+
+def _ollama_keep_alive() -> str:
+    valor = str(
+        os.getenv("PCPI_OLLAMA_KEEP_ALIVE", PCPI_OLLAMA_KEEP_ALIVE_PADRAO) or ""
+    ).strip()
+    return valor or PCPI_OLLAMA_KEEP_ALIVE_PADRAO
 
 
 def _normalizar_texto_resposta(texto: str) -> str:
@@ -118,6 +126,7 @@ def gerar_texto_pcpi_ollama(contexto: dict) -> str:
         "model": modelo,
         "prompt": _montar_prompt_pcpi(contexto),
         "stream": False,
+        "keep_alive": _ollama_keep_alive(),
         "options": {"temperature": PCPI_OLLAMA_TEMPERATURE},
     }
 

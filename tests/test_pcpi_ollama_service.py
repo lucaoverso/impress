@@ -5,6 +5,7 @@ from unittest.mock import patch
 from urllib import request as urllib_request
 
 from services.pcpi_ollama_service import (
+    PCPI_OLLAMA_KEEP_ALIVE_PADRAO,
     PCPI_OLLAMA_TEMPERATURE,
     PcpiOllamaError,
     gerar_texto_pcpi_ollama,
@@ -32,12 +33,14 @@ class PcpiOllamaServiceTest(unittest.TestCase):
         self._old_base_url = os.environ.get("PCPI_OLLAMA_BASE_URL")
         self._old_model = os.environ.get("PCPI_OLLAMA_MODEL")
         self._old_timeout = os.environ.get("PCPI_OLLAMA_TIMEOUT_SECONDS")
+        self._old_keep_alive = os.environ.get("PCPI_OLLAMA_KEEP_ALIVE")
 
     def tearDown(self):
         self._restaurar_env("PCPI_OLLAMA_ENABLED", self._old_enabled)
         self._restaurar_env("PCPI_OLLAMA_BASE_URL", self._old_base_url)
         self._restaurar_env("PCPI_OLLAMA_MODEL", self._old_model)
         self._restaurar_env("PCPI_OLLAMA_TIMEOUT_SECONDS", self._old_timeout)
+        self._restaurar_env("PCPI_OLLAMA_KEEP_ALIVE", self._old_keep_alive)
 
     def _restaurar_env(self, nome: str, valor_antigo: str | None):
         if valor_antigo is None:
@@ -55,6 +58,7 @@ class PcpiOllamaServiceTest(unittest.TestCase):
     def test_gerar_texto_pcpi_ollama_envia_prompt_com_temperatura_fixa(self):
         os.environ["PCPI_OLLAMA_BASE_URL"] = "http://127.0.0.1:11434"
         os.environ["PCPI_OLLAMA_MODEL"] = "qwen2.5:7b"
+        os.environ["PCPI_OLLAMA_KEEP_ALIVE"] = "45m"
 
         contexto = {"texto_base": "Texto base do PCPI.", "turno": "MATUTINO"}
 
@@ -70,7 +74,23 @@ class PcpiOllamaServiceTest(unittest.TestCase):
         self.assertEqual(texto, "Texto final do Ollama.")
         self.assertEqual(payload["model"], "qwen2.5:7b")
         self.assertEqual(payload["options"]["temperature"], PCPI_OLLAMA_TEMPERATURE)
+        self.assertEqual(payload["keep_alive"], "45m")
         self.assertFalse(payload["stream"])
+
+    def test_gerar_texto_pcpi_ollama_usa_keep_alive_padrao(self):
+        os.environ["PCPI_OLLAMA_BASE_URL"] = "http://127.0.0.1:11434"
+        os.environ["PCPI_OLLAMA_MODEL"] = "qwen2.5:7b"
+        os.environ.pop("PCPI_OLLAMA_KEEP_ALIVE", None)
+
+        with patch(
+            "services.pcpi_ollama_service.request.urlopen",
+            return_value=_FakeHttpResponse({"response": "Texto final do Ollama."}),
+        ) as urlopen:
+            gerar_texto_pcpi_ollama({"texto_base": "Texto base do PCPI."})
+
+        requisicao = urlopen.call_args.args[0]
+        payload = json.loads(requisicao.data.decode("utf-8"))
+        self.assertEqual(payload["keep_alive"], PCPI_OLLAMA_KEEP_ALIVE_PADRAO)
 
     def test_gerar_texto_pcpi_ollama_falha_com_resposta_vazia(self):
         os.environ["PCPI_OLLAMA_BASE_URL"] = "http://127.0.0.1:11434"
