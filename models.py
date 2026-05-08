@@ -148,6 +148,7 @@ class PcpiTextoGeradoOut(BaseModel):
     data: str
     turno: str
     turno_nome: str = ""
+    origem_texto: Literal["local", "ollama"] = "local"
     total_agendamentos: int = 0
     total_registros_manuais: int = 0
     frases_automaticas: list[str] = Field(default_factory=list)

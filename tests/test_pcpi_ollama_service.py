@@ -2,6 +2,7 @@ import json
 import os
 import unittest
 from unittest.mock import patch
+from urllib import request as urllib_request
 
 from services.pcpi_ollama_service import (
     PCPI_OLLAMA_TEMPERATURE,
@@ -81,6 +82,39 @@ class PcpiOllamaServiceTest(unittest.TestCase):
         ):
             with self.assertRaises(PcpiOllamaError):
                 gerar_texto_pcpi_ollama({"texto_base": "Texto base."})
+
+    def test_gerar_texto_pcpi_ollama_consulta_endpoint_real_quando_integracao_habilitada(self):
+        if os.environ.get("PCPI_OLLAMA_INTEGRATION_TEST") != "true":
+            self.skipTest("Defina PCPI_OLLAMA_INTEGRATION_TEST=true para executar contra o Ollama real.")
+
+        os.environ.setdefault("PCPI_OLLAMA_BASE_URL", "http://127.0.0.1:11434")
+        os.environ.setdefault("PCPI_OLLAMA_MODEL", "qwen2.5:7b")
+
+        contexto = {
+            "texto_base": "Atendimento ao professor para organizacao de material pedagogico.",
+            "turno": "MATUTINO",
+            "frases_automaticas": [
+                "Disponibilizacao e acompanhamento na Sala de Tecnologia Educacional.",
+            ],
+            "frases_manuais": [
+                "Registro de orientacao pedagogica ao docente.",
+            ],
+        }
+
+        with patch(
+            "services.pcpi_ollama_service.request.urlopen",
+            wraps=urllib_request.urlopen,
+        ) as urlopen_real:
+            texto = gerar_texto_pcpi_ollama(contexto)
+
+        requisicao = urlopen_real.call_args.args[0]
+        payload = json.loads(requisicao.data.decode("utf-8"))
+
+        self.assertTrue(texto.strip())
+        self.assertTrue(requisicao.full_url.endswith("/api/generate"))
+        self.assertEqual(payload["model"], os.environ["PCPI_OLLAMA_MODEL"])
+        self.assertEqual(payload["options"]["temperature"], PCPI_OLLAMA_TEMPERATURE)
+        self.assertFalse(payload["stream"])
 
 
 if __name__ == "__main__":

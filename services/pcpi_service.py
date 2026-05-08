@@ -633,6 +633,7 @@ def _gerar_texto_pcpi_deterministico(
         "data": data,
         "turno": _texto_limpo(turno).upper(),
         "turno_nome": nome_turno_pcpi(turno),
+        "origem_texto": "local",
         "total_agendamentos": len(itens_automaticos or []),
         "total_registros_manuais": len(registros),
         "frases_automaticas": frases_automaticas,
@@ -725,6 +726,7 @@ def gerar_texto_pcpi(
         return resultado_local
 
     resultado_local["texto"] = _garantir_ponto_final(texto_ia)
+    resultado_local["origem_texto"] = "ollama"
     return resultado_local
 
 

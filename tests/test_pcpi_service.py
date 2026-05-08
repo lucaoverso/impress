@@ -76,6 +76,7 @@ class PcpiServiceTest(unittest.TestCase):
 
         resultado = gerar_texto_pcpi("2026-04-03", "MATUTINO", itens, [])
 
+        self.assertEqual(resultado["origem_texto"], "local")
         self.assertEqual(resultado["total_agendamentos"], 3)
         self.assertEqual(len(resultado["frases_automaticas"]), 2)
         self.assertIn("Sala de Tecnologia Educacional (STE)", resultado["frases_automaticas"][0])
@@ -111,6 +112,7 @@ class PcpiServiceTest(unittest.TestCase):
 
         resultado = gerar_texto_pcpi("2026-04-03", "MATUTINO", [], registros)
 
+        self.assertEqual(resultado["origem_texto"], "local")
         self.assertEqual(resultado["total_registros_manuais"], 4)
         self.assertEqual(len(resultado["frases_manuais"]), 3)
         self.assertIn("Impressao e organizacao de materiais pedagogicos", resultado["frases_manuais"][0])
@@ -128,6 +130,7 @@ class PcpiServiceTest(unittest.TestCase):
 
         resultado = gerar_texto_pcpi("2026-04-03", "VESPERTINO", [], registros)
 
+        self.assertEqual(resultado["origem_texto"], "local")
         self.assertTrue(resultado["frase_fechamento"])
         self.assertIn("Acompanhamento cont", resultado["frase_fechamento"])
         self.assertIn(resultado["frase_fechamento"], resultado["texto"])
@@ -170,6 +173,7 @@ class PcpiServiceTest(unittest.TestCase):
         ):
             resultado = gerar_texto_pcpi("2026-04-03", "MATUTINO", itens, [])
 
+        self.assertEqual(resultado["origem_texto"], "ollama")
         self.assertEqual(resultado["texto"], "Texto final reescrito pela IA.")
         self.assertEqual(resultado["total_agendamentos"], 1)
         self.assertTrue(resultado["frases_automaticas"])
@@ -199,6 +203,7 @@ class PcpiServiceTest(unittest.TestCase):
         ):
             resultado = gerar_texto_pcpi("2026-04-03", "MATUTINO", itens, [])
 
+        self.assertEqual(resultado["origem_texto"], "local")
         self.assertIn("Sala de Tecnologia Educacional", resultado["texto"])
 
     def test_texto_base_pcpi_permanece_deterministico_mesmo_com_ollama_habilitado(self):
