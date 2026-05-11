@@ -15,9 +15,9 @@ function modulosPermitidos(usuario = {}) {
     }
 
     const cargo = normalizarCargoUsuario(usuario);
-    if (cargo === "ADMIN") return new Set(["impressao", "agendamento", "download", "gestao", "coordenacao", "horario", "pcpi", "preconselho"]);
-    if (cargo === "COORDENADOR") return new Set(["download", "coordenacao", "horario", "preconselho"]);
-    return new Set(["impressao", "agendamento", "download", "preconselho"]);
+    if (cargo === "ADMIN") return new Set(["impressao", "agendamento", "download", "gestao", "coordenacao", "horario", "apc", "pcpi", "preconselho"]);
+    if (cargo === "COORDENADOR") return new Set(["download", "coordenacao", "horario", "apc", "preconselho"]);
+    return new Set(["impressao", "agendamento", "download", "apc", "preconselho"]);
 }
 
 function aplicarVisibilidadeModulos(modulos) {
@@ -79,6 +79,13 @@ function registrarEventos() {
     if (btnIrHorario) {
         btnIrHorario.addEventListener("click", () => {
             window.location.href = "/horario-escolar";
+        });
+    }
+
+    const btnIrApc = document.getElementById("cardApc");
+    if (btnIrApc) {
+        btnIrApc.addEventListener("click", () => {
+            window.location.href = "/apc";
         });
     }
 

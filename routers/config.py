@@ -9,6 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
 SPOOL_DIR = os.getenv("SPOOL_DIR", str(BASE_DIR / "spool"))
+APC_DIR = os.getenv("APC_DIR", str(BASE_DIR / "spool" / "apc"))
 DEFAULT_PRINTER_NAME = os.getenv("CUPS_PRINTER", "").strip()
 ENABLE_EMBEDDED_WORKER = os.getenv("ENABLE_EMBEDDED_WORKER", "").strip().lower() in {
     "1",

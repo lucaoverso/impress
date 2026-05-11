@@ -21,6 +21,7 @@ import routers.config as config_module
 import routers.impressao_router as impressao_router_module
 import routers.download_router as download_router_module
 import routers.horario_escolar_router as horario_escolar_router_module
+import routers.apc_router as apc_router_module
 import routers.pages_router as pages_router_module
 import routers.professores_common as professores_common_module
 import routers.professores_router as professores_router_module
@@ -49,6 +50,7 @@ pages_router_module = _reload_or_import(pages_router_module)
 impressao_router_module = _reload_or_import(impressao_router_module)
 download_router_module = _reload_or_import(download_router_module)
 horario_escolar_router_module = _reload_or_import(horario_escolar_router_module)
+apc_router_module = _reload_or_import(apc_router_module)
 agendamento_router_module = _reload_or_import(agendamento_router_module)
 professores_router_module = _reload_or_import(professores_router_module)
 admin_router_module = _reload_or_import(admin_router_module)
@@ -61,6 +63,7 @@ pages_router = pages_router_module.router
 impressao_router = impressao_router_module.router
 download_router = download_router_module.router
 horario_escolar_router = horario_escolar_router_module.router
+apc_router = apc_router_module.router
 agendamento_router = agendamento_router_module.router
 professores_router = professores_router_module.router
 admin_router = admin_router_module.router
@@ -83,6 +86,7 @@ cadastro_professor_page = pages_router_module.cadastro_professor_page
 admin_page = pages_router_module.admin_page
 coordenacao_page = pages_router_module.coordenacao_page
 horario_escolar_page = pages_router_module.horario_escolar_page
+apc_page = pages_router_module.apc_page
 
 turmas_impressao = impressao_router_module.turmas_impressao
 imprimir = impressao_router_module.imprimir
@@ -178,6 +182,7 @@ app.include_router(pages_router)
 app.include_router(impressao_router)
 app.include_router(download_router)
 app.include_router(horario_escolar_router)
+app.include_router(apc_router)
 app.include_router(agendamento_router)
 app.include_router(professores_router)
 app.include_router(admin_router)

@@ -84,12 +84,12 @@
 
         const cargo = normalizarCargoUsuario(usuario);
         if (cargo === CARGO_ADMIN) {
-            return new Set(["impressao", "agendamento", "gestao", "coordenacao", "horario", "pcpi", "preconselho"]);
+            return new Set(["impressao", "agendamento", "gestao", "coordenacao", "horario", "apc", "pcpi", "preconselho"]);
         }
         if (cargo === CARGO_COORDENADOR) {
-            return new Set(["coordenacao", "horario", "pcpi", "preconselho"]);
+            return new Set(["coordenacao", "horario", "apc", "pcpi", "preconselho"]);
         }
-        return new Set(["impressao", "agendamento", "preconselho"]);
+        return new Set(["impressao", "agendamento", "apc", "preconselho"]);
     }
 
     function parseDataSqlUtc(valor) {

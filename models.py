@@ -551,6 +551,51 @@ class HorarioEscolarRegistroOut(BaseModel):
     atualizado_em: str = ""
 
 
+class ApcPeriodoIn(BaseModel):
+    ano_letivo: int
+    data_referencia: str
+    prazo_envio: str = ""
+    titulo: str = "APC"
+    observacao: str = ""
+
+
+class ApcPeriodoUpdateIn(BaseModel):
+    ano_letivo: int
+    data_referencia: str
+    prazo_envio: str = ""
+    titulo: str = "APC"
+    observacao: str = ""
+
+
+class ApcPeriodoOut(BaseModel):
+    id: int
+    ano_letivo: int
+    data_referencia: str
+    dia_semana: str = ""
+    dia_semana_nome: str = ""
+    prazo_envio: str
+    prazo_envio_input: str = ""
+    prazo_expirado: bool = False
+    titulo: str = "APC"
+    observacao: str = ""
+    criado_por_usuario_id: int = 0
+    criado_em: str = ""
+    atualizado_em: str = ""
+
+
+class ApcEnvioOut(BaseModel):
+    id: int
+    periodo_id: int
+    professor_id: int
+    professor_nome: str = ""
+    professor_email: str = ""
+    arquivo_nome_original: str
+    arquivo_tipo: str = ""
+    arquivo_tamanho: int = 0
+    enviado_em: str = ""
+    atualizado_em: str = ""
+
+
 class TurmaCreateIn(BaseModel):
     nome: str
     turno: str

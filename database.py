@@ -4998,6 +4998,362 @@ def excluir_horario_escolar(registro_id: int):
     return alterado
 
 
+def _mapear_apc_periodo(row) -> dict:
+    return {
+        "id": int(row["id"]),
+        "ano_letivo": int(row["ano_letivo"] or 0),
+        "data_referencia": str(row["data_referencia"] or "").strip(),
+        "prazo_envio": str(row["prazo_envio"] or "").strip(),
+        "titulo": str(row["titulo"] or "").strip(),
+        "observacao": str(row["observacao"] or "").strip(),
+        "criado_por_usuario_id": int(row["criado_por_usuario_id"] or 0),
+        "criado_em": str(row["criado_em"] or "").strip(),
+        "atualizado_em": str(row["atualizado_em"] or "").strip(),
+    }
+
+
+def _consultar_apc_periodos(cursor, *, filtros_sql=None, params=None):
+    where = list(filtros_sql or [])
+    parametros = list(params or [])
+    clausula_where = f"WHERE {' AND '.join(where)}" if where else ""
+
+    cursor.execute(
+        f"""
+        SELECT
+            id,
+            ano_letivo,
+            data_referencia,
+            prazo_envio,
+            titulo,
+            observacao,
+            criado_por_usuario_id,
+            criado_em,
+            atualizado_em
+        FROM apc_periodos
+        {clausula_where}
+        ORDER BY data_referencia ASC, id ASC
+        """,
+        parametros,
+    )
+    return [_mapear_apc_periodo(row) for row in cursor.fetchall()]
+
+
+def listar_anos_letivos_apc():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT DISTINCT ano_letivo
+        FROM apc_periodos
+        ORDER BY ano_letivo ASC
+        """
+    )
+    anos = [int(row[0]) for row in cursor.fetchall() if int(row[0] or 0) > 0]
+    conn.close()
+    return anos
+
+
+def listar_apc_periodos(
+    *,
+    ano_letivo: int | None = None,
+    data_inicio: str | None = None,
+    data_fim: str | None = None,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    filtros = []
+    params = []
+
+    if ano_letivo is not None:
+        filtros.append("ano_letivo = ?")
+        params.append(int(ano_letivo))
+    if str(data_inicio or "").strip():
+        filtros.append("data_referencia >= ?")
+        params.append(str(data_inicio).strip())
+    if str(data_fim or "").strip():
+        filtros.append("data_referencia <= ?")
+        params.append(str(data_fim).strip())
+
+    itens = _consultar_apc_periodos(cursor, filtros_sql=filtros, params=params)
+    conn.close()
+    return itens
+
+
+def buscar_apc_periodo_por_id(periodo_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    itens = _consultar_apc_periodos(
+        cursor,
+        filtros_sql=["id = ?"],
+        params=[int(periodo_id)],
+    )
+    conn.close()
+    return itens[0] if itens else None
+
+
+def criar_apc_periodo(
+    *,
+    ano_letivo: int,
+    data_referencia: str,
+    prazo_envio: str,
+    titulo: str,
+    observacao: str,
+    criado_por_usuario_id: int,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO apc_periodos (
+            ano_letivo,
+            data_referencia,
+            prazo_envio,
+            titulo,
+            observacao,
+            criado_por_usuario_id,
+            criado_em,
+            atualizado_em
+        )
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        """,
+        (
+            int(ano_letivo),
+            str(data_referencia).strip(),
+            str(prazo_envio).strip(),
+            str(titulo or "").strip(),
+            str(observacao or "").strip(),
+            int(criado_por_usuario_id),
+        ),
+    )
+    periodo_id = int(cursor.lastrowid)
+    conn.commit()
+    conn.close()
+    return buscar_apc_periodo_por_id(periodo_id)
+
+
+def atualizar_apc_periodo(
+    *,
+    periodo_id: int,
+    ano_letivo: int,
+    data_referencia: str,
+    prazo_envio: str,
+    titulo: str,
+    observacao: str,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE apc_periodos
+        SET ano_letivo = ?,
+            data_referencia = ?,
+            prazo_envio = ?,
+            titulo = ?,
+            observacao = ?,
+            atualizado_em = datetime('now')
+        WHERE id = ?
+        """,
+        (
+            int(ano_letivo),
+            str(data_referencia).strip(),
+            str(prazo_envio).strip(),
+            str(titulo or "").strip(),
+            str(observacao or "").strip(),
+            int(periodo_id),
+        ),
+    )
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    if not alterado:
+        return None
+    return buscar_apc_periodo_por_id(periodo_id)
+
+
+def excluir_apc_periodo(periodo_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        DELETE FROM apc_periodos
+        WHERE id = ?
+        """,
+        (int(periodo_id),),
+    )
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def _mapear_apc_envio(row) -> dict:
+    return {
+        "id": int(row["id"]),
+        "periodo_id": int(row["periodo_id"] or 0),
+        "professor_id": int(row["professor_usuario_id"] or 0),
+        "arquivo_nome_original": str(row["arquivo_nome_original"] or "").strip(),
+        "arquivo_path": str(row["arquivo_path"] or "").strip(),
+        "arquivo_tamanho": int(row["arquivo_tamanho"] or 0),
+        "arquivo_tipo": str(row["arquivo_tipo"] or "").strip(),
+        "enviado_em": str(row["enviado_em"] or "").strip(),
+        "atualizado_em": str(row["atualizado_em"] or "").strip(),
+        "professor_nome": str(row["professor_nome"] or "").strip(),
+        "professor_email": str(row["professor_email"] or "").strip(),
+    }
+
+
+def _consultar_apc_envios(cursor, *, filtros_sql=None, params=None):
+    where = list(filtros_sql or [])
+    parametros = list(params or [])
+    clausula_where = f"WHERE {' AND '.join(where)}" if where else ""
+
+    cursor.execute(
+        f"""
+        SELECT
+            ae.id,
+            ae.periodo_id,
+            ae.professor_usuario_id,
+            ae.arquivo_nome_original,
+            ae.arquivo_path,
+            ae.arquivo_tamanho,
+            ae.arquivo_tipo,
+            ae.enviado_em,
+            ae.atualizado_em,
+            COALESCE(u.nome, '') AS professor_nome,
+            COALESCE(u.email, '') AS professor_email
+        FROM apc_envios ae
+        INNER JOIN usuarios u ON u.id = ae.professor_usuario_id
+        {clausula_where}
+        ORDER BY ae.enviado_em DESC, ae.id DESC
+        """,
+        parametros,
+    )
+    return [_mapear_apc_envio(row) for row in cursor.fetchall()]
+
+
+def listar_apc_envios(
+    *,
+    periodo_id: int | None = None,
+    professor_id: int | None = None,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    filtros = []
+    params = []
+
+    if periodo_id is not None:
+        filtros.append("ae.periodo_id = ?")
+        params.append(int(periodo_id))
+    if professor_id is not None:
+        filtros.append("ae.professor_usuario_id = ?")
+        params.append(int(professor_id))
+
+    itens = _consultar_apc_envios(cursor, filtros_sql=filtros, params=params)
+    conn.close()
+    return itens
+
+
+def buscar_apc_envio_por_id(envio_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    itens = _consultar_apc_envios(
+        cursor,
+        filtros_sql=["ae.id = ?"],
+        params=[int(envio_id)],
+    )
+    conn.close()
+    return itens[0] if itens else None
+
+
+def buscar_apc_envio_por_periodo_e_professor(periodo_id: int, professor_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    itens = _consultar_apc_envios(
+        cursor,
+        filtros_sql=["ae.periodo_id = ?", "ae.professor_usuario_id = ?"],
+        params=[int(periodo_id), int(professor_id)],
+    )
+    conn.close()
+    return itens[0] if itens else None
+
+
+def criar_apc_envio(
+    *,
+    periodo_id: int,
+    professor_usuario_id: int,
+    arquivo_nome_original: str,
+    arquivo_path: str,
+    arquivo_tamanho: int,
+    arquivo_tipo: str,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO apc_envios (
+            periodo_id,
+            professor_usuario_id,
+            arquivo_nome_original,
+            arquivo_path,
+            arquivo_tamanho,
+            arquivo_tipo,
+            enviado_em,
+            atualizado_em
+        )
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        """,
+        (
+            int(periodo_id),
+            int(professor_usuario_id),
+            str(arquivo_nome_original or "").strip(),
+            str(arquivo_path or "").strip(),
+            int(arquivo_tamanho or 0),
+            str(arquivo_tipo or "").strip(),
+        ),
+    )
+    envio_id = int(cursor.lastrowid)
+    conn.commit()
+    conn.close()
+    return buscar_apc_envio_por_id(envio_id)
+
+
+def atualizar_apc_envio(
+    *,
+    envio_id: int,
+    arquivo_nome_original: str,
+    arquivo_path: str,
+    arquivo_tamanho: int,
+    arquivo_tipo: str,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE apc_envios
+        SET arquivo_nome_original = ?,
+            arquivo_path = ?,
+            arquivo_tamanho = ?,
+            arquivo_tipo = ?,
+            enviado_em = datetime('now'),
+            atualizado_em = datetime('now')
+        WHERE id = ?
+        """,
+        (
+            str(arquivo_nome_original or "").strip(),
+            str(arquivo_path or "").strip(),
+            int(arquivo_tamanho or 0),
+            str(arquivo_tipo or "").strip(),
+            int(envio_id),
+        ),
+    )
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    if not alterado:
+        return None
+    return buscar_apc_envio_por_id(envio_id)
+
+
 def listar_turmas(incluir_inativas: bool = False):
     conn = get_connection()
     cursor = conn.cursor()

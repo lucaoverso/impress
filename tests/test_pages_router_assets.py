@@ -94,6 +94,18 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn("css/style.css?v=build-horario-789", html)
         self.assertIn("js/horario_escolar.js?v=build-horario-789", html)
 
+    def test_apc_injeta_asset_version_e_no_store(self):
+        config, pages_router = _reload_modulos("build-apc-321")
+        app = FastAPI()
+        app.mount("/static", StaticFiles(directory=str(config.STATIC_DIR)), name="static")
+
+        resposta = pages_router.apc_page(_criar_request(app, "/apc"))
+        html = resposta.body.decode("utf-8")
+
+        self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
+        self.assertIn("css/style.css?v=build-apc-321", html)
+        self.assertIn("js/apc.js?v=build-apc-321", html)
+
 
 if __name__ == "__main__":
     unittest.main()

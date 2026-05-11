@@ -132,3 +132,13 @@ def horario_escolar_page(request: Request):
         {"asset_version": ASSET_VERSION},
         cache_control="no-store",
     )
+
+
+@router.get("/apc")
+def apc_page(request: Request):
+    return render_template_response(
+        request,
+        "apc.html",
+        {"asset_version": ASSET_VERSION},
+        cache_control="no-store",
+    )
