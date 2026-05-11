@@ -47,6 +47,7 @@ def _resolver_radius_internal_secret() -> str:
 
 RADIUS_INTERNAL_SECRET = _resolver_radius_internal_secret()
 templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates.env.policies["json.dumps_kwargs"] = {"ensure_ascii": False}
 
 
 def render_template_response(
@@ -61,6 +62,7 @@ def render_template_response(
         context.update(extra_context)
 
     response = templates.TemplateResponse(request, template_name, context)
+    response.charset = "utf-8"
     if cache_control:
         response.headers["Cache-Control"] = cache_control
     return response

@@ -140,10 +140,10 @@ function renderFilaVazia(texto) {
 async function carregarUsuario() {
     const res = await fetchComAuth("/me", { headers });
     if (!res.ok) {
-        throw new Error("Nao foi possivel carregar o usuario.");
+        throw new Error("Não foi possível carregar o usuário.");
     }
 
-    usuarioAtual = await lerJsonResposta(res, "Nao foi possivel carregar o usuario.");
+    usuarioAtual = await lerJsonResposta(res, "Não foi possível carregar o usuário.");
     atualizarTitulosContextoImpressao();
 }
 
@@ -166,12 +166,12 @@ async function carregarProfessoresImpressaoAdmin() {
     grupo.style.display = "block";
     const res = await fetchComAuth("/agendamento/professores", { headers });
     if (!res.ok) {
-        throw new Error("Nao foi possivel carregar os professores para impressao.");
+        throw new Error("Não foi possível carregar os professores para impressão.");
     }
 
     professoresImpressao = await lerJsonResposta(
         res,
-        "Nao foi possivel carregar os professores para impressao."
+        "Não foi possível carregar os professores para impressão."
     );
     select.innerHTML = "";
 
@@ -285,7 +285,7 @@ async function carregarTurmasImpressao() {
         throw new Error("Não foi possível carregar as turmas para impressão.");
     }
 
-    const data = await lerJsonResposta(res, "Nao foi possivel carregar as turmas para impressao.");
+    const data = await lerJsonResposta(res, "Não foi possível carregar as turmas para impressão.");
     turmasImpressao = Array.isArray(data) ? data : [];
 
     select.innerHTML = "";
@@ -369,7 +369,7 @@ function sincronizarInputArquivo(file) {
             input.files = transfer.files;
         }
     } catch (_err) {
-        // Alguns navegadores nao permitem atribuir FileList manualmente.
+        // Alguns navegadores não permitem atribuir FileList manualmente.
     }
 }
 
@@ -471,7 +471,7 @@ async function selecionarArquivoParaImpressao(file, mensagemSucesso = "") {
 
     const arquivo = normalizarArquivoTransferido(file, "arquivo-colado");
     if (!arquivoSuportado(arquivo)) {
-        el("msg").innerText = "Formato nao suportado. Use PDF, DOCX, DOC, PNG, JPG ou JPEG.";
+        el("msg").innerText = "Formato não suportado. Use PDF, DOCX, DOC, PNG, JPG ou JPEG.";
         return false;
     }
 
@@ -956,7 +956,7 @@ async function enviarImpressao() {
 
         const data = await lerJsonResposta(
             res,
-            "Nao foi possivel interpretar a resposta do servidor ao enviar a impressao."
+            "Não foi possível interpretar a resposta do servidor ao enviar a impressão."
         );
         if (!res.ok) {
             el("msg").innerText = data.detail || "Não foi possível enviar a impressão.";
@@ -985,10 +985,10 @@ async function carregarCota() {
 
     const res = await fetchComAuth(montarUrlConsultaImpressao("/minha-cota"), { headers });
     if (!res.ok) {
-        throw new Error(await obterMensagemErroResposta(res, "Nao foi possivel carregar a cota."));
+        throw new Error(await obterMensagemErroResposta(res, "Não foi possível carregar a cota."));
     }
 
-    const data = await lerJsonResposta(res, "Nao foi possivel carregar a cota.");
+    const data = await lerJsonResposta(res, "Não foi possível carregar a cota.");
     if (data.ilimitada) {
         el("cota").innerText = "Cota ilimitada";
         return;
@@ -1016,7 +1016,7 @@ async function cancelarJobProfessor(jobId, botaoCancelar) {
             method: "POST",
             headers
         });
-        const data = await lerJsonResposta(res, "Nao foi possivel cancelar o pedido de impressao.");
+        const data = await lerJsonResposta(res, "Não foi possível cancelar o pedido de impressão.");
 
         if (!res.ok) {
             el("msg").innerText = data.detail || "Não foi possível cancelar este job.";
@@ -1271,10 +1271,10 @@ async function carregarFila() {
 
     const res = await fetchComAuth(montarUrlConsultaImpressao("/meus-jobs"), { headers });
     if (!res.ok) {
-        throw new Error(await obterMensagemErroResposta(res, "Nao foi possivel carregar os pedidos de impressao."));
+        throw new Error(await obterMensagemErroResposta(res, "Não foi possível carregar os pedidos de impressão."));
     }
 
-    const jobs = await lerJsonResposta(res, "Nao foi possivel carregar os pedidos de impressao.");
+    const jobs = await lerJsonResposta(res, "Não foi possível carregar os pedidos de impressão.");
 
     const ul = el("lista-jobs");
     ul.innerHTML = "";

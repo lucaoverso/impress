@@ -125,7 +125,7 @@ class HorarioEscolarRouterTest(unittest.TestCase):
             )
             self.assertEqual(
                 resposta["mensagem"],
-                "Registro do horario escolar removido com sucesso.",
+                "Registro do horário escolar removido com sucesso.",
             )
             self.assertEqual(database.listar_horarios_escolares(ano_letivo=2031), [])
 

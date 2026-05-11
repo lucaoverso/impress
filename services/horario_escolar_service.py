@@ -52,7 +52,7 @@ def normalizar_dia_semana(valor: str) -> str:
     chave = str(valor or "").strip().upper()
     normalizado = _ALIASES_DIA_SEMANA.get(chave)
     if not normalizado:
-        raise ValueError("Dia da semana invalido.")
+        raise ValueError("Dia da semana inválido.")
     return normalizado
 
 
@@ -68,9 +68,9 @@ def validar_ano_letivo(valor: int) -> int:
     try:
         ano = int(valor)
     except (TypeError, ValueError) as exc:
-        raise ValueError("Ano letivo invalido.") from exc
+        raise ValueError("Ano letivo inválido.") from exc
     if ano < 2000 or ano > 2100:
-        raise ValueError("Ano letivo invalido.")
+        raise ValueError("Ano letivo inválido.")
     return ano
 
 
@@ -78,16 +78,16 @@ def validar_aula_numero(valor: int, turno: str = "") -> int:
     try:
         aula = int(valor)
     except (TypeError, ValueError) as exc:
-        raise ValueError("Aula invalida.") from exc
+        raise ValueError("Aula inválida.") from exc
     if aula <= 0:
-        raise ValueError("Aula invalida.")
+        raise ValueError("Aula inválida.")
 
     turno_norm = str(turno or "").strip().upper()
     maximo_turno = int((TURNOS_CONFIG.get(turno_norm) or {}).get("aulas") or 0)
     if maximo_turno and aula > maximo_turno:
         raise ValueError(f"A aula informada excede o limite do turno selecionado ({maximo_turno}).")
     if aula > 12:
-        raise ValueError("Aula invalida.")
+        raise ValueError("Aula inválida.")
     return aula
 
 
@@ -211,7 +211,7 @@ def dia_semana_por_data(data_iso: str) -> str:
     try:
         data = datetime.strptime(str(data_iso or "").strip(), "%Y-%m-%d").date()
     except ValueError as exc:
-        raise ValueError("Data invalida. Use o formato YYYY-MM-DD.") from exc
+        raise ValueError("Data inválida. Use o formato YYYY-MM-DD.") from exc
     return _DIAS_SEMANA_POR_WEEKDAY[data.weekday()]
 
 

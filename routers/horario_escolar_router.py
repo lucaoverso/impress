@@ -54,7 +54,7 @@ router = APIRouter()
 def _usuario_professor_ativo(professor_id: int) -> dict:
     professor = buscar_usuario_por_id(int(professor_id))
     if not professor or normalizar_cargo_usuario(professor) != CARGO_PROFESSOR:
-        raise HTTPException(404, "Professor nao encontrado.")
+        raise HTTPException(404, "Professor não encontrado.")
     if not bool(int(professor.get("ativo", 1) or 0)):
         raise HTTPException(400, "Professor selecionado esta inativo.")
     return professor
@@ -80,24 +80,24 @@ def _serializar_contexto_professores(professores: list[dict]) -> list[dict]:
 def _validar_data_iso(valor: str, campo: str = "Data") -> str:
     texto = str(valor or "").strip()
     if not texto:
-        raise HTTPException(400, f"{campo} invalida. Use o formato YYYY-MM-DD.")
+        raise HTTPException(400, f"{campo} inválida. Use o formato YYYY-MM-DD.")
     try:
         return datetime.strptime(texto, "%Y-%m-%d").date().isoformat()
     except ValueError as exc:
-        raise HTTPException(400, f"{campo} invalida. Use o formato YYYY-MM-DD.") from exc
+        raise HTTPException(400, f"{campo} inválida. Use o formato YYYY-MM-DD.") from exc
 
 
 def _traduzir_erro_integridade(exc: IntegrityError) -> str:
     texto = str(exc).lower()
     if "idx_horarios_escolares_professor_slot" in texto:
-        return "O professor ja possui aula cadastrada nesse dia e horario."
+        return "O professor já possui aula cadastrada nesse dia e horário."
     if "idx_horarios_escolares_turma_slot" in texto:
-        return "Ja existe aula cadastrada para essa turma nesse dia e horario."
+        return "Já existe aula cadastrada para essa turma nesse dia e horário."
     if "professor_usuario_id" in texto and "dia_semana" in texto and "aula_numero" in texto:
-        return "O professor ja possui aula cadastrada nesse dia e horario."
+        return "O professor já possui aula cadastrada nesse dia e horário."
     if "turma_id" in texto and "dia_semana" in texto and "aula_numero" in texto:
-        return "Ja existe aula cadastrada para essa turma nesse dia e horario."
-    return "Conflito ao salvar o horario escolar."
+        return "Já existe aula cadastrada para essa turma nesse dia e horário."
+    return "Conflito ao salvar o horário escolar."
 
 
 def _validar_vinculo_docente(professor: dict, turma: dict, disciplina: dict):
@@ -141,7 +141,7 @@ def _validar_vinculo_docente(professor: dict, turma: dict, disciplina: dict):
 
     raise HTTPException(
         400,
-        "O professor selecionado nao possui vinculo com a turma e disciplina informadas.",
+        "O professor selecionado não possui vínculo com a turma e disciplina informadas.",
     )
 
 
@@ -155,11 +155,11 @@ def _validar_payload_horario(
 
     turma = buscar_turma_por_id(int(payload.turma_id))
     if not turma:
-        raise HTTPException(404, "Turma nao encontrada.")
+        raise HTTPException(404, "Turma não encontrada.")
 
     disciplina = buscar_disciplina_por_id(int(payload.disciplina_id))
     if not disciplina:
-        raise HTTPException(404, "Disciplina nao encontrada.")
+        raise HTTPException(404, "Disciplina não encontrada.")
 
     professor = _usuario_professor_ativo(int(payload.professor_id))
 
@@ -253,7 +253,7 @@ def obter_matriz_horario_turma_api(
 
     turma = buscar_turma_por_id(int(turma_id))
     if not turma:
-        raise HTTPException(404, "Turma nao encontrada.")
+        raise HTTPException(404, "Turma não encontrada.")
 
     registros = ordenar_horarios_escolares(
         listar_horarios_escolares(
@@ -317,7 +317,7 @@ def atualizar_horario_escolar_api(
 ):
     exigir_gestor(usuario)
     if not buscar_horario_escolar_por_id(registro_id):
-        raise HTTPException(404, "Registro do horario escolar nao encontrado.")
+        raise HTTPException(404, "Registro do horário escolar não encontrado.")
     dados = _validar_payload_horario(payload)
     try:
         item = atualizar_horario_escolar(
@@ -332,7 +332,7 @@ def atualizar_horario_escolar_api(
     except IntegrityError as exc:
         raise HTTPException(409, _traduzir_erro_integridade(exc)) from exc
     if not item:
-        raise HTTPException(404, "Registro do horario escolar nao encontrado.")
+        raise HTTPException(404, "Registro do horário escolar não encontrado.")
     return enriquecer_horario_escolar(item)
 
 
@@ -343,8 +343,8 @@ def excluir_horario_escolar_api(
 ):
     exigir_gestor(usuario)
     if not excluir_horario_escolar(registro_id):
-        raise HTTPException(404, "Registro do horario escolar nao encontrado.")
-    return {"mensagem": "Registro do horario escolar removido com sucesso."}
+        raise HTTPException(404, "Registro do horário escolar não encontrado.")
+    return {"mensagem": "Registro do horário escolar removido com sucesso."}
 
 
 @router.get("/horario-escolar/professores-do-dia")

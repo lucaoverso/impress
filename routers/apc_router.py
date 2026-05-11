@@ -74,10 +74,10 @@ def _resolver_caminho_envio_seguro(caminho_arquivo: str) -> Path:
     try:
         caminho.relative_to(caminho_base)
     except ValueError as exc:
-        raise HTTPException(409, "O arquivo vinculado a este envio esta fora do diretorio APC.") from exc
+        raise HTTPException(409, "O arquivo vinculado a este envio está fora do diretório APC.") from exc
 
     if not caminho.exists() or not caminho.is_file():
-        raise HTTPException(404, "Arquivo do envio nao encontrado.")
+        raise HTTPException(404, "Arquivo do envio não encontrado.")
     return caminho
 
 
@@ -85,10 +85,10 @@ def _dados_periodo_payload(payload: ApcPeriodoIn | ApcPeriodoUpdateIn) -> dict:
     try:
         ano_letivo = int(payload.ano_letivo)
     except (TypeError, ValueError) as exc:
-        raise HTTPException(400, "Ano letivo invalido.") from exc
+        raise HTTPException(400, "Ano letivo inválido.") from exc
 
     if ano_letivo < 2000 or ano_letivo > 2100:
-        raise HTTPException(400, "Ano letivo invalido.")
+        raise HTTPException(400, "Ano letivo inválido.")
 
     try:
         data_referencia = normalizar_data_apc(payload.data_referencia)
@@ -212,7 +212,7 @@ def listar_calendario_apc_api(
 def obter_periodo_apc_api(periodo_id: int, usuario=Depends(get_usuario_logado)):
     periodo = buscar_apc_periodo_por_id(periodo_id)
     if not periodo:
-        raise HTTPException(404, "Data de APC nao encontrada.")
+        raise HTTPException(404, "Data de APC não encontrada.")
 
     horarios = _obter_horarios_periodo(periodo)
     if _pode_gerir_apc(usuario):
@@ -229,7 +229,7 @@ def obter_periodo_apc_api(periodo_id: int, usuario=Depends(get_usuario_logado)):
         buscar_apc_envio_por_periodo_e_professor(periodo_id, int(usuario["id"])),
     )
     if not painel:
-        raise HTTPException(403, "Nenhuma APC prevista para voce nesta data.")
+        raise HTTPException(403, "Nenhuma APC prevista para você nesta data.")
     return painel
 
 
@@ -247,7 +247,7 @@ def criar_periodo_apc_api(payload: ApcPeriodoIn, usuario=Depends(get_usuario_log
             criado_por_usuario_id=int(usuario["id"]),
         )
     except sqlite3.IntegrityError as exc:
-        raise HTTPException(409, "Ja existe uma APC cadastrada para essa data no ano letivo.") from exc
+        raise HTTPException(409, "Já existe uma APC cadastrada para essa data no ano letivo.") from exc
     return enriquecer_periodo_apc(periodo)
 
 
@@ -259,7 +259,7 @@ def atualizar_periodo_apc_api(
 ):
     _exigir_gestao_apc(usuario)
     if not buscar_apc_periodo_por_id(periodo_id):
-        raise HTTPException(404, "Data de APC nao encontrada.")
+        raise HTTPException(404, "Data de APC não encontrada.")
 
     dados = _dados_periodo_payload(payload)
     try:
@@ -272,10 +272,10 @@ def atualizar_periodo_apc_api(
             observacao=dados["observacao"],
         )
     except sqlite3.IntegrityError as exc:
-        raise HTTPException(409, "Ja existe uma APC cadastrada para essa data no ano letivo.") from exc
+        raise HTTPException(409, "Já existe uma APC cadastrada para essa data no ano letivo.") from exc
 
     if not periodo:
-        raise HTTPException(404, "Data de APC nao encontrada.")
+        raise HTTPException(404, "Data de APC não encontrada.")
     return enriquecer_periodo_apc(periodo)
 
 
@@ -283,16 +283,16 @@ def atualizar_periodo_apc_api(
 def excluir_periodo_apc_api(periodo_id: int, usuario=Depends(get_usuario_logado)):
     _exigir_gestao_apc(usuario)
     if not buscar_apc_periodo_por_id(periodo_id):
-        raise HTTPException(404, "Data de APC nao encontrada.")
+        raise HTTPException(404, "Data de APC não encontrada.")
     try:
         removido = excluir_apc_periodo(periodo_id)
     except sqlite3.IntegrityError as exc:
         raise HTTPException(
             409,
-            "Nao e possivel excluir esta data porque ja existem arquivos enviados.",
+            "Não é possível excluir esta data porque já existem arquivos enviados.",
         ) from exc
     if not removido:
-        raise HTTPException(404, "Data de APC nao encontrada.")
+        raise HTTPException(404, "Data de APC não encontrada.")
     return {"mensagem": "Data de APC removida com sucesso."}
 
 
@@ -307,22 +307,22 @@ def enviar_arquivo_apc_api(
 
     periodo = buscar_apc_periodo_por_id(periodo_id)
     if not periodo:
-        raise HTTPException(404, "Data de APC nao encontrada.")
+        raise HTTPException(404, "Data de APC não encontrada.")
     periodo_norm = enriquecer_periodo_apc(periodo)
 
     if not periodo_apc_aberto(periodo_norm):
-        raise HTTPException(409, "O prazo de envio desta APC ja foi encerrado.")
+        raise HTTPException(409, "O prazo de envio desta APC já foi encerrado.")
 
     if not arquivo or not arquivo.filename:
-        raise HTTPException(400, "Arquivo nao enviado.")
+        raise HTTPException(400, "Arquivo não enviado.")
     if not arquivo_suportado(arquivo.filename):
-        raise HTTPException(400, f"Formato nao suportado. Envie {FORMATOS_UPLOAD_DESCRICAO}.")
+        raise HTTPException(400, f"Formato não suportado. Envie {FORMATOS_UPLOAD_DESCRICAO}.")
 
     horarios = _obter_horarios_periodo(periodo_norm, professor_id=int(usuario["id"]))
     envio_existente = buscar_apc_envio_por_periodo_e_professor(periodo_id, int(usuario["id"]))
     painel = montar_painel_professor_apc(periodo_norm, int(usuario["id"]), horarios, envio_existente)
     if not painel:
-        raise HTTPException(403, "Nao ha APC prevista para voce nesta data.")
+        raise HTTPException(403, "Não há APC prevista para você nesta data.")
 
     conteudo = arquivo.file.read()
     if not conteudo:
@@ -376,11 +376,11 @@ def enviar_arquivo_apc_api(
 def baixar_arquivo_apc_api(envio_id: int, usuario=Depends(get_usuario_logado)):
     envio = buscar_apc_envio_por_id(envio_id)
     if not envio:
-        raise HTTPException(404, "Envio nao encontrado.")
+        raise HTTPException(404, "Envio não encontrado.")
 
     professor_id = int(envio.get("professor_id") or 0)
     if not _pode_gerir_apc(usuario) and int(usuario["id"]) != professor_id:
-        raise HTTPException(403, "Voce nao pode acessar este arquivo.")
+        raise HTTPException(403, "Você não pode acessar este arquivo.")
 
     caminho = _resolver_caminho_envio_seguro(envio.get("arquivo_path"))
     media_type = str(envio.get("arquivo_tipo") or "").strip() or "application/octet-stream"

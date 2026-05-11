@@ -91,8 +91,10 @@ class PagesRouterAssetsTest(unittest.TestCase):
         html = resposta.body.decode("utf-8")
 
         self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
+        self.assertIn("charset=utf-8", resposta.headers.get("content-type", "").lower())
         self.assertIn("css/style.css?v=build-horario-789", html)
         self.assertIn("js/horario_escolar.js?v=build-horario-789", html)
+        self.assertIn("Horário escolar", html)
 
     def test_apc_injeta_asset_version_e_no_store(self):
         config, pages_router = _reload_modulos("build-apc-321")
@@ -103,8 +105,10 @@ class PagesRouterAssetsTest(unittest.TestCase):
         html = resposta.body.decode("utf-8")
 
         self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
+        self.assertIn("charset=utf-8", resposta.headers.get("content-type", "").lower())
         self.assertIn("css/style.css?v=build-apc-321", html)
         self.assertIn("js/apc.js?v=build-apc-321", html)
+        self.assertIn("Voltar aos serviços", html)
 
 
 if __name__ == "__main__":

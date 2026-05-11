@@ -13,10 +13,10 @@ const headersApc = criarHeadersAuth(tokenApc);
 const headersJsonApc = criarHeadersJsonAuth(tokenApc);
 
 const nomesMesesApc = [
-    "Janeiro", "Fevereiro", "MarÃ§o", "Abril", "Maio", "Junho",
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
 ];
-const nomesDiasSemanaApc = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "SÃ¡b"];
+const nomesDiasSemanaApc = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 
 let usuarioApc = null;
 let contextoApc = null;
@@ -63,14 +63,14 @@ function atualizarResumoMesApc() {
             0
         );
         el("apcResumoMes").innerText =
-            `${totalDatas} data(s) de APC neste mÃªs | ${totalPendencias} pendÃªncia(s) no total.`;
+            `${totalDatas} data(s) de APC neste mês | ${totalPendencias} pendência(s) no total.`;
         return;
     }
 
     const totalDatas = periodos.length;
     const enviados = periodos.filter((item) => Boolean(item.enviado)).length;
     el("apcResumoMes").innerText =
-        `${totalDatas} APC(s) prevista(s) para vocÃª neste mÃªs | ${enviados} enviada(s).`;
+        `${totalDatas} APC(s) prevista(s) para você neste mês | ${enviados} enviada(s).`;
 }
 
 function aplicarVisibilidadeApc() {
@@ -113,7 +113,7 @@ function renderListaGestaoApc(detalhe) {
     lista.innerHTML = "";
 
     if (!detalhe || !Array.isArray(detalhe.itens) || detalhe.itens.length === 0) {
-        lista.innerHTML = '<div class="booking-empty">Nenhum professor elegÃ­vel nesta data segundo o horÃ¡rio escolar.</div>';
+        lista.innerHTML = '<div class="booking-empty">Nenhum professor elegível nesta data segundo o horário escolar.</div>';
         return;
     }
 
@@ -145,7 +145,7 @@ function renderListaGestaoApc(detalhe) {
         horarios.className = "apc-horarios-lista";
         (item.horarios || []).forEach((horario) => {
             const li = document.createElement("li");
-            li.innerText = `${horario.aula_numero}Âª aula - ${horario.turma_nome} - ${horario.disciplina_nome}`;
+            li.innerText = `${horario.aula_numero}ª aula - ${horario.turma_nome} - ${horario.disciplina_nome}`;
             horarios.appendChild(li);
         });
         card.appendChild(horarios);
@@ -173,7 +173,7 @@ function renderPainelProfessorApc(detalhe) {
     envioAtual.innerHTML = "";
 
     if (!detalhe || !detalhe.periodo) {
-        resumo.innerHTML = '<div class="booking-empty">Selecione uma data com APC prevista para vocÃª.</div>';
+        resumo.innerHTML = '<div class="booking-empty">Selecione uma data com APC prevista para você.</div>';
         form.hidden = true;
         return;
     }
@@ -185,7 +185,7 @@ function renderPainelProfessorApc(detalhe) {
         <div class="apc-professor-topo">
             <div>
                 <h4>${periodo.titulo}</h4>
-                <p>${paraDataBr(periodo.data_referencia)} | Prazo atÃ© ${periodo.prazo_envio_input.replace("T", " ")}</p>
+                <p>${paraDataBr(periodo.data_referencia)} | Prazo até ${periodo.prazo_envio_input.replace("T", " ")}</p>
             </div>
         </div>
     `;
@@ -208,7 +208,7 @@ function renderPainelProfessorApc(detalhe) {
     horarios.className = "apc-horarios-lista";
     (detalhe.horarios || []).forEach((horario) => {
         const li = document.createElement("li");
-        li.innerText = `${horario.aula_numero}Âª aula - ${horario.turma_nome} - ${horario.disciplina_nome}`;
+        li.innerText = `${horario.aula_numero}ª aula - ${horario.turma_nome} - ${horario.disciplina_nome}`;
         horarios.appendChild(li);
     });
     bloco.appendChild(horarios);
@@ -240,7 +240,7 @@ function renderPainelSelecionadoVazio() {
     el("apcSubtituloPainel").innerText = `Nenhuma APC cadastrada em ${paraDataBr(dataSelecionadaApc)}.`;
     el("apcResumoPainel").innerHTML = "";
     el("apcListaPainel").innerHTML =
-        '<div class="booking-empty">Cadastre a data ao lado para comeÃ§ar a receber os anexos dos professores.</div>';
+        '<div class="booking-empty">Cadastre a data ao lado para começar a receber os anexos dos professores.</div>';
     preencherFormularioPeriodo(null);
     renderPainelProfessorApc(null);
 }
@@ -259,13 +259,13 @@ async function carregarDetalheSelecionadoApc() {
     periodoSelecionadoApc = periodo;
 
     el("apcTituloPainel").innerText = `${periodo.titulo} - ${paraDataBr(periodo.data_referencia)}`;
-    el("apcSubtituloPainel").innerText = `${periodo.dia_semana_nome} | Prazo atÃ© ${periodo.prazo_envio_input.replace("T", " ")}`;
+    el("apcSubtituloPainel").innerText = `${periodo.dia_semana_nome} | Prazo até ${periodo.prazo_envio_input.replace("T", " ")}`;
 
     if (usuarioApc?.pode_gerir) {
         el("apcResumoPainel").innerHTML = "";
         el("apcResumoPainel").appendChild(
             renderResumoPainelCards([
-                { label: "ElegÃ­veis", valor: String(detalhe.total_elegiveis || 0) },
+                { label: "Elegíveis", valor: String(detalhe.total_elegiveis || 0) },
                 { label: "Enviados", valor: String(detalhe.total_enviados || 0) },
                 { label: "Pendentes", valor: String(detalhe.total_pendentes || 0) },
             ])
@@ -275,7 +275,7 @@ async function carregarDetalheSelecionadoApc() {
     } else {
         el("apcResumoPainel").innerHTML = "";
         el("apcListaPainel").innerHTML =
-            '<div class="booking-empty">VocÃª estÃ¡ vendo apenas as APCs previstas para o seu horÃ¡rio.</div>';
+            '<div class="booking-empty">Você está vendo apenas as APCs previstas para o seu horário.</div>';
     }
 
     if (usuarioApc?.eh_professor) {
@@ -393,7 +393,7 @@ async function salvarPeriodoApc(event) {
         dataSelecionadaApc = payload.data_referencia;
         await carregarCalendarioApc();
     } catch (err) {
-        setMensagemApc(err.message || "NÃ£o foi possÃ­vel salvar a data da APC.", true);
+        setMensagemApc(err.message || "Não foi possível salvar a data da APC.", true);
     }
 }
 
@@ -410,7 +410,7 @@ async function excluirPeriodoApc() {
         periodoSelecionadoApc = null;
         await carregarCalendarioApc();
     } catch (err) {
-        setMensagemApc(err.message || "NÃ£o foi possÃ­vel excluir a data da APC.", true);
+        setMensagemApc(err.message || "Não foi possível excluir a data da APC.", true);
     }
 }
 
@@ -437,7 +437,7 @@ async function enviarArquivoApc(event) {
         setMensagemApc("Arquivo da APC enviado com sucesso.");
         await carregarCalendarioApc();
     } catch (err) {
-        setMensagemApc(err.message || "NÃ£o foi possÃ­vel enviar o arquivo da APC.", true);
+        setMensagemApc(err.message || "Não foi possível enviar o arquivo da APC.", true);
     }
 }
 

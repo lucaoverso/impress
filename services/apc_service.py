@@ -15,7 +15,7 @@ def validar_mes_referencia(valor: str) -> str:
     try:
         return datetime.strptime(str(valor or "").strip(), "%Y-%m").strftime("%Y-%m")
     except ValueError as exc:
-        raise ValueError("Mes invalido. Use o formato YYYY-MM.") from exc
+        raise ValueError("Mês inválido. Use o formato YYYY-MM.") from exc
 
 
 def intervalo_mes_referencia(valor: str) -> tuple[str, str]:
@@ -33,7 +33,7 @@ def normalizar_data_apc(valor: str) -> str:
     try:
         return datetime.strptime(str(valor or "").strip(), "%Y-%m-%d").date().isoformat()
     except ValueError as exc:
-        raise ValueError("Data invalida. Use o formato YYYY-MM-DD.") from exc
+        raise ValueError("Data inválida. Use o formato YYYY-MM-DD.") from exc
 
 
 def _parse_datetime_local(valor: str) -> datetime:
@@ -49,7 +49,7 @@ def _parse_datetime_local(valor: str) -> datetime:
             return datetime.strptime(texto, formato)
         except ValueError:
             continue
-    raise ValueError("Prazo invalido. Use o formato YYYY-MM-DDTHH:MM.")
+    raise ValueError("Prazo inválido. Use o formato YYYY-MM-DDTHH:MM.")
 
 
 def normalizar_prazo_envio(data_referencia: str, prazo_envio: str = "") -> str:
@@ -60,7 +60,7 @@ def normalizar_prazo_envio(data_referencia: str, prazo_envio: str = "") -> str:
 
     prazo = _parse_datetime_local(texto)
     if prazo.date().isoformat() < data_norm:
-        raise ValueError("O prazo de envio nao pode ser anterior a data da APC.")
+        raise ValueError("O prazo de envio não pode ser anterior à data da APC.")
     return prazo.strftime("%Y-%m-%d %H:%M:%S")
 
 
