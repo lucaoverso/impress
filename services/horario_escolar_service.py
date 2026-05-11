@@ -1,6 +1,8 @@
 from collections import Counter
 from datetime import datetime
 
+from routers.common import FAIXA_GLOBAL_OFFSET_POR_TURNO, TURNOS_CONFIG
+
 DIAS_SEMANA_HORARIO = (
     {"valor": "SEGUNDA", "label": "Segunda-feira"},
     {"valor": "TERCA", "label": "Terca-feira"},
@@ -35,12 +37,6 @@ _ALIASES_DIA_SEMANA = {
     "SEX": "SEXTA",
     "SEXTA": "SEXTA",
     "SEXTA-FEIRA": "SEXTA",
-}
-_AULAS_POR_TURNO = {
-    "MATUTINO": 5,
-    "VESPERTINO": 5,
-    "VESPERTINO_EM": 6,
-    "INTEGRAL": 8,
 }
 DIA_SEMANA_LABELS = {item["valor"]: item["label"] for item in DIAS_SEMANA_HORARIO}
 DIA_SEMANA_ORDEM = {
@@ -87,7 +83,7 @@ def validar_aula_numero(valor: int, turno: str = "") -> int:
         raise ValueError("Aula invalida.")
 
     turno_norm = str(turno or "").strip().upper()
-    maximo_turno = _AULAS_POR_TURNO.get(turno_norm)
+    maximo_turno = int((TURNOS_CONFIG.get(turno_norm) or {}).get("aulas") or 0)
     if maximo_turno and aula > maximo_turno:
         raise ValueError(f"A aula informada excede o limite do turno selecionado ({maximo_turno}).")
     if aula > 12:
@@ -97,19 +93,65 @@ def validar_aula_numero(valor: int, turno: str = "") -> int:
 
 def total_aulas_por_turno(turno: str) -> int:
     turno_norm = str(turno or "").strip().upper()
-    return int(_AULAS_POR_TURNO.get(turno_norm) or 0)
+    return int((TURNOS_CONFIG.get(turno_norm) or {}).get("aulas") or 0)
+
+
+def nome_turno_horario(turno: str) -> str:
+    turno_norm = str(turno or "").strip().upper()
+    return str((TURNOS_CONFIG.get(turno_norm) or {}).get("nome") or turno or "").strip()
+
+
+def faixa_global_por_turno_e_aula(turno: str, aula_numero: int) -> int:
+    turno_norm = str(turno or "").strip().upper()
+    aula = validar_aula_numero(aula_numero, turno_norm)
+    faixa = aula + int(FAIXA_GLOBAL_OFFSET_POR_TURNO.get(turno_norm) or 0)
+    if turno_norm == "INTEGRAL" and aula > 5:
+        faixa += 1
+    return faixa
+
+
+def aula_label_com_faixa(turno: str, aula_numero: int) -> str:
+    faixa = faixa_global_por_turno_e_aula(turno, aula_numero)
+    return f"{int(aula_numero)}a aula (faixa {faixa})"
+
+
+def listar_faixas_turno_horario(turno: str) -> list[dict]:
+    total = total_aulas_por_turno(turno)
+    itens = []
+    for aula_numero in range(1, total + 1):
+        faixa_global = faixa_global_por_turno_e_aula(turno, aula_numero)
+        itens.append(
+            {
+                "aula_numero": aula_numero,
+                "faixa_global": faixa_global,
+                "label": aula_label_com_faixa(turno, aula_numero),
+                "label_curta": f"{aula_numero}a aula",
+            }
+        )
+    return itens
 
 
 def enriquecer_horario_escolar(item: dict) -> dict:
+    turno = str((item or {}).get("turno") or "").strip().upper()
+    aula_numero = int((item or {}).get("aula_numero") or 0)
+    faixa_global = (
+        faixa_global_por_turno_e_aula(turno, aula_numero)
+        if turno and aula_numero > 0
+        else 0
+    )
     return {
         **dict(item or {}),
         "dia_semana": normalizar_dia_semana((item or {}).get("dia_semana")),
         "dia_semana_nome": nome_dia_semana((item or {}).get("dia_semana")),
-        "aula_numero": int((item or {}).get("aula_numero") or 0),
+        "aula_numero": aula_numero,
         "ano_letivo": int((item or {}).get("ano_letivo") or 0),
         "turma_id": int((item or {}).get("turma_id") or 0),
         "disciplina_id": int((item or {}).get("disciplina_id") or 0),
         "professor_id": int((item or {}).get("professor_id") or 0),
+        "turno": turno,
+        "turno_nome": nome_turno_horario(turno),
+        "faixa_global": faixa_global,
+        "aula_label": aula_label_com_faixa(turno, aula_numero) if faixa_global > 0 else "",
     }
 
 
@@ -121,7 +163,7 @@ def ordenar_horarios_escolares(itens: list[dict]) -> list[dict]:
             -int(item.get("ano_letivo") or 0),
             str(item.get("turma_nome") or "").casefold(),
             DIA_SEMANA_ORDEM.get(str(item.get("dia_semana") or "").upper(), 999),
-            int(item.get("aula_numero") or 0),
+            int(item.get("faixa_global") or 0) or int(item.get("aula_numero") or 0),
             str(item.get("disciplina_nome") or "").casefold(),
             str(item.get("professor_nome") or "").casefold(),
             int(item.get("id") or 0),

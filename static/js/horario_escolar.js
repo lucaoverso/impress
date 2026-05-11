@@ -84,6 +84,18 @@ function obterDiaInfo(valor) {
     return (contextoHorario.dias_semana || []).find((item) => item.valor === valor) || null;
 }
 
+function labelAulaHorario(item = {}) {
+    const faixaGlobal = Number(item.faixa_global || 0);
+    const aulaNumero = Number(item.aula_numero || 0);
+    if (aulaNumero > 0 && faixaGlobal > 0) {
+        return `${aulaNumero}a aula (faixa ${faixaGlobal})`;
+    }
+    if (aulaNumero > 0) {
+        return `${aulaNumero}a aula`;
+    }
+    return "";
+}
+
 function preencherContextoHorario() {
     preencherSelectAnos("horarioAnoLetivo", contextoHorario.anos_letivos);
     preencherSelect("horarioTurmaId", contextoHorario.turmas, {
@@ -332,13 +344,13 @@ function renderizarGrupoHorario(grupo, modo = "turma") {
         const celulas = modo === "turma"
             ? [
                 item.dia_semana_nome || item.dia_semana || "",
-                item.aula_numero || "",
+                labelAulaHorario(item),
                 item.disciplina_nome || "",
                 item.professor_nome || "",
             ]
             : [
                 item.dia_semana_nome || item.dia_semana || "",
-                item.aula_numero || "",
+                labelAulaHorario(item),
                 item.turma_nome || "",
                 item.disciplina_nome || "",
             ];
@@ -570,7 +582,7 @@ function criarCardVisualHorario(payload, { agendado = false } = {}) {
     } else {
         const meta = document.createElement("small");
         meta.className = "horario-card-meta";
-        meta.innerText = `${payload.dia_semana_nome || payload.dia_semana || ""} - Aula ${payload.aula_numero || ""}`;
+        meta.innerText = `${payload.dia_semana_nome || payload.dia_semana || ""} - ${labelAulaHorario(payload)}`;
         card.appendChild(meta);
     }
 
@@ -647,10 +659,20 @@ function renderizarMatrizHorario() {
     });
 
     const tbody = document.createElement("tbody");
-    (estadoMatrizHorario.aulas || []).forEach((aulaNumero) => {
+    const faixas = Array.isArray(estadoMatrizHorario.faixas) && estadoMatrizHorario.faixas.length > 0
+        ? estadoMatrizHorario.faixas
+        : (estadoMatrizHorario.aulas || []).map((aulaNumero) => ({
+            aula_numero: aulaNumero,
+            faixa_global: 0,
+            label: `${aulaNumero}a aula`,
+            label_curta: `${aulaNumero}a aula`,
+        }));
+
+    faixas.forEach((faixaInfo) => {
+        const aulaNumero = Number(faixaInfo.aula_numero || 0);
         const tr = document.createElement("tr");
         const th = document.createElement("th");
-        th.innerText = `${aulaNumero}a aula`;
+        th.innerText = faixaInfo.label || `${aulaNumero}a aula`;
         tr.appendChild(th);
 
         (estadoMatrizHorario.dias_semana || []).forEach((dia) => {
@@ -658,6 +680,7 @@ function renderizarMatrizHorario() {
             td.className = "horario-slot";
             td.dataset.diaSemana = dia.valor;
             td.dataset.aulaNumero = String(aulaNumero);
+            td.dataset.faixaGlobal = String(faixaInfo.faixa_global || 0);
 
             const registro = mapaRegistros.get(`${dia.valor}:${aulaNumero}`) || null;
             if (registro) {

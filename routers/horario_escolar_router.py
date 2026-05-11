@@ -36,6 +36,7 @@ from services.horario_escolar_service import (
     dia_semana_por_data,
     enriquecer_horario_escolar,
     listar_dias_semana_horario,
+    listar_faixas_turno_horario,
     montar_cards_disponiveis_turma,
     nome_dia_semana,
     normalizar_dia_semana,
@@ -269,6 +270,7 @@ def obter_matriz_horario_turma_api(
         registros,
     )
     total_aulas = total_aulas_por_turno(turma.get("turno"))
+    faixas = listar_faixas_turno_horario(turma.get("turno"))
 
     return {
         "ano_letivo": ano_letivo_valor,
@@ -278,6 +280,7 @@ def obter_matriz_horario_turma_api(
         },
         "dias_semana": listar_dias_semana_horario(),
         "aulas": list(range(1, total_aulas + 1)),
+        "faixas": faixas,
         "registros": registros,
         "cards_disponiveis": cards_disponiveis,
         "cards_resumo": cards_resumo,

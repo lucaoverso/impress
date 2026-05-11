@@ -179,6 +179,7 @@ class HorarioEscolarRouterTest(unittest.TestCase):
             self.assertEqual(int(matriz["turma"]["id"]), turma_id)
             self.assertEqual(int(matriz["turma"]["total_aulas"]), 5)
             self.assertEqual(matriz["aulas"], [1, 2, 3, 4, 5])
+            self.assertEqual([item["faixa_global"] for item in matriz["faixas"]], [1, 2, 3, 4, 5])
             self.assertEqual(len(matriz["registros"]), 1)
             self.assertEqual(len(matriz["cards_disponiveis"]), 3)
             self.assertEqual(len(matriz["cards_resumo"]), 1)
