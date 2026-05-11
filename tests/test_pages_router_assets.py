@@ -82,6 +82,18 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn("css/style.css?v=build-cadastro-456", html)
         self.assertIn("js/cadastro-professor.js?v=build-cadastro-456", html)
 
+    def test_horario_escolar_injeta_asset_version_e_no_store(self):
+        config, pages_router = _reload_modulos("build-horario-789")
+        app = FastAPI()
+        app.mount("/static", StaticFiles(directory=str(config.STATIC_DIR)), name="static")
+
+        resposta = pages_router.horario_escolar_page(_criar_request(app, "/horario-escolar"))
+        html = resposta.body.decode("utf-8")
+
+        self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
+        self.assertIn("css/style.css?v=build-horario-789", html)
+        self.assertIn("js/horario_escolar.js?v=build-horario-789", html)
+
 
 if __name__ == "__main__":
     unittest.main()

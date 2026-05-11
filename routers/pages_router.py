@@ -122,3 +122,13 @@ def coordenacao_page(request: Request):
         {"asset_version": ASSET_VERSION},
         cache_control="no-store",
     )
+
+
+@router.get("/horario-escolar")
+def horario_escolar_page(request: Request):
+    return render_template_response(
+        request,
+        "horario_escolar.html",
+        {"asset_version": ASSET_VERSION},
+        cache_control="no-store",
+    )

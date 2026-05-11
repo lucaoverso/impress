@@ -1,0 +1,431 @@
+.horario-page {
+    padding: 2rem;
+    display: grid;
+    gap: 1.5rem;
+}
+
+.horario-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1rem;
+}
+
+.horario-summary-card {
+    border-radius: 20px;
+    padding: 1rem 1.1rem;
+    background: linear-gradient(180deg, #ffffff 0%, #f3f7fb 100%);
+    border: 1px solid rgba(28, 54, 88, 0.08);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+    display: grid;
+    gap: 0.35rem;
+}
+
+.horario-summary-card.is-primary {
+    background: linear-gradient(135deg, #17324d 0%, #264d73 100%);
+    color: #f8fbff;
+}
+
+.horario-summary-label,
+.horario-summary-meta {
+    font-size: 0.95rem;
+}
+
+.horario-summary-value {
+    font-size: 1.65rem;
+    line-height: 1;
+}
+
+.horario-grid,
+.horario-board {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.25rem;
+}
+
+.horario-builder-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 4fr) minmax(220px, 1fr);
+    gap: 1.25rem;
+    align-items: start;
+}
+
+.horario-form-card,
+.horario-filter-card,
+.horario-board-card {
+    height: 100%;
+}
+
+.horario-config-card,
+.horario-matrix-card,
+.horario-pool-card {
+    height: 100%;
+}
+
+.horario-config-card {
+    grid-column: 1 / -1;
+}
+
+.horario-matrix-card {
+    grid-column: 1;
+}
+
+.horario-pool-card {
+    grid-column: 2;
+}
+
+.horario-config-card .coordenacao-form-grid {
+    grid-template-columns: repeat(2, minmax(180px, 240px)) minmax(280px, 1fr);
+    align-items: end;
+}
+
+.horario-builder-note {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.9rem 1rem;
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(23, 50, 77, 0.07) 0%, rgba(38, 77, 115, 0.03) 100%);
+    border: 1px solid rgba(23, 50, 77, 0.08);
+}
+
+.horario-builder-note strong {
+    color: #17324d;
+}
+
+.horario-builder-note small {
+    color: #4b5563;
+}
+
+.horario-alert-stack {
+    display: grid;
+    gap: 0.65rem;
+    margin-bottom: 1rem;
+}
+
+.horario-alert-item {
+    padding: 0.85rem 0.95rem;
+    border-radius: 14px;
+    background: #fff7ed;
+    border: 1px solid rgba(234, 88, 12, 0.18);
+    color: #9a3412;
+    font-size: 0.95rem;
+}
+
+.horario-matrix-wrap {
+    overflow-x: auto;
+}
+
+.horario-matrix-table {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: separate;
+    border-spacing: 0.45rem;
+}
+
+.horario-matrix-table thead th {
+    padding: 0 0.35rem 0.55rem;
+    text-align: left;
+    color: #35597f;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.horario-matrix-table tbody th {
+    padding: 0.65rem 0.35rem;
+    min-width: 78px;
+    vertical-align: top;
+    text-align: left;
+    color: #17324d;
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.horario-slot {
+    min-width: 136px;
+    min-height: 122px;
+    vertical-align: top;
+    padding: 0.25rem;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #f7fafc 0%, #edf4fb 100%);
+    border: 1px dashed rgba(53, 89, 127, 0.18);
+    transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.horario-slot.is-occupied {
+    background: linear-gradient(180deg, #eef7ff 0%, #e2eefb 100%);
+    border-style: solid;
+    border-color: rgba(42, 87, 135, 0.2);
+}
+
+.horario-slot.is-drop-target,
+.horario-drop-pool.is-drop-target {
+    border-color: #0f766e;
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+    transform: translateY(-1px);
+}
+
+.horario-slot-hint {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 98px;
+    border-radius: 13px;
+    color: #6b7280;
+    font-size: 0.84rem;
+    background: rgba(255, 255, 255, 0.66);
+}
+
+.horario-pool-meta {
+    display: grid;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.horario-pool-summary {
+    margin: 0;
+    color: #17324d;
+    font-weight: 600;
+}
+
+.horario-pool-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.55rem;
+}
+
+.horario-pool-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 34px;
+    padding: 0.35rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(23, 50, 77, 0.08);
+    color: #21446b;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.horario-drop-pool {
+    min-height: 0;
+    max-height: 700px;
+    border-radius: 18px;
+    border: 1px dashed rgba(53, 89, 127, 0.24);
+    background:
+        radial-gradient(circle at top right, rgba(38, 77, 115, 0.08), transparent 34%),
+        linear-gradient(180deg, #fcfdff 0%, #f3f7fb 100%);
+    padding: 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.horario-drop-pool-copy {
+    margin: 0;
+    color: #4b5563;
+    font-size: 0.88rem;
+}
+
+.horario-card-pool {
+    display: grid;
+    gap: 0.65rem;
+    align-content: start;
+    overflow-y: auto;
+    padding-right: 0.25rem;
+}
+
+.horario-card-item {
+    display: grid;
+    gap: 0.4rem;
+    padding: 0.72rem;
+    border-radius: 15px;
+    background: linear-gradient(180deg, #ffffff 0%, #f4f8fc 100%);
+    border: 1px solid rgba(28, 54, 88, 0.1);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.07);
+    cursor: grab;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+}
+
+.horario-card-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.11);
+}
+
+.horario-card-item.is-dragging {
+    opacity: 0.72;
+    transform: rotate(1.2deg) scale(0.985);
+}
+
+.horario-card-item.is-scheduled {
+    background: linear-gradient(180deg, #f7fbff 0%, #eaf3fb 100%);
+    border-color: rgba(42, 87, 135, 0.18);
+}
+
+.horario-card-top {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 0.55rem;
+}
+
+.horario-card-top strong {
+    color: #17324d;
+    line-height: 1.3;
+    font-size: 0.92rem;
+}
+
+.horario-card-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 0.1rem 0.5rem;
+    border-radius: 999px;
+    background: rgba(15, 118, 110, 0.1);
+    color: #0f766e;
+    font-size: 0.74rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.horario-card-professor {
+    margin: 0;
+    color: #334155;
+    font-weight: 600;
+    font-size: 0.87rem;
+}
+
+.horario-card-meta {
+    color: #64748b;
+    font-size: 0.76rem;
+}
+
+.horario-card-remove {
+    justify-self: start;
+}
+
+@media (max-width: 1180px) {
+    .horario-builder-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .horario-config-card,
+    .horario-matrix-card,
+    .horario-pool-card {
+        grid-column: 1;
+    }
+
+    .horario-config-card .coordenacao-form-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+
+    .horario-drop-pool {
+        max-height: none;
+    }
+
+    .horario-card-pool {
+        overflow: visible;
+        padding-right: 0;
+    }
+}
+
+.horario-form-actions {
+    margin-top: 0.5rem;
+}
+
+.horario-group-stack {
+    display: grid;
+    gap: 1rem;
+}
+
+.horario-group-card {
+    border: 1px solid rgba(28, 54, 88, 0.08);
+    border-radius: 18px;
+    padding: 1rem;
+    background: #fbfdff;
+    display: grid;
+    gap: 0.85rem;
+}
+
+.horario-group-header {
+    display: flex;
+    align-items: start;
+    justify-content: space-between;
+    gap: 1rem;
+}
+
+.horario-group-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+}
+
+.horario-group-header p {
+    margin: 0.2rem 0 0;
+    color: #4b5563;
+}
+
+.horario-group-count {
+    font-size: 0.9rem;
+    color: #35597f;
+    background: rgba(53, 89, 127, 0.08);
+    border-radius: 999px;
+    padding: 0.35rem 0.7rem;
+    white-space: nowrap;
+}
+
+.horario-table-wrap {
+    overflow-x: auto;
+}
+
+.horario-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.horario-table th,
+.horario-table td {
+    text-align: left;
+    padding: 0.7rem 0.65rem;
+    border-bottom: 1px solid rgba(28, 54, 88, 0.08);
+    vertical-align: top;
+}
+
+.horario-table th {
+    color: #35597f;
+    font-weight: 700;
+}
+
+.horario-inline-actions {
+    display: inline-flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.horario-empty-state {
+    border: 1px dashed rgba(53, 89, 127, 0.25);
+    border-radius: 16px;
+    padding: 1rem;
+    color: #4b5563;
+    background: rgba(245, 248, 252, 0.9);
+}
+
+@media (max-width: 720px) {
+    .horario-page {
+        padding: 1rem;
+    }
+
+    .horario-builder-grid,
+    .horario-grid,
+    .horario-board {
+        grid-template-columns: 1fr;
+    }
+
+    .horario-matrix-table {
+        min-width: 560px;
+    }
+
+    .horario-group-header {
+        flex-direction: column;
+    }
+}

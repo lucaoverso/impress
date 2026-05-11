@@ -7,6 +7,9 @@ from services.pcpi_service import (
     turno_agendamento_pertence_ao_turno_pcpi,
 )
 
+SIMBOLO_ORDINAL_FEMININO = "\u00AA"
+SIMBOLO_ORDINAL_MASCULINO = "\u00BA"
+
 
 def _agendamento(
     *,
@@ -79,6 +82,54 @@ class PcpiServiceTest(unittest.TestCase):
         self.assertIn("Bruno", resultado["frases_automaticas"][1])
         self.assertIn("Carla", resultado["frases_automaticas"][1])
 
+    def test_preserva_simbolos_de_turma_e_formata_aula_com_ordinal(self):
+        itens = [
+            {
+                "agendamento_id": 1,
+                "data": "2026-04-03",
+                "turno": "MATUTINO",
+                "turno_nome": "Matutino",
+                "aula": f"1{SIMBOLO_ORDINAL_FEMININO} aula",
+                "faixa_global": 1,
+                "recurso_id": 1,
+                "recurso_nome": "STE Sala 1",
+                "recurso_tipo": "Tecnologico",
+                "professor_id": 1,
+                "professor_nome": "Ana",
+                "componentes": ["Matematica"],
+                "turma": f"6{SIMBOLO_ORDINAL_MASCULINO} A",
+                "tema_aula": "Atividade planejada",
+                "observacao": "",
+                "categoria_uso": GRUPO_AUTOMATICO_STE,
+            },
+            {
+                "agendamento_id": 2,
+                "data": "2026-04-03",
+                "turno": "MATUTINO",
+                "turno_nome": "Matutino",
+                "aula": f"3{SIMBOLO_ORDINAL_FEMININO} aula",
+                "faixa_global": 3,
+                "recurso_id": 2,
+                "recurso_nome": "STE Sala 1",
+                "recurso_tipo": "Tecnologico",
+                "professor_id": 2,
+                "professor_nome": "Bianca",
+                "componentes": ["Fisica"],
+                "turma": f"3{SIMBOLO_ORDINAL_MASCULINO} EM A",
+                "tema_aula": "Atividade planejada",
+                "observacao": "",
+                "categoria_uso": GRUPO_AUTOMATICO_STE,
+            },
+        ]
+
+        resultado = gerar_texto_pcpi("2026-04-03", "MATUTINO", itens, [])
+
+        frase = resultado["frases_automaticas"][0]
+        self.assertIn(f"1{SIMBOLO_ORDINAL_FEMININO} aula", frase)
+        self.assertIn(f"3{SIMBOLO_ORDINAL_FEMININO} aula", frase)
+        self.assertIn(f"6{SIMBOLO_ORDINAL_MASCULINO} A", frase)
+        self.assertIn(f"3{SIMBOLO_ORDINAL_MASCULINO} EM A", frase)
+
     def test_gera_frases_manuais_por_tipo_e_agrupa_itens_tecnicos(self):
         registros = [
             {
@@ -138,11 +189,23 @@ class PcpiServiceTest(unittest.TestCase):
     def test_pcpi_separa_aulas_do_integral_por_turno(self):
         agendamento_matutino = {"turno": "INTEGRAL", "aula": "5"}
         agendamento_vespertino = {"turno": "INTEGRAL", "aula": "6"}
+        agendamento_matutino_ordinal = {
+            "turno": "INTEGRAL",
+            "aula": f"5{SIMBOLO_ORDINAL_FEMININO} aula",
+        }
+        agendamento_vespertino_ordinal = {
+            "turno": "INTEGRAL",
+            "aula": f"6{SIMBOLO_ORDINAL_FEMININO} aula",
+        }
 
         self.assertTrue(agendamento_pertence_ao_turno_pcpi(agendamento_matutino, "MATUTINO"))
         self.assertFalse(agendamento_pertence_ao_turno_pcpi(agendamento_matutino, "VESPERTINO"))
         self.assertFalse(agendamento_pertence_ao_turno_pcpi(agendamento_vespertino, "MATUTINO"))
         self.assertTrue(agendamento_pertence_ao_turno_pcpi(agendamento_vespertino, "VESPERTINO"))
+        self.assertTrue(agendamento_pertence_ao_turno_pcpi(agendamento_matutino_ordinal, "MATUTINO"))
+        self.assertFalse(agendamento_pertence_ao_turno_pcpi(agendamento_matutino_ordinal, "VESPERTINO"))
+        self.assertFalse(agendamento_pertence_ao_turno_pcpi(agendamento_vespertino_ordinal, "MATUTINO"))
+        self.assertTrue(agendamento_pertence_ao_turno_pcpi(agendamento_vespertino_ordinal, "VESPERTINO"))
 
 
 if __name__ == "__main__":

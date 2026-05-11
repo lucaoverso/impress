@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Horario Escolar</title>
+    {% include "includes/style_bundle.html" %}
+</head>
+
+<body>
+    <main class="horario-page">
+        <header class="admin-header admin-header-shell">
+            <div class="admin-header-main">
+                <h1>Horario escolar</h1>
+                <p>Organize a grade por turma e acompanhe uma leitura complementar por professor para preparar os proximos modulos operacionais.</p>
+            </div>
+            <div class="scheduler-actions">
+                <button id="btnIrAdmin" type="button" hidden>Painel de gestao</button>
+                <button id="btnVoltarServicos" type="button">Voltar aos servicos</button>
+                <button id="btnSair" type="button">Sair</button>
+            </div>
+        </header>
+
+        <section class="horario-summary-grid">
+            <article class="horario-summary-card is-primary">
+                <span class="horario-summary-label">Registros carregados</span>
+                <strong id="horarioResumoRegistros" class="horario-summary-value">0</strong>
+                <span id="horarioResumoPeriodo" class="horario-summary-meta">Sem filtro aplicado.</span>
+            </article>
+            <article class="horario-summary-card">
+                <span class="horario-summary-label">Turmas com horario</span>
+                <strong id="horarioResumoTurmas" class="horario-summary-value">0</strong>
+                <span class="horario-summary-meta">Agrupadas pela grade principal.</span>
+            </article>
+            <article class="horario-summary-card">
+                <span class="horario-summary-label">Professores com aulas</span>
+                <strong id="horarioResumoProfessores" class="horario-summary-value">0</strong>
+                <span class="horario-summary-meta">Leitura complementar por docente.</span>
+            </article>
+        </section>
+
+        <section class="horario-builder-grid">
+            <article class="coordenacao-card horario-config-card">
+                <div class="coordenacao-section-header">
+                    <div>
+                        <p class="coordenacao-eyebrow">Montagem visual</p>
+                        <h2>Construtor da grade</h2>
+                        <p>Selecione a turma e monte o horario arrastando os cards de disciplina e professor para a matriz semanal.</p>
+                    </div>
+                    <p id="msgHorarioForm" class="coordenacao-status-copy"></p>
+                </div>
+
+                <div class="coordenacao-form coordenacao-form-grid">
+                    <label class="coordenacao-field" for="horarioAnoLetivo">
+                        <span>Ano letivo</span>
+                        <select id="horarioAnoLetivo" required></select>
+                    </label>
+
+                    <label class="coordenacao-field" for="horarioTurmaId">
+                        <span>Turma</span>
+                        <select id="horarioTurmaId" required></select>
+                    </label>
+
+                    <div class="horario-builder-note">
+                        <strong id="horarioBuilderTitulo">Selecione uma turma para abrir a matriz.</strong>
+                        <small id="horarioBuilderMeta">Os cards ao lado serao gerados a partir das atribuicoes e da carga horaria vinculada a turma.</small>
+                    </div>
+                </div>
+            </article>
+
+            <article class="coordenacao-card horario-matrix-card">
+                <div class="coordenacao-section-header">
+                    <div>
+                        <p class="coordenacao-eyebrow">Grade da turma</p>
+                        <h2 id="horarioMatrizTitulo">Matriz semanal</h2>
+                        <p>Solte um card em um campo vazio para criar a aula. Arraste uma aula preenchida para outro campo vazio para reposicionar.</p>
+                    </div>
+                </div>
+                <div id="horarioAlertas" class="horario-alert-stack" hidden></div>
+                <div id="horarioMatrizWrap" class="horario-matrix-wrap">
+                    <div class="horario-empty-state">Selecione uma turma para visualizar a matriz do horario.</div>
+                </div>
+            </article>
+
+            <article class="coordenacao-card horario-pool-card">
+                <div class="coordenacao-section-header">
+                    <div>
+                        <p class="coordenacao-eyebrow">Cards disponiveis</p>
+                        <h2>Disciplinas da turma</h2>
+                        <p>O sistema gera um card para cada aula disponivel da disciplina com o professor atribuido.</p>
+                    </div>
+                </div>
+                <div id="horarioPoolMeta" class="horario-pool-meta"></div>
+                <div id="horarioDropPool" class="horario-drop-pool">
+                    <p class="horario-drop-pool-copy">Arraste uma aula da matriz de volta para esta area para remover o lancamento do horario.</p>
+                    <div id="horarioCardsDisponiveis" class="horario-card-pool"></div>
+                </div>
+            </article>
+        </section>
+
+        <section class="horario-grid">
+            <article class="coordenacao-card horario-filter-card">
+                <div class="coordenacao-section-header">
+                    <div>
+                        <p class="coordenacao-eyebrow">Consulta</p>
+                        <h2>Filtrar a grade</h2>
+                        <p>Aplique filtros para revisar a grade por turma e a leitura espelhada por professor.</p>
+                    </div>
+                </div>
+
+                <form id="formFiltrosHorarioEscolar" class="coordenacao-filter-grid">
+                    <label class="coordenacao-field" for="filtroHorarioAnoLetivo">
+                        <span>Ano letivo</span>
+                        <select id="filtroHorarioAnoLetivo"></select>
+                    </label>
+
+                    <label class="coordenacao-field" for="filtroHorarioTurmaId">
+                        <span>Turma</span>
+                        <select id="filtroHorarioTurmaId"></select>
+                    </label>
+
+                    <label class="coordenacao-field" for="filtroHorarioProfessorId">
+                        <span>Professor</span>
+                        <select id="filtroHorarioProfessorId"></select>
+                    </label>
+
+                    <label class="coordenacao-field" for="filtroHorarioDiaSemana">
+                        <span>Dia da semana</span>
+                        <select id="filtroHorarioDiaSemana"></select>
+                    </label>
+
+                    <div class="coordenacao-filter-actions">
+                        <button class="btn-destaque" type="submit">Filtrar</button>
+                        <button id="btnLimparFiltrosHorario" type="button">Limpar</button>
+                    </div>
+                </form>
+            </article>
+        </section>
+
+        <section class="horario-board">
+            <article class="coordenacao-card horario-board-card">
+                <div class="coordenacao-section-header">
+                    <div>
+                        <p class="coordenacao-eyebrow">Visao principal</p>
+                        <h2>Grade por turma</h2>
+                        <p>Resumo textual da grade organizada por turma para conferencia rapida.</p>
+                    </div>
+                </div>
+                <div id="horarioListaTurmas" class="horario-group-stack"></div>
+            </article>
+
+            <article class="coordenacao-card horario-board-card">
+                <div class="coordenacao-section-header">
+                    <div>
+                        <p class="coordenacao-eyebrow">Visao espelhada</p>
+                        <h2>Agrupamento por professor</h2>
+                        <p>Leitura complementar no frontend para enxergar rapidamente a carga distribuida por docente.</p>
+                    </div>
+                </div>
+                <div id="horarioListaProfessores" class="horario-group-stack"></div>
+            </article>
+        </section>
+    </main>
+
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/horario_escolar.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+
+</html>

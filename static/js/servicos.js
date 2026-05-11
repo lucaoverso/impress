@@ -15,8 +15,8 @@ function modulosPermitidos(usuario = {}) {
     }
 
     const cargo = normalizarCargoUsuario(usuario);
-    if (cargo === "ADMIN") return new Set(["impressao", "agendamento", "download", "gestao", "coordenacao", "pcpi", "preconselho"]);
-    if (cargo === "COORDENADOR") return new Set(["download", "coordenacao", "preconselho"]);
+    if (cargo === "ADMIN") return new Set(["impressao", "agendamento", "download", "gestao", "coordenacao", "horario", "pcpi", "preconselho"]);
+    if (cargo === "COORDENADOR") return new Set(["download", "coordenacao", "horario", "preconselho"]);
     return new Set(["impressao", "agendamento", "download", "preconselho"]);
 }
 
@@ -72,6 +72,13 @@ function registrarEventos() {
     if (btnIrCoordenacao) {
         btnIrCoordenacao.addEventListener("click", () => {
             window.location.href = "/coordenacao";
+        });
+    }
+
+    const btnIrHorario = document.getElementById("cardHorario");
+    if (btnIrHorario) {
+        btnIrHorario.addEventListener("click", () => {
+            window.location.href = "/horario-escolar";
         });
     }
 

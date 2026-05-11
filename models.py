@@ -515,6 +515,42 @@ class TurmaDisciplinaOut(BaseModel):
     atualizado_em: str = ""
 
 
+class HorarioEscolarRegistroIn(BaseModel):
+    ano_letivo: int
+    turma_id: int
+    disciplina_id: int
+    professor_id: int
+    dia_semana: str
+    aula_numero: int
+
+
+class HorarioEscolarRegistroUpdateIn(BaseModel):
+    ano_letivo: int
+    turma_id: int
+    disciplina_id: int
+    professor_id: int
+    dia_semana: str
+    aula_numero: int
+
+
+class HorarioEscolarRegistroOut(BaseModel):
+    id: int
+    ano_letivo: int
+    turma_id: int
+    turma_nome: str = ""
+    turno: str = ""
+    disciplina_id: int
+    disciplina_nome: str = ""
+    professor_id: int
+    professor_nome: str = ""
+    professor_email: str = ""
+    dia_semana: str
+    dia_semana_nome: str = ""
+    aula_numero: int
+    criado_em: str = ""
+    atualizado_em: str = ""
+
+
 class TurmaCreateIn(BaseModel):
     nome: str
     turno: str

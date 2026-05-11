@@ -1,3 +1,4 @@
+import re
 import unicodedata
 from collections import defaultdict
 from datetime import datetime
@@ -63,10 +64,19 @@ def turno_agendamento_pertence_ao_turno_pcpi(turno_agendamento: str, turno_pcpi:
 
 def _aula_agendamento_para_int(valor) -> int | None:
     texto = _texto_limpo(valor)
-    if not texto.isdigit():
+    if not texto:
         return None
-    numero = int(texto)
+
+    correspondencia = re.search(r"\d+", texto)
+    if not correspondencia:
+        return None
+
+    numero = int(correspondencia.group())
     return numero if numero > 0 else None
+
+
+def _formatar_ordinal_aula(numero: int) -> str:
+    return f"{numero}\u00AA aula"
 
 
 def agendamento_pertence_ao_turno_pcpi(agendamento: dict, turno_pcpi: str) -> bool:
@@ -201,9 +211,9 @@ def _formatar_aulas_referencia(itens: list[dict]) -> str:
     if not aulas:
         return ""
 
-    rotulos = [f"{aula}a" for aula in sorted(aulas)]
+    rotulos = [_formatar_ordinal_aula(aula) for aula in sorted(aulas)]
     if len(rotulos) == 1:
-        return f" durante a {rotulos[0]} aula"
+        return f" durante a {rotulos[0]}"
     return f" durante as aulas {_formatar_lista_pt_br(rotulos)}"
 
 

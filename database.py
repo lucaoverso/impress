@@ -4778,6 +4778,226 @@ def seed_recursos_padrao():
     conn.close()
 
 
+def _mapear_horario_escolar(row) -> dict:
+    item = dict(row)
+    return {
+        "id": int(item["id"]),
+        "ano_letivo": int(item["ano_letivo"]),
+        "turma_id": int(item["turma_id"]),
+        "turma_nome": item.get("turma_nome", "") or "",
+        "turno": item.get("turno", "") or "",
+        "disciplina_id": int(item["disciplina_id"]),
+        "disciplina_nome": item.get("disciplina_nome", "") or "",
+        "professor_id": int(item["professor_usuario_id"]),
+        "professor_nome": item.get("professor_nome", "") or "",
+        "professor_email": item.get("professor_email", "") or "",
+        "dia_semana": item.get("dia_semana", "") or "",
+        "aula_numero": int(item.get("aula_numero") or 0),
+        "criado_em": item.get("criado_em", "") or "",
+        "atualizado_em": item.get("atualizado_em", "") or "",
+    }
+
+
+def _consultar_horarios_escolares(cursor, *, filtros_sql=None, params=None):
+    where = list(filtros_sql or [])
+    parametros = list(params or [])
+    clausula_where = f"WHERE {' AND '.join(where)}" if where else ""
+
+    cursor.execute(
+        f"""
+        SELECT
+            he.id,
+            he.ano_letivo,
+            he.turma_id,
+            he.disciplina_id,
+            he.professor_usuario_id,
+            he.dia_semana,
+            he.aula_numero,
+            he.criado_em,
+            he.atualizado_em,
+            COALESCE(t.nome, '') AS turma_nome,
+            COALESCE(t.turno, '') AS turno,
+            COALESCE(d.nome, '') AS disciplina_nome,
+            COALESCE(u.nome, '') AS professor_nome,
+            COALESCE(u.email, '') AS professor_email
+        FROM horarios_escolares he
+        INNER JOIN turmas t ON t.id = he.turma_id
+        INNER JOIN disciplinas d ON d.id = he.disciplina_id
+        INNER JOIN usuarios u ON u.id = he.professor_usuario_id
+        {clausula_where}
+        ORDER BY
+            he.ano_letivo DESC,
+            t.nome COLLATE NOCASE ASC,
+            he.dia_semana ASC,
+            he.aula_numero ASC,
+            d.nome COLLATE NOCASE ASC,
+            u.nome COLLATE NOCASE ASC,
+            he.id ASC
+        """,
+        parametros,
+    )
+    return [_mapear_horario_escolar(row) for row in cursor.fetchall()]
+
+
+def listar_anos_letivos_horario_escolar():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT DISTINCT ano_letivo
+        FROM horarios_escolares
+        ORDER BY ano_letivo ASC
+        """
+    )
+    anos = [int(row[0]) for row in cursor.fetchall() if int(row[0] or 0) > 0]
+    conn.close()
+    return anos
+
+
+def listar_horarios_escolares(
+    *,
+    ano_letivo: int | None = None,
+    turma_id: int | None = None,
+    disciplina_id: int | None = None,
+    professor_id: int | None = None,
+    dia_semana: str | None = None,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    filtros = []
+    params = []
+
+    if ano_letivo is not None:
+        filtros.append("he.ano_letivo = ?")
+        params.append(int(ano_letivo))
+    if turma_id is not None:
+        filtros.append("he.turma_id = ?")
+        params.append(int(turma_id))
+    if disciplina_id is not None:
+        filtros.append("he.disciplina_id = ?")
+        params.append(int(disciplina_id))
+    if professor_id is not None:
+        filtros.append("he.professor_usuario_id = ?")
+        params.append(int(professor_id))
+    if str(dia_semana or "").strip():
+        filtros.append("UPPER(he.dia_semana) = ?")
+        params.append(str(dia_semana).strip().upper())
+
+    itens = _consultar_horarios_escolares(cursor, filtros_sql=filtros, params=params)
+    conn.close()
+    return itens
+
+
+def buscar_horario_escolar_por_id(registro_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    itens = _consultar_horarios_escolares(
+        cursor,
+        filtros_sql=["he.id = ?"],
+        params=[int(registro_id)],
+    )
+    conn.close()
+    return itens[0] if itens else None
+
+
+def criar_horario_escolar(
+    *,
+    ano_letivo: int,
+    turma_id: int,
+    disciplina_id: int,
+    professor_usuario_id: int,
+    dia_semana: str,
+    aula_numero: int,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO horarios_escolares (
+            ano_letivo,
+            turma_id,
+            disciplina_id,
+            professor_usuario_id,
+            dia_semana,
+            aula_numero,
+            criado_em,
+            atualizado_em
+        )
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        """,
+        (
+            int(ano_letivo),
+            int(turma_id),
+            int(disciplina_id),
+            int(professor_usuario_id),
+            str(dia_semana or "").strip().upper(),
+            int(aula_numero),
+        ),
+    )
+    registro_id = int(cursor.lastrowid)
+    conn.commit()
+    conn.close()
+    return buscar_horario_escolar_por_id(registro_id)
+
+
+def atualizar_horario_escolar(
+    *,
+    registro_id: int,
+    ano_letivo: int,
+    turma_id: int,
+    disciplina_id: int,
+    professor_usuario_id: int,
+    dia_semana: str,
+    aula_numero: int,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE horarios_escolares
+        SET ano_letivo = ?,
+            turma_id = ?,
+            disciplina_id = ?,
+            professor_usuario_id = ?,
+            dia_semana = ?,
+            aula_numero = ?,
+            atualizado_em = datetime('now')
+        WHERE id = ?
+        """,
+        (
+            int(ano_letivo),
+            int(turma_id),
+            int(disciplina_id),
+            int(professor_usuario_id),
+            str(dia_semana or "").strip().upper(),
+            int(aula_numero),
+            int(registro_id),
+        ),
+    )
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    if not alterado:
+        return None
+    return buscar_horario_escolar_por_id(registro_id)
+
+
+def excluir_horario_escolar(registro_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        DELETE FROM horarios_escolares
+        WHERE id = ?
+        """,
+        (int(registro_id),),
+    )
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
 def listar_turmas(incluir_inativas: bool = False):
     conn = get_connection()
     cursor = conn.cursor()
