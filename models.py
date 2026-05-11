@@ -547,6 +547,7 @@ class HorarioEscolarRegistroOut(BaseModel):
     dia_semana: str
     dia_semana_nome: str = ""
     aula_numero: int
+    faixa_global: int = 0
     criado_em: str = ""
     atualizado_em: str = ""
 

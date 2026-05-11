@@ -4778,6 +4778,126 @@ def seed_recursos_padrao():
     conn.close()
 
 
+_HORARIO_FAIXA_GLOBAL_OFFSET_POR_TURNO = {
+    "MATUTINO": 0,
+    "INTEGRAL": 0,
+    "VESPERTINO": 5,
+    "VESPERTINO_EM": 5,
+}
+
+
+def _faixa_global_por_turno_e_aula_horario(turno: str, aula_numero: int) -> int:
+    turno_norm = str(turno or "").strip().upper()
+    aula = int(aula_numero or 0)
+    if aula <= 0:
+        return 0
+    faixa = aula + int(_HORARIO_FAIXA_GLOBAL_OFFSET_POR_TURNO.get(turno_norm) or 0)
+    if turno_norm == "INTEGRAL" and aula > 5:
+        faixa += 1
+    return faixa
+
+
+def _expressao_sql_faixa_global_horario(alias_horario: str = "he", alias_turma: str = "t") -> str:
+    aula_expr = f"CAST(COALESCE({alias_horario}.aula_numero, 0) AS INTEGER)"
+    turno_expr = f"UPPER(COALESCE({alias_turma}.turno, ''))"
+    return f"""
+        COALESCE(
+            NULLIF({alias_horario}.faixa_global, 0),
+            CASE
+                WHEN {turno_expr} IN ('VESPERTINO', 'VESPERTINO_EM') THEN {aula_expr} + 5
+                WHEN {turno_expr} = 'INTEGRAL' THEN {aula_expr} + CASE WHEN {aula_expr} > 5 THEN 1 ELSE 0 END
+                ELSE {aula_expr}
+            END
+        )
+    """
+
+
+def _resolver_faixa_global_registro_horario(
+    cursor,
+    *,
+    turma_id: int,
+    aula_numero: int,
+    faixa_global: int | None = None,
+) -> int:
+    faixa_informada = int(faixa_global or 0)
+    if faixa_informada > 0:
+        return faixa_informada
+
+    cursor.execute(
+        """
+        SELECT turno
+        FROM turmas
+        WHERE id = ?
+        """,
+        (int(turma_id),),
+    )
+    row = cursor.fetchone()
+    turno = row["turno"] if row else ""
+    return _faixa_global_por_turno_e_aula_horario(turno, aula_numero)
+
+
+def _buscar_horario_escolar_conflito_professor_cursor(
+    cursor,
+    *,
+    ano_letivo: int,
+    professor_usuario_id: int,
+    dia_semana: str,
+    faixa_global: int,
+    ignorar_registro_id: int | None = None,
+):
+    filtros = [
+        "he.ano_letivo = ?",
+        "he.professor_usuario_id = ?",
+        "UPPER(he.dia_semana) = ?",
+        f"{_expressao_sql_faixa_global_horario('he', 't')} = ?",
+    ]
+    params = [
+        int(ano_letivo),
+        int(professor_usuario_id),
+        str(dia_semana or "").strip().upper(),
+        int(faixa_global or 0),
+    ]
+    if ignorar_registro_id is not None:
+        filtros.append("he.id <> ?")
+        params.append(int(ignorar_registro_id))
+
+    cursor.execute(
+        f"""
+        SELECT he.id
+        FROM horarios_escolares he
+        INNER JOIN turmas t ON t.id = he.turma_id
+        WHERE {' AND '.join(filtros)}
+        ORDER BY he.id ASC
+        LIMIT 1
+        """,
+        params,
+    )
+    row = cursor.fetchone()
+    return int(row["id"]) if row else None
+
+
+def _recalcular_faixa_global_horarios_turma(cursor, turma_id: int, turno: str) -> None:
+    turno_norm = str(turno or "").strip().upper()
+    if turno_norm in {"VESPERTINO", "VESPERTINO_EM"}:
+        expressao = "CAST(COALESCE(aula_numero, 0) AS INTEGER) + 5"
+    elif turno_norm == "INTEGRAL":
+        expressao = (
+            "CAST(COALESCE(aula_numero, 0) AS INTEGER) + "
+            "CASE WHEN CAST(COALESCE(aula_numero, 0) AS INTEGER) > 5 THEN 1 ELSE 0 END"
+        )
+    else:
+        expressao = "CAST(COALESCE(aula_numero, 0) AS INTEGER)"
+
+    cursor.execute(
+        f"""
+        UPDATE horarios_escolares
+        SET faixa_global = {expressao}
+        WHERE turma_id = ?
+        """,
+        (int(turma_id),),
+    )
+
+
 def _mapear_horario_escolar(row) -> dict:
     item = dict(row)
     return {
@@ -4793,6 +4913,7 @@ def _mapear_horario_escolar(row) -> dict:
         "professor_email": item.get("professor_email", "") or "",
         "dia_semana": item.get("dia_semana", "") or "",
         "aula_numero": int(item.get("aula_numero") or 0),
+        "faixa_global": int(item.get("faixa_global") or 0),
         "criado_em": item.get("criado_em", "") or "",
         "atualizado_em": item.get("atualizado_em", "") or "",
     }
@@ -4813,6 +4934,7 @@ def _consultar_horarios_escolares(cursor, *, filtros_sql=None, params=None):
             he.professor_usuario_id,
             he.dia_semana,
             he.aula_numero,
+            {_expressao_sql_faixa_global_horario('he', 't')} AS faixa_global,
             he.criado_em,
             he.atualizado_em,
             COALESCE(t.nome, '') AS turma_nome,
@@ -4829,6 +4951,7 @@ def _consultar_horarios_escolares(cursor, *, filtros_sql=None, params=None):
             he.ano_letivo DESC,
             t.nome COLLATE NOCASE ASC,
             he.dia_semana ASC,
+            faixa_global ASC,
             he.aula_numero ASC,
             d.nome COLLATE NOCASE ASC,
             u.nome COLLATE NOCASE ASC,
@@ -4908,35 +5031,57 @@ def criar_horario_escolar(
     professor_usuario_id: int,
     dia_semana: str,
     aula_numero: int,
+    faixa_global: int | None = None,
 ):
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT INTO horarios_escolares (
-            ano_letivo,
-            turma_id,
-            disciplina_id,
-            professor_usuario_id,
-            dia_semana,
-            aula_numero,
-            criado_em,
-            atualizado_em
+    try:
+        cursor = conn.cursor()
+        dia_semana_normalizado = str(dia_semana or "").strip().upper()
+        faixa_global_resolvida = _resolver_faixa_global_registro_horario(
+            cursor,
+            turma_id=int(turma_id),
+            aula_numero=int(aula_numero),
+            faixa_global=faixa_global,
         )
-        VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-        """,
-        (
-            int(ano_letivo),
-            int(turma_id),
-            int(disciplina_id),
-            int(professor_usuario_id),
-            str(dia_semana or "").strip().upper(),
-            int(aula_numero),
-        ),
-    )
-    registro_id = int(cursor.lastrowid)
-    conn.commit()
-    conn.close()
+        conflito_id = _buscar_horario_escolar_conflito_professor_cursor(
+            cursor,
+            ano_letivo=int(ano_letivo),
+            professor_usuario_id=int(professor_usuario_id),
+            dia_semana=dia_semana_normalizado,
+            faixa_global=faixa_global_resolvida,
+        )
+        if conflito_id:
+            raise sqlite3.IntegrityError("idx_horarios_escolares_professor_faixa_slot")
+
+        cursor.execute(
+            """
+            INSERT INTO horarios_escolares (
+                ano_letivo,
+                turma_id,
+                disciplina_id,
+                professor_usuario_id,
+                dia_semana,
+                aula_numero,
+                faixa_global,
+                criado_em,
+                atualizado_em
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+            """,
+            (
+                int(ano_letivo),
+                int(turma_id),
+                int(disciplina_id),
+                int(professor_usuario_id),
+                dia_semana_normalizado,
+                int(aula_numero),
+                faixa_global_resolvida,
+            ),
+        )
+        registro_id = int(cursor.lastrowid)
+        conn.commit()
+    finally:
+        conn.close()
     return buscar_horario_escolar_por_id(registro_id)
 
 
@@ -4949,34 +5094,57 @@ def atualizar_horario_escolar(
     professor_usuario_id: int,
     dia_semana: str,
     aula_numero: int,
+    faixa_global: int | None = None,
 ):
     conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        UPDATE horarios_escolares
-        SET ano_letivo = ?,
-            turma_id = ?,
-            disciplina_id = ?,
-            professor_usuario_id = ?,
-            dia_semana = ?,
-            aula_numero = ?,
-            atualizado_em = datetime('now')
-        WHERE id = ?
-        """,
-        (
-            int(ano_letivo),
-            int(turma_id),
-            int(disciplina_id),
-            int(professor_usuario_id),
-            str(dia_semana or "").strip().upper(),
-            int(aula_numero),
-            int(registro_id),
-        ),
-    )
-    alterado = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
+    try:
+        cursor = conn.cursor()
+        dia_semana_normalizado = str(dia_semana or "").strip().upper()
+        faixa_global_resolvida = _resolver_faixa_global_registro_horario(
+            cursor,
+            turma_id=int(turma_id),
+            aula_numero=int(aula_numero),
+            faixa_global=faixa_global,
+        )
+        conflito_id = _buscar_horario_escolar_conflito_professor_cursor(
+            cursor,
+            ano_letivo=int(ano_letivo),
+            professor_usuario_id=int(professor_usuario_id),
+            dia_semana=dia_semana_normalizado,
+            faixa_global=faixa_global_resolvida,
+            ignorar_registro_id=int(registro_id),
+        )
+        if conflito_id:
+            raise sqlite3.IntegrityError("idx_horarios_escolares_professor_faixa_slot")
+
+        cursor.execute(
+            """
+            UPDATE horarios_escolares
+            SET ano_letivo = ?,
+                turma_id = ?,
+                disciplina_id = ?,
+                professor_usuario_id = ?,
+                dia_semana = ?,
+                aula_numero = ?,
+                faixa_global = ?,
+                atualizado_em = datetime('now')
+            WHERE id = ?
+            """,
+            (
+                int(ano_letivo),
+                int(turma_id),
+                int(disciplina_id),
+                int(professor_usuario_id),
+                dia_semana_normalizado,
+                int(aula_numero),
+                faixa_global_resolvida,
+                int(registro_id),
+            ),
+        )
+        alterado = cursor.rowcount > 0
+        conn.commit()
+    finally:
+        conn.close()
     if not alterado:
         return None
     return buscar_horario_escolar_por_id(registro_id)
@@ -5467,6 +5635,8 @@ def atualizar_turma_dados(turma_id: int, turno: str, quantidade_estudantes: int)
     )
 
     alterado = cursor.rowcount > 0
+    if alterado:
+        _recalcular_faixa_global_horarios_turma(cursor, int(turma_id), turno_limpo)
     conn.commit()
     conn.close()
     return alterado

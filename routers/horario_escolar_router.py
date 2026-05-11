@@ -89,6 +89,8 @@ def _validar_data_iso(valor: str, campo: str = "Data") -> str:
 
 def _traduzir_erro_integridade(exc: IntegrityError) -> str:
     texto = str(exc).lower()
+    if "idx_horarios_escolares_professor_faixa_slot" in texto:
+        return "O professor já possui aula cadastrada nessa faixa e nesse dia."
     if "idx_horarios_escolares_professor_slot" in texto:
         return "O professor já possui aula cadastrada nesse dia e horário."
     if "idx_horarios_escolares_turma_slot" in texto:

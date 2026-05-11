@@ -4,6 +4,8 @@ import sys
 import tempfile
 import unittest
 
+from fastapi import HTTPException
+
 
 def _reload_modules(db_path: str):
     os.environ["DB_PATH"] = db_path
@@ -87,6 +89,7 @@ class HorarioEscolarRouterTest(unittest.TestCase):
             self.assertEqual(int(criado["ano_letivo"]), 2031)
             self.assertEqual(criado["dia_semana"], "SEXTA")
             self.assertEqual(criado["dia_semana_nome"], "Sexta-feira")
+            self.assertEqual(int(criado["faixa_global"]), 3)
 
             listagem = horario_router.listar_horarios_escolares_api(
                 ano_letivo=2031,
@@ -198,6 +201,75 @@ class HorarioEscolarRouterTest(unittest.TestCase):
             self.assertEqual(int(card["quantidade_total"]), 4)
             self.assertEqual(int(card["indice_disponivel"]), 1)
             self.assertEqual(matriz["alertas"], [])
+
+    def test_conflito_do_professor_considera_faixa_global_em_vez_de_aula_relativa(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, models, horario_router = _reload_modules(db_path)
+            database.criar_tabelas()
+
+            turma_matutino_id = int(database.criar_turma("7A", "MATUTINO", 30))
+            turma_vespertino_id = int(database.criar_turma("8A", "VESPERTINO", 30))
+            turma_integral_id = int(database.criar_turma("9A", "INTEGRAL", 30))
+            disciplina_id = int(database.criar_disciplina("Matematica", 5))
+            professor_id = int(
+                database.criar_professor(
+                    nome="Professor Faixas",
+                    email="faixas@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1987-09-17",
+                    aulas_semanais=20,
+                    turmas_quantidade=3,
+                    turmas=["7A", "8A", "9A"],
+                    disciplinas=["Matematica"],
+                )
+            )
+
+            database.criar_atribuicao_docente(professor_id, turma_matutino_id, disciplina_id)
+            database.criar_atribuicao_docente(professor_id, turma_vespertino_id, disciplina_id)
+            database.criar_atribuicao_docente(professor_id, turma_integral_id, disciplina_id)
+
+            matutino = horario_router.criar_horario_escolar_api(
+                payload=models.HorarioEscolarRegistroIn(
+                    ano_letivo=2033,
+                    turma_id=turma_matutino_id,
+                    disciplina_id=disciplina_id,
+                    professor_id=professor_id,
+                    dia_semana="segunda",
+                    aula_numero=4,
+                ),
+                usuario=self._usuario_coord(),
+            )
+            self.assertEqual(int(matutino["faixa_global"]), 4)
+
+            vespertino = horario_router.criar_horario_escolar_api(
+                payload=models.HorarioEscolarRegistroIn(
+                    ano_letivo=2033,
+                    turma_id=turma_vespertino_id,
+                    disciplina_id=disciplina_id,
+                    professor_id=professor_id,
+                    dia_semana="segunda",
+                    aula_numero=4,
+                ),
+                usuario=self._usuario_coord(),
+            )
+            self.assertEqual(int(vespertino["faixa_global"]), 9)
+
+            with self.assertRaises(HTTPException) as ctx:
+                horario_router.criar_horario_escolar_api(
+                    payload=models.HorarioEscolarRegistroIn(
+                        ano_letivo=2033,
+                        turma_id=turma_integral_id,
+                        disciplina_id=disciplina_id,
+                        professor_id=professor_id,
+                        dia_semana="segunda",
+                        aula_numero=8,
+                    ),
+                    usuario=self._usuario_coord(),
+                )
+
+            self.assertEqual(int(ctx.exception.status_code), 409)
+            self.assertIn("faixa", str(ctx.exception.detail).lower())
 
 
 if __name__ == "__main__":
