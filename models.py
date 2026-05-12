@@ -552,20 +552,28 @@ class HorarioEscolarRegistroOut(BaseModel):
     atualizado_em: str = ""
 
 
+ApcPublicoAlvo = Literal[
+    "TODOS_PROFESSORES",
+    "HORARIO_DIA",
+]
+
+
 class ApcPeriodoIn(BaseModel):
     ano_letivo: int
     data_referencia: str
     prazo_envio: str = ""
-    titulo: str = "APC"
+    titulo: str = "Documento"
     observacao: str = ""
+    publico_alvo: ApcPublicoAlvo = "TODOS_PROFESSORES"
 
 
 class ApcPeriodoUpdateIn(BaseModel):
     ano_letivo: int
     data_referencia: str
     prazo_envio: str = ""
-    titulo: str = "APC"
+    titulo: str = "Documento"
     observacao: str = ""
+    publico_alvo: ApcPublicoAlvo = "TODOS_PROFESSORES"
 
 
 class ApcPeriodoOut(BaseModel):
@@ -577,8 +585,10 @@ class ApcPeriodoOut(BaseModel):
     prazo_envio: str
     prazo_envio_input: str = ""
     prazo_expirado: bool = False
-    titulo: str = "APC"
+    titulo: str = "Documento"
     observacao: str = ""
+    publico_alvo: ApcPublicoAlvo = "TODOS_PROFESSORES"
+    publico_alvo_label: str = ""
     criado_por_usuario_id: int = 0
     criado_em: str = ""
     atualizado_em: str = ""

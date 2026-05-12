@@ -4,41 +4,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de APC</title>
+    <title>Central de Anexos</title>
     {% include "includes/style_bundle.html" %}
 </head>
 
 <body>
     <main class="scheduler-page apc-page">
-        <section class="scheduler-toolbar apc-toolbar">
-            <h2>Registro de APC</h2>
-            <p id="apcUsuario"></p>
+        <section class="apc-topbar">
+            <div class="apc-topbar-main">
+                <div class="apc-topbar-copy">
+                    <p class="apc-eyebrow">Central docente</p>
+                    <h1>Central de Anexos Docentes</h1>
+                    <p id="apcUsuario" class="apc-topbar-user"></p>
+                </div>
 
-            <div class="scheduler-actions">
-                <button id="btnVoltarServicos" type="button">Voltar aos serviços</button>
-                <button id="btnSair" type="button">Sair</button>
-            </div>
-
-            <hr>
-
-            <div class="apc-toolbar-grid">
-                <label for="apcAnoLetivo">Ano letivo</label>
-                <select id="apcAnoLetivo"></select>
-
-                <div id="apcResumoMes" class="apc-toolbar-note">
-                    Selecione uma data no calendário para ver ou configurar a APC.
+                <div class="apc-topbar-actions">
+                    <button id="btnVoltarServicos" type="button">Voltar aos serviços</button>
+                    <button id="btnSair" type="button">Sair</button>
                 </div>
             </div>
 
-            <p id="msgApc"></p>
+            <div class="apc-topbar-grid">
+                <div class="apc-field">
+                    <label for="apcAnoLetivo">Ano letivo</label>
+                    <select id="apcAnoLetivo"></select>
+                </div>
+
+                <div id="apcResumoMes" class="apc-toolbar-note">
+                    Selecione uma data no calendario para ver ou configurar as entregas.
+                </div>
+            </div>
+
+            <p id="msgApc" class="apc-toolbar-message"></p>
         </section>
 
         <section class="scheduler-content apc-content">
             <article class="calendar-card apc-calendar-card">
                 <header class="calendar-header">
-                    <button id="btnApcMesAnterior" type="button" aria-label="Mês anterior">◀</button>
+                    <button id="btnApcMesAnterior" type="button" aria-label="Mes anterior">&#9664;</button>
                     <h3 id="apcMesAtual"></h3>
-                    <button id="btnApcMesProximo" type="button" aria-label="Próximo mês">▶</button>
+                    <button id="btnApcMesProximo" type="button" aria-label="Proximo mes">&#9654;</button>
                     <button id="btnApcMesHoje" type="button">Hoje</button>
                 </header>
                 <div id="apcCalendarioGrid" class="calendar-grid"></div>
@@ -46,25 +51,28 @@
 
             <article id="apcGestaoCard" class="calendar-card apc-side-card" hidden>
                 <header class="booking-card-header">
-                    <h3>Configurar data de APC</h3>
-                    <p>Cadastre a data da atividade e defina até quando o professor pode anexar o arquivo.</p>
+                    <h3>Nova solicitacao de entrega</h3>
+                    <p>Defina o documento solicitado, o prazo e quem deve visualizar essa entrega.</p>
                 </header>
 
                 <form id="formApcPeriodo" class="apc-form">
-                    <label for="apcDataReferencia">Data da APC</label>
+                    <label for="apcDataReferencia">Data de referencia</label>
                     <input id="apcDataReferencia" type="date" required>
 
                     <label for="apcPrazoEnvio">Prazo de envio</label>
                     <input id="apcPrazoEnvio" type="datetime-local" required>
 
-                    <label for="apcTitulo">Título</label>
-                    <input id="apcTitulo" type="text" maxlength="80" value="APC">
+                    <label for="apcTitulo">Documento solicitado</label>
+                    <input id="apcTitulo" type="text" maxlength="80" value="Documento">
 
-                    <label for="apcObservacao">Observação</label>
-                    <textarea id="apcObservacao" rows="3" placeholder="Ex.: APC referente à semana pedagógica."></textarea>
+                    <label for="apcPublicoAlvo">Quem deve enviar</label>
+                    <select id="apcPublicoAlvo"></select>
+
+                    <label for="apcObservacao">Observacao</label>
+                    <textarea id="apcObservacao" rows="3" placeholder="Ex.: atividade pedagogica, prova bimestral, roteiro, plano ou outro material."></textarea>
 
                     <div class="apc-inline-actions">
-                        <button class="btn-destaque" type="submit">Salvar data</button>
+                        <button class="btn-destaque" type="submit">Salvar solicitacao</button>
                         <button id="btnNovaApc" type="button">Nova</button>
                         <button id="btnExcluirApc" type="button" hidden>Excluir</button>
                     </div>
@@ -74,31 +82,18 @@
             <article class="calendar-card apc-detail-card">
                 <header class="booking-card-header">
                     <h3 id="apcTituloPainel">Painel da data selecionada</h3>
-                    <p id="apcSubtituloPainel">Escolha uma data no calendário para continuar.</p>
+                    <p id="apcSubtituloPainel">Escolha uma data no calendario para continuar.</p>
                 </header>
+
+                <div id="apcSolicitacoesData" class="apc-solicitacoes-data">
+                    <div class="booking-empty">Nenhuma solicitacao nesta data.</div>
+                </div>
+
                 <div id="apcResumoPainel"></div>
+
                 <div id="apcListaPainel" class="apc-lista-painel">
-                    <div class="booking-empty">Nenhuma APC selecionada.</div>
+                    <div class="booking-empty">Nenhuma solicitacao selecionada.</div>
                 </div>
-            </article>
-
-            <article id="apcProfessorCard" class="calendar-card apc-side-card" hidden>
-                <header class="booking-card-header">
-                    <h3>Meu envio de APC</h3>
-                    <p>Anexe o arquivo apenas nas datas em que você tem aula prevista no horário escolar.</p>
-                </header>
-
-                <div id="apcProfessorResumo" class="apc-professor-resumo">
-                    <div class="booking-empty">Selecione uma data com APC prevista para você.</div>
-                </div>
-
-                <form id="formApcEnvio" class="apc-form" hidden>
-                    <label for="apcArquivo">Arquivo da APC</label>
-                    <input id="apcArquivo" type="file" required>
-                    <button class="btn-destaque" type="submit">Enviar arquivo</button>
-                </form>
-
-                <div id="apcEnvioAtual" class="apc-envio-atual"></div>
             </article>
         </section>
     </main>

@@ -1,24 +1,130 @@
-.apc-toolbar {
-    gap: 14px;
+.apc-page {
+    grid-template-columns: minmax(0, 1fr);
+    width: min(1440px, 100%);
+    margin: 0 auto;
+    padding: 18px;
+    gap: 16px;
 }
 
-.apc-toolbar-grid {
+.apc-topbar {
+    background:
+        linear-gradient(135deg, rgba(19, 53, 88, 0.98), rgba(25, 84, 126, 0.94)),
+        #12324d;
+    color: #ffffff;
+    border-radius: 24px;
+    padding: 22px 24px 20px;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
     display: grid;
-    grid-template-columns: minmax(180px, 220px) minmax(0, 1fr);
-    gap: 10px 14px;
-    align-items: center;
+    gap: 18px;
+}
+
+.apc-topbar-main {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+}
+
+.apc-topbar-copy {
+    display: grid;
+    gap: 8px;
+}
+
+.apc-eyebrow {
+    margin: 0;
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, 0.72);
+}
+
+.apc-topbar h1 {
+    margin: 0;
+    font-size: clamp(1.8rem, 2.1vw, 2.35rem);
+    line-height: 1.08;
+}
+
+.apc-topbar-user {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.84);
+}
+
+.apc-topbar-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+}
+
+.apc-topbar-actions button {
+    width: auto;
+    min-width: 140px;
+    height: 42px;
+    padding: 0 16px;
+    border-radius: 999px;
+    border-color: rgba(255, 255, 255, 0.22);
+    background: rgba(255, 255, 255, 0.08);
+    color: #ffffff;
+}
+
+.apc-topbar-actions button:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.34);
+}
+
+.apc-topbar-grid {
+    display: grid;
+    grid-template-columns: minmax(190px, 230px) minmax(0, 1fr);
+    gap: 12px 16px;
+    align-items: end;
+}
+
+.apc-field {
+    display: grid;
+    gap: 8px;
+}
+
+.apc-field label {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: rgba(255, 255, 255, 0.84);
+}
+
+.apc-field select {
+    height: 44px;
+    border-radius: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.24);
+    background: rgba(255, 255, 255, 0.98);
+    color: #143454;
+    padding: 0 12px;
 }
 
 .apc-toolbar-note {
-    padding: 10px 12px;
-    border-radius: 12px;
-    background: rgba(19, 53, 88, 0.06);
-    color: var(--ink-soft);
+    min-height: 44px;
+    border-radius: 16px;
+    padding: 12px 14px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.88);
+    display: flex;
+    align-items: center;
+}
+
+.apc-toolbar-message {
+    min-height: 20px;
+    margin: 0;
+    font-size: 0.94rem;
+    color: #d9f99d;
 }
 
 .apc-content {
-    grid-template-columns: minmax(0, 1.3fr) minmax(320px, 0.95fr);
+    grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.78fr);
     align-items: start;
+}
+
+.apc-page.is-professor .apc-content {
+    grid-template-columns: 1fr;
 }
 
 .apc-calendar-card {
@@ -33,14 +139,23 @@
 
 .apc-side-card {
     grid-column: 2;
+    grid-row: 1 / span 2;
+    align-self: start;
+    position: sticky;
+    top: 12px;
 }
 
-#apcGestaoCard {
-    grid-row: 1;
+.apc-page.is-professor .apc-calendar-card,
+.apc-page.is-professor .apc-detail-card,
+.apc-page.is-professor .apc-side-card {
+    grid-column: 1;
+    grid-row: auto;
+    position: static;
 }
 
-#apcProfessorCard {
-    grid-row: 2;
+.apc-calendar-card .calendar-day {
+    min-height: 86px;
+    padding: 8px;
 }
 
 .apc-form {
@@ -55,6 +170,118 @@
     margin-top: 6px;
 }
 
+.apc-detail-card {
+    display: grid;
+    gap: 14px;
+}
+
+.apc-solicitacoes-data {
+    display: grid;
+    gap: 12px;
+}
+
+.apc-solicitacao-item {
+    border: 1px solid var(--line-soft);
+    border-radius: 18px;
+    background: linear-gradient(180deg, #ffffff, #f8fbff);
+    overflow: hidden;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.apc-solicitacao-item.is-selected,
+.apc-solicitacao-item[open] {
+    border-color: rgba(19, 53, 88, 0.26);
+    box-shadow: 0 12px 28px rgba(19, 53, 88, 0.08);
+}
+
+.apc-solicitacao-summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 18px;
+}
+
+.apc-solicitacao-summary::-webkit-details-marker {
+    display: none;
+}
+
+.apc-solicitacao-summary-main {
+    min-width: 0;
+    display: grid;
+    gap: 7px;
+}
+
+.apc-solicitacao-summary-main h4,
+.apc-solicitacao-summary-main p {
+    margin: 0;
+}
+
+.apc-solicitacao-summary-main h4 {
+    font-size: 1rem;
+}
+
+.apc-solicitacao-resumo {
+    font-size: 0.93rem;
+    color: var(--ink-soft);
+}
+
+.apc-solicitacao-summary-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    color: var(--ink-soft);
+    font-size: 0.87rem;
+}
+
+.apc-solicitacao-summary-side {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+}
+
+.apc-solicitacao-chevron {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    background: rgba(19, 53, 88, 0.08);
+    color: #21446b;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.94rem;
+    font-weight: 800;
+}
+
+.apc-solicitacao-item[open] .apc-solicitacao-chevron {
+    transform: rotate(180deg);
+}
+
+.apc-accordion-body {
+    border-top: 1px solid rgba(19, 53, 88, 0.08);
+    padding: 16px 18px 18px;
+    display: grid;
+    gap: 14px;
+    background: rgba(244, 248, 252, 0.94);
+}
+
+.apc-accordion-note,
+.apc-inline-observacao,
+.apc-inline-hint {
+    margin: 0;
+    color: var(--ink-soft);
+}
+
+.apc-inline-observacao {
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 1px solid rgba(19, 53, 88, 0.08);
+    background: rgba(255, 255, 255, 0.88);
+}
+
 .apc-resumo-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -64,14 +291,14 @@
 
 .apc-resumo-item {
     border: 1px solid var(--line-soft);
-    border-radius: 12px;
-    padding: 10px 12px;
+    border-radius: 14px;
+    padding: 12px;
     background: var(--surface-1);
 }
 
 .apc-resumo-item strong {
     display: block;
-    font-size: 1.25rem;
+    font-size: 1.2rem;
     margin-top: 4px;
 }
 
@@ -84,7 +311,7 @@
     border: 1px solid var(--line-soft);
     border-radius: 14px;
     padding: 12px;
-    background: var(--surface-1);
+    background: #ffffff;
     display: grid;
     gap: 8px;
 }
@@ -92,7 +319,7 @@
 .apc-professor-topo {
     display: flex;
     justify-content: space-between;
-    align-items: start;
+    align-items: flex-start;
     gap: 10px;
 }
 
@@ -151,10 +378,18 @@
     color: var(--ink-soft);
 }
 
-.apc-professor-resumo,
-.apc-envio-atual {
-    display: grid;
-    gap: 10px;
+.apc-inline-form {
+    padding-top: 14px;
+    border-top: 1px solid rgba(19, 53, 88, 0.1);
+}
+
+.apc-inline-form input[type="file"] {
+    width: 100%;
+}
+
+.apc-inline-form button {
+    width: fit-content;
+    min-width: 180px;
 }
 
 .apc-envio-link {
@@ -165,6 +400,11 @@
 
 .apc-envio-link:hover {
     text-decoration: underline;
+}
+
+.apc-envio-meta {
+    margin: 0;
+    color: var(--ink-soft);
 }
 
 .apc-calendar-flag {
@@ -186,23 +426,59 @@
     box-shadow: inset 0 0 0 2px rgba(15, 118, 110, 0.22);
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 1120px) {
     .apc-content {
         grid-template-columns: 1fr;
     }
 
     .apc-calendar-card,
     .apc-detail-card,
-    .apc-side-card,
-    #apcGestaoCard,
-    #apcProfessorCard {
+    .apc-side-card {
         grid-column: 1;
         grid-row: auto;
+        position: static;
     }
 }
 
-@media (max-width: 720px) {
-    .apc-toolbar-grid {
+@media (max-width: 780px) {
+    .apc-page {
+        padding: 12px;
+    }
+
+    .apc-topbar {
+        padding: 18px 16px;
+        border-radius: 20px;
+    }
+
+    .apc-topbar-main {
+        flex-direction: column;
+    }
+
+    .apc-topbar-actions {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .apc-topbar-actions button {
+        flex: 1 1 100%;
+    }
+
+    .apc-topbar-grid {
         grid-template-columns: 1fr;
+    }
+
+    .apc-solicitacao-summary {
+        padding: 14px;
+    }
+
+    .apc-solicitacao-summary-side {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+@media (max-width: 640px) {
+    .apc-solicitacao-summary {
+        flex-direction: column;
     }
 }

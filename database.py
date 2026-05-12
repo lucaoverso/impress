@@ -5174,6 +5174,7 @@ def _mapear_apc_periodo(row) -> dict:
         "prazo_envio": str(row["prazo_envio"] or "").strip(),
         "titulo": str(row["titulo"] or "").strip(),
         "observacao": str(row["observacao"] or "").strip(),
+        "publico_alvo": str(row["publico_alvo"] or "").strip(),
         "criado_por_usuario_id": int(row["criado_por_usuario_id"] or 0),
         "criado_em": str(row["criado_em"] or "").strip(),
         "atualizado_em": str(row["atualizado_em"] or "").strip(),
@@ -5194,6 +5195,7 @@ def _consultar_apc_periodos(cursor, *, filtros_sql=None, params=None):
             prazo_envio,
             titulo,
             observacao,
+            publico_alvo,
             criado_por_usuario_id,
             criado_em,
             atualizado_em
@@ -5266,6 +5268,7 @@ def criar_apc_periodo(
     prazo_envio: str,
     titulo: str,
     observacao: str,
+    publico_alvo: str,
     criado_por_usuario_id: int,
 ):
     conn = get_connection()
@@ -5278,11 +5281,12 @@ def criar_apc_periodo(
             prazo_envio,
             titulo,
             observacao,
+            publico_alvo,
             criado_por_usuario_id,
             criado_em,
             atualizado_em
         )
-        VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
         """,
         (
             int(ano_letivo),
@@ -5290,6 +5294,7 @@ def criar_apc_periodo(
             str(prazo_envio).strip(),
             str(titulo or "").strip(),
             str(observacao or "").strip(),
+            str(publico_alvo or "").strip().upper(),
             int(criado_por_usuario_id),
         ),
     )
@@ -5307,6 +5312,7 @@ def atualizar_apc_periodo(
     prazo_envio: str,
     titulo: str,
     observacao: str,
+    publico_alvo: str,
 ):
     conn = get_connection()
     cursor = conn.cursor()
@@ -5318,6 +5324,7 @@ def atualizar_apc_periodo(
             prazo_envio = ?,
             titulo = ?,
             observacao = ?,
+            publico_alvo = ?,
             atualizado_em = datetime('now')
         WHERE id = ?
         """,
@@ -5327,6 +5334,7 @@ def atualizar_apc_periodo(
             str(prazo_envio).strip(),
             str(titulo or "").strip(),
             str(observacao or "").strip(),
+            str(publico_alvo or "").strip().upper(),
             int(periodo_id),
         ),
     )

@@ -20,15 +20,22 @@ from db.apc import (
     listar_apc_periodos,
 )
 from db.horario_escolar import listar_anos_letivos_horario_escolar, listar_horarios_escolares
+from db.usuarios import listar_professores_agendamento
 from models import ApcEnvioOut, ApcPeriodoIn, ApcPeriodoOut, ApcPeriodoUpdateIn
 from services.apc_service import (
+    APC_PUBLICO_ALVO_HORARIO_DIA,
+    APC_PUBLICO_ALVO_TODOS_PROFESSORES,
+    agrupar_horarios_professor_dia,
+    agrupar_professores_elegiveis,
     contexto_apc_anos,
     enriquecer_periodo_apc,
     intervalo_mes_referencia,
     montar_painel_periodo_apc,
     montar_painel_professor_apc,
+    nome_publico_alvo,
     nome_arquivo_armazenado,
     normalizar_data_apc,
+    normalizar_publico_alvo,
     normalizar_prazo_envio,
     ordenar_periodos_apc,
     periodo_apc_aberto,
@@ -74,7 +81,7 @@ def _resolver_caminho_envio_seguro(caminho_arquivo: str) -> Path:
     try:
         caminho.relative_to(caminho_base)
     except ValueError as exc:
-        raise HTTPException(409, "O arquivo vinculado a este envio está fora do diretório APC.") from exc
+        raise HTTPException(409, "O arquivo vinculado a este envio está fora do diretório configurado.") from exc
 
     if not caminho.exists() or not caminho.is_file():
         raise HTTPException(404, "Arquivo do envio não encontrado.")
@@ -93,10 +100,11 @@ def _dados_periodo_payload(payload: ApcPeriodoIn | ApcPeriodoUpdateIn) -> dict:
     try:
         data_referencia = normalizar_data_apc(payload.data_referencia)
         prazo_envio = normalizar_prazo_envio(data_referencia, payload.prazo_envio)
+        publico_alvo = normalizar_publico_alvo(payload.publico_alvo)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 
-    titulo = str(payload.titulo or "APC").strip() or "APC"
+    titulo = str(payload.titulo or "Documento").strip() or "Documento"
     observacao = str(payload.observacao or "").strip()
     return {
         "ano_letivo": ano_letivo,
@@ -104,6 +112,7 @@ def _dados_periodo_payload(payload: ApcPeriodoIn | ApcPeriodoUpdateIn) -> dict:
         "prazo_envio": prazo_envio,
         "titulo": titulo,
         "observacao": observacao,
+        "publico_alvo": publico_alvo,
     }
 
 
@@ -116,14 +125,28 @@ def _obter_horarios_periodo(periodo: dict, professor_id: int | None = None) -> l
     )
 
 
+def _obter_elegiveis_periodo(periodo: dict, professor_id: int | None = None) -> list[dict]:
+    periodo_norm = enriquecer_periodo_apc(periodo)
+    if periodo_norm["publico_alvo"] == APC_PUBLICO_ALVO_TODOS_PROFESSORES:
+        professores = listar_professores_agendamento()
+        if professor_id is not None:
+            professores = [
+                item for item in professores if int(item.get("id") or 0) == int(professor_id)
+            ]
+        return agrupar_professores_elegiveis(professores)
+
+    horarios = _obter_horarios_periodo(periodo_norm, professor_id=professor_id)
+    return agrupar_horarios_professor_dia(horarios)
+
+
 def _montar_resumo_calendario_para_usuario(periodo: dict, usuario: dict) -> dict | None:
     periodo_norm = enriquecer_periodo_apc(periodo)
-    horarios = _obter_horarios_periodo(periodo_norm)
+    elegiveis = _obter_elegiveis_periodo(periodo_norm)
 
     if _pode_gerir_apc(usuario):
         painel = montar_painel_periodo_apc(
             periodo_norm,
-            horarios,
+            elegiveis,
             listar_apc_envios(periodo_id=int(periodo_norm["id"])),
         )
         return {
@@ -138,7 +161,7 @@ def _montar_resumo_calendario_para_usuario(periodo: dict, usuario: dict) -> dict
     painel_professor = montar_painel_professor_apc(
         periodo_norm,
         int(usuario["id"]),
-        horarios,
+        _obter_elegiveis_periodo(periodo_norm, professor_id=int(usuario["id"])),
         buscar_apc_envio_por_periodo_e_professor(int(periodo_norm["id"]), int(usuario["id"])),
     )
     if not painel_professor:
@@ -164,6 +187,16 @@ def obter_contexto_apc_api(usuario=Depends(get_usuario_logado)):
         "ano_letivo_atual": datetime.now().year,
         "mes_atual": datetime.now().strftime("%Y-%m"),
         "hoje": datetime.now().date().isoformat(),
+        "publicos_alvo": [
+            {
+                "valor": APC_PUBLICO_ALVO_TODOS_PROFESSORES,
+                "label": nome_publico_alvo(APC_PUBLICO_ALVO_TODOS_PROFESSORES),
+            },
+            {
+                "valor": APC_PUBLICO_ALVO_HORARIO_DIA,
+                "label": nome_publico_alvo(APC_PUBLICO_ALVO_HORARIO_DIA),
+            },
+        ],
         "usuario": {
             "id": int(usuario["id"]),
             "nome": str(usuario.get("nome") or "").strip(),
@@ -212,24 +245,24 @@ def listar_calendario_apc_api(
 def obter_periodo_apc_api(periodo_id: int, usuario=Depends(get_usuario_logado)):
     periodo = buscar_apc_periodo_por_id(periodo_id)
     if not periodo:
-        raise HTTPException(404, "Data de APC não encontrada.")
+        raise HTTPException(404, "Solicitação de entrega não encontrada.")
 
-    horarios = _obter_horarios_periodo(periodo)
+    elegiveis = _obter_elegiveis_periodo(periodo)
     if _pode_gerir_apc(usuario):
         return montar_painel_periodo_apc(
             periodo,
-            horarios,
+            elegiveis,
             listar_apc_envios(periodo_id=periodo_id),
         )
 
     painel = montar_painel_professor_apc(
         periodo,
         int(usuario["id"]),
-        horarios,
+        _obter_elegiveis_periodo(periodo, professor_id=int(usuario["id"])),
         buscar_apc_envio_por_periodo_e_professor(periodo_id, int(usuario["id"])),
     )
     if not painel:
-        raise HTTPException(403, "Nenhuma APC prevista para você nesta data.")
+        raise HTTPException(403, "Nenhuma entrega prevista para você nesta data.")
     return painel
 
 
@@ -244,10 +277,14 @@ def criar_periodo_apc_api(payload: ApcPeriodoIn, usuario=Depends(get_usuario_log
             prazo_envio=dados["prazo_envio"],
             titulo=dados["titulo"],
             observacao=dados["observacao"],
+            publico_alvo=dados["publico_alvo"],
             criado_por_usuario_id=int(usuario["id"]),
         )
     except sqlite3.IntegrityError as exc:
-        raise HTTPException(409, "Já existe uma APC cadastrada para essa data no ano letivo.") from exc
+        raise HTTPException(
+            409,
+            "Já existe uma solicitação semelhante cadastrada para essa data no ano letivo.",
+        ) from exc
     return enriquecer_periodo_apc(periodo)
 
 
@@ -259,7 +296,7 @@ def atualizar_periodo_apc_api(
 ):
     _exigir_gestao_apc(usuario)
     if not buscar_apc_periodo_por_id(periodo_id):
-        raise HTTPException(404, "Data de APC não encontrada.")
+        raise HTTPException(404, "Solicitação de entrega não encontrada.")
 
     dados = _dados_periodo_payload(payload)
     try:
@@ -270,12 +307,16 @@ def atualizar_periodo_apc_api(
             prazo_envio=dados["prazo_envio"],
             titulo=dados["titulo"],
             observacao=dados["observacao"],
+            publico_alvo=dados["publico_alvo"],
         )
     except sqlite3.IntegrityError as exc:
-        raise HTTPException(409, "Já existe uma APC cadastrada para essa data no ano letivo.") from exc
+        raise HTTPException(
+            409,
+            "Já existe uma solicitação semelhante cadastrada para essa data no ano letivo.",
+        ) from exc
 
     if not periodo:
-        raise HTTPException(404, "Data de APC não encontrada.")
+        raise HTTPException(404, "Solicitação de entrega não encontrada.")
     return enriquecer_periodo_apc(periodo)
 
 
@@ -283,17 +324,17 @@ def atualizar_periodo_apc_api(
 def excluir_periodo_apc_api(periodo_id: int, usuario=Depends(get_usuario_logado)):
     _exigir_gestao_apc(usuario)
     if not buscar_apc_periodo_por_id(periodo_id):
-        raise HTTPException(404, "Data de APC não encontrada.")
+        raise HTTPException(404, "Solicitação de entrega não encontrada.")
     try:
         removido = excluir_apc_periodo(periodo_id)
     except sqlite3.IntegrityError as exc:
         raise HTTPException(
             409,
-            "Não é possível excluir esta data porque já existem arquivos enviados.",
+            "Não é possível excluir esta solicitação porque já existem arquivos enviados.",
         ) from exc
     if not removido:
-        raise HTTPException(404, "Data de APC não encontrada.")
-    return {"mensagem": "Data de APC removida com sucesso."}
+        raise HTTPException(404, "Solicitação de entrega não encontrada.")
+    return {"mensagem": "Solicitação de entrega removida com sucesso."}
 
 
 @router.post("/apc/periodos/{periodo_id}/envio", response_model=ApcEnvioOut)
@@ -303,26 +344,31 @@ def enviar_arquivo_apc_api(
     usuario=Depends(get_usuario_logado),
 ):
     if not usuario_eh_professor(usuario):
-        raise HTTPException(403, "Somente professores podem enviar APC.")
+        raise HTTPException(403, "Somente professores podem enviar arquivos.")
 
     periodo = buscar_apc_periodo_por_id(periodo_id)
     if not periodo:
-        raise HTTPException(404, "Data de APC não encontrada.")
+        raise HTTPException(404, "Solicitação de entrega não encontrada.")
     periodo_norm = enriquecer_periodo_apc(periodo)
 
     if not periodo_apc_aberto(periodo_norm):
-        raise HTTPException(409, "O prazo de envio desta APC já foi encerrado.")
+        raise HTTPException(409, "O prazo de envio desta solicitação já foi encerrado.")
 
     if not arquivo or not arquivo.filename:
         raise HTTPException(400, "Arquivo não enviado.")
     if not arquivo_suportado(arquivo.filename):
         raise HTTPException(400, f"Formato não suportado. Envie {FORMATOS_UPLOAD_DESCRICAO}.")
 
-    horarios = _obter_horarios_periodo(periodo_norm, professor_id=int(usuario["id"]))
+    elegiveis = _obter_elegiveis_periodo(periodo_norm, professor_id=int(usuario["id"]))
     envio_existente = buscar_apc_envio_por_periodo_e_professor(periodo_id, int(usuario["id"]))
-    painel = montar_painel_professor_apc(periodo_norm, int(usuario["id"]), horarios, envio_existente)
+    painel = montar_painel_professor_apc(
+        periodo_norm,
+        int(usuario["id"]),
+        elegiveis,
+        envio_existente,
+    )
     if not painel:
-        raise HTTPException(403, "Não há APC prevista para você nesta data.")
+        raise HTTPException(403, "Não há entrega prevista para você nesta data.")
 
     conteudo = arquivo.file.read()
     if not conteudo:
@@ -336,7 +382,7 @@ def enviar_arquivo_apc_api(
         with caminho_destino.open("wb") as destino:
             destino.write(conteudo)
     except OSError as exc:
-        raise HTTPException(500, "Falha ao armazenar o arquivo da APC.") from exc
+        raise HTTPException(500, "Falha ao armazenar o arquivo enviado.") from exc
 
     try:
         if envio_existente:
@@ -361,14 +407,14 @@ def enviar_arquivo_apc_api(
             )
     except sqlite3.IntegrityError as exc:
         _remover_arquivo_se_existir(caminho_destino)
-        raise HTTPException(409, "Conflito ao registrar o envio da APC.") from exc
+        raise HTTPException(409, "Conflito ao registrar o envio do arquivo.") from exc
     except Exception:
         _remover_arquivo_se_existir(caminho_destino)
         raise
 
     if not envio:
         _remover_arquivo_se_existir(caminho_destino)
-        raise HTTPException(500, "Falha ao registrar o envio da APC.")
+        raise HTTPException(500, "Falha ao registrar o envio do arquivo.")
     return envio
 
 

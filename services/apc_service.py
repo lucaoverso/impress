@@ -10,6 +10,17 @@ from services.horario_escolar_service import (
     validar_ano_letivo,
 )
 
+APC_PUBLICO_ALVO_TODOS_PROFESSORES = "TODOS_PROFESSORES"
+APC_PUBLICO_ALVO_HORARIO_DIA = "HORARIO_DIA"
+APC_PUBLICOS_ALVO_VALIDOS = (
+    APC_PUBLICO_ALVO_TODOS_PROFESSORES,
+    APC_PUBLICO_ALVO_HORARIO_DIA,
+)
+APC_PUBLICO_ALVO_LABELS = {
+    APC_PUBLICO_ALVO_TODOS_PROFESSORES: "Todos os professores",
+    APC_PUBLICO_ALVO_HORARIO_DIA: "Professores com aula na data",
+}
+
 
 def validar_mes_referencia(valor: str) -> str:
     try:
@@ -60,8 +71,22 @@ def normalizar_prazo_envio(data_referencia: str, prazo_envio: str = "") -> str:
 
     prazo = _parse_datetime_local(texto)
     if prazo.date().isoformat() < data_norm:
-        raise ValueError("O prazo de envio não pode ser anterior à data da APC.")
+        raise ValueError("O prazo de envio não pode ser anterior à data de referência.")
     return prazo.strftime("%Y-%m-%d %H:%M:%S")
+
+
+def normalizar_publico_alvo(valor: str) -> str:
+    publico = str(valor or "").strip().upper()
+    if not publico:
+        return APC_PUBLICO_ALVO_TODOS_PROFESSORES
+    if publico not in APC_PUBLICOS_ALVO_VALIDOS:
+        raise ValueError("Público-alvo inválido.")
+    return publico
+
+
+def nome_publico_alvo(publico_alvo: str) -> str:
+    publico = normalizar_publico_alvo(publico_alvo)
+    return APC_PUBLICO_ALVO_LABELS.get(publico, publico)
 
 
 def _parse_sqlite_datetime(valor: str):
@@ -96,6 +121,7 @@ def enriquecer_periodo_apc(item: dict, agora: datetime | None = None) -> dict:
     data_referencia = normalizar_data_apc(periodo.get("data_referencia"))
     dia_semana = dia_semana_por_data(data_referencia)
     prazo = str(periodo.get("prazo_envio") or "").strip()
+    publico_alvo = normalizar_publico_alvo(periodo.get("publico_alvo"))
     return {
         **periodo,
         "id": int(periodo.get("id") or 0),
@@ -107,8 +133,10 @@ def enriquecer_periodo_apc(item: dict, agora: datetime | None = None) -> dict:
         "prazo_envio": prazo,
         "prazo_envio_input": prazo_envio_input(prazo),
         "prazo_expirado": not periodo_apc_aberto({"prazo_envio": prazo}, agora=agora),
-        "titulo": str(periodo.get("titulo") or "APC").strip() or "APC",
+        "titulo": str(periodo.get("titulo") or "Documento").strip() or "Documento",
         "observacao": str(periodo.get("observacao") or "").strip(),
+        "publico_alvo": publico_alvo,
+        "publico_alvo_label": nome_publico_alvo(publico_alvo),
         "criado_em": str(periodo.get("criado_em") or "").strip(),
         "atualizado_em": str(periodo.get("atualizado_em") or "").strip(),
     }
@@ -188,9 +216,30 @@ def agrupar_horarios_professor_dia(horarios: list[dict]) -> list[dict]:
     return itens
 
 
-def montar_painel_periodo_apc(periodo: dict, horarios: list[dict], envios: list[dict]) -> dict:
+def agrupar_professores_elegiveis(professores: list[dict]) -> list[dict]:
+    itens = []
+    for item in sorted(
+        [dict(item) for item in (professores or []) if int(item.get("id") or 0) > 0],
+        key=lambda prof: (
+            str(prof.get("nome") or "").casefold(),
+            int(prof.get("id") or 0),
+        ),
+    ):
+        itens.append(
+            {
+                "professor_id": int(item.get("id") or 0),
+                "professor_nome": str(item.get("nome") or "").strip(),
+                "professor_email": str(item.get("email") or "").strip(),
+                "turmas": [],
+                "disciplinas": [],
+                "horarios": [],
+            }
+        )
+    return itens
+
+
+def montar_painel_periodo_apc(periodo: dict, elegiveis: list[dict], envios: list[dict]) -> dict:
     periodo_norm = enriquecer_periodo_apc(periodo)
-    elegiveis = agrupar_horarios_professor_dia(horarios)
     envios_por_professor = {
         int(item.get("professor_id") or 0): enriquecer_envio_apc(item) for item in (envios or [])
     }
@@ -219,12 +268,10 @@ def montar_painel_periodo_apc(periodo: dict, horarios: list[dict], envios: list[
 def montar_painel_professor_apc(
     periodo: dict,
     professor_id: int,
-    horarios: list[dict],
+    elegiveis: list[dict],
     envio: dict | None,
 ) -> dict | None:
-    grupos = {
-        int(item["professor_id"]): item for item in agrupar_horarios_professor_dia(horarios)
-    }
+    grupos = {int(item["professor_id"]): item for item in (elegiveis or [])}
     grupo = grupos.get(int(professor_id))
     if not grupo:
         return None
@@ -246,7 +293,7 @@ def sanitizar_nome_arquivo(nome_arquivo: str) -> str:
     nome_base = os.path.basename(nome_arquivo or "").strip().replace(" ", "_")
     nome_limpo = re.sub(r"[^A-Za-z0-9._-]", "_", nome_base)
     if not nome_limpo:
-        return "apc.pdf"
+        return "documento.pdf"
     return nome_limpo
 
 
