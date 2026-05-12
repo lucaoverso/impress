@@ -22,6 +22,7 @@ let usuarioApc = null;
 let contextoApc = null;
 let mesAtualApc = new Date();
 let dataSelecionadaApc = paraIso(new Date());
+let dataSelecionadaManualmenteApc = false;
 let calendarioApc = { periodos: [] };
 let periodoSelecionadoApcId = null;
 let abaGestaoApc = "professores";
@@ -71,6 +72,10 @@ function modoDocenteAtivoApc() {
 
 function modoGestaoAtivoApc() {
     return modoApc === "gestao";
+}
+
+function gestaoComDataSelecionadaApc() {
+    return modoGestaoAtivoApc() && dataSelecionadaManualmenteApc;
 }
 
 function modoInicialApc() {
@@ -127,6 +132,10 @@ function ativarModoApc(modo, { recarregar = false } = {}) {
     } else {
         if (!usuarioPodeVerDocenteApc()) return;
         modoApc = "docente";
+    }
+
+    if (recarregar && modoGestaoAtivoApc()) {
+        dataSelecionadaManualmenteApc = false;
     }
 
     renderizarAbasModoApc();
@@ -212,7 +221,7 @@ function aplicarVisibilidadeApc() {
     const pagina = obterPaginaApc();
 
     renderizarAbasModoApc();
-    el("apcGestaoCard").hidden = !(podeGerir && modoGestaoAtivoApc());
+    el("apcGestaoCard").hidden = !(podeGerir && gestaoComDataSelecionadaApc());
     el("apcResumoPainel").hidden = false;
     el("apcGestaoTabs").hidden = !(podeGerir && modoGestaoAtivoApc());
     if (!(podeGerir && modoGestaoAtivoApc())) {
@@ -950,6 +959,22 @@ function renderPainelSelecionadoVazio() {
     preencherFormularioPeriodo(null);
 }
 
+function renderPainelAguardandoDataGestao() {
+    el("apcTituloPainel").innerText = "Escolha uma data no calendario";
+    el("apcSubtituloPainel").innerText =
+        "Clique em um dia para abrir as solicitacoes, acompanhar os envios e cadastrar um novo prazo.";
+    el("apcResumoPainel").innerHTML = "";
+    renderSolicitacoesData([]);
+    el("apcGestaoTabs").hidden = true;
+    ativarAbaGestaoApc("professores");
+    el("apcListaPainel").innerHTML =
+        '<div class="booking-empty">Selecione uma data no calendario para visualizar os professores e os envios.</div>';
+    if (el("apcArquivosLista")) {
+        el("apcArquivosLista").innerHTML =
+            '<div class="booking-empty">Selecione uma data no calendario para listar os arquivos enviados.</div>';
+    }
+}
+
 function renderPainelSemSelecaoGestao() {
     el("apcTituloPainel").innerText = modoGestaoAtivoApc()
         ? `Solicitacoes de ${paraDataBr(dataSelecionadaApc)}`
@@ -968,6 +993,12 @@ function renderPainelSemSelecaoGestao() {
 }
 
 async function carregarDetalheSelecionadoApc() {
+    if (modoGestaoAtivoApc() && !dataSelecionadaManualmenteApc) {
+        periodoSelecionadoApcId = null;
+        renderPainelAguardandoDataGestao();
+        return;
+    }
+
     const periodosDoDia = periodosResumoPorData(dataSelecionadaApc);
 
     if (!periodosDoDia.length) {
@@ -1058,7 +1089,9 @@ function renderCalendarioApc() {
         const btnDia = document.createElement("button");
         btnDia.type = "button";
         btnDia.className = "calendar-day apc-calendar-day";
-        if (dataIso === dataSelecionadaApc) btnDia.classList.add("is-selected");
+        if (dataIso === dataSelecionadaApc && (!modoGestaoAtivoApc() || dataSelecionadaManualmenteApc)) {
+            btnDia.classList.add("is-selected");
+        }
         if (dataIso === hojeIso) btnDia.classList.add("is-today");
         if (periodos.length) {
             btnDia.classList.add("has-apc");
@@ -1100,11 +1133,13 @@ function renderCalendarioApc() {
 
         btnDia.addEventListener("click", async () => {
             dataSelecionadaApc = dataIso;
+            dataSelecionadaManualmenteApc = true;
             const periodosDaData = periodosResumoPorData(dataIso);
             const atualNaData = periodosDaData.find(
                 (item) => Number(item.id) === Number(periodoSelecionadoApcId)
             );
             periodoSelecionadoApcId = atualNaData ? Number(atualNaData.id) : Number(periodosDaData[0]?.id || 0);
+            aplicarVisibilidadeApc();
             renderCalendarioApc();
             await carregarDetalheSelecionadoApc();
         });
@@ -1234,17 +1269,23 @@ function registrarEventosApc() {
 
     el("apcAnoLetivo").addEventListener("change", async () => {
         periodoSelecionadoApcId = null;
+        dataSelecionadaManualmenteApc = false;
+        aplicarVisibilidadeApc();
         await carregarCalendarioApc();
     });
 
     el("btnApcMesAnterior").addEventListener("click", async () => {
         mesAtualApc = new Date(mesAtualApc.getFullYear(), mesAtualApc.getMonth() - 1, 1);
         periodoSelecionadoApcId = null;
+        dataSelecionadaManualmenteApc = false;
+        aplicarVisibilidadeApc();
         await carregarCalendarioApc();
     });
     el("btnApcMesProximo").addEventListener("click", async () => {
         mesAtualApc = new Date(mesAtualApc.getFullYear(), mesAtualApc.getMonth() + 1, 1);
         periodoSelecionadoApcId = null;
+        dataSelecionadaManualmenteApc = false;
+        aplicarVisibilidadeApc();
         await carregarCalendarioApc();
     });
     el("btnApcMesHoje").addEventListener("click", async () => {
@@ -1252,6 +1293,8 @@ function registrarEventosApc() {
         mesAtualApc = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
         dataSelecionadaApc = paraIso(hoje);
         periodoSelecionadoApcId = null;
+        dataSelecionadaManualmenteApc = false;
+        aplicarVisibilidadeApc();
         await carregarCalendarioApc();
     });
 

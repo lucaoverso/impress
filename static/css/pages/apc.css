@@ -48,11 +48,7 @@
 .apc-topbar-user {
     margin: 0;
     color: rgba(255, 255, 255, 0.84);
-}
-
-.apc-topbar-user,
-.apc-topbar .apc-topbar-actions {
-    display: none;
+    display: block;
 }
 
 .apc-topbar-actions {
@@ -143,8 +139,6 @@
     grid-column: 2;
     grid-row: 1;
     align-self: start;
-    position: sticky;
-    top: 12px;
 }
 
 .apc-detail-card {
@@ -154,7 +148,7 @@
 
 .apc-side-card {
     grid-column: 2;
-    grid-row: 1 / span 2;
+    grid-row: 2;
     align-self: start;
     position: sticky;
     top: 12px;
