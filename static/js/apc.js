@@ -458,9 +458,8 @@ function renderListaGestaoApc(detalhe) {
         const contexto = document.createElement("p");
         if (publicoLivre) {
             contexto.innerText = "Entrega liberada para este professor sem dependencia do horario escolar.";
-        } else {
-            contexto.innerText = `Disciplinas: ${(item.disciplinas || []).join(", ") || "-"}`;
-        }
+        } 
+        
         card.appendChild(contexto);
 
         if (!publicoLivre) {
@@ -468,7 +467,7 @@ function renderListaGestaoApc(detalhe) {
             horarios.className = "apc-horarios-lista";
             (item.horarios || []).forEach((horario) => {
                 const li = document.createElement("li");
-                li.innerText = `${horario.aula_numero}a aula - ${horario.turma_nome} - ${horario.disciplina_nome}`;
+                li.innerText = `${horario.turma_nome} - ${horario.disciplina_nome}`;
                 horarios.appendChild(li);
             });
             card.appendChild(horarios);
