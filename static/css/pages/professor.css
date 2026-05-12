@@ -3,16 +3,20 @@
 .professor-page {
     min-height: 100svh;
     padding: 14px;
-    overflow: hidden;
+    overflow-x: hidden;
     background:
         radial-gradient(circle at 12% 14%, #dfeaf8, transparent 32%),
         radial-gradient(circle at 92% 8%, #fceec8, transparent 24%),
         linear-gradient(180deg, #eef3f9 0%, #e6edf6 62%, #dfe8f3 100%);
 }
 
+.print-app-topbar {
+    width: min(1580px, 100%);
+}
+
 .print-ios-layout {
     width: min(1580px, 100%);
-    height: calc(100svh - 28px);
+    min-height: calc(100svh - 142px);
     margin: 0 auto;
     display: grid;
     grid-template-columns: minmax(320px, 420px) minmax(0, 1fr) minmax(250px, 300px);
@@ -40,24 +44,16 @@
 }
 
 .print-ios-topbar {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
+    display: grid;
+    gap: 6px;
     padding-bottom: 2px;
 }
 
-.print-ios-topbar h1 {
+.print-ios-topbar h2 {
     font-size: 26px;
     font-weight: 800;
     letter-spacing: -0.02em;
     line-height: 1.1;
-}
-
-.print-ios-top-actions {
-    display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
-    justify-content: flex-end;
 }
 
 .print-circle-btn {
@@ -730,7 +726,6 @@
     }
 
     .print-ios-layout {
-        height: calc(100svh - 16px);
         grid-template-columns: 1fr;
         grid-template-rows: minmax(0, 58svh) minmax(0, 1fr);
         grid-template-areas:
@@ -750,13 +745,7 @@
         display: none;
     }
 
-    .print-ios-topbar {
-        flex-direction: row;
-        align-items: center;
-        justify-content: space-between;
-    }
-
-    .print-ios-topbar h1 {
+    .print-ios-topbar h2 {
         font-size: 22px;
     }
 
@@ -837,7 +826,7 @@
 }
 
 @media (max-width: 520px) {
-    .print-ios-topbar h1 {
+    .print-ios-topbar h2 {
         font-size: 20px;
     }
 

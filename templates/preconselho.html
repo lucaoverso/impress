@@ -9,18 +9,27 @@
 </head>
 
 <body>
-    <main class="pcpi-page preconselho-page">
-        <header class="admin-header admin-header-shell">
-            <div class="admin-header-main">
-                <h1>Módulo de Pré-Conselho</h1>
-                <p>Organize os registros pedagógicos por período, acompanhe os estudantes sinalizados e mantenha a
-                    consolidação pronta para atas e relatórios institucionais.</p>
-                <p id="preconselhoUsuario" class="pcpi-user-copy"></p>
+    <header class="app-topbar">
+        <div class="app-topbar-main">
+            <div class="app-topbar-brand">
+                <span class="app-topbar-logo">Suite Escolar</span>
             </div>
-            <div class="scheduler-actions">
-                <button id="btnIrAdmin" type="button" hidden>Painel de gestão</button>
-                <button id="btnVoltarServicos" type="button">Voltar aos serviços</button>
-                <button id="btnSair" type="button">Sair</button>
+        </div>
+        <div class="app-topbar-actions">
+            <button id="btnIrAdmin" type="button" hidden>Painel de gestao</button>
+            <button id="btnVoltarServicos" type="button">Servicos</button>
+            <button id="btnSair" type="button">Sair</button>
+        </div>
+    </header>
+    
+    <main class="pcpi-page preconselho-page page-shell page-shell--wide">
+        <header class="admin-header admin-header-shell page-header">
+            <div class="admin-header-main page-header-main">
+                <h1 class="page-title">Módulo de Pré-Conselho</h1>
+                <p class="page-lead">Organize os registros pedagógicos por período, acompanhe os estudantes sinalizados
+                    e mantenha a
+                    consolidação pronta para atas e relatórios institucionais.</p>
+                <p id="preconselhoUsuario" class="pcpi-user-copy page-user-copy"></p>
             </div>
         </header>
 
@@ -46,23 +55,23 @@
         <section class="preconselho-tab-panels">
             <section id="preconselho-tab-docente" class="admin-tab-panel" data-preconselho-tab-panel="docente" hidden>
                 <section class="preconselho-workspace-grid">
-                    <article class="calendar-card pcpi-card pcpi-card-full">
-                        <div class="pcpi-card-header">
-                            <div>
-                                <p class="pcpi-eyebrow">Professor</p>
+                    <article class="calendar-card panel-card pcpi-card pcpi-card-full">
+                        <div class="pcpi-card-header section-header">
+                            <div class="section-header-main">
+                                <p class="pcpi-eyebrow section-eyebrow">Professor</p>
                                 <h2>Organize o período e a turma</h2>
                                 <p>Selecione o período do pré-conselho e escolha uma combinação de turma e disciplina
                                     da sua carga para iniciar o preenchimento.</p>
                             </div>
                         </div>
 
-                        <form id="formPreconselhoDocentePeriodo" class="pcpi-filter-grid">
-                            <label class="pcpi-field" for="preconselhoPeriodoDocente">
-                                <span>Período</span>
+                        <form id="formPreconselhoDocentePeriodo" class="pcpi-filter-grid form-grid form-grid--two">
+                            <label class="pcpi-field field" for="preconselhoPeriodoDocente">
+                                <span class="field-label">Período</span>
                                 <select id="preconselhoPeriodoDocente" required></select>
                             </label>
 
-                            <div class="pcpi-inline-actions pcpi-field">
+                            <div class="pcpi-inline-actions inline-actions pcpi-field field">
                                 <button id="btnAtualizarDocente" class="btn-destaque" type="submit">Atualizar
                                     painel</button>
                             </div>
@@ -86,14 +95,14 @@
                             </article>
                         </div>
 
-                        <p id="msgPreconselhoDocente" class="pcpi-status-copy"></p>
+                        <p id="msgPreconselhoDocente" class="pcpi-status-copy status-copy"></p>
                     </article>
 
                     <section class="preconselho-docente-board pcpi-card-full">
-                        <article class="calendar-card pcpi-card preconselho-docente-column">
-                            <div class="pcpi-card-header">
-                                <div>
-                                    <p class="pcpi-eyebrow">Carga docente</p>
+                        <article class="calendar-card panel-card pcpi-card preconselho-docente-column">
+                            <div class="pcpi-card-header section-header">
+                                <div class="section-header-main">
+                                    <p class="pcpi-eyebrow section-eyebrow">Carga docente</p>
                                     <h2>Turmas do professor</h2>
                                     <p>Escolha a combinação de turma e disciplina em que deseja registrar ou revisar os
                                         estudantes sinalizados.
@@ -106,25 +115,26 @@
                             </div>
                         </article>
 
-                        <article class="calendar-card pcpi-card preconselho-docente-column">
-                            <div class="pcpi-card-header">
-                                <div>
-                                    <p class="pcpi-eyebrow">Turma</p>
+                        <article class="calendar-card panel-card pcpi-card preconselho-docente-column">
+                            <div class="pcpi-card-header section-header">
+                                <div class="section-header-main">
+                                    <p class="pcpi-eyebrow section-eyebrow">Turma</p>
                                     <h2>Lista de estudantes</h2>
                                     <p>Busque por nome, filtre por situação e clique no estudante para abrir a janela de
                                         sinalização.</p>
                                 </div>
                             </div>
 
-                            <form id="formFiltrosEstudantesDocente" class="pcpi-filter-grid preconselho-filter-stack">
-                                <label class="pcpi-field" for="preconselhoBuscaEstudante">
-                                    <span>Buscar estudante</span>
+                            <form id="formFiltrosEstudantesDocente"
+                                class="pcpi-filter-grid form-grid form-grid--two preconselho-filter-stack">
+                                <label class="pcpi-field field" for="preconselhoBuscaEstudante">
+                                    <span class="field-label">Buscar estudante</span>
                                     <input id="preconselhoBuscaEstudante" type="text"
                                         placeholder="Digite parte do nome">
                                 </label>
 
-                                <label class="pcpi-field" for="preconselhoStatusEstudante">
-                                    <span>Filtro</span>
+                                <label class="pcpi-field field" for="preconselhoStatusEstudante">
+                                    <span class="field-label">Filtro</span>
                                     <select id="preconselhoStatusEstudante">
                                         <option value="todos">Todos</option>
                                         <option value="sinalizados">Sinalizados</option>
@@ -133,7 +143,7 @@
                                 </label>
                             </form>
 
-                            <p id="preconselhoResumoEstudantesDocente" class="pcpi-hint"></p>
+                            <p id="preconselhoResumoEstudantesDocente" class="pcpi-hint hint-copy"></p>
                             <div class="preconselho-rail-scroll">
                                 <ul id="listaEstudantesDocente" class="pcpi-list" aria-live="polite"></ul>
                             </div>
@@ -194,12 +204,10 @@
                                         <input id="preconselhoPosPreConselhoStatus" type="hidden">
                                         <div class="preconselho-choice-group" role="group"
                                             aria-label="Resultado após a recuperação paralela">
-                                            <button id="preconselhoPosPreConselhoBtnSim"
-                                                class="preconselho-choice-btn" data-valor="sim" type="button"
-                                                aria-pressed="false">Sim</button>
-                                            <button id="preconselhoPosPreConselhoBtnNao"
-                                                class="preconselho-choice-btn" data-valor="nao" type="button"
-                                                aria-pressed="false">Não</button>
+                                            <button id="preconselhoPosPreConselhoBtnSim" class="preconselho-choice-btn"
+                                                data-valor="sim" type="button" aria-pressed="false">Sim</button>
+                                            <button id="preconselhoPosPreConselhoBtnNao" class="preconselho-choice-btn"
+                                                data-valor="nao" type="button" aria-pressed="false">Não</button>
                                         </div>
                                         <small id="preconselhoPosPreConselhoAjuda" class="pcpi-hint">Marque quando
                                             houver recuperação. Use “Não” quando o estudante manteve baixo

@@ -4,22 +4,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Professor - Impressão</title>
+    <title>Professor - Impressao</title>
     {% include "includes/style_bundle.html" %}
 </head>
 
 <body class="professor-page">
+    <header class="app-topbar print-app-topbar">
+        <div class="app-topbar-main">
+            <div class="app-topbar-brand">
+                <span class="app-topbar-logo">Suite Escolar</span>
+                <span class="app-topbar-context">Area docente</span>
+            </div>
+        </div>
+        <div class="app-topbar-actions">
+            <button id="btnVoltarServicos" type="button">Servicos</button>
+            <button id="btnSair" type="button">Sair</button>
+        </div>
+    </header>
+
     <main class="print-ios-layout">
         <section class="print-options-panel">
             <header class="print-ios-topbar">
-                <h1>Impressão</h1>
-                <div class="print-ios-top-actions">
-                    <button id="btnVoltarServicos" class="print-circle-btn" type="button">Voltar aos Serviços</button>
+                <div>
+                    <p class="auth-badge">Configuracao</p>
+                    <h2>Enviar arquivo</h2>
                 </div>
             </header>
 
             <article class="ios-group ios-group-file">
-                <label for="arquivo">Arquivo para impressão</label>
+                <label for="arquivo">Arquivo para impressao</label>
                 <input class="print-file-input-hidden" type="file" id="arquivo" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg">
                 <button
                     id="arquivoDropzone"
@@ -52,12 +65,12 @@
                     </select>
                 </div>
                 <p id="resumoTurmaImpressao" class="print-file-hint">
-                    Selecione uma turma para preencher as cópias automaticamente.
+                    Selecione uma turma para preencher as copias automaticamente.
                 </p>
 
                 <div class="ios-divider"></div>
                 <div class="ios-row">
-                    <label for="copias">Cópias</label>
+                    <label for="copias">Copias</label>
                     <input type="number" id="copias" min="1" step="1" value="1">
                 </div>
 
@@ -71,15 +84,15 @@
                 <div class="ios-row">
                     <label for="paginasPorFolha">Layout</label>
                     <select id="paginasPorFolha">
-                        <option value="1">1 página por folha</option>
-                        <option value="2">2 páginas por folha</option>
-                        <option value="4">4 páginas por folha</option>
+                        <option value="1">1 pagina por folha</option>
+                        <option value="2">2 paginas por folha</option>
+                        <option value="4">4 paginas por folha</option>
                     </select>
                 </div>
 
                 <div class="ios-divider"></div>
                 <div class="ios-row">
-                    <label for="orientacao">Orientação</label>
+                    <label for="orientacao">Orientacao</label>
                     <select id="orientacao">
                         <option value="retrato">Retrato</option>
                         <option value="paisagem">Paisagem</option>
@@ -105,11 +118,11 @@
 
         <section class="print-preview-stage">
             <header class="print-preview-header">
-                <p class="auth-badge">Pré-visualização</p>
-                <div class="print-pagination" role="group" aria-label="Navegação da pré-visualização">
-                    <button id="btnAnterior" type="button" aria-label="Folha anterior">◀</button>
+                <p class="auth-badge">Pre-visualizacao</p>
+                <div class="print-pagination" role="group" aria-label="Navegacao da pre-visualizacao">
+                    <button id="btnAnterior" type="button" aria-label="Folha anterior">&#9664;</button>
                     <span id="contadorFolha"></span>
-                    <button id="btnProxima" type="button" aria-label="Próxima folha">▶</button>
+                    <button id="btnProxima" type="button" aria-label="Proxima folha">&#9654;</button>
                 </div>
             </header>
 
@@ -120,7 +133,7 @@
 
         <aside class="print-meta-panel">
             <header class="print-meta-header">
-                <p class="auth-badge">Cota e histórico</p>
+                <p class="auth-badge">Cota e historico</p>
             </header>
 
             <div class="print-meta-compact">
@@ -132,9 +145,9 @@
                 <article class="print-meta-card print-jobs-card">
                     <h2 id="tituloJobs">Seus pedidos</h2>
                     <p class="print-jobs-hint">
-                        A impressão inicia após {{ cancel_window_seconds | default(15) }}s.
-                        Nesse período você pode cancelar impressões pendentes.
-                        Jobs concluídos podem ser abertos novamente no preview.
+                        A impressao inicia apos {{ cancel_window_seconds | default(15) }}s.
+                        Nesse periodo voce pode cancelar impressoes pendentes.
+                        Jobs concluidos podem ser abertos novamente no preview.
                     </p>
                     <ul id="lista-jobs"></ul>
                 </article>

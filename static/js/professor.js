@@ -124,6 +124,34 @@ function atualizarTitulosContextoImpressao() {
     }
 }
 
+function atualizarTopbarUsuario() {
+    const topbarUsuario = el("printTopbarUsuario");
+    if (!topbarUsuario) {
+        return;
+    }
+
+    if (!usuarioAtual) {
+        topbarUsuario.innerText = "Usuario nao identificado";
+        return;
+    }
+
+    const nome = String(
+        usuarioAtual.nome
+        || usuarioAtual.username
+        || usuarioAtual.email
+        || "Usuario"
+    ).trim();
+
+    const perfil = String(
+        usuarioAtual.perfil
+        || usuarioAtual.cargo
+        || (usuarioAtual.eh_admin ? "Admin" : "Professor")
+        || ""
+    ).trim();
+
+    topbarUsuario.innerText = perfil ? `${nome} • ${perfil}` : nome;
+}
+
 function renderFilaVazia(texto) {
     const ul = el("lista-jobs");
     if (!ul) {
@@ -1895,6 +1923,7 @@ async function inicializarPagina() {
 
     try {
         await carregarUsuario();
+        atualizarTopbarUsuario();
         await carregarProfessoresImpressaoAdmin();
         await carregarTurmasImpressao();
         await carregarCota();

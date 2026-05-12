@@ -9,119 +9,129 @@
 </head>
 
 <body>
-    <main class="pcpi-page">
-        <header class="admin-header admin-header-shell">
-            <div class="admin-header-main">
-                <h1>Registro PCPI</h1>
-                <p>Selecione o turno, confira os agendamentos importados, registre ações manuais e gere o texto final
-                    do PCPI.</p>
-                <p id="pcpiUsuario" class="pcpi-user-copy"></p>
+    <header class="app-topbar">
+        <div class="app-topbar-main">
+            <div class="app-topbar-brand">
+                <span class="app-topbar-logo">Suite Escolar</span>
+                <span class="app-topbar-context">Area docente</span>
             </div>
-            <div class="scheduler-actions">
-                <button id="btnVoltarServicos" type="button">Voltar aos serviços</button>
-                <button id="btnSair" type="button">Sair</button>
+        </div>
+        <div class="app-topbar-actions">
+            <button id="btnVoltarServicos" type="button">Servicos</button>
+            <button id="btnSair" type="button">Sair</button>
+        </div>
+    </header>
+    
+    <main class="pcpi-page page-shell">
+        <header class="admin-header admin-header-shell page-header">
+            <div class="admin-header-main page-header-main">
+
             </div>
         </header>
 
         <section class="pcpi-grid">
-            <article class="calendar-card pcpi-card pcpi-card-full">
-                <div class="pcpi-card-header">
-                    <div>
-                        <p class="pcpi-eyebrow">Bloco 1</p>
+            <article class="calendar-card panel-card pcpi-card pcpi-card-full">
+                <div class="pcpi-card-header section-header">
+                    <div class="section-header-main">
+                        <h1 class="page-title">Registro PCPI</h1>
+                        <p class="page-lead">Selecione o turno, confira os agendamentos importados, registre ações
+                            manuais e gere o texto final
+                            do PCPI.</p>
+                        <p id="pcpiUsuario" class="pcpi-user-copy page-user-copy"></p>
                         <h2>Filtro do turno</h2>
                         <p>Defina a data e o turno para importar os agendamentos e carregar os registros manuais.</p>
                     </div>
                 </div>
 
-                <form id="formFiltrosPcpi" class="pcpi-filter-grid">
-                    <label class="pcpi-field" for="pcpiData">
-                        <span>Data</span>
+                <form id="formFiltrosPcpi" class="pcpi-filter-grid form-grid form-grid--two">
+                    <label class="pcpi-field field" for="pcpiData">
+                        <span class="field-label">Data</span>
                         <input id="pcpiData" type="date" required>
                     </label>
 
-                    <label class="pcpi-field" for="pcpiTurno">
-                        <span>Turno</span>
+                    <label class="pcpi-field field" for="pcpiTurno">
+                        <span class="field-label">Turno</span>
                         <select id="pcpiTurno" required></select>
                     </label>
 
-                    <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
+                    <div class="pcpi-inline-actions inline-actions pcpi-field field pcpi-field-wide field--wide">
                         <button id="btnAtualizarPcpi" class="btn-destaque" type="submit">Atualizar dados</button>
                         <button id="btnGerarTexto" type="button">Gerar texto</button>
                     </div>
                 </form>
 
-                <p id="msgPcpiGeral" class="pcpi-status-copy"></p>
-                <p id="pcpiResumoTurno" class="pcpi-hint"></p>
+                <p id="msgPcpiGeral" class="pcpi-status-copy status-copy"></p>
+                <p id="pcpiResumoTurno" class="pcpi-hint hint-copy"></p>
             </article>
 
-            <article class="calendar-card pcpi-card">
-                <div class="pcpi-card-header">
-                    <div>
-                        <p class="pcpi-eyebrow">Bloco 2</p>
+            <article class="calendar-card panel-card pcpi-card">
+                <div class="pcpi-card-header section-header">
+                    <div class="section-header-main">
                         <h2>Agendamentos automáticos</h2>
                         <p>Marque apenas os itens que devem entrar no texto administrativo do turno.</p>
                     </div>
-                    <div class="pcpi-inline-actions">
+                    <div class="pcpi-inline-actions inline-actions">
                         <button id="btnMarcarTodosAgendamentos" type="button">Marcar todos</button>
                         <button id="btnLimparAgendamentos" type="button">Limpar</button>
                     </div>
                 </div>
 
-                <p id="pcpiResumoAutomatico" class="pcpi-hint"></p>
+                <p id="pcpiResumoAutomatico" class="pcpi-hint hint-copy"></p>
                 <ul id="listaAgendamentosPcpi" class="pcpi-list" aria-live="polite"></ul>
             </article>
 
-            <article class="calendar-card pcpi-card">
-                <div class="pcpi-card-header">
-                    <div>
-                        <p class="pcpi-eyebrow">Bloco 3</p>
+            <article class="calendar-card panel-card pcpi-card">
+                <div class="pcpi-card-header section-header">
+                    <div class="section-header-main">
                         <h2>Ações manuais</h2>
                         <p>Registre rapidamente as ações do turno que não vieram do agendamento.</p>
                     </div>
                 </div>
 
-                <p id="pcpiAjudaManual" class="pcpi-hint"></p>
+                <p id="pcpiAjudaManual" class="pcpi-hint hint-copy"></p>
 
-                <form id="formRegistroManualPcpi" class="pcpi-form-grid">
-                    <label class="pcpi-field" for="pcpiTipoAcao">
-                        <span>Tipo de ação</span>
+                <form id="formRegistroManualPcpi" class="pcpi-form-grid form-grid form-grid--two">
+                    <label class="pcpi-field field" for="pcpiTipoAcao">
+                        <span class="field-label">Tipo de ação</span>
                         <select id="pcpiTipoAcao" required></select>
                     </label>
 
-                    <label class="pcpi-field" for="pcpiProfessorNome">
-                        <span>Professor ou setor</span>
-                        <input id="pcpiProfessorNome" type="text" maxlength="160" placeholder="Ex.: Prof. Ana ou Equipe gestora">
+                    <label class="pcpi-field field" for="pcpiProfessorNome">
+                        <span class="field-label">Professor ou setor</span>
+                        <input id="pcpiProfessorNome" type="text" maxlength="160"
+                            placeholder="Ex.: Prof. Ana ou Equipe gestora">
                     </label>
 
-                    <label class="pcpi-field" for="pcpiComponente">
-                        <span>Componente ou recurso</span>
+                    <label class="pcpi-field field" for="pcpiComponente">
+                        <span class="field-label">Componente ou recurso</span>
                         <input id="pcpiComponente" type="text" maxlength="160" placeholder="Ex.: Ciencias ou Canva">
                     </label>
 
-                    <label class="pcpi-field" for="pcpiTurma">
-                        <span>Turma</span>
+                    <label class="pcpi-field field" for="pcpiTurma">
+                        <span class="field-label">Turma</span>
                         <input id="pcpiTurma" type="text" maxlength="120" placeholder="Ex.: 7A">
                     </label>
 
-                    <label class="pcpi-field pcpi-field-wide" for="pcpiDescricaoCurta">
-                        <span>Descrição curta</span>
+                    <label class="pcpi-field field pcpi-field-wide field--wide" for="pcpiDescricaoCurta">
+                        <span class="field-label">Descrição curta</span>
                         <input id="pcpiDescricaoCurta" type="text" maxlength="500"
                             placeholder="Ex.: Planejamento das atividades e organização dos recursos do turno" required>
                     </label>
 
-                    <label class="pcpi-field pcpi-field-wide" for="pcpiObservacoes">
-                        <span>Observações</span>
+                    <label class="pcpi-field field pcpi-field-wide field--wide" for="pcpiObservacoes">
+                        <span class="field-label">Observações</span>
                         <textarea id="pcpiObservacoes" rows="4" maxlength="2000"
                             placeholder="Detalhes complementares para o registro manual"></textarea>
                     </label>
 
-                    <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
-                        <button id="btnSalvarRegistroManualPcpi" class="btn-destaque" type="submit">Salvar ação manual</button>
+                    <div class="pcpi-inline-actions inline-actions pcpi-field field pcpi-field-wide field--wide">
+                        <button id="btnSalvarRegistroManualPcpi" class="btn-destaque" type="submit">Salvar ação
+                            manual</button>
                         <button id="btnLimparRegistroManualPcpi" type="button">Limpar formulário</button>
                     </div>
                 </form>
 
-                <p id="msgPcpiManual" class="pcpi-status-copy"></p>
+                <p id="msgPcpiManual" class="pcpi-status-copy status-copy"></p>
 
                 <div class="pcpi-subsection">
                     <div class="pcpi-subsection-header">
@@ -132,19 +142,18 @@
                 </div>
             </article>
 
-            <article class="calendar-card pcpi-card pcpi-card-full">
-                <div class="pcpi-card-header">
-                    <div>
-                        <p class="pcpi-eyebrow">Bloco 4</p>
-                        <h2>Texto final</h2>
+            <article class="calendar-card panel-card pcpi-card pcpi-card-full">
+                <div class="pcpi-card-header section-header">
+                    <div class="section-header-main">
+                         <h2>Texto final</h2>
                         <p>Gere, revise e ajuste o texto antes de copiar para o sistema administrativo.</p>
                     </div>
-                    <div class="pcpi-inline-actions">
+                    <div class="pcpi-inline-actions inline-actions">
                         <button id="btnCopiarTextoPcpi" type="button">Copiar texto</button>
                     </div>
                 </div>
 
-                <p id="pcpiResumoTexto" class="pcpi-hint"></p>
+                <p id="pcpiResumoTexto" class="pcpi-hint hint-copy"></p>
                 <textarea id="pcpiTextoFinal" class="pcpi-textarea" rows="12"
                     placeholder="O texto gerado do PCPI aparecerá aqui."></textarea>
             </article>
@@ -154,7 +163,8 @@
     <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
-    <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script
+        src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/pcpi.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>
 

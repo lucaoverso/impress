@@ -82,6 +82,13 @@
     margin-top: 18px;
 }
 
+.services-header .services-actions,
+.download-header .download-header-actions,
+.scheduler-toolbar > #agendamentoUsuario,
+.scheduler-toolbar > .scheduler-actions {
+    display: none;
+}
+
 .services-actions button {
     height: 40px;
     padding: 0 14px;

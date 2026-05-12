@@ -50,6 +50,11 @@
     color: rgba(255, 255, 255, 0.84);
 }
 
+.apc-topbar-user,
+.apc-topbar .apc-topbar-actions {
+    display: none;
+}
+
 .apc-topbar-actions {
     display: flex;
     gap: 10px;
