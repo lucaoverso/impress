@@ -5367,6 +5367,10 @@ def _mapear_apc_envio(row) -> dict:
         "id": int(row["id"]),
         "periodo_id": int(row["periodo_id"] or 0),
         "professor_id": int(row["professor_usuario_id"] or 0),
+        "turma_id": int(row["turma_id"] or 0),
+        "turma_nome": str(row["turma_nome"] or "").strip(),
+        "disciplina_id": int(row["disciplina_id"] or 0),
+        "disciplina_nome": str(row["disciplina_nome"] or "").strip(),
         "arquivo_nome_original": str(row["arquivo_nome_original"] or "").strip(),
         "arquivo_path": str(row["arquivo_path"] or "").strip(),
         "arquivo_tamanho": int(row["arquivo_tamanho"] or 0),
@@ -5389,6 +5393,8 @@ def _consultar_apc_envios(cursor, *, filtros_sql=None, params=None):
             ae.id,
             ae.periodo_id,
             ae.professor_usuario_id,
+            ae.turma_id,
+            ae.disciplina_id,
             ae.arquivo_nome_original,
             ae.arquivo_path,
             ae.arquivo_tamanho,
@@ -5396,9 +5402,13 @@ def _consultar_apc_envios(cursor, *, filtros_sql=None, params=None):
             ae.enviado_em,
             ae.atualizado_em,
             COALESCE(u.nome, '') AS professor_nome,
-            COALESCE(u.email, '') AS professor_email
+            COALESCE(u.email, '') AS professor_email,
+            COALESCE(t.nome, '') AS turma_nome,
+            COALESCE(d.nome, '') AS disciplina_nome
         FROM apc_envios ae
         INNER JOIN usuarios u ON u.id = ae.professor_usuario_id
+        LEFT JOIN turmas t ON t.id = ae.turma_id
+        LEFT JOIN disciplinas d ON d.id = ae.disciplina_id
         {clausula_where}
         ORDER BY ae.enviado_em DESC, ae.id DESC
         """,
@@ -5411,6 +5421,8 @@ def listar_apc_envios(
     *,
     periodo_id: int | None = None,
     professor_id: int | None = None,
+    turma_id: int | None = None,
+    disciplina_id: int | None = None,
 ):
     conn = get_connection()
     cursor = conn.cursor()
@@ -5423,6 +5435,12 @@ def listar_apc_envios(
     if professor_id is not None:
         filtros.append("ae.professor_usuario_id = ?")
         params.append(int(professor_id))
+    if turma_id is not None:
+        filtros.append("ae.turma_id = ?")
+        params.append(int(turma_id))
+    if disciplina_id is not None:
+        filtros.append("ae.disciplina_id = ?")
+        params.append(int(disciplina_id))
 
     itens = _consultar_apc_envios(cursor, filtros_sql=filtros, params=params)
     conn.close()
@@ -5442,12 +5460,31 @@ def buscar_apc_envio_por_id(envio_id: int):
 
 
 def buscar_apc_envio_por_periodo_e_professor(periodo_id: int, professor_id: int):
+    return buscar_apc_envio_por_chave(periodo_id, professor_id, 0, 0)
+
+
+def buscar_apc_envio_por_chave(
+    periodo_id: int,
+    professor_id: int,
+    turma_id: int = 0,
+    disciplina_id: int = 0,
+):
     conn = get_connection()
     cursor = conn.cursor()
     itens = _consultar_apc_envios(
         cursor,
-        filtros_sql=["ae.periodo_id = ?", "ae.professor_usuario_id = ?"],
-        params=[int(periodo_id), int(professor_id)],
+        filtros_sql=[
+            "ae.periodo_id = ?",
+            "ae.professor_usuario_id = ?",
+            "ae.turma_id = ?",
+            "ae.disciplina_id = ?",
+        ],
+        params=[
+            int(periodo_id),
+            int(professor_id),
+            int(turma_id or 0),
+            int(disciplina_id or 0),
+        ],
     )
     conn.close()
     return itens[0] if itens else None
@@ -5457,6 +5494,8 @@ def criar_apc_envio(
     *,
     periodo_id: int,
     professor_usuario_id: int,
+    turma_id: int = 0,
+    disciplina_id: int = 0,
     arquivo_nome_original: str,
     arquivo_path: str,
     arquivo_tamanho: int,
@@ -5469,6 +5508,8 @@ def criar_apc_envio(
         INSERT INTO apc_envios (
             periodo_id,
             professor_usuario_id,
+            turma_id,
+            disciplina_id,
             arquivo_nome_original,
             arquivo_path,
             arquivo_tamanho,
@@ -5476,11 +5517,13 @@ def criar_apc_envio(
             enviado_em,
             atualizado_em
         )
-        VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
         """,
         (
             int(periodo_id),
             int(professor_usuario_id),
+            int(turma_id or 0),
+            int(disciplina_id or 0),
             str(arquivo_nome_original or "").strip(),
             str(arquivo_path or "").strip(),
             int(arquivo_tamanho or 0),

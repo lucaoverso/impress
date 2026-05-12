@@ -297,6 +297,135 @@ class ApcRouterTest(unittest.TestCase):
 
             self.assertEqual(int(ctx.exception.status_code), 403)
 
+    def test_professor_envia_arquivos_separados_por_disciplina_no_mesmo_dia(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            apc_dir = os.path.join(tmp_dir, "apc")
+            database, models, apc_router = _reload_modules(db_path, apc_dir)
+            database.criar_tabelas()
+
+            turma_id = int(database.criar_turma("7A", "MATUTINO", 32))
+            disciplina_matematica_id = int(database.criar_disciplina("Matematica", 4))
+            disciplina_ra_id = int(database.criar_disciplina("R.A Matematica", 2))
+            professor_id = int(
+                database.criar_professor(
+                    nome="Professor Multiplas Disciplinas",
+                    email="multiplas@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1987-07-21",
+                    aulas_semanais=14,
+                    turmas_quantidade=1,
+                    turmas=["7A"],
+                    disciplinas=["Matematica", "R.A Matematica"],
+                )
+            )
+
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_id,
+                disciplina_id=disciplina_matematica_id,
+                carga_horaria=4,
+                professor_usuario_id=professor_id,
+            )
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_id,
+                disciplina_id=disciplina_ra_id,
+                carga_horaria=2,
+                professor_usuario_id=professor_id,
+            )
+            database.criar_horario_escolar(
+                ano_letivo=2033,
+                turma_id=turma_id,
+                disciplina_id=disciplina_matematica_id,
+                professor_usuario_id=professor_id,
+                dia_semana="QUINTA",
+                aula_numero=2,
+            )
+            database.criar_horario_escolar(
+                ano_letivo=2033,
+                turma_id=turma_id,
+                disciplina_id=disciplina_ra_id,
+                professor_usuario_id=professor_id,
+                dia_semana="QUINTA",
+                aula_numero=3,
+            )
+
+            periodo = apc_router.criar_periodo_apc_api(
+                payload=models.ApcPeriodoIn(
+                    ano_letivo=2033,
+                    data_referencia="2033-04-14",
+                    prazo_envio="2033-04-14T23:59",
+                    titulo="Atividades da quinta",
+                    observacao="Uma entrega por disciplina.",
+                    publico_alvo="HORARIO_DIA",
+                ),
+                usuario=self._usuario_coord(),
+            )
+
+            detalhe_professor = apc_router.obter_periodo_apc_api(
+                periodo_id=int(periodo["id"]),
+                usuario=self._usuario_professor(professor_id),
+            )
+            self.assertEqual(int(detalhe_professor["total_entregas"]), 2)
+            self.assertEqual(int(detalhe_professor["total_pendentes"]), 2)
+            self.assertEqual(len(detalhe_professor["itens"]), 2)
+
+            item_matematica = next(
+                item for item in detalhe_professor["itens"]
+                if int(item["disciplina_id"]) == disciplina_matematica_id
+            )
+            item_ra = next(
+                item for item in detalhe_professor["itens"]
+                if int(item["disciplina_id"]) == disciplina_ra_id
+            )
+
+            envio_matematica = apc_router.enviar_arquivo_apc_api(
+                periodo_id=int(periodo["id"]),
+                turma_id=int(item_matematica["turma_id"]),
+                disciplina_id=int(item_matematica["disciplina_id"]),
+                arquivo=UploadFile(
+                    io.BytesIO(b"matematica"),
+                    filename="matematica.pdf",
+                    headers=Headers({"content-type": "application/pdf"}),
+                ),
+                usuario=self._usuario_professor(professor_id),
+            )
+            self.assertEqual(int(envio_matematica["disciplina_id"]), disciplina_matematica_id)
+
+            detalhe_parcial = apc_router.obter_periodo_apc_api(
+                periodo_id=int(periodo["id"]),
+                usuario=self._usuario_professor(professor_id),
+            )
+            self.assertEqual(int(detalhe_parcial["total_enviadas"]), 1)
+            self.assertEqual(int(detalhe_parcial["total_pendentes"]), 1)
+
+            envio_ra = apc_router.enviar_arquivo_apc_api(
+                periodo_id=int(periodo["id"]),
+                turma_id=int(item_ra["turma_id"]),
+                disciplina_id=int(item_ra["disciplina_id"]),
+                arquivo=UploadFile(
+                    io.BytesIO(b"ra matematica"),
+                    filename="ra-matematica.pdf",
+                    headers=Headers({"content-type": "application/pdf"}),
+                ),
+                usuario=self._usuario_professor(professor_id),
+            )
+            self.assertEqual(int(envio_ra["disciplina_id"]), disciplina_ra_id)
+
+            detalhe_final = apc_router.obter_periodo_apc_api(
+                periodo_id=int(periodo["id"]),
+                usuario=self._usuario_professor(professor_id),
+            )
+            self.assertEqual(int(detalhe_final["total_enviadas"]), 2)
+            self.assertEqual(int(detalhe_final["total_pendentes"]), 0)
+
+            detalhe_gestao = apc_router.obter_periodo_apc_api(
+                periodo_id=int(periodo["id"]),
+                usuario=self._usuario_coord(),
+            )
+            self.assertEqual(int(detalhe_gestao["total_elegiveis"]), 2)
+            self.assertEqual(int(detalhe_gestao["total_enviados"]), 2)
+            self.assertEqual(len(detalhe_gestao["itens"]), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

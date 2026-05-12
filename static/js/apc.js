@@ -260,6 +260,90 @@ function criarCardEnvioExistenteApc(envio) {
     return envioCard;
 }
 
+function criarCardEntregaProfessorApc(periodo, item) {
+    const card = document.createElement("article");
+    card.className = "apc-professor-card";
+
+    const topo = document.createElement("div");
+    topo.className = "apc-professor-topo";
+    const titulo = item.disciplina_nome
+        ? `${item.disciplina_nome}${item.turma_nome ? ` - ${item.turma_nome}` : ""}`
+        : "Entrega geral";
+    topo.innerHTML = `<div><h4>${titulo}</h4><p>${item.total_aulas || 0} aula(s) vinculada(s)</p></div>`;
+    topo.appendChild(item.enviado ? criarStatusApc("Enviado", "ok") : criarStatusApc("Pendente"));
+    card.appendChild(topo);
+
+    if ((item.turmas || []).length) {
+        const chips = document.createElement("div");
+        chips.className = "apc-chip-row";
+        (item.turmas || []).forEach((turma) => {
+            chips.appendChild(criarChipApc(turma));
+        });
+        if (item.disciplina_nome) {
+            chips.appendChild(criarChipApc(item.disciplina_nome));
+        }
+        card.appendChild(chips);
+    }
+
+    if ((item.horarios || []).length) {
+        const horarios = document.createElement("ul");
+        horarios.className = "apc-horarios-lista";
+        (item.horarios || []).forEach((horario) => {
+            const li = document.createElement("li");
+            li.innerText = `${horario.aula_numero}a aula - ${horario.turma_nome} - ${horario.disciplina_nome}`;
+            horarios.appendChild(li);
+        });
+        card.appendChild(horarios);
+    } else {
+        const livre = document.createElement("p");
+        livre.className = "apc-inline-hint";
+        livre.innerText = "Esta entrega foi liberada para todos os professores.";
+        card.appendChild(livre);
+    }
+
+    if (item.envio?.id) {
+        card.appendChild(criarCardEnvioExistenteApc(item.envio));
+    }
+
+    if (periodo.prazo_expirado) {
+        card.appendChild(criarStatusApc("Prazo encerrado", "closed"));
+        return card;
+    }
+
+    const form = document.createElement("form");
+    form.className = "apc-form apc-inline-form";
+    form.dataset.periodoId = String(periodo.id);
+    form.dataset.turmaId = String(item.turma_id || 0);
+    form.dataset.disciplinaId = String(item.disciplina_id || 0);
+
+    const label = document.createElement("label");
+    label.innerText = "Arquivo";
+    form.appendChild(label);
+
+    const input = document.createElement("input");
+    input.type = "file";
+    input.required = true;
+    input.name = "arquivo";
+    form.appendChild(input);
+
+    const dica = document.createElement("p");
+    dica.className = "apc-inline-hint";
+    dica.innerText = item.envio?.id
+        ? "Se necessario, envie um novo arquivo para substituir o anexo anterior desta disciplina."
+        : "Anexe o arquivo correspondente a esta disciplina.";
+    form.appendChild(dica);
+
+    const submit = document.createElement("button");
+    submit.type = "submit";
+    submit.className = "btn-destaque";
+    submit.innerText = item.envio?.id ? "Atualizar arquivo" : "Enviar arquivo";
+    form.appendChild(submit);
+
+    form.addEventListener("submit", enviarArquivoApc);
+    card.appendChild(form);
+    return card;
+}
+
 function criarCorpoProfessorPeriodoApc(detalhe) {
     const body = document.createElement("div");
     body.className = "apc-accordion-body";
@@ -283,26 +367,12 @@ function criarCorpoProfessorPeriodoApc(detalhe) {
         body.appendChild(chips);
     }
 
-    if ((detalhe.horarios || []).length) {
-        const disciplinas = document.createElement("p");
-        disciplinas.className = "apc-inline-hint";
-        disciplinas.innerText = `Disciplinas: ${(detalhe.disciplinas || []).join(", ") || "-"}`;
-        body.appendChild(disciplinas);
-
-        const horarios = document.createElement("ul");
-        horarios.className = "apc-horarios-lista";
-        (detalhe.horarios || []).forEach((horario) => {
-            const li = document.createElement("li");
-            li.innerText = `${horario.aula_numero}a aula - ${horario.turma_nome} - ${horario.disciplina_nome}`;
-            horarios.appendChild(li);
-        });
-        body.appendChild(horarios);
-    } else {
-        const livre = document.createElement("p");
-        livre.className = "apc-inline-hint";
-        livre.innerText = "Esta entrega foi liberada para todos os professores.";
-        body.appendChild(livre);
-    }
+    const resumo = document.createElement("p");
+    resumo.className = "apc-inline-hint";
+    resumo.innerText = detalhe.total_entregas > 1
+        ? `Voce possui ${detalhe.total_entregas} entregas nesta solicitacao. Cada disciplina precisa do seu proprio anexo.`
+        : "Voce possui 1 entrega nesta solicitacao.";
+    body.appendChild(resumo);
 
     if (periodo.observacao) {
         const observacao = document.createElement("p");
@@ -311,44 +381,17 @@ function criarCorpoProfessorPeriodoApc(detalhe) {
         body.appendChild(observacao);
     }
 
-    if (detalhe.envio?.id) {
-        body.appendChild(criarCardEnvioExistenteApc(detalhe.envio));
-    }
-
-    if (periodo.prazo_expirado) {
-        body.appendChild(criarStatusApc("Prazo encerrado", "closed"));
+    if (!Array.isArray(detalhe.itens) || !detalhe.itens.length) {
+        const vazio = document.createElement("p");
+        vazio.className = "apc-accordion-note";
+        vazio.innerText = "Nenhuma disciplina vinculada a esta solicitacao para o seu horario.";
+        body.appendChild(vazio);
         return body;
     }
 
-    const form = document.createElement("form");
-    form.className = "apc-form apc-inline-form";
-    form.dataset.periodoId = String(periodo.id);
-
-    const label = document.createElement("label");
-    label.innerText = "Arquivo";
-    form.appendChild(label);
-
-    const input = document.createElement("input");
-    input.type = "file";
-    input.required = true;
-    input.name = "arquivo";
-    form.appendChild(input);
-
-    const dica = document.createElement("p");
-    dica.className = "apc-inline-hint";
-    dica.innerText = detalhe.envio?.id
-        ? "Se necessario, envie um novo arquivo para substituir o anexo anterior."
-        : "Anexe o arquivo correspondente a esta solicitacao.";
-    form.appendChild(dica);
-
-    const submit = document.createElement("button");
-    submit.type = "submit";
-    submit.className = "btn-destaque";
-    submit.innerText = detalhe.envio?.id ? "Atualizar arquivo" : "Enviar arquivo";
-    form.appendChild(submit);
-
-    form.addEventListener("submit", enviarArquivoApc);
-    body.appendChild(form);
+    detalhe.itens.forEach((item) => {
+        body.appendChild(criarCardEntregaProfessorApc(periodo, item));
+    });
 
     return body;
 }
@@ -388,8 +431,8 @@ function renderSolicitacoesData(periodos, detalheSelecionado = null) {
         resumo.innerText = modoGestao
             ? `${periodo.total_enviados || 0}/${periodo.total_elegiveis || 0} enviados`
             : periodo.enviado
-                ? "Arquivo ja enviado"
-                : "Aguardando envio";
+                ? "Todos os arquivos enviados"
+                : `${periodo.total_pendentes || periodo.total_entregas || 0} pendencia(s) de envio`;
         summaryMain.appendChild(resumo);
 
         const meta = document.createElement("div");
@@ -445,12 +488,15 @@ function renderListaGestaoApc(detalhe) {
         topo.appendChild(item.enviado ? criarStatusApc("Enviado", "ok") : criarStatusApc("Pendente"));
         card.appendChild(topo);
 
-        if ((item.turmas || []).length) {
-            const chips = document.createElement("div");
-            chips.className = "apc-chip-row";
-            (item.turmas || []).forEach((turma) => {
-                chips.appendChild(criarChipApc(turma));
-            });
+        const chips = document.createElement("div");
+        chips.className = "apc-chip-row";
+        if (item.turma_nome) {
+            chips.appendChild(criarChipApc(item.turma_nome));
+        }
+        if (item.disciplina_nome) {
+            chips.appendChild(criarChipApc(item.disciplina_nome));
+        }
+        if (chips.childNodes.length) {
             card.appendChild(chips);
         }
 
@@ -458,8 +504,9 @@ function renderListaGestaoApc(detalhe) {
         const contexto = document.createElement("p");
         if (publicoLivre) {
             contexto.innerText = "Entrega liberada para este professor sem dependencia do horario escolar.";
-        } 
-        
+        } else {
+            contexto.innerText = "Envio vinculado a esta disciplina no horario escolar.";
+        }
         card.appendChild(contexto);
 
         if (!publicoLivre) {
@@ -467,7 +514,7 @@ function renderListaGestaoApc(detalhe) {
             horarios.className = "apc-horarios-lista";
             (item.horarios || []).forEach((horario) => {
                 const li = document.createElement("li");
-                li.innerText = `${horario.turma_nome} - ${horario.disciplina_nome}`;
+                li.innerText = `${horario.aula_numero}a aula - ${horario.turma_nome} - ${horario.disciplina_nome}`;
                 horarios.appendChild(li);
             });
             card.appendChild(horarios);
@@ -717,6 +764,8 @@ async function enviarArquivoApc(event) {
     event.preventDefault();
     const form = event.currentTarget;
     const periodoId = Number(form?.dataset?.periodoId || 0);
+    const turmaId = Number(form?.dataset?.turmaId || 0);
+    const disciplinaId = Number(form?.dataset?.disciplinaId || 0);
     const inputArquivo = form?.querySelector('input[type="file"][name="arquivo"]');
     const arquivo = inputArquivo?.files?.[0];
 
@@ -727,6 +776,8 @@ async function enviarArquivoApc(event) {
 
     const formData = new FormData();
     formData.append("arquivo", arquivo);
+    formData.append("turma_id", String(turmaId));
+    formData.append("disciplina_id", String(disciplinaId));
 
     try {
         await fetchJson(`/apc/periodos/${periodoId}/envio`, {

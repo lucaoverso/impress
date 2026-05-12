@@ -598,6 +598,10 @@ class ApcEnvioOut(BaseModel):
     id: int
     periodo_id: int
     professor_id: int
+    turma_id: int = 0
+    turma_nome: str = ""
+    disciplina_id: int = 0
+    disciplina_nome: str = ""
     professor_nome: str = ""
     professor_email: str = ""
     arquivo_nome_original: str

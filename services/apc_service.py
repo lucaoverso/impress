@@ -160,6 +160,10 @@ def enriquecer_envio_apc(item: dict) -> dict:
         "id": int(envio.get("id") or 0),
         "periodo_id": int(envio.get("periodo_id") or 0),
         "professor_id": int(envio.get("professor_id") or 0),
+        "turma_id": int(envio.get("turma_id") or 0),
+        "turma_nome": str(envio.get("turma_nome") or "").strip(),
+        "disciplina_id": int(envio.get("disciplina_id") or 0),
+        "disciplina_nome": str(envio.get("disciplina_nome") or "").strip(),
         "arquivo_tamanho": int(envio.get("arquivo_tamanho") or 0),
         "arquivo_nome_original": str(envio.get("arquivo_nome_original") or "").strip(),
         "arquivo_tipo": str(envio.get("arquivo_tipo") or "").strip(),
@@ -171,19 +175,41 @@ def enriquecer_envio_apc(item: dict) -> dict:
     }
 
 
+def chave_entrega_apc(
+    professor_id: int,
+    turma_id: int | None = None,
+    disciplina_id: int | None = None,
+) -> tuple[int, int, int]:
+    return (
+        int(professor_id or 0),
+        int(turma_id or 0),
+        int(disciplina_id or 0),
+    )
+
+
 def agrupar_horarios_professor_dia(horarios: list[dict]) -> list[dict]:
-    grupos: dict[int, dict] = {}
+    grupos: dict[tuple[int, int, int], dict] = {}
     for item in ordenar_horarios_escolares(horarios):
         professor_id = int(item.get("professor_id") or 0)
+        turma_id = int(item.get("turma_id") or 0)
+        disciplina_id = int(item.get("disciplina_id") or 0)
         if professor_id <= 0:
             continue
+        if turma_id <= 0 or disciplina_id <= 0:
+            continue
+
+        chave = chave_entrega_apc(professor_id, turma_id, disciplina_id)
 
         grupo = grupos.setdefault(
-            professor_id,
+            chave,
             {
                 "professor_id": professor_id,
                 "professor_nome": str(item.get("professor_nome") or "").strip(),
                 "professor_email": str(item.get("professor_email") or "").strip(),
+                "turma_id": turma_id,
+                "turma_nome": str(item.get("turma_nome") or "").strip(),
+                "disciplina_id": disciplina_id,
+                "disciplina_nome": str(item.get("disciplina_nome") or "").strip(),
                 "turmas": [],
                 "disciplinas": [],
                 "horarios": [],
@@ -212,7 +238,16 @@ def agrupar_horarios_professor_dia(horarios: list[dict]) -> list[dict]:
         )
 
     itens = list(grupos.values())
-    itens.sort(key=lambda item: (item["professor_nome"].casefold(), item["professor_id"]))
+    itens.sort(
+        key=lambda item: (
+            item["professor_nome"].casefold(),
+            item["turma_nome"].casefold(),
+            item["disciplina_nome"].casefold(),
+            item["professor_id"],
+            item["turma_id"],
+            item["disciplina_id"],
+        )
+    )
     return itens
 
 
@@ -230,6 +265,10 @@ def agrupar_professores_elegiveis(professores: list[dict]) -> list[dict]:
                 "professor_id": int(item.get("id") or 0),
                 "professor_nome": str(item.get("nome") or "").strip(),
                 "professor_email": str(item.get("email") or "").strip(),
+                "turma_id": 0,
+                "turma_nome": "",
+                "disciplina_id": 0,
+                "disciplina_nome": "",
                 "turmas": [],
                 "disciplinas": [],
                 "horarios": [],
@@ -241,12 +280,23 @@ def agrupar_professores_elegiveis(professores: list[dict]) -> list[dict]:
 def montar_painel_periodo_apc(periodo: dict, elegiveis: list[dict], envios: list[dict]) -> dict:
     periodo_norm = enriquecer_periodo_apc(periodo)
     envios_por_professor = {
-        int(item.get("professor_id") or 0): enriquecer_envio_apc(item) for item in (envios or [])
+        chave_entrega_apc(
+            int(item.get("professor_id") or 0),
+            int(item.get("turma_id") or 0),
+            int(item.get("disciplina_id") or 0),
+        ): enriquecer_envio_apc(item)
+        for item in (envios or [])
     }
 
     itens = []
     for item in elegiveis:
-        envio = envios_por_professor.get(int(item["professor_id"]))
+        envio = envios_por_professor.get(
+            chave_entrega_apc(
+                int(item["professor_id"]),
+                int(item.get("turma_id") or 0),
+                int(item.get("disciplina_id") or 0),
+            )
+        )
         itens.append(
             {
                 **item,
@@ -269,23 +319,77 @@ def montar_painel_professor_apc(
     periodo: dict,
     professor_id: int,
     elegiveis: list[dict],
-    envio: dict | None,
+    envios: list[dict] | None,
 ) -> dict | None:
-    grupos = {int(item["professor_id"]): item for item in (elegiveis or [])}
-    grupo = grupos.get(int(professor_id))
-    if not grupo:
+    grupos = [
+        item for item in (elegiveis or [])
+        if int(item.get("professor_id") or 0) == int(professor_id)
+    ]
+    if not grupos:
         return None
+
+    envios_por_chave = {
+        chave_entrega_apc(
+            int(item.get("professor_id") or 0),
+            int(item.get("turma_id") or 0),
+            int(item.get("disciplina_id") or 0),
+        ): enriquecer_envio_apc(item)
+        for item in (envios or [])
+    }
+
+    itens = []
+    turmas: list[str] = []
+    disciplinas: list[str] = []
+    horarios: list[dict] = []
+
+    for grupo in grupos:
+        turma_nome = str(grupo.get("turma_nome") or "").strip()
+        disciplina_nome = str(grupo.get("disciplina_nome") or "").strip()
+        if turma_nome and turma_nome not in turmas:
+            turmas.append(turma_nome)
+        if disciplina_nome and disciplina_nome not in disciplinas:
+            disciplinas.append(disciplina_nome)
+        horarios.extend(list(grupo.get("horarios") or []))
+
+        envio = envios_por_chave.get(
+            chave_entrega_apc(
+                int(grupo.get("professor_id") or 0),
+                int(grupo.get("turma_id") or 0),
+                int(grupo.get("disciplina_id") or 0),
+            )
+        )
+        itens.append(
+            {
+                **grupo,
+                "total_aulas": len(grupo["horarios"]),
+                "enviado": envio is not None,
+                "envio": envio,
+            }
+        )
+
+    itens.sort(
+        key=lambda item: (
+            str(item.get("turma_nome") or "").casefold(),
+            str(item.get("disciplina_nome") or "").casefold(),
+            int(item.get("turma_id") or 0),
+            int(item.get("disciplina_id") or 0),
+        )
+    )
 
     return {
         "periodo": enriquecer_periodo_apc(periodo),
         "professor_id": int(professor_id),
-        "professor_nome": grupo["professor_nome"],
-        "professor_email": grupo["professor_email"],
-        "turmas": grupo["turmas"],
-        "disciplinas": grupo["disciplinas"],
-        "horarios": grupo["horarios"],
-        "total_aulas": len(grupo["horarios"]),
-        "envio": enriquecer_envio_apc(envio) if envio else None,
+        "professor_nome": str(grupos[0].get("professor_nome") or "").strip(),
+        "professor_email": str(grupos[0].get("professor_email") or "").strip(),
+        "turmas": turmas,
+        "disciplinas": disciplinas,
+        "horarios": horarios,
+        "total_aulas": len(horarios),
+        "total_entregas": len(itens),
+        "total_enviadas": sum(1 for item in itens if item["enviado"]),
+        "total_pendentes": sum(1 for item in itens if not item["enviado"]),
+        "envio": itens[0]["envio"] if len(itens) == 1 else None,
+        "itens": itens,
     }
 
 
@@ -297,9 +401,20 @@ def sanitizar_nome_arquivo(nome_arquivo: str) -> str:
     return nome_limpo
 
 
-def nome_arquivo_armazenado(periodo_id: int, professor_id: int, nome_original: str) -> str:
+def nome_arquivo_armazenado(
+    periodo_id: int,
+    professor_id: int,
+    nome_original: str,
+    *,
+    turma_id: int = 0,
+    disciplina_id: int = 0,
+) -> str:
     nome_limpo = sanitizar_nome_arquivo(nome_original)
-    return f"apc_{int(periodo_id)}_{int(professor_id)}_{uuid.uuid4().hex}_{nome_limpo}"
+    return (
+        f"apc_{int(periodo_id)}_{int(professor_id)}_"
+        f"{int(turma_id or 0)}_{int(disciplina_id or 0)}_"
+        f"{uuid.uuid4().hex}_{nome_limpo}"
+    )
 
 
 def contexto_apc_anos(anos_existentes: list[int] | None = None) -> list[int]:

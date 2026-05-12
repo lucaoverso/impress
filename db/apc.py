@@ -2,6 +2,7 @@ from ._proxy import proxy
 
 buscar_apc_envio_por_id = proxy("buscar_apc_envio_por_id")
 buscar_apc_envio_por_periodo_e_professor = proxy("buscar_apc_envio_por_periodo_e_professor")
+buscar_apc_envio_por_chave = proxy("buscar_apc_envio_por_chave")
 buscar_apc_periodo_por_id = proxy("buscar_apc_periodo_por_id")
 criar_apc_envio = proxy("criar_apc_envio")
 criar_apc_periodo = proxy("criar_apc_periodo")
@@ -14,6 +15,7 @@ atualizar_apc_periodo = proxy("atualizar_apc_periodo")
 
 __all__ = [
     "buscar_apc_envio_por_id",
+    "buscar_apc_envio_por_chave",
     "buscar_apc_envio_por_periodo_e_professor",
     "buscar_apc_periodo_por_id",
     "criar_apc_envio",
