@@ -231,7 +231,10 @@ function aplicarVisibilidadeApc() {
     } else {
         ativarAbaGestaoApc(abaGestaoApc);
     }
-    el("apcUsuario").innerText = descricaoUsuarioApc();
+    const usuarioResumo = el("apcUsuario");
+    if (usuarioResumo) {
+        usuarioResumo.innerText = descricaoUsuarioApc();
+    }
 
     if (!pagina) return;
     pagina.classList.toggle("is-manager", podeGerir);

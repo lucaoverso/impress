@@ -109,6 +109,7 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn("css/style.css?v=build-apc-321", html)
         self.assertIn("js/apc.js?v=build-apc-321", html)
         self.assertIn("Voltar aos serviços", html)
+        self.assertIn('id="apcUsuario"', html)
 
 
 if __name__ == "__main__":
