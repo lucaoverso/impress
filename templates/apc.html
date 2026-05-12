@@ -9,19 +9,6 @@
 </head>
 
 <body>
-    <header class="app-topbar">
-        <div class="app-topbar-main">
-            <div class="app-topbar-brand">
-                <span class="app-topbar-logo">Suite Escolar</span>
-                <span class="app-topbar-context">Central docente</span>
-            </div>
-        </div>
-        <div class="app-topbar-actions">
-            <button id="btnVoltarServicos" type="button">Servicos</button>
-            <button id="btnSair" type="button">Sair</button>
-        </div>
-    </header>
-    
     <main class="scheduler-page apc-page">
         <section class="apc-topbar">
             <div class="apc-topbar-main">
@@ -47,6 +34,18 @@
                     Selecione uma data no calendario para ver ou configurar as entregas.
                 </div>
             </div>
+
+            <nav id="apcModeTabs" class="admin-tabs apc-mode-tabs" aria-label="Abas principais da central de anexos"
+                hidden>
+                <button id="apcTabModoDocente" class="admin-tab-btn is-active" data-apc-mode-trigger="docente"
+                    aria-selected="true" type="button">
+                    Minhas entregas
+                </button>
+                <button id="apcTabModoGestao" class="admin-tab-btn" data-apc-mode-trigger="gestao"
+                    aria-selected="false" type="button">
+                    Gestao
+                </button>
+            </nav>
 
             <p id="msgApc" class="apc-toolbar-message"></p>
         </section>
@@ -82,7 +81,8 @@
                     <select id="apcPublicoAlvo"></select>
 
                     <label for="apcObservacao">Observacao</label>
-                    <textarea id="apcObservacao" rows="3" placeholder="Ex.: atividade pedagogica, prova bimestral, roteiro, plano ou outro material."></textarea>
+                    <textarea id="apcObservacao" rows="3"
+                        placeholder="Ex.: atividade pedagogica, prova bimestral, roteiro, plano ou outro material."></textarea>
 
                     <div class="apc-inline-actions">
                         <button class="btn-destaque" type="submit">Salvar solicitacao</button>
@@ -105,8 +105,9 @@
                 <div id="apcResumoPainel"></div>
 
                 <nav id="apcGestaoTabs" class="admin-tabs apc-gestao-tabs" aria-label="Abas da gestao de anexos" hidden>
-                    <button id="apcTabBtnProfessores" class="admin-tab-btn is-active" data-apc-gestao-tab-trigger="professores"
-                        aria-controls="apc-tab-professores" aria-selected="true" type="button">
+                    <button id="apcTabBtnProfessores" class="admin-tab-btn is-active"
+                        data-apc-gestao-tab-trigger="professores" aria-controls="apc-tab-professores"
+                        aria-selected="true" type="button">
                         Por professor
                     </button>
                     <button id="apcTabBtnArquivos" class="admin-tab-btn" data-apc-gestao-tab-trigger="arquivos"
@@ -122,33 +123,10 @@
                     </div>
                 </section>
 
-                <section id="apc-tab-arquivos" class="admin-tab-panel apc-gestao-panel" data-apc-gestao-tab-panel="arquivos"
-                    hidden>
-                    <div class="apc-arquivos-workspace">
-                        <div id="apcArquivosLista" class="apc-arquivos-lista">
-                            <div class="booking-empty">Nenhum arquivo enviado ainda.</div>
-                        </div>
-
-                        <article class="apc-arquivo-preview-card">
-                            <div id="apcArquivoPreviewMeta" class="apc-arquivo-preview-meta">
-                                <div class="booking-empty">Selecione um arquivo enviado para visualizar aqui.</div>
-                            </div>
-
-                            <div id="apcArquivoPreviewState" class="apc-arquivo-preview-state">
-                                <div class="booking-empty">A visualizacao do arquivo sera carregada neste painel.</div>
-                            </div>
-
-                            <iframe id="apcArquivoPreviewFrame" class="apc-arquivo-preview-frame" title="Visualizacao do arquivo"
-                                hidden></iframe>
-                            <img id="apcArquivoPreviewImage" class="apc-arquivo-preview-image" alt="Preview do arquivo"
-                                hidden>
-                            <pre id="apcArquivoPreviewText" class="apc-arquivo-preview-text" hidden></pre>
-
-                            <div class="apc-inline-actions apc-arquivo-preview-actions">
-                                <button id="btnApcAbrirArquivoGuia" type="button" hidden>Abrir em nova guia</button>
-                                <button id="btnApcBaixarArquivo" type="button" hidden>Baixar arquivo</button>
-                            </div>
-                        </article>
+                <section id="apc-tab-arquivos" class="admin-tab-panel apc-gestao-panel"
+                    data-apc-gestao-tab-panel="arquivos" hidden>
+                    <div id="apcArquivosLista" class="apc-arquivos-lista">
+                        <div class="booking-empty">Nenhum arquivo enviado ainda.</div>
                     </div>
                 </section>
             </article>

@@ -5573,6 +5573,16 @@ def atualizar_apc_envio(
     return buscar_apc_envio_por_id(envio_id)
 
 
+def excluir_apc_envio(envio_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM apc_envios WHERE id = ?", (int(envio_id),))
+    removido = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return removido
+
+
 def listar_turmas(incluir_inativas: bool = False):
     conn = get_connection()
     cursor = conn.cursor()

@@ -401,6 +401,33 @@ def sanitizar_nome_arquivo(nome_arquivo: str) -> str:
     return nome_limpo
 
 
+def _normalizar_trecho_nome_arquivo(texto: str, fallback: str) -> str:
+    valor = str(texto or "").strip()
+    valor = re.sub(r"\s+", " ", valor)
+    valor = re.sub(r"[\\/:*?\"<>|]+", "-", valor)
+    valor = valor.strip(" .-_")
+    return valor or fallback
+
+
+def nome_publico_arquivo_apc(
+    titulo: str,
+    professor_nome: str,
+    data_referencia: str,
+    nome_original: str,
+) -> str:
+    extensao = os.path.splitext(os.path.basename(str(nome_original or "").strip()))[1].strip()
+    extensao = re.sub(r"[^A-Za-z0-9.]", "", extensao)
+    if not extensao.startswith("."):
+        extensao = f".{extensao}" if extensao else ""
+    if not extensao:
+        extensao = ".pdf"
+
+    titulo_base = _normalizar_trecho_nome_arquivo(titulo, "Documento")
+    professor_base = _normalizar_trecho_nome_arquivo(professor_nome, "Professor")
+    data_base = normalizar_data_apc(data_referencia)
+    return f"{titulo_base} - {professor_base} - {data_base}{extensao.lower()}"
+
+
 def nome_arquivo_armazenado(
     periodo_id: int,
     professor_id: int,

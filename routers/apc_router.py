@@ -13,6 +13,7 @@ from db.apc import (
     buscar_apc_periodo_por_id,
     criar_apc_envio,
     criar_apc_periodo,
+    excluir_apc_envio,
     excluir_apc_periodo,
     listar_anos_letivos_apc,
     listar_apc_envios,
@@ -33,13 +34,13 @@ from services.apc_service import (
     montar_painel_periodo_apc,
     montar_painel_professor_apc,
     nome_arquivo_armazenado,
+    nome_publico_arquivo_apc,
     nome_publico_alvo,
     normalizar_data_apc,
     normalizar_prazo_envio,
     normalizar_publico_alvo,
     ordenar_periodos_apc,
     periodo_apc_aberto,
-    sanitizar_nome_arquivo,
     validar_mes_referencia,
 )
 from services.file_service import arquivo_suportado
@@ -177,11 +178,38 @@ def _coercer_form_int(valor, padrao: int = 0) -> int:
             return int(padrao)
 
 
-def _montar_resumo_calendario_para_usuario(periodo: dict, usuario: dict) -> dict | None:
+def _resolver_visao_apc(usuario: dict, visao: str | None = None) -> str:
+    valor = str(visao or "").strip().lower()
+    if valor and valor not in {"docente", "gestao"}:
+        raise HTTPException(400, "Visao invalida para este modulo.")
+
+    pode_gerir = _pode_gerir_apc(usuario)
+    eh_professor = usuario_eh_professor(usuario)
+
+    if valor == "gestao":
+        if not pode_gerir:
+            raise HTTPException(403, "Voce nao possui acesso a visao de gestao.")
+        return "gestao"
+
+    if valor == "docente":
+        if not eh_professor:
+            raise HTTPException(403, "Somente professores possuem visao docente.")
+        return "docente"
+
+    if pode_gerir and not eh_professor:
+        return "gestao"
+    if eh_professor:
+        return "docente"
+    if pode_gerir:
+        return "gestao"
+    raise HTTPException(403, "Acesso negado.")
+
+
+def _montar_resumo_calendario_para_usuario(periodo: dict, usuario: dict, visao: str) -> dict | None:
     periodo_norm = enriquecer_periodo_apc(periodo)
     elegiveis = _obter_elegiveis_periodo(periodo_norm)
 
-    if _pode_gerir_apc(usuario):
+    if visao == "gestao":
         painel = montar_painel_periodo_apc(
             periodo_norm,
             elegiveis,
@@ -254,6 +282,7 @@ def obter_contexto_apc_api(usuario=Depends(get_usuario_logado)):
 def listar_calendario_apc_api(
     mes: str,
     ano_letivo: int | None = None,
+    visao: str | None = None,
     usuario=Depends(get_usuario_logado),
 ):
     try:
@@ -270,9 +299,10 @@ def listar_calendario_apc_api(
         )
     )
 
+    visao_resolvida = _resolver_visao_apc(usuario, visao)
     itens = []
     for periodo in periodos:
-        resumo = _montar_resumo_calendario_para_usuario(periodo, usuario)
+        resumo = _montar_resumo_calendario_para_usuario(periodo, usuario, visao_resolvida)
         if resumo is None:
             continue
         itens.append(resumo)
@@ -285,13 +315,18 @@ def listar_calendario_apc_api(
 
 
 @router.get("/apc/periodos/{periodo_id}")
-def obter_periodo_apc_api(periodo_id: int, usuario=Depends(get_usuario_logado)):
+def obter_periodo_apc_api(
+    periodo_id: int,
+    visao: str | None = None,
+    usuario=Depends(get_usuario_logado),
+):
     periodo = buscar_apc_periodo_por_id(periodo_id)
     if not periodo:
         raise HTTPException(404, "Solicitacao de entrega nao encontrada.")
 
+    visao_resolvida = _resolver_visao_apc(usuario, visao)
     elegiveis = _obter_elegiveis_periodo(periodo)
-    if _pode_gerir_apc(usuario):
+    if visao_resolvida == "gestao":
         return montar_painel_periodo_apc(
             periodo,
             elegiveis,
@@ -430,10 +465,16 @@ def enviar_arquivo_apc_api(
 
     envio_existente = item_envio.get("envio")
     diretorio = _garantir_diretorio_apc()
+    nome_publico = nome_publico_arquivo_apc(
+        periodo_norm.get("titulo"),
+        str(item_envio.get("professor_nome") or usuario.get("nome") or "").strip(),
+        periodo_norm.get("data_referencia"),
+        arquivo.filename,
+    )
     nome_destino = nome_arquivo_armazenado(
         periodo_id,
         int(usuario["id"]),
-        arquivo.filename,
+        nome_publico,
         turma_id=int(item_envio.get("turma_id") or 0),
         disciplina_id=int(item_envio.get("disciplina_id") or 0),
     )
@@ -449,7 +490,7 @@ def enviar_arquivo_apc_api(
         if envio_existente:
             envio = atualizar_apc_envio(
                 envio_id=int(envio_existente["id"]),
-                arquivo_nome_original=sanitizar_nome_arquivo(arquivo.filename),
+                arquivo_nome_original=nome_publico,
                 arquivo_path=str(caminho_destino),
                 arquivo_tamanho=len(conteudo),
                 arquivo_tipo=str(arquivo.content_type or "").strip(),
@@ -463,7 +504,7 @@ def enviar_arquivo_apc_api(
                 professor_usuario_id=int(usuario["id"]),
                 turma_id=int(item_envio.get("turma_id") or 0),
                 disciplina_id=int(item_envio.get("disciplina_id") or 0),
-                arquivo_nome_original=sanitizar_nome_arquivo(arquivo.filename),
+                arquivo_nome_original=nome_publico,
                 arquivo_path=str(caminho_destino),
                 arquivo_tamanho=len(conteudo),
                 arquivo_tipo=str(arquivo.content_type or "").strip(),
@@ -479,6 +520,42 @@ def enviar_arquivo_apc_api(
         _remover_arquivo_se_existir(caminho_destino)
         raise HTTPException(500, "Falha ao registrar o envio do arquivo.")
     return envio
+
+
+@router.delete("/apc/envios/{envio_id}")
+def excluir_envio_apc_api(envio_id: int, usuario=Depends(get_usuario_logado)):
+    envio = buscar_apc_envio_por_id(envio_id)
+    if not envio:
+        raise HTTPException(404, "Envio nao encontrado.")
+
+    professor_id = int(envio.get("professor_id") or 0)
+    if not usuario_eh_professor(usuario) or int(usuario["id"]) != professor_id:
+        raise HTTPException(
+            403,
+            "Somente o professor responsavel pode remover este arquivo enquanto o prazo estiver aberto.",
+        )
+
+    periodo = buscar_apc_periodo_por_id(int(envio.get("periodo_id") or 0))
+    if not periodo:
+        raise HTTPException(404, "Solicitacao de entrega nao encontrada.")
+    periodo_norm = enriquecer_periodo_apc(periodo)
+    if not periodo_apc_aberto(periodo_norm):
+        raise HTTPException(409, "O prazo de envio desta solicitacao ja foi encerrado.")
+
+    caminho_arquivo = None
+    try:
+        caminho_arquivo = _resolver_caminho_envio_seguro(envio.get("arquivo_path"))
+    except HTTPException as exc:
+        if int(exc.status_code) != 404:
+            raise
+
+    if not excluir_apc_envio(envio_id):
+        raise HTTPException(404, "Envio nao encontrado.")
+
+    if caminho_arquivo:
+        _remover_arquivo_se_existir(caminho_arquivo)
+
+    return {"mensagem": "Arquivo removido com sucesso. Voce ja pode enviar novamente."}
 
 
 @router.get("/apc/envios/{envio_id}/arquivo")

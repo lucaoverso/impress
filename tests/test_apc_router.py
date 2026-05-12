@@ -62,6 +62,14 @@ class ApcRouterTest(unittest.TestCase):
     def _usuario_professor(self, usuario_id: int) -> dict:
         return {"id": usuario_id, "nome": "Professor", "cargo": "PROFESSOR"}
 
+    def _usuario_professor_coordenacao(self, usuario_id: int) -> dict:
+        return {
+            "id": usuario_id,
+            "nome": "Professor Coordenador",
+            "cargo": "PROFESSOR",
+            "acesso_coordenacao": 1,
+        }
+
     def test_fluxo_apc_filtra_professor_por_horario_e_registra_envio(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")
@@ -163,7 +171,10 @@ class ApcRouterTest(unittest.TestCase):
             )
             self.assertEqual(int(envio["periodo_id"]), int(quinta["id"]))
             self.assertEqual(int(envio["professor_id"]), professor_id)
-            self.assertEqual(envio["arquivo_nome_original"], "atividade.pdf")
+            self.assertEqual(
+                envio["arquivo_nome_original"],
+                "Atividade pedagogica semanal - Professor APC - 2031-05-08.pdf",
+            )
             self.assertTrue(Path(str(envio["arquivo_path"])).exists())
 
             detalhe_professor = apc_router.obter_periodo_apc_api(
@@ -425,6 +436,221 @@ class ApcRouterTest(unittest.TestCase):
             self.assertEqual(int(detalhe_gestao["total_elegiveis"]), 2)
             self.assertEqual(int(detalhe_gestao["total_enviados"]), 2)
             self.assertEqual(len(detalhe_gestao["itens"]), 2)
+
+    def test_professor_com_acesso_coordenacao_alterna_entre_visoes_docente_e_gestao(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            apc_dir = os.path.join(tmp_dir, "apc")
+            database, models, apc_router = _reload_modules(db_path, apc_dir)
+            database.criar_tabelas()
+
+            turma_a_id = int(database.criar_turma("8A", "MATUTINO", 30))
+            turma_b_id = int(database.criar_turma("8B", "MATUTINO", 31))
+            disciplina_a_id = int(database.criar_disciplina("Matematica", 4))
+            disciplina_b_id = int(database.criar_disciplina("Ciencias", 3))
+
+            professor_coord_id = int(
+                database.criar_professor(
+                    nome="Professor Coordenador",
+                    email="coord-prof@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1984-04-18",
+                    aulas_semanais=12,
+                    turmas_quantidade=1,
+                    turmas=["8A"],
+                    disciplinas=["Matematica"],
+                )
+            )
+            professor_outro_id = int(
+                database.criar_professor(
+                    nome="Professor Outro",
+                    email="outro@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1986-03-09",
+                    aulas_semanais=10,
+                    turmas_quantidade=1,
+                    turmas=["8B"],
+                    disciplinas=["Ciencias"],
+                )
+            )
+
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_a_id,
+                disciplina_id=disciplina_a_id,
+                carga_horaria=4,
+                professor_usuario_id=professor_coord_id,
+            )
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_b_id,
+                disciplina_id=disciplina_b_id,
+                carga_horaria=3,
+                professor_usuario_id=professor_outro_id,
+            )
+            database.criar_horario_escolar(
+                ano_letivo=2034,
+                turma_id=turma_a_id,
+                disciplina_id=disciplina_a_id,
+                professor_usuario_id=professor_coord_id,
+                dia_semana="SEGUNDA",
+                aula_numero=1,
+            )
+            database.criar_horario_escolar(
+                ano_letivo=2034,
+                turma_id=turma_b_id,
+                disciplina_id=disciplina_b_id,
+                professor_usuario_id=professor_outro_id,
+                dia_semana="SEGUNDA",
+                aula_numero=2,
+            )
+
+            periodo = apc_router.criar_periodo_apc_api(
+                payload=models.ApcPeriodoIn(
+                    ano_letivo=2034,
+                    data_referencia="2034-03-06",
+                    prazo_envio="2034-03-06T23:59",
+                    titulo="Entrega semanal",
+                    observacao="Visoes separadas para professor coordenador.",
+                    publico_alvo="HORARIO_DIA",
+                ),
+                usuario=self._usuario_coord(),
+            )
+
+            usuario_hibrido = self._usuario_professor_coordenacao(professor_coord_id)
+            contexto = apc_router.obter_contexto_apc_api(usuario=usuario_hibrido)
+            self.assertTrue(contexto["usuario"]["pode_gerir"])
+            self.assertTrue(contexto["usuario"]["eh_professor"])
+
+            calendario_docente = apc_router.listar_calendario_apc_api(
+                mes="2034-03",
+                ano_letivo=2034,
+                visao="docente",
+                usuario=usuario_hibrido,
+            )
+            self.assertEqual(len(calendario_docente["periodos"]), 1)
+            self.assertEqual(int(calendario_docente["periodos"][0]["total_elegiveis"]), 1)
+
+            calendario_gestao = apc_router.listar_calendario_apc_api(
+                mes="2034-03",
+                ano_letivo=2034,
+                visao="gestao",
+                usuario=usuario_hibrido,
+            )
+            self.assertEqual(len(calendario_gestao["periodos"]), 1)
+            self.assertEqual(int(calendario_gestao["periodos"][0]["total_elegiveis"]), 2)
+
+            detalhe_docente = apc_router.obter_periodo_apc_api(
+                periodo_id=int(periodo["id"]),
+                visao="docente",
+                usuario=usuario_hibrido,
+            )
+            self.assertEqual(int(detalhe_docente["professor_id"]), professor_coord_id)
+            self.assertEqual(int(detalhe_docente["total_entregas"]), 1)
+
+            detalhe_gestao = apc_router.obter_periodo_apc_api(
+                periodo_id=int(periodo["id"]),
+                visao="gestao",
+                usuario=usuario_hibrido,
+            )
+            self.assertEqual(int(detalhe_gestao["total_elegiveis"]), 2)
+            self.assertEqual(len(detalhe_gestao["itens"]), 2)
+
+    def test_professor_remove_envio_e_reenvia_arquivo_dentro_do_prazo(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            apc_dir = os.path.join(tmp_dir, "apc")
+            database, models, apc_router = _reload_modules(db_path, apc_dir)
+            database.criar_tabelas()
+
+            turma_id = int(database.criar_turma("6A", "MATUTINO", 29))
+            disciplina_id = int(database.criar_disciplina("Geografia APC Reenvio", 3))
+            professor_id = int(
+                database.criar_professor(
+                    nome="Professor Reenvio",
+                    email="reenvio@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1988-12-02",
+                    aulas_semanais=9,
+                    turmas_quantidade=1,
+                    turmas=["6A"],
+                    disciplinas=["Geografia APC Reenvio"],
+                )
+            )
+
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_id,
+                disciplina_id=disciplina_id,
+                carga_horaria=3,
+                professor_usuario_id=professor_id,
+            )
+            database.criar_horario_escolar(
+                ano_letivo=2035,
+                turma_id=turma_id,
+                disciplina_id=disciplina_id,
+                professor_usuario_id=professor_id,
+                dia_semana="QUARTA",
+                aula_numero=2,
+            )
+
+            periodo = apc_router.criar_periodo_apc_api(
+                payload=models.ApcPeriodoIn(
+                    ano_letivo=2035,
+                    data_referencia="2035-11-14",
+                    prazo_envio="2035-11-14T23:59",
+                    titulo="Atividade complementar",
+                    observacao="Teste de remocao e novo envio.",
+                    publico_alvo="HORARIO_DIA",
+                ),
+                usuario=self._usuario_coord(),
+            )
+
+            envio = apc_router.enviar_arquivo_apc_api(
+                periodo_id=int(periodo["id"]),
+                arquivo=UploadFile(
+                    io.BytesIO(b"versao inicial"),
+                    filename="atividade-inicial.pdf",
+                    headers=Headers({"content-type": "application/pdf"}),
+                ),
+                usuario=self._usuario_professor(professor_id),
+            )
+            caminho_inicial = Path(str(envio["arquivo_path"]))
+            self.assertTrue(caminho_inicial.exists())
+
+            resposta_remocao = apc_router.excluir_envio_apc_api(
+                envio_id=int(envio["id"]),
+                usuario=self._usuario_professor(professor_id),
+            )
+            self.assertIn("sucesso", resposta_remocao["mensagem"].lower())
+            self.assertFalse(caminho_inicial.exists())
+            self.assertIsNone(database.buscar_apc_envio_por_id(int(envio["id"])))
+
+            detalhe_pos_remocao = apc_router.obter_periodo_apc_api(
+                periodo_id=int(periodo["id"]),
+                usuario=self._usuario_professor(professor_id),
+            )
+            self.assertEqual(int(detalhe_pos_remocao["total_enviadas"]), 0)
+            self.assertEqual(int(detalhe_pos_remocao["total_pendentes"]), 1)
+
+            novo_envio = apc_router.enviar_arquivo_apc_api(
+                periodo_id=int(periodo["id"]),
+                arquivo=UploadFile(
+                    io.BytesIO(b"versao corrigida"),
+                    filename="atividade-corrigida.pdf",
+                    headers=Headers({"content-type": "application/pdf"}),
+                ),
+                usuario=self._usuario_professor(professor_id),
+            )
+            self.assertTrue(Path(str(novo_envio["arquivo_path"])).exists())
+            self.assertEqual(
+                novo_envio["arquivo_nome_original"],
+                "Atividade complementar - Professor Reenvio - 2035-11-14.pdf",
+            )
+
+            detalhe_final = apc_router.obter_periodo_apc_api(
+                periodo_id=int(periodo["id"]),
+                usuario=self._usuario_professor(professor_id),
+            )
+            self.assertEqual(int(detalhe_final["total_enviadas"]), 1)
+            self.assertEqual(int(detalhe_final["total_pendentes"]), 0)
 
 
 if __name__ == "__main__":

@@ -123,6 +123,10 @@
     color: #d9f99d;
 }
 
+.apc-mode-tabs {
+    margin-top: 2px;
+}
+
 .apc-content {
     grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.78fr);
     align-items: start;
@@ -448,6 +452,7 @@
     gap: 8px;
 }
 
+.apc-arquivo-item-card,
 .apc-arquivo-item-btn {
     width: 100%;
     text-align: left;
@@ -457,6 +462,10 @@
     padding: 12px;
     display: grid;
     gap: 6px;
+}
+
+.apc-arquivo-item-card .apc-inline-actions {
+    margin-top: 2px;
 }
 
 .apc-arquivo-item-btn.is-active {
@@ -537,6 +546,22 @@
     background: #ffffff;
     display: grid;
     gap: 8px;
+    align-content: start;
+}
+
+.apc-professor-card.is-enviado {
+    border-color: rgba(15, 118, 110, 0.24);
+    background: linear-gradient(180deg, rgba(236, 253, 245, 0.98), #ffffff);
+}
+
+.apc-professor-card.is-pendente {
+    border-color: rgba(234, 179, 8, 0.18);
+    background: linear-gradient(180deg, rgba(255, 251, 235, 0.98), #ffffff);
+}
+
+.apc-professor-card.is-fechado {
+    border-color: rgba(185, 28, 28, 0.18);
+    background: linear-gradient(180deg, rgba(254, 242, 242, 0.98), #ffffff);
 }
 
 .apc-professor-topo {
@@ -549,6 +574,17 @@
 .apc-professor-topo h4,
 .apc-professor-topo p {
     margin: 0;
+}
+
+.apc-professor-card-resumo {
+    display: grid;
+    gap: 4px;
+}
+
+.apc-professor-card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
 }
 
 .apc-status {
@@ -604,6 +640,7 @@
 .apc-inline-form {
     padding-top: 14px;
     border-top: 1px solid rgba(19, 53, 88, 0.1);
+    gap: 8px;
 }
 
 .apc-inline-form input[type="file"] {
@@ -611,8 +648,40 @@
 }
 
 .apc-inline-form button {
+    width: 100%;
+    min-width: 0;
+}
+
+.apc-envio-card {
+    border: 1px solid rgba(19, 53, 88, 0.12);
+    border-radius: 14px;
+    padding: 12px;
+    background: rgba(244, 248, 252, 0.88);
+    display: grid;
+    gap: 10px;
+}
+
+.apc-envio-card-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.apc-envio-nome {
+    font-size: 0.98rem;
+    color: var(--brand-700);
+    word-break: break-word;
+}
+
+.apc-envio-actions {
+    margin-top: 0;
+}
+
+.apc-envio-actions button {
     width: fit-content;
-    min-width: 180px;
+    min-width: 150px;
 }
 
 .apc-envio-link {
@@ -660,10 +729,6 @@
         grid-column: 1;
         grid-row: auto;
         position: static;
-    }
-
-    .apc-arquivos-workspace {
-        grid-template-columns: 1fr;
     }
 }
 

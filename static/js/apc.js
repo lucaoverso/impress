@@ -25,9 +25,7 @@ let dataSelecionadaApc = paraIso(new Date());
 let calendarioApc = { periodos: [] };
 let periodoSelecionadoApcId = null;
 let abaGestaoApc = "professores";
-let envioPreviewApcId = null;
-let arquivoPreviewUrlApc = "";
-let arquivoPreviewNomeApc = "";
+let modoApc = "docente";
 
 function setMensagemApc(texto, erro = false) {
     const msg = el("msgApc");
@@ -57,6 +55,91 @@ function pluralizarApc(total, singular, plural) {
 
 function obterPaginaApc() {
     return document.querySelector(".apc-page");
+}
+
+function usuarioPodeVerDocenteApc() {
+    return Boolean(usuarioApc?.eh_professor);
+}
+
+function usuarioPodeVerGestaoApc() {
+    return Boolean(usuarioApc?.pode_gerir);
+}
+
+function modoDocenteAtivoApc() {
+    return modoApc === "docente";
+}
+
+function modoGestaoAtivoApc() {
+    return modoApc === "gestao";
+}
+
+function modoInicialApc() {
+    if (usuarioPodeVerDocenteApc()) return "docente";
+    if (usuarioPodeVerGestaoApc()) return "gestao";
+    return "docente";
+}
+
+function descricaoUsuarioApc() {
+    if (!usuarioApc) return "";
+    const descricao = [];
+    if (usuarioPodeVerDocenteApc()) {
+        descricao.push("visao docente");
+    }
+    if (usuarioPodeVerGestaoApc()) {
+        descricao.push("visao de gestao");
+    }
+    const papel = descricao.length ? ` | ${descricao.join(" e ")}` : "";
+    return `${usuarioApc.nome} (${usuarioApc.cargo})${papel}`;
+}
+
+function renderizarAbasModoApc() {
+    const mostrarDocente = usuarioPodeVerDocenteApc();
+    const mostrarGestao = usuarioPodeVerGestaoApc();
+    const nav = el("apcModeTabs");
+    if (nav) {
+        nav.hidden = !(mostrarDocente && mostrarGestao);
+    }
+    if (el("apcTabModoDocente")) {
+        el("apcTabModoDocente").hidden = !mostrarDocente;
+    }
+    if (el("apcTabModoGestao")) {
+        el("apcTabModoGestao").hidden = !mostrarGestao;
+    }
+
+    if (modoDocenteAtivoApc() && !mostrarDocente) {
+        modoApc = mostrarGestao ? "gestao" : modoInicialApc();
+    }
+    if (modoGestaoAtivoApc() && !mostrarGestao) {
+        modoApc = mostrarDocente ? "docente" : modoInicialApc();
+    }
+
+    document.querySelectorAll("[data-apc-mode-trigger]").forEach((botao) => {
+        const ativo = botao.dataset.apcModeTrigger === modoApc;
+        botao.classList.toggle("is-active", ativo);
+        botao.setAttribute("aria-selected", ativo ? "true" : "false");
+    });
+}
+
+function ativarModoApc(modo, { recarregar = false } = {}) {
+    if (modo === "gestao") {
+        if (!usuarioPodeVerGestaoApc()) return;
+        modoApc = "gestao";
+    } else {
+        if (!usuarioPodeVerDocenteApc()) return;
+        modoApc = "docente";
+    }
+
+    renderizarAbasModoApc();
+    aplicarVisibilidadeApc();
+
+    if (recarregar) {
+        periodoSelecionadoApcId = null;
+        void carregarCalendarioApc();
+    }
+}
+
+function visaoAtivaApc() {
+    return modoGestaoAtivoApc() ? "gestao" : "docente";
 }
 
 function preencherSelectAnosApc() {
@@ -104,7 +187,7 @@ function periodoResumoSelecionado(periodos) {
 
 function atualizarResumoMesApc() {
     const periodos = Array.isArray(calendarioApc.periodos) ? calendarioApc.periodos : [];
-    if (usuarioApc?.pode_gerir) {
+    if (modoGestaoAtivoApc()) {
         const totalSolicitacoes = periodos.length;
         const totalPendencias = periodos.reduce(
             (soma, item) => soma + Number(item.total_pendentes || 0),
@@ -124,28 +207,28 @@ function atualizarResumoMesApc() {
 }
 
 function aplicarVisibilidadeApc() {
-    const podeGerir = Boolean(usuarioApc?.pode_gerir);
-    const ehProfessor = Boolean(usuarioApc?.eh_professor);
-    const layoutProfessor = ehProfessor && !podeGerir;
+    const podeGerir = usuarioPodeVerGestaoApc();
+    const layoutProfessor = modoDocenteAtivoApc();
     const pagina = obterPaginaApc();
 
-    el("apcGestaoCard").hidden = !podeGerir;
-    el("apcResumoPainel").hidden = !podeGerir;
-    el("apcGestaoTabs").hidden = !podeGerir;
-    if (!podeGerir) {
+    renderizarAbasModoApc();
+    el("apcGestaoCard").hidden = !(podeGerir && modoGestaoAtivoApc());
+    el("apcResumoPainel").hidden = !modoGestaoAtivoApc();
+    el("apcGestaoTabs").hidden = !(podeGerir && modoGestaoAtivoApc());
+    if (!(podeGerir && modoGestaoAtivoApc())) {
         document.querySelectorAll("[data-apc-gestao-tab-panel]").forEach((painel) => {
             painel.hidden = true;
         });
     } else {
         ativarAbaGestaoApc(abaGestaoApc);
     }
-    el("apcUsuario").innerText = usuarioApc
-        ? `${usuarioApc.nome} (${usuarioApc.cargo})`
-        : "";
+    el("apcUsuario").innerText = descricaoUsuarioApc();
 
     if (!pagina) return;
     pagina.classList.toggle("is-manager", podeGerir);
     pagina.classList.toggle("is-professor", layoutProfessor);
+    pagina.classList.toggle("is-docente-mode", modoDocenteAtivoApc());
+    pagina.classList.toggle("is-gestao-mode", modoGestaoAtivoApc());
 }
 
 function preencherFormularioPeriodo(periodo) {
@@ -203,38 +286,26 @@ function ativarAbaGestaoApc(aba) {
     });
 }
 
-function revogarPreviewArquivoApc() {
-    if (arquivoPreviewUrlApc) {
-        window.URL.revokeObjectURL(arquivoPreviewUrlApc);
-        arquivoPreviewUrlApc = "";
+async function baixarArquivoApc(envio) {
+    if (!envio?.id) return;
+    try {
+        const resposta = await fetchResposta(`/apc/envios/${envio.id}/arquivo`, {
+            headers: headersApc,
+        });
+        const blob = await resposta.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = envio.arquivo_nome_original || "arquivo";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => {
+            window.URL.revokeObjectURL(url);
+        }, 30000);
+    } catch (err) {
+        setMensagemApc(err.message || "Nao foi possivel baixar o arquivo.", true);
     }
-    arquivoPreviewNomeApc = "";
-}
-
-function limparPreviewArquivoApc(mensagem = "Selecione um arquivo enviado para visualizar aqui.") {
-    revogarPreviewArquivoApc();
-    envioPreviewApcId = null;
-    el("apcArquivoPreviewMeta").innerHTML = `<div class="booking-empty">${mensagem}</div>`;
-    el("apcArquivoPreviewState").innerHTML =
-        '<div class="booking-empty">A visualizacao do arquivo sera carregada neste painel.</div>';
-    el("apcArquivoPreviewState").hidden = false;
-    el("apcArquivoPreviewFrame").hidden = true;
-    el("apcArquivoPreviewFrame").removeAttribute("src");
-    el("apcArquivoPreviewImage").hidden = true;
-    el("apcArquivoPreviewImage").removeAttribute("src");
-    el("apcArquivoPreviewText").hidden = true;
-    el("apcArquivoPreviewText").textContent = "";
-    el("btnApcAbrirArquivoGuia").hidden = true;
-    el("btnApcBaixarArquivo").hidden = true;
-}
-
-function tipoPreviewArquivoApc(envio) {
-    const tipo = String(envio?.arquivo_tipo || "").toLowerCase();
-    const nome = String(envio?.arquivo_nome_original || "").toLowerCase();
-    if (tipo.startsWith("image/")) return "image";
-    if (tipo.includes("pdf") || nome.endsWith(".pdf")) return "frame";
-    if (tipo.includes("json") || nome.endsWith(".json") || tipo.startsWith("text/")) return "text";
-    return "download";
 }
 
 function agruparItensGestaoPorProfessor(itens) {
@@ -332,23 +403,83 @@ function criarCorpoResumoGestaoApc(periodo, detalhe) {
     return body;
 }
 
-function criarCardEnvioExistenteApc(envio) {
+async function removerArquivoApc(event) {
+    const botao = event.currentTarget;
+    const envioId = Number(botao?.dataset?.envioId || 0);
+    const periodoId = Number(botao?.dataset?.periodoId || 0);
+    if (!envioId) return;
+
+    if (!window.confirm("Deseja remover este arquivo para enviar uma nova versao?")) {
+        return;
+    }
+
+    botao.disabled = true;
+    try {
+        await fetchJson(`/apc/envios/${envioId}`, {
+            method: "DELETE",
+            headers: headersApc,
+        });
+        periodoSelecionadoApcId = periodoId || periodoSelecionadoApcId;
+        setMensagemApc("Arquivo removido. Voce pode enviar novamente enquanto o prazo estiver aberto.");
+        await carregarCalendarioApc();
+    } catch (err) {
+        botao.disabled = false;
+        setMensagemApc(err.message || "Nao foi possivel remover o arquivo.", true);
+    }
+}
+
+function criarCardEnvioExistenteApc(periodo, item) {
+    const envio = item?.envio;
+    if (!envio?.id) return null;
+
     const envioCard = document.createElement("div");
-    envioCard.className = "apc-professor-card";
-    envioCard.appendChild(criarStatusApc("Arquivo enviado", "ok"));
+    envioCard.className = "apc-envio-card";
+
+    const topo = document.createElement("div");
+    topo.className = "apc-envio-card-topo";
+    topo.appendChild(criarStatusApc("Arquivo enviado", "ok"));
 
     const enviadoEm = document.createElement("p");
     enviadoEm.className = "apc-envio-meta";
     enviadoEm.innerText = `Enviado em ${formatarDataHoraApc(envio.enviado_em)}`;
-    envioCard.appendChild(enviadoEm);
+    topo.appendChild(enviadoEm);
+    envioCard.appendChild(topo);
 
-    const link = document.createElement("a");
-    link.className = "apc-envio-link";
-    link.href = `/apc/envios/${envio.id}/arquivo`;
-    link.target = "_blank";
-    link.rel = "noopener";
-    link.innerText = envio.arquivo_nome_original;
-    envioCard.appendChild(link);
+    const nome = document.createElement("strong");
+    nome.className = "apc-envio-nome";
+    nome.innerText = envio.arquivo_nome_original || "Arquivo enviado";
+    envioCard.appendChild(nome);
+
+    const acoes = document.createElement("div");
+    acoes.className = "apc-inline-actions apc-envio-actions";
+
+    const abrir = document.createElement("button");
+    abrir.type = "button";
+    abrir.innerText = "Baixar arquivo";
+    abrir.addEventListener("click", async () => {
+        await baixarArquivoApc(envio);
+    });
+    acoes.appendChild(abrir);
+
+    if (!periodo?.prazo_expirado) {
+        const remover = document.createElement("button");
+        remover.type = "button";
+        remover.className = "btn-perigo";
+        remover.dataset.envioId = String(envio.id);
+        remover.dataset.periodoId = String(periodo.id || 0);
+        remover.innerText = "Remover arquivo";
+        remover.addEventListener("click", removerArquivoApc);
+        acoes.appendChild(remover);
+    }
+
+    envioCard.appendChild(acoes);
+
+    if (periodo?.prazo_expirado) {
+        const aviso = document.createElement("p");
+        aviso.className = "apc-inline-hint";
+        aviso.innerText = "O prazo foi encerrado. Este anexo permanece apenas para consulta.";
+        envioCard.appendChild(aviso);
+    }
 
     return envioCard;
 }
@@ -356,50 +487,47 @@ function criarCardEnvioExistenteApc(envio) {
 function criarCardEntregaProfessorApc(periodo, item) {
     const card = document.createElement("article");
     card.className = "apc-professor-card";
+    card.classList.add(
+        item.enviado ? "is-enviado" : (periodo.prazo_expirado ? "is-fechado" : "is-pendente")
+    );
 
     const topo = document.createElement("div");
     topo.className = "apc-professor-topo";
     const titulo = item.disciplina_nome
         ? `${item.disciplina_nome}${item.turma_nome ? ` - ${item.turma_nome}` : ""}`
         : "Entrega geral";
-    topo.innerHTML = `<div><h4>${titulo}</h4><p>${item.total_aulas || 0} aula(s) vinculada(s)</p></div>`;
-    topo.appendChild(item.enviado ? criarStatusApc("Enviado", "ok") : criarStatusApc("Pendente"));
+    topo.innerHTML = `<div><h4>${titulo}</h4><p>${periodo.titulo || "Documento"}</p></div>`;
+    topo.appendChild(
+        item.enviado
+            ? criarStatusApc("Enviado", "ok")
+            : (periodo.prazo_expirado ? criarStatusApc("Prazo encerrado", "closed") : criarStatusApc("Pendente"))
+    );
     card.appendChild(topo);
 
-    if ((item.turmas || []).length) {
-        const chips = document.createElement("div");
-        chips.className = "apc-chip-row";
-        (item.turmas || []).forEach((turma) => {
-            chips.appendChild(criarChipApc(turma));
-        });
-        if (item.disciplina_nome) {
-            chips.appendChild(criarChipApc(item.disciplina_nome));
-        }
-        card.appendChild(chips);
-    }
+    const resumo = document.createElement("div");
+    resumo.className = "apc-professor-card-resumo";
 
-    if ((item.horarios || []).length) {
-        const horarios = document.createElement("ul");
-        horarios.className = "apc-horarios-lista";
-        (item.horarios || []).forEach((horario) => {
-            const li = document.createElement("li");
-            li.innerText = `${horario.aula_numero}a aula - ${horario.turma_nome} - ${horario.disciplina_nome}`;
-            horarios.appendChild(li);
-        });
-        card.appendChild(horarios);
-    } else {
-        const livre = document.createElement("p");
-        livre.className = "apc-inline-hint";
-        livre.innerText = "Esta entrega foi liberada para todos os professores.";
-        card.appendChild(livre);
-    }
+    const turma = document.createElement("p");
+    turma.className = "apc-inline-hint";
+    turma.innerText = item.turma_nome
+        ? `Turma: ${item.turma_nome}`
+        : "Entrega liberada para todos os professores.";
+    resumo.appendChild(turma);
+
+    const meta = document.createElement("p");
+    meta.className = "apc-inline-hint";
+    meta.innerText = `${item.total_aulas || 0} aula(s) vinculada(s) | Prazo: ${formatarDataHoraApc(periodo.prazo_envio)}`;
+    resumo.appendChild(meta);
+    card.appendChild(resumo);
 
     if (item.envio?.id) {
-        card.appendChild(criarCardEnvioExistenteApc(item.envio));
+        const envioExistente = criarCardEnvioExistenteApc(periodo, item);
+        if (envioExistente) {
+            card.appendChild(envioExistente);
+        }
     }
 
     if (periodo.prazo_expirado) {
-        card.appendChild(criarStatusApc("Prazo encerrado", "closed"));
         return card;
     }
 
@@ -422,14 +550,14 @@ function criarCardEntregaProfessorApc(periodo, item) {
     const dica = document.createElement("p");
     dica.className = "apc-inline-hint";
     dica.innerText = item.envio?.id
-        ? "Se necessario, envie um novo arquivo para substituir o anexo anterior desta disciplina."
+        ? "Se necessario, remova o arquivo atual ou envie uma nova versao para esta disciplina."
         : "Anexe o arquivo correspondente a esta disciplina.";
     form.appendChild(dica);
 
     const submit = document.createElement("button");
     submit.type = "submit";
     submit.className = "btn-destaque";
-    submit.innerText = item.envio?.id ? "Atualizar arquivo" : "Enviar arquivo";
+    submit.innerText = item.envio?.id ? "Substituir arquivo" : "Enviar arquivo";
     form.appendChild(submit);
 
     form.addEventListener("submit", enviarArquivoApc);
@@ -482,9 +610,12 @@ function criarCorpoProfessorPeriodoApc(detalhe) {
         return body;
     }
 
+    const grid = document.createElement("div");
+    grid.className = "apc-professor-card-grid";
     detalhe.itens.forEach((item) => {
-        body.appendChild(criarCardEntregaProfessorApc(periodo, item));
+        grid.appendChild(criarCardEntregaProfessorApc(periodo, item));
     });
+    body.appendChild(grid);
 
     return body;
 }
@@ -498,7 +629,7 @@ function renderSolicitacoesData(periodos, detalheSelecionado = null) {
         return;
     }
 
-    const modoGestao = Boolean(usuarioApc?.pode_gerir);
+    const modoGestao = modoGestaoAtivoApc();
 
     periodos.forEach((periodo) => {
         const selecionado = Number(periodo.id) === Number(periodoSelecionadoApcId);
@@ -742,19 +873,10 @@ function renderArquivosGestaoApc(detalhe) {
 
     if (!detalhe || !Array.isArray(detalhe.itens) || detalhe.itens.length === 0) {
         lista.innerHTML = '<div class="booking-empty">Nenhum professor elegivel para esta solicitacao.</div>';
-        limparPreviewArquivoApc();
         return;
     }
 
     const grupos = agruparItensGestaoPorProfessor(detalhe.itens);
-    const enviosDisponiveis = detalhe.itens
-        .filter((item) => item.envio?.id)
-        .map((item) => item.envio);
-    const envioPreviewAnterior = Number(envioPreviewApcId || 0);
-    const envioSelecionado = enviosDisponiveis.find(
-        (envio) => Number(envio.id) === Number(envioPreviewApcId)
-    ) || enviosDisponiveis[0] || null;
-    envioPreviewApcId = Number(envioSelecionado?.id || 0) || null;
 
     grupos.forEach((grupo) => {
         const bloco = document.createElement("article");
@@ -773,20 +895,24 @@ function renderArquivosGestaoApc(detalhe) {
 
         grupo.entregas.filter((item) => item.envio?.id).forEach((item) => {
             const envio = item.envio;
-            const botao = document.createElement("button");
-            botao.type = "button";
-            botao.className = "apc-arquivo-item-btn";
-            botao.classList.toggle("is-active", Number(envio.id) === Number(envioPreviewApcId));
-            botao.innerHTML = `
+            const card = document.createElement("article");
+            card.className = "apc-arquivo-item-card";
+            card.innerHTML = `
                 <strong>${envio.disciplina_nome || item.disciplina_nome || "Entrega geral"}${envio.turma_nome ? ` - ${envio.turma_nome}` : ""}</strong>
                 <span>${envio.arquivo_nome_original}</span>
                 <small>Enviado em ${formatarDataHoraApc(envio.enviado_em)}</small>
             `;
-            botao.addEventListener("click", async () => {
-                await carregarPreviewArquivoApc(envio);
-                renderArquivosGestaoApc(detalhe);
+            const acoes = document.createElement("div");
+            acoes.className = "apc-inline-actions";
+            const baixar = document.createElement("button");
+            baixar.type = "button";
+            baixar.innerText = "Baixar arquivo";
+            baixar.addEventListener("click", async () => {
+                await baixarArquivoApc(envio);
             });
-            itens.appendChild(botao);
+            acoes.appendChild(baixar);
+            card.appendChild(acoes);
+            itens.appendChild(card);
         });
 
         if (!itens.childNodes.length) {
@@ -799,24 +925,10 @@ function renderArquivosGestaoApc(detalhe) {
         bloco.appendChild(itens);
         lista.appendChild(bloco);
     });
-
-    if (!enviosDisponiveis.length) {
-        limparPreviewArquivoApc("Nenhum arquivo enviado ainda.");
-        return;
-    }
-
-    if (Number(envioSelecionado?.id || 0) !== envioPreviewAnterior) {
-        void carregarPreviewArquivoApc(envioSelecionado);
-        return;
-    }
-
-    if (!arquivoPreviewUrlApc) {
-        void carregarPreviewArquivoApc(envioSelecionado);
-    }
 }
 
 function renderPainelSelecionadoVazio() {
-    const modoGestao = Boolean(usuarioApc?.pode_gerir);
+    const modoGestao = modoGestaoAtivoApc();
     el("apcTituloPainel").innerText = modoGestao
         ? `Solicitacoes de ${paraDataBr(dataSelecionadaApc)}`
         : `Pendencias de ${paraDataBr(dataSelecionadaApc)}`;
@@ -828,7 +940,6 @@ function renderPainelSelecionadoVazio() {
     if (modoGestao) {
         el("apcGestaoTabs").hidden = true;
         ativarAbaGestaoApc("professores");
-        limparPreviewArquivoApc();
     }
     el("apcListaPainel").innerHTML = modoGestao
         ? '<div class="booking-empty">Cadastre uma solicitacao ao lado para comecar a receber anexos dos professores.</div>'
@@ -840,8 +951,12 @@ function renderPainelSelecionadoVazio() {
 }
 
 function renderPainelSemSelecaoGestao() {
-    el("apcTituloPainel").innerText = `Solicitacoes de ${paraDataBr(dataSelecionadaApc)}`;
-    el("apcSubtituloPainel").innerText = "Selecione uma solicitacao existente ou cadastre uma nova ao lado.";
+    el("apcTituloPainel").innerText = modoGestaoAtivoApc()
+        ? `Solicitacoes de ${paraDataBr(dataSelecionadaApc)}`
+        : `Pendencias de ${paraDataBr(dataSelecionadaApc)}`;
+    el("apcSubtituloPainel").innerText = modoGestaoAtivoApc()
+        ? "Selecione uma solicitacao existente ou cadastre uma nova ao lado."
+        : "Selecione uma pendencia no calendario para ver os detalhes.";
     el("apcResumoPainel").innerHTML = "";
     el("apcGestaoTabs").hidden = true;
     el("apcListaPainel").innerHTML =
@@ -849,7 +964,6 @@ function renderPainelSemSelecaoGestao() {
     if (el("apcArquivosLista")) {
         el("apcArquivosLista").innerHTML = '<div class="booking-empty">Nenhum arquivo enviado ainda.</div>';
     }
-    limparPreviewArquivoApc();
     renderSolicitacoesData(periodosResumoPorData(dataSelecionadaApc));
 }
 
@@ -869,13 +983,13 @@ async function carregarDetalheSelecionadoApc() {
         return;
     }
 
-    const detalhe = await fetchJson(`/apc/periodos/${periodoSelecionadoApcId}`, {
+    const detalhe = await fetchJson(`/apc/periodos/${periodoSelecionadoApcId}?visao=${visaoAtivaApc()}`, {
         headers: headersApc,
     });
     const periodo = detalhe.periodo || detalhe;
     renderSolicitacoesData(periodosDoDia, detalhe);
 
-    if (usuarioApc?.pode_gerir) {
+    if (modoGestaoAtivoApc()) {
         const gruposProfessor = agruparItensGestaoPorProfessor(detalhe.itens || []);
         el("apcTituloPainel").innerText = `${periodo.titulo} - ${paraDataBr(periodo.data_referencia)}`;
         el("apcSubtituloPainel").innerText =
@@ -939,7 +1053,7 @@ function renderCalendarioApc() {
         if (dataIso === hojeIso) btnDia.classList.add("is-today");
         if (periodos.length) {
             btnDia.classList.add("has-apc");
-            const todosConcluidos = usuarioApc?.pode_gerir
+            const todosConcluidos = modoGestaoAtivoApc()
                 ? periodos.every(
                     (item) => Number(item.total_elegiveis || 0) > 0 && Number(item.total_pendentes || 0) === 0
                 )
@@ -956,7 +1070,7 @@ function renderCalendarioApc() {
         resumo.className = "calendar-count";
         if (!periodos.length) {
             resumo.innerText = "Livre";
-        } else if (usuarioApc?.pode_gerir) {
+        } else if (modoGestaoAtivoApc()) {
             const totalElegiveis = periodos.reduce((soma, item) => soma + Number(item.total_elegiveis || 0), 0);
             const totalEnviados = periodos.reduce((soma, item) => soma + Number(item.total_enviados || 0), 0);
             resumo.innerText = `${totalEnviados}/${totalElegiveis}`;
@@ -993,9 +1107,12 @@ function renderCalendarioApc() {
 async function carregarCalendarioApc() {
     const mes = mesIsoApc(mesAtualApc);
     const anoLetivo = el("apcAnoLetivo").value;
-    calendarioApc = await fetchJson(`/apc/calendario?mes=${mes}&ano_letivo=${anoLetivo}`, {
-        headers: headersApc,
-    });
+    calendarioApc = await fetchJson(
+        `/apc/calendario?mes=${mes}&ano_letivo=${anoLetivo}&visao=${visaoAtivaApc()}`,
+        {
+            headers: headersApc,
+        }
+    );
     atualizarResumoMesApc();
     renderCalendarioApc();
     await carregarDetalheSelecionadoApc();
@@ -1095,25 +1212,15 @@ function registrarEventosApc() {
     el("btnSair").addEventListener("click", () => {
         encerrarSessao();
     });
+    document.querySelectorAll("[data-apc-mode-trigger]").forEach((botao) => {
+        botao.addEventListener("click", () => {
+            ativarModoApc(botao.dataset.apcModeTrigger || "docente", { recarregar: true });
+        });
+    });
     document.querySelectorAll("[data-apc-gestao-tab-trigger]").forEach((botao) => {
         botao.addEventListener("click", () => {
             ativarAbaGestaoApc(botao.dataset.apcGestaoTabTrigger || "professores");
         });
-    });
-
-    el("btnApcAbrirArquivoGuia")?.addEventListener("click", () => {
-        if (arquivoPreviewUrlApc) {
-            window.open(arquivoPreviewUrlApc, "_blank", "noopener");
-        }
-    });
-    el("btnApcBaixarArquivo")?.addEventListener("click", () => {
-        if (!arquivoPreviewUrlApc) return;
-        const link = document.createElement("a");
-        link.href = arquivoPreviewUrlApc;
-        link.download = arquivoPreviewNomeApc || "arquivo";
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
     });
 
     el("apcAnoLetivo").addEventListener("change", async () => {
@@ -1154,6 +1261,7 @@ async function initApc() {
         const usuarioMe = await fetchJson("/me", { headers: headersApc });
         contextoApc = await fetchJson("/apc/contexto", { headers: headersApc });
         usuarioApc = Object.assign({}, usuarioMe || {}, contextoApc?.usuario || {});
+        modoApc = modoInicialApc();
         preencherSelectAnosApc();
         preencherSelectPublicoApc();
         aplicarVisibilidadeApc();
@@ -1164,5 +1272,4 @@ async function initApc() {
     }
 }
 
-window.addEventListener("beforeunload", revogarPreviewArquivoApc);
 window.addEventListener("DOMContentLoaded", initApc);
