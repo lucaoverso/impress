@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Central de Anexos</title>
     {% include "includes/style_bundle.html" %}
+    <link rel="stylesheet"
+        href="{{ request.url_for('static', path='css/pages/apc.css') }}?v={{ asset_version | default('1') }}&page=apc">
 </head>
 
 <body>
@@ -140,7 +142,7 @@
     <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
-    <script src="{{ request.url_for('static', path='js/apc.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/apc.js') }}?v={{ asset_version | default('1') }}&page=apc"></script>
 </body>
 
 </html>

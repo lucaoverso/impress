@@ -107,7 +107,9 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
         self.assertIn("charset=utf-8", resposta.headers.get("content-type", "").lower())
         self.assertIn("css/style.css?v=build-apc-321", html)
+        self.assertIn("css/pages/apc.css?v=build-apc-321&page=apc", html)
         self.assertIn("js/apc.js?v=build-apc-321", html)
+        self.assertIn("js/apc.js?v=build-apc-321&page=apc", html)
         self.assertIn("Voltar aos serviços", html)
         self.assertIn('id="apcUsuario"', html)
 
