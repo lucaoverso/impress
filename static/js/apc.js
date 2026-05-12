@@ -5,7 +5,7 @@ const {
     criarHeadersJsonAuth,
     encerrarSessao,
 } = window.AppAuth;
-const { fetchJson } = window.AppApi;
+const { fetchJson, fetchResposta } = window.AppApi;
 const { paraIso, paraDataBr } = window.AppFormat;
 
 const tokenApc = garantirToken();
@@ -24,6 +24,10 @@ let mesAtualApc = new Date();
 let dataSelecionadaApc = paraIso(new Date());
 let calendarioApc = { periodos: [] };
 let periodoSelecionadoApcId = null;
+let abaGestaoApc = "professores";
+let envioPreviewApcId = null;
+let arquivoPreviewUrlApc = "";
+let arquivoPreviewNomeApc = "";
 
 function setMensagemApc(texto, erro = false) {
     const msg = el("msgApc");
@@ -127,7 +131,14 @@ function aplicarVisibilidadeApc() {
 
     el("apcGestaoCard").hidden = !podeGerir;
     el("apcResumoPainel").hidden = !podeGerir;
-    el("apcListaPainel").hidden = !podeGerir;
+    el("apcGestaoTabs").hidden = !podeGerir;
+    if (!podeGerir) {
+        document.querySelectorAll("[data-apc-gestao-tab-panel]").forEach((painel) => {
+            painel.hidden = true;
+        });
+    } else {
+        ativarAbaGestaoApc(abaGestaoApc);
+    }
     el("apcUsuario").innerText = usuarioApc
         ? `${usuarioApc.nome} (${usuarioApc.cargo})`
         : "";
@@ -176,6 +187,88 @@ function criarMetaApc(texto) {
     const meta = document.createElement("span");
     meta.innerText = texto;
     return meta;
+}
+
+function ativarAbaGestaoApc(aba) {
+    abaGestaoApc = aba || "professores";
+    document.querySelectorAll("[data-apc-gestao-tab-trigger]").forEach((botao) => {
+        const ativa = botao.dataset.apcGestaoTabTrigger === abaGestaoApc;
+        botao.classList.toggle("is-active", ativa);
+        botao.setAttribute("aria-selected", ativa ? "true" : "false");
+    });
+    document.querySelectorAll("[data-apc-gestao-tab-panel]").forEach((painel) => {
+        const ativo = painel.dataset.apcGestaoTabPanel === abaGestaoApc;
+        painel.hidden = !ativo;
+        painel.classList.toggle("is-active", ativo);
+    });
+}
+
+function revogarPreviewArquivoApc() {
+    if (arquivoPreviewUrlApc) {
+        window.URL.revokeObjectURL(arquivoPreviewUrlApc);
+        arquivoPreviewUrlApc = "";
+    }
+    arquivoPreviewNomeApc = "";
+}
+
+function limparPreviewArquivoApc(mensagem = "Selecione um arquivo enviado para visualizar aqui.") {
+    revogarPreviewArquivoApc();
+    envioPreviewApcId = null;
+    el("apcArquivoPreviewMeta").innerHTML = `<div class="booking-empty">${mensagem}</div>`;
+    el("apcArquivoPreviewState").innerHTML =
+        '<div class="booking-empty">A visualizacao do arquivo sera carregada neste painel.</div>';
+    el("apcArquivoPreviewState").hidden = false;
+    el("apcArquivoPreviewFrame").hidden = true;
+    el("apcArquivoPreviewFrame").removeAttribute("src");
+    el("apcArquivoPreviewImage").hidden = true;
+    el("apcArquivoPreviewImage").removeAttribute("src");
+    el("apcArquivoPreviewText").hidden = true;
+    el("apcArquivoPreviewText").textContent = "";
+    el("btnApcAbrirArquivoGuia").hidden = true;
+    el("btnApcBaixarArquivo").hidden = true;
+}
+
+function tipoPreviewArquivoApc(envio) {
+    const tipo = String(envio?.arquivo_tipo || "").toLowerCase();
+    const nome = String(envio?.arquivo_nome_original || "").toLowerCase();
+    if (tipo.startsWith("image/")) return "image";
+    if (tipo.includes("pdf") || nome.endsWith(".pdf")) return "frame";
+    if (tipo.includes("json") || nome.endsWith(".json") || tipo.startsWith("text/")) return "text";
+    return "download";
+}
+
+function agruparItensGestaoPorProfessor(itens) {
+    const grupos = new Map();
+    (itens || []).forEach((item) => {
+        const professorId = Number(item.professor_id || 0);
+        if (!grupos.has(professorId)) {
+            grupos.set(professorId, {
+                professor_id: professorId,
+                professor_nome: item.professor_nome || "Professor",
+                professor_email: item.professor_email || "",
+                total_entregas: 0,
+                total_enviadas: 0,
+                total_pendentes: 0,
+                turmas: [],
+                disciplinas: [],
+                entregas: [],
+            });
+        }
+        const grupo = grupos.get(professorId);
+        grupo.total_entregas += 1;
+        grupo.total_enviadas += item.enviado ? 1 : 0;
+        grupo.total_pendentes += item.enviado ? 0 : 1;
+        if (item.turma_nome && !grupo.turmas.includes(item.turma_nome)) {
+            grupo.turmas.push(item.turma_nome);
+        }
+        if (item.disciplina_nome && !grupo.disciplinas.includes(item.disciplina_nome)) {
+            grupo.disciplinas.push(item.disciplina_nome);
+        }
+        grupo.entregas.push(item);
+    });
+    return Array.from(grupos.values()).sort((a, b) => (
+        String(a.professor_nome || "").localeCompare(String(b.professor_nome || ""), "pt-BR")
+    ));
 }
 
 function statusResumoPeriodoApc(item, modoGestao = false) {
@@ -478,65 +571,248 @@ function renderListaGestaoApc(detalhe) {
         return;
     }
 
-    detalhe.itens.forEach((item) => {
-        const card = document.createElement("article");
-        card.className = "apc-professor-card";
+    const grupos = agruparItensGestaoPorProfessor(detalhe.itens);
+    const wrap = document.createElement("div");
+    wrap.className = "apc-professor-group-list";
 
-        const topo = document.createElement("div");
-        topo.className = "apc-professor-topo";
-        topo.innerHTML = `<div><h4>${item.professor_nome}</h4><p>${item.professor_email || "Sem e-mail"}</p></div>`;
-        topo.appendChild(item.enviado ? criarStatusApc("Enviado", "ok") : criarStatusApc("Pendente"));
-        card.appendChild(topo);
+    grupos.forEach((grupo) => {
+        const details = document.createElement("details");
+        details.className = "apc-professor-group";
+        details.open = true;
 
-        const chips = document.createElement("div");
-        chips.className = "apc-chip-row";
-        if (item.turma_nome) {
-            chips.appendChild(criarChipApc(item.turma_nome));
-        }
-        if (item.disciplina_nome) {
-            chips.appendChild(criarChipApc(item.disciplina_nome));
-        }
-        if (chips.childNodes.length) {
-            card.appendChild(chips);
-        }
+        const summary = document.createElement("summary");
+        summary.className = "apc-professor-group-summary";
 
-        const publicoLivre = !item.horarios || item.horarios.length === 0;
-        const contexto = document.createElement("p");
-        if (publicoLivre) {
-            contexto.innerText = "Entrega liberada para este professor sem dependencia do horario escolar.";
-        } else {
-            contexto.innerText = "Envio vinculado a esta disciplina no horario escolar.";
-        }
-        card.appendChild(contexto);
+        const main = document.createElement("div");
+        main.className = "apc-professor-group-main";
+        main.innerHTML = `
+            <h4>${grupo.professor_nome}</h4>
+            <p>${grupo.professor_email || "Sem e-mail"}</p>
+        `;
+        const meta = document.createElement("div");
+        meta.className = "apc-professor-group-meta";
+        meta.innerText =
+            `${grupo.total_enviadas}/${grupo.total_entregas} entregas enviadas | `
+            + `${grupo.total_pendentes} pendencia(s)`;
+        main.appendChild(meta);
+        summary.appendChild(main);
 
-        if (!publicoLivre) {
-            const horarios = document.createElement("ul");
-            horarios.className = "apc-horarios-lista";
-            (item.horarios || []).forEach((horario) => {
-                const li = document.createElement("li");
-                li.innerText = `${horario.aula_numero}a aula - ${horario.turma_nome} - ${horario.disciplina_nome}`;
-                horarios.appendChild(li);
-            });
-            card.appendChild(horarios);
-        }
+        const side = document.createElement("div");
+        side.className = "apc-professor-group-side";
+        side.appendChild(
+            grupo.total_pendentes === 0
+                ? criarStatusApc("Concluido", "ok")
+                : criarStatusApc("Pendente")
+        );
+        const chevron = document.createElement("span");
+        chevron.className = "apc-solicitacao-chevron";
+        chevron.innerText = "v";
+        side.appendChild(chevron);
+        summary.appendChild(side);
+        details.appendChild(summary);
 
-        if (item.envio?.id) {
-            const enviadoEm = document.createElement("p");
-            enviadoEm.className = "apc-envio-meta";
-            enviadoEm.innerText = `Enviado em ${formatarDataHoraApc(item.envio.enviado_em)}`;
-            card.appendChild(enviadoEm);
+        const body = document.createElement("div");
+        body.className = "apc-professor-group-body";
 
-            const link = document.createElement("a");
-            link.className = "apc-envio-link";
-            link.href = `/apc/envios/${item.envio.id}/arquivo`;
-            link.target = "_blank";
-            link.rel = "noopener";
-            link.innerText = `Abrir arquivo: ${item.envio.arquivo_nome_original}`;
-            card.appendChild(link);
+        if (grupo.turmas.length || grupo.disciplinas.length) {
+            const chips = document.createElement("div");
+            chips.className = "apc-chip-row";
+            grupo.turmas.forEach((turma) => chips.appendChild(criarChipApc(turma)));
+            grupo.disciplinas.forEach((disciplina) => chips.appendChild(criarChipApc(disciplina)));
+            body.appendChild(chips);
         }
 
-        lista.appendChild(card);
+        const entregas = document.createElement("div");
+        entregas.className = "apc-professor-entrega-list";
+        grupo.entregas.forEach((item) => {
+            const card = document.createElement("article");
+            card.className = "apc-entrega-item";
+
+            const topo = document.createElement("div");
+            topo.className = "apc-entrega-topo";
+            const titulo = item.disciplina_nome
+                ? `${item.disciplina_nome}${item.turma_nome ? ` - ${item.turma_nome}` : ""}`
+                : "Entrega geral";
+            topo.innerHTML = `<div><h5>${titulo}</h5><p>${item.total_aulas || 0} aula(s) vinculada(s)</p></div>`;
+            topo.appendChild(item.enviado ? criarStatusApc("Enviado", "ok") : criarStatusApc("Pendente"));
+            card.appendChild(topo);
+
+            const contexto = document.createElement("p");
+            contexto.className = "apc-inline-hint";
+            contexto.innerText = (item.horarios || []).length
+                ? "Entrega vinculada a disciplina do horario escolar."
+                : "Entrega liberada para este professor sem dependencia do horario escolar.";
+            card.appendChild(contexto);
+
+            if ((item.horarios || []).length) {
+                const horarios = document.createElement("ul");
+                horarios.className = "apc-horarios-lista";
+                (item.horarios || []).forEach((horario) => {
+                    const li = document.createElement("li");
+                    li.innerText = `${horario.aula_numero}a aula - ${horario.turma_nome} - ${horario.disciplina_nome}`;
+                    horarios.appendChild(li);
+                });
+                card.appendChild(horarios);
+            }
+
+            if (item.envio?.id) {
+                const enviadoEm = document.createElement("p");
+                enviadoEm.className = "apc-envio-meta";
+                enviadoEm.innerText = `Enviado em ${formatarDataHoraApc(item.envio.enviado_em)}`;
+                card.appendChild(enviadoEm);
+            }
+
+            entregas.appendChild(card);
+        });
+        body.appendChild(entregas);
+        details.appendChild(body);
+        wrap.appendChild(details);
     });
+
+    lista.appendChild(wrap);
+}
+
+function preencherMetaPreviewArquivoApc(envio) {
+    const meta = el("apcArquivoPreviewMeta");
+    meta.innerHTML = `
+        <h4>${envio.arquivo_nome_original || "Arquivo enviado"}</h4>
+        <p>${envio.professor_nome || "Professor"}${envio.professor_email ? ` • ${envio.professor_email}` : ""}</p>
+        <p>${envio.disciplina_nome || "Entrega geral"}${envio.turma_nome ? ` • ${envio.turma_nome}` : ""}</p>
+        <p>Enviado em ${formatarDataHoraApc(envio.enviado_em)}</p>
+    `;
+}
+
+async function carregarPreviewArquivoApc(envio) {
+    if (!envio?.id) {
+        limparPreviewArquivoApc();
+        return;
+    }
+
+    revogarPreviewArquivoApc();
+    envioPreviewApcId = Number(envio.id);
+    arquivoPreviewNomeApc = String(envio.arquivo_nome_original || "arquivo");
+    preencherMetaPreviewArquivoApc(envio);
+    el("apcArquivoPreviewState").hidden = false;
+    el("apcArquivoPreviewState").innerHTML = '<div class="booking-empty">Carregando arquivo...</div>';
+    el("apcArquivoPreviewFrame").hidden = true;
+    el("apcArquivoPreviewImage").hidden = true;
+    el("apcArquivoPreviewText").hidden = true;
+    el("btnApcAbrirArquivoGuia").hidden = true;
+    el("btnApcBaixarArquivo").hidden = true;
+
+    try {
+        const resposta = await fetchResposta(`/apc/envios/${envio.id}/arquivo`, {
+            headers: headersApc,
+        });
+        const blob = await resposta.blob();
+        arquivoPreviewUrlApc = window.URL.createObjectURL(blob);
+
+        const tipoPreview = tipoPreviewArquivoApc(envio);
+        el("apcArquivoPreviewState").hidden = true;
+
+        if (tipoPreview === "image") {
+            const imagem = el("apcArquivoPreviewImage");
+            imagem.src = arquivoPreviewUrlApc;
+            imagem.hidden = false;
+        } else if (tipoPreview === "text") {
+            const texto = await blob.text();
+            const pre = el("apcArquivoPreviewText");
+            pre.textContent = texto;
+            pre.hidden = false;
+        } else if (tipoPreview === "frame") {
+            const frame = el("apcArquivoPreviewFrame");
+            frame.src = arquivoPreviewUrlApc;
+            frame.hidden = false;
+        } else {
+            el("apcArquivoPreviewState").hidden = false;
+            el("apcArquivoPreviewState").innerHTML =
+                '<div class="booking-empty">Pre-visualizacao indisponivel para este formato. Use os botoes abaixo para abrir ou baixar o arquivo.</div>';
+        }
+
+        el("btnApcAbrirArquivoGuia").hidden = false;
+        el("btnApcBaixarArquivo").hidden = false;
+    } catch (err) {
+        limparPreviewArquivoApc(err.message || "Nao foi possivel carregar o arquivo.");
+    }
+}
+
+function renderArquivosGestaoApc(detalhe) {
+    const lista = el("apcArquivosLista");
+    lista.innerHTML = "";
+
+    if (!detalhe || !Array.isArray(detalhe.itens) || detalhe.itens.length === 0) {
+        lista.innerHTML = '<div class="booking-empty">Nenhum professor elegivel para esta solicitacao.</div>';
+        limparPreviewArquivoApc();
+        return;
+    }
+
+    const grupos = agruparItensGestaoPorProfessor(detalhe.itens);
+    const enviosDisponiveis = detalhe.itens
+        .filter((item) => item.envio?.id)
+        .map((item) => item.envio);
+    const envioPreviewAnterior = Number(envioPreviewApcId || 0);
+    const envioSelecionado = enviosDisponiveis.find(
+        (envio) => Number(envio.id) === Number(envioPreviewApcId)
+    ) || enviosDisponiveis[0] || null;
+    envioPreviewApcId = Number(envioSelecionado?.id || 0) || null;
+
+    grupos.forEach((grupo) => {
+        const bloco = document.createElement("article");
+        bloco.className = "apc-arquivos-grupo";
+
+        const header = document.createElement("div");
+        header.className = "apc-arquivos-grupo-header";
+        header.innerHTML = `
+            <h4>${grupo.professor_nome}</h4>
+            <p>${grupo.total_enviadas}/${grupo.total_entregas} arquivos enviados</p>
+        `;
+        bloco.appendChild(header);
+
+        const itens = document.createElement("div");
+        itens.className = "apc-arquivos-itens";
+
+        grupo.entregas.filter((item) => item.envio?.id).forEach((item) => {
+            const envio = item.envio;
+            const botao = document.createElement("button");
+            botao.type = "button";
+            botao.className = "apc-arquivo-item-btn";
+            botao.classList.toggle("is-active", Number(envio.id) === Number(envioPreviewApcId));
+            botao.innerHTML = `
+                <strong>${envio.disciplina_nome || item.disciplina_nome || "Entrega geral"}${envio.turma_nome ? ` - ${envio.turma_nome}` : ""}</strong>
+                <span>${envio.arquivo_nome_original}</span>
+                <small>Enviado em ${formatarDataHoraApc(envio.enviado_em)}</small>
+            `;
+            botao.addEventListener("click", async () => {
+                await carregarPreviewArquivoApc(envio);
+                renderArquivosGestaoApc(detalhe);
+            });
+            itens.appendChild(botao);
+        });
+
+        if (!itens.childNodes.length) {
+            const vazio = document.createElement("div");
+            vazio.className = "booking-empty";
+            vazio.innerText = "Nenhum arquivo enviado por este professor ainda.";
+            itens.appendChild(vazio);
+        }
+
+        bloco.appendChild(itens);
+        lista.appendChild(bloco);
+    });
+
+    if (!enviosDisponiveis.length) {
+        limparPreviewArquivoApc("Nenhum arquivo enviado ainda.");
+        return;
+    }
+
+    if (Number(envioSelecionado?.id || 0) !== envioPreviewAnterior) {
+        void carregarPreviewArquivoApc(envioSelecionado);
+        return;
+    }
+
+    if (!arquivoPreviewUrlApc) {
+        void carregarPreviewArquivoApc(envioSelecionado);
+    }
 }
 
 function renderPainelSelecionadoVazio() {
@@ -549,9 +825,17 @@ function renderPainelSelecionadoVazio() {
         : "Nao ha entregas disponiveis para voce nesta data.";
     renderSolicitacoesData([]);
     el("apcResumoPainel").innerHTML = "";
+    if (modoGestao) {
+        el("apcGestaoTabs").hidden = true;
+        ativarAbaGestaoApc("professores");
+        limparPreviewArquivoApc();
+    }
     el("apcListaPainel").innerHTML = modoGestao
         ? '<div class="booking-empty">Cadastre uma solicitacao ao lado para comecar a receber anexos dos professores.</div>'
         : "";
+    if (el("apcArquivosLista")) {
+        el("apcArquivosLista").innerHTML = '<div class="booking-empty">Nenhum arquivo enviado ainda.</div>';
+    }
     preencherFormularioPeriodo(null);
 }
 
@@ -559,8 +843,13 @@ function renderPainelSemSelecaoGestao() {
     el("apcTituloPainel").innerText = `Solicitacoes de ${paraDataBr(dataSelecionadaApc)}`;
     el("apcSubtituloPainel").innerText = "Selecione uma solicitacao existente ou cadastre uma nova ao lado.";
     el("apcResumoPainel").innerHTML = "";
+    el("apcGestaoTabs").hidden = true;
     el("apcListaPainel").innerHTML =
         '<div class="booking-empty">Nenhuma solicitacao selecionada.</div>';
+    if (el("apcArquivosLista")) {
+        el("apcArquivosLista").innerHTML = '<div class="booking-empty">Nenhum arquivo enviado ainda.</div>';
+    }
+    limparPreviewArquivoApc();
     renderSolicitacoesData(periodosResumoPorData(dataSelecionadaApc));
 }
 
@@ -587,19 +876,24 @@ async function carregarDetalheSelecionadoApc() {
     renderSolicitacoesData(periodosDoDia, detalhe);
 
     if (usuarioApc?.pode_gerir) {
+        const gruposProfessor = agruparItensGestaoPorProfessor(detalhe.itens || []);
         el("apcTituloPainel").innerText = `${periodo.titulo} - ${paraDataBr(periodo.data_referencia)}`;
         el("apcSubtituloPainel").innerText =
             `${periodo.dia_semana_nome} | Prazo ate ${formatarDataHoraApc(periodo.prazo_envio)}`;
         el("apcResumoPainel").innerHTML = "";
         el("apcResumoPainel").appendChild(
             renderResumoPainelCards([
-                { label: "Elegiveis", valor: String(detalhe.total_elegiveis || 0) },
+                { label: "Professores", valor: String(gruposProfessor.length) },
+                { label: "Entregas", valor: String(detalhe.total_elegiveis || 0) },
                 { label: "Enviados", valor: String(detalhe.total_enviados || 0) },
                 { label: "Pendentes", valor: String(detalhe.total_pendentes || 0) },
                 { label: "Publico", valor: periodo.publico_alvo_label || "-" },
             ])
         );
+        el("apcGestaoTabs").hidden = false;
+        ativarAbaGestaoApc(abaGestaoApc);
         renderListaGestaoApc(detalhe);
+        renderArquivosGestaoApc(detalhe);
         preencherFormularioPeriodo(periodo);
         return;
     }
@@ -801,6 +1095,26 @@ function registrarEventosApc() {
     el("btnSair").addEventListener("click", () => {
         encerrarSessao();
     });
+    document.querySelectorAll("[data-apc-gestao-tab-trigger]").forEach((botao) => {
+        botao.addEventListener("click", () => {
+            ativarAbaGestaoApc(botao.dataset.apcGestaoTabTrigger || "professores");
+        });
+    });
+
+    el("btnApcAbrirArquivoGuia")?.addEventListener("click", () => {
+        if (arquivoPreviewUrlApc) {
+            window.open(arquivoPreviewUrlApc, "_blank", "noopener");
+        }
+    });
+    el("btnApcBaixarArquivo")?.addEventListener("click", () => {
+        if (!arquivoPreviewUrlApc) return;
+        const link = document.createElement("a");
+        link.href = arquivoPreviewUrlApc;
+        link.download = arquivoPreviewNomeApc || "arquivo";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    });
 
     el("apcAnoLetivo").addEventListener("change", async () => {
         periodoSelecionadoApcId = null;
@@ -850,4 +1164,5 @@ async function initApc() {
     }
 }
 
+window.addEventListener("beforeunload", revogarPreviewArquivoApc);
 window.addEventListener("DOMContentLoaded", initApc);

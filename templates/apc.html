@@ -104,9 +104,53 @@
 
                 <div id="apcResumoPainel"></div>
 
-                <div id="apcListaPainel" class="apc-lista-painel">
-                    <div class="booking-empty">Nenhuma solicitacao selecionada.</div>
-                </div>
+                <nav id="apcGestaoTabs" class="admin-tabs apc-gestao-tabs" aria-label="Abas da gestao de anexos" hidden>
+                    <button id="apcTabBtnProfessores" class="admin-tab-btn is-active" data-apc-gestao-tab-trigger="professores"
+                        aria-controls="apc-tab-professores" aria-selected="true" type="button">
+                        Por professor
+                    </button>
+                    <button id="apcTabBtnArquivos" class="admin-tab-btn" data-apc-gestao-tab-trigger="arquivos"
+                        aria-controls="apc-tab-arquivos" aria-selected="false" type="button">
+                        Arquivos
+                    </button>
+                </nav>
+
+                <section id="apc-tab-professores" class="admin-tab-panel apc-gestao-panel is-active"
+                    data-apc-gestao-tab-panel="professores">
+                    <div id="apcListaPainel" class="apc-lista-painel">
+                        <div class="booking-empty">Nenhuma solicitacao selecionada.</div>
+                    </div>
+                </section>
+
+                <section id="apc-tab-arquivos" class="admin-tab-panel apc-gestao-panel" data-apc-gestao-tab-panel="arquivos"
+                    hidden>
+                    <div class="apc-arquivos-workspace">
+                        <div id="apcArquivosLista" class="apc-arquivos-lista">
+                            <div class="booking-empty">Nenhum arquivo enviado ainda.</div>
+                        </div>
+
+                        <article class="apc-arquivo-preview-card">
+                            <div id="apcArquivoPreviewMeta" class="apc-arquivo-preview-meta">
+                                <div class="booking-empty">Selecione um arquivo enviado para visualizar aqui.</div>
+                            </div>
+
+                            <div id="apcArquivoPreviewState" class="apc-arquivo-preview-state">
+                                <div class="booking-empty">A visualizacao do arquivo sera carregada neste painel.</div>
+                            </div>
+
+                            <iframe id="apcArquivoPreviewFrame" class="apc-arquivo-preview-frame" title="Visualizacao do arquivo"
+                                hidden></iframe>
+                            <img id="apcArquivoPreviewImage" class="apc-arquivo-preview-image" alt="Preview do arquivo"
+                                hidden>
+                            <pre id="apcArquivoPreviewText" class="apc-arquivo-preview-text" hidden></pre>
+
+                            <div class="apc-inline-actions apc-arquivo-preview-actions">
+                                <button id="btnApcAbrirArquivoGuia" type="button" hidden>Abrir em nova guia</button>
+                                <button id="btnApcBaixarArquivo" type="button" hidden>Baixar arquivo</button>
+                            </div>
+                        </article>
+                    </div>
+                </section>
             </article>
         </section>
     </main>

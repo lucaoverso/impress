@@ -312,6 +312,224 @@
     gap: 10px;
 }
 
+.apc-gestao-tabs {
+    margin-bottom: 0;
+}
+
+.apc-gestao-panel {
+    display: grid;
+    gap: 12px;
+}
+
+.apc-professor-group-list {
+    display: grid;
+    gap: 12px;
+}
+
+.apc-professor-group {
+    border: 1px solid var(--line-soft);
+    border-radius: 18px;
+    background: linear-gradient(180deg, #ffffff, #f8fbff);
+    overflow: hidden;
+}
+
+.apc-professor-group-summary {
+    list-style: none;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 14px;
+    padding: 16px 18px;
+}
+
+.apc-professor-group-summary::-webkit-details-marker {
+    display: none;
+}
+
+.apc-professor-group-main {
+    display: grid;
+    gap: 6px;
+}
+
+.apc-professor-group-main h4,
+.apc-professor-group-main p {
+    margin: 0;
+}
+
+.apc-professor-group-meta {
+    color: var(--ink-soft);
+    font-size: 0.9rem;
+}
+
+.apc-professor-group-side {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.apc-professor-group-body {
+    border-top: 1px solid rgba(19, 53, 88, 0.08);
+    padding: 16px 18px 18px;
+    display: grid;
+    gap: 12px;
+    background: rgba(244, 248, 252, 0.94);
+}
+
+.apc-professor-entrega-list {
+    display: grid;
+    gap: 10px;
+}
+
+.apc-entrega-item {
+    border: 1px solid var(--line-soft);
+    border-radius: 14px;
+    padding: 12px;
+    background: #ffffff;
+    display: grid;
+    gap: 8px;
+}
+
+.apc-entrega-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.apc-entrega-topo h5,
+.apc-entrega-topo p {
+    margin: 0;
+}
+
+.apc-arquivos-workspace {
+    display: grid;
+    grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.4fr);
+    gap: 14px;
+    align-items: start;
+}
+
+.apc-arquivos-lista,
+.apc-arquivo-preview-card {
+    border: 1px solid var(--line-soft);
+    border-radius: 16px;
+    background: var(--surface-1);
+    padding: 14px;
+}
+
+.apc-arquivos-lista {
+    display: grid;
+    gap: 10px;
+    max-height: 720px;
+    overflow: auto;
+}
+
+.apc-arquivos-grupo {
+    border: 1px solid rgba(19, 53, 88, 0.08);
+    border-radius: 14px;
+    background: #ffffff;
+    padding: 12px;
+    display: grid;
+    gap: 10px;
+}
+
+.apc-arquivos-grupo-header {
+    display: grid;
+    gap: 4px;
+}
+
+.apc-arquivos-grupo-header h4,
+.apc-arquivos-grupo-header p {
+    margin: 0;
+}
+
+.apc-arquivos-itens {
+    display: grid;
+    gap: 8px;
+}
+
+.apc-arquivo-item-btn {
+    width: 100%;
+    text-align: left;
+    border: 1px solid var(--line-soft);
+    border-radius: 12px;
+    background: #f8fbff;
+    padding: 12px;
+    display: grid;
+    gap: 6px;
+}
+
+.apc-arquivo-item-btn.is-active {
+    border-color: rgba(19, 53, 88, 0.28);
+    box-shadow: 0 0 0 2px rgba(19, 53, 88, 0.08) inset;
+    background: #ffffff;
+}
+
+.apc-arquivo-item-btn strong,
+.apc-arquivo-item-btn span,
+.apc-arquivo-item-btn small {
+    display: block;
+}
+
+.apc-arquivo-item-btn small {
+    color: var(--ink-soft);
+}
+
+.apc-arquivo-preview-card {
+    min-height: 520px;
+    display: grid;
+    gap: 12px;
+}
+
+.apc-arquivo-preview-meta {
+    display: grid;
+    gap: 6px;
+}
+
+.apc-arquivo-preview-meta h4,
+.apc-arquivo-preview-meta p {
+    margin: 0;
+}
+
+.apc-arquivo-preview-state {
+    border: 1px dashed rgba(19, 53, 88, 0.18);
+    border-radius: 14px;
+    padding: 14px;
+    background: rgba(255, 255, 255, 0.8);
+}
+
+.apc-arquivo-preview-frame,
+.apc-arquivo-preview-image,
+.apc-arquivo-preview-text {
+    width: 100%;
+    min-height: 420px;
+    border: 1px solid var(--line-soft);
+    border-radius: 14px;
+    background: #ffffff;
+}
+
+.apc-arquivo-preview-frame {
+    display: block;
+}
+
+.apc-arquivo-preview-image {
+    object-fit: contain;
+    padding: 12px;
+}
+
+.apc-arquivo-preview-text {
+    margin: 0;
+    padding: 14px;
+    overflow: auto;
+    white-space: pre-wrap;
+    font-family: "Courier New", monospace;
+    font-size: 0.88rem;
+}
+
+.apc-arquivo-preview-actions {
+    margin-top: auto;
+}
+
 .apc-professor-card {
     border: 1px solid var(--line-soft);
     border-radius: 14px;
@@ -442,6 +660,10 @@
         grid-column: 1;
         grid-row: auto;
         position: static;
+    }
+
+    .apc-arquivos-workspace {
+        grid-template-columns: 1fr;
     }
 }
 
