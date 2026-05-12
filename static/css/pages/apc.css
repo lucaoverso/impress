@@ -128,17 +128,23 @@
 }
 
 .apc-content {
-    grid-template-columns: minmax(0, 1.55fr) minmax(300px, 0.78fr);
+    grid-template-columns: minmax(0, 1.55fr) minmax(290px, 0.78fr);
     align-items: start;
 }
 
-.apc-page.is-professor .apc-content {
-    grid-template-columns: 1fr;
+.apc-overview-card {
+    grid-column: 1;
+    grid-row: 1;
+    display: grid;
+    gap: 12px;
 }
 
 .apc-calendar-card {
-    grid-column: 1;
+    grid-column: 2;
     grid-row: 1;
+    align-self: start;
+    position: sticky;
+    top: 12px;
 }
 
 .apc-detail-card {
@@ -154,8 +160,32 @@
     top: 12px;
 }
 
+.apc-page.is-professor .apc-content {
+    grid-template-columns: minmax(0, 1fr) minmax(290px, 320px);
+}
+
 .apc-page.is-professor .apc-calendar-card,
+.apc-page.is-professor .apc-overview-card,
 .apc-page.is-professor .apc-detail-card,
+.apc-page.is-professor .apc-side-card {
+    position: static;
+}
+
+.apc-page.is-professor .apc-overview-card {
+    grid-column: 1;
+    grid-row: 1;
+}
+
+.apc-page.is-professor .apc-calendar-card {
+    grid-column: 2;
+    grid-row: 1;
+}
+
+.apc-page.is-professor .apc-detail-card {
+    grid-column: 1 / span 2;
+    grid-row: 2;
+}
+
 .apc-page.is-professor .apc-side-card {
     grid-column: 1;
     grid-row: auto;
@@ -163,8 +193,25 @@
 }
 
 .apc-calendar-card .calendar-day {
-    min-height: 86px;
-    padding: 8px;
+    min-height: 68px;
+    padding: 6px;
+}
+
+.apc-calendar-card .calendar-header {
+    margin-bottom: 10px;
+}
+
+.apc-calendar-card .calendar-header button {
+    height: 32px;
+    padding: 0 8px;
+}
+
+.apc-calendar-card .calendar-number {
+    font-size: 13px;
+}
+
+.apc-calendar-card .calendar-count {
+    font-size: 10px;
 }
 
 .apc-form {
@@ -189,6 +236,10 @@
     gap: 12px;
 }
 
+.apc-page.is-professor .apc-solicitacoes-data {
+    gap: 10px;
+}
+
 .apc-solicitacao-item {
     border: 1px solid var(--line-soft);
     border-radius: 18px;
@@ -211,6 +262,10 @@
     align-items: flex-start;
     gap: 14px;
     padding: 16px 18px;
+}
+
+.apc-page.is-professor .apc-solicitacao-summary {
+    padding: 12px 14px;
 }
 
 .apc-solicitacao-summary::-webkit-details-marker {
@@ -550,8 +605,9 @@
 }
 
 .apc-professor-card.is-enviado {
-    border-color: rgba(15, 118, 110, 0.24);
-    background: linear-gradient(180deg, rgba(236, 253, 245, 0.98), #ffffff);
+    border-color: rgba(15, 118, 110, 0.3);
+    box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.08);
+    background: linear-gradient(180deg, rgba(220, 252, 231, 0.98), rgba(240, 253, 244, 0.96));
 }
 
 .apc-professor-card.is-pendente {
@@ -583,7 +639,7 @@
 
 .apc-professor-card-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 12px;
 }
 
@@ -723,6 +779,7 @@
         grid-template-columns: 1fr;
     }
 
+    .apc-overview-card,
     .apc-calendar-card,
     .apc-detail-card,
     .apc-side-card {

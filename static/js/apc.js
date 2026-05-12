@@ -213,7 +213,7 @@ function aplicarVisibilidadeApc() {
 
     renderizarAbasModoApc();
     el("apcGestaoCard").hidden = !(podeGerir && modoGestaoAtivoApc());
-    el("apcResumoPainel").hidden = !modoGestaoAtivoApc();
+    el("apcResumoPainel").hidden = false;
     el("apcGestaoTabs").hidden = !(podeGerir && modoGestaoAtivoApc());
     if (!(podeGerir && modoGestaoAtivoApc())) {
         document.querySelectorAll("[data-apc-gestao-tab-panel]").forEach((painel) => {
@@ -934,7 +934,7 @@ function renderPainelSelecionadoVazio() {
         : `Pendencias de ${paraDataBr(dataSelecionadaApc)}`;
     el("apcSubtituloPainel").innerText = modoGestao
         ? "Cadastre uma nova solicitacao ao lado ou selecione outra data no calendario."
-        : "Nao ha entregas disponiveis para voce nesta data.";
+        : "Selecione outra data no calendario para localizar suas entregas.";
     renderSolicitacoesData([]);
     el("apcResumoPainel").innerHTML = "";
     if (modoGestao) {
@@ -956,7 +956,7 @@ function renderPainelSemSelecaoGestao() {
         : `Pendencias de ${paraDataBr(dataSelecionadaApc)}`;
     el("apcSubtituloPainel").innerText = modoGestaoAtivoApc()
         ? "Selecione uma solicitacao existente ou cadastre uma nova ao lado."
-        : "Selecione uma pendencia no calendario para ver os detalhes.";
+        : "Escolha uma solicitacao abaixo para abrir os cards de envio.";
     el("apcResumoPainel").innerHTML = "";
     el("apcGestaoTabs").hidden = true;
     el("apcListaPainel").innerHTML =
@@ -1014,7 +1014,16 @@ async function carregarDetalheSelecionadoApc() {
 
     el("apcTituloPainel").innerText = `Pendencias de ${paraDataBr(periodo.data_referencia)}`;
     el("apcSubtituloPainel").innerText =
-        "Abra a pendencia desejada abaixo para ver os detalhes e anexar o arquivo correto.";
+        "Use os cards abaixo para anexar, baixar ou substituir cada entrega da data.";
+    el("apcResumoPainel").innerHTML = "";
+    el("apcResumoPainel").appendChild(
+        renderResumoPainelCards([
+            { label: "Entregas", valor: String(detalhe.total_entregas || 0) },
+            { label: "Enviadas", valor: String(detalhe.total_enviadas || 0) },
+            { label: "Pendentes", valor: String(detalhe.total_pendentes || 0) },
+            { label: "Prazo", valor: periodo.prazo_expirado ? "Encerrado" : "Aberto" },
+        ])
+    );
 }
 
 function renderCalendarioApc() {

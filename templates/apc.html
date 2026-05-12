@@ -51,6 +51,15 @@
         </section>
 
         <section class="scheduler-content apc-content">
+            <article class="calendar-card apc-overview-card">
+                <header class="booking-card-header">
+                    <h3 id="apcTituloPainel">Painel da data selecionada</h3>
+                    <p id="apcSubtituloPainel">Escolha uma data no calendario para continuar.</p>
+                </header>
+
+                <div id="apcResumoPainel"></div>
+            </article>
+
             <article class="calendar-card apc-calendar-card">
                 <header class="calendar-header">
                     <button id="btnApcMesAnterior" type="button" aria-label="Mes anterior">&#9664;</button>
@@ -93,16 +102,9 @@
             </article>
 
             <article class="calendar-card apc-detail-card">
-                <header class="booking-card-header">
-                    <h3 id="apcTituloPainel">Painel da data selecionada</h3>
-                    <p id="apcSubtituloPainel">Escolha uma data no calendario para continuar.</p>
-                </header>
-
                 <div id="apcSolicitacoesData" class="apc-solicitacoes-data">
                     <div class="booking-empty">Nenhuma solicitacao nesta data.</div>
                 </div>
-
-                <div id="apcResumoPainel"></div>
 
                 <nav id="apcGestaoTabs" class="admin-tabs apc-gestao-tabs" aria-label="Abas da gestao de anexos" hidden>
                     <button id="apcTabBtnProfessores" class="admin-tab-btn is-active"
