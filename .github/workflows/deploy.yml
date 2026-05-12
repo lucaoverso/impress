@@ -14,7 +14,7 @@ jobs:
       HEALTHCHECK_URL: http://127.0.0.1:8000/health
 
     steps:
-      - name: Atualizar código no servidor
+      - name: Atualizar codigo no servidor
         run: |
           sudo -n -u sistema-impress rm -f /opt/sistema-impress/.git/index.lock || true
           sudo -n -u sistema-impress git -C /opt/sistema-impress config --global --add safe.directory /opt/sistema-impress
@@ -32,12 +32,29 @@ jobs:
             .venv/bin/python -m db.schema_migrations upgrade
           '
 
-      - name: Reiniciar serviços
+      - name: Atualizar versao dos assets
+        env:
+          RELEASE_ASSET_VERSION: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          sudo -n -u sistema-impress env RELEASE_ASSET_VERSION="$RELEASE_ASSET_VERSION" bash -lc '
+            cd /opt/sistema-impress
+            touch .env
+            asset_version="${RELEASE_ASSET_VERSION:-manual-deploy}"
+            asset_version="${asset_version:0:12}"
+
+            if grep -q "^STATIC_ASSET_VERSION=" .env; then
+              sed -i "s/^STATIC_ASSET_VERSION=.*/STATIC_ASSET_VERSION=${asset_version}/" .env
+            else
+              printf "\nSTATIC_ASSET_VERSION=%s\n" "$asset_version" >> .env
+            fi
+          '
+
+      - name: Reiniciar servicos
         run: |
           sudo -n systemctl restart sistema-impress-api.service
           sudo -n systemctl restart sistema-impress-worker.service
 
-      - name: Verificar serviços ativos
+      - name: Verificar servicos ativos
         run: |
           systemctl is-active --quiet sistema-impress-api.service
           systemctl is-active --quiet sistema-impress-worker.service
