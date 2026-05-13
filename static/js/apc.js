@@ -717,7 +717,7 @@ function renderListaGestaoApc(detalhe) {
     grupos.forEach((grupo) => {
         const details = document.createElement("details");
         details.className = "apc-professor-group";
-        details.open = true;
+        details.open = false;
 
         const summary = document.createElement("summary");
         summary.className = "apc-professor-group-summary";
