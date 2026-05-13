@@ -516,15 +516,21 @@ function criarCardEntregaProfessorApc(periodo, item) {
     );
     card.appendChild(topo);
 
-
+    const resumo = document.createElement("div");
     resumo.className = "apc-professor-card-resumo";
 
     const turma = document.createElement("p");
     turma.className = "apc-inline-hint";
+    turma.innerText = item.turma_nome
+        ? `Turma: ${item.turma_nome}`
+        : "Entrega sem turma vinculada.";
     resumo.appendChild(turma);
 
     const meta = document.createElement("p");
     meta.className = "apc-inline-hint";
+    meta.innerText = (item.horarios || []).length
+        ? `${item.total_aulas || item.horarios.length || 0} aula(s) vinculada(s) a esta entrega.`
+        : "Entrega liberada para este professor sem dependencia do horario escolar.";
     resumo.appendChild(meta);
     card.appendChild(resumo);
 
