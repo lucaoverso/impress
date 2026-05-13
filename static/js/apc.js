@@ -508,7 +508,7 @@ function criarCardEntregaProfessorApc(periodo, item) {
     const titulo = item.disciplina_nome
         ? `${item.disciplina_nome}${item.turma_nome ? ` - ${item.turma_nome}` : ""}`
         : "Entrega geral";
-    topo.innerHTML = `<div><h4>${titulo}</h4><p>${periodo.titulo || "Documento"}</p></div>`;
+    topo.innerHTML = `<div><h4>${titulo}</h4></div>`;
     topo.appendChild(
         item.enviado
             ? criarStatusApc("Enviado", "ok")
@@ -516,19 +516,15 @@ function criarCardEntregaProfessorApc(periodo, item) {
     );
     card.appendChild(topo);
 
-    const resumo = document.createElement("div");
+
     resumo.className = "apc-professor-card-resumo";
 
     const turma = document.createElement("p");
     turma.className = "apc-inline-hint";
-    turma.innerText = item.turma_nome
-        ? `Turma: ${item.turma_nome}`
-        : "Entrega liberada para todos os professores.";
     resumo.appendChild(turma);
 
     const meta = document.createElement("p");
     meta.className = "apc-inline-hint";
-    meta.innerText = `${item.total_aulas || 0} aula(s) vinculada(s) | Prazo: ${formatarDataHoraApc(periodo.prazo_envio)}`;
     resumo.appendChild(meta);
     card.appendChild(resumo);
 
