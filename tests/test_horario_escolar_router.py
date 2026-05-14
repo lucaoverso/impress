@@ -47,6 +47,9 @@ class HorarioEscolarRouterTest(unittest.TestCase):
     def _usuario_coord(self, usuario_id: int = 1) -> dict:
         return {"id": usuario_id, "nome": "Coord", "cargo": "COORDENADOR"}
 
+    def _usuario_professor(self, usuario_id: int) -> dict:
+        return {"id": usuario_id, "nome": "Professor", "cargo": "PROFESSOR"}
+
     def test_crud_basico_do_horario_escolar(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")
@@ -270,6 +273,114 @@ class HorarioEscolarRouterTest(unittest.TestCase):
 
             self.assertEqual(int(ctx.exception.status_code), 409)
             self.assertIn("faixa", str(ctx.exception.detail).lower())
+
+    def test_professor_pode_visualizar_grade_com_destaque_sem_edicao(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, models, horario_router = _reload_modules(db_path)
+            database.criar_tabelas()
+
+            turma_a_id = int(database.criar_turma("7A", "MATUTINO", 30))
+            turma_b_id = int(database.criar_turma("8A", "VESPERTINO", 30))
+            disciplina_id = int(database.criar_disciplina("Matematica", 5))
+            professor_logado_id = int(
+                database.criar_professor(
+                    nome="Professor Logado",
+                    email="prof.logado@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1991-02-14",
+                    aulas_semanais=20,
+                    turmas_quantidade=2,
+                    turmas=["7A", "8A"],
+                    disciplinas=["Matematica"],
+                )
+            )
+            professor_colega_id = int(
+                database.criar_professor(
+                    nome="Professor Colega",
+                    email="colega@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1989-04-09",
+                    aulas_semanais=20,
+                    turmas_quantidade=1,
+                    turmas=["7A"],
+                    disciplinas=["Matematica"],
+                )
+            )
+
+            database.criar_atribuicao_docente(professor_logado_id, turma_a_id, disciplina_id)
+            database.criar_atribuicao_docente(professor_logado_id, turma_b_id, disciplina_id)
+            database.criar_atribuicao_docente(professor_colega_id, turma_a_id, disciplina_id)
+
+            horario_router.criar_horario_escolar_api(
+                payload=models.HorarioEscolarRegistroIn(
+                    ano_letivo=2034,
+                    turma_id=turma_a_id,
+                    disciplina_id=disciplina_id,
+                    professor_id=professor_logado_id,
+                    dia_semana="segunda",
+                    aula_numero=1,
+                ),
+                usuario=self._usuario_coord(),
+            )
+            horario_router.criar_horario_escolar_api(
+                payload=models.HorarioEscolarRegistroIn(
+                    ano_letivo=2034,
+                    turma_id=turma_b_id,
+                    disciplina_id=disciplina_id,
+                    professor_id=professor_logado_id,
+                    dia_semana="terca",
+                    aula_numero=2,
+                ),
+                usuario=self._usuario_coord(),
+            )
+            horario_router.criar_horario_escolar_api(
+                payload=models.HorarioEscolarRegistroIn(
+                    ano_letivo=2034,
+                    turma_id=turma_a_id,
+                    disciplina_id=disciplina_id,
+                    professor_id=professor_colega_id,
+                    dia_semana="quarta",
+                    aula_numero=3,
+                ),
+                usuario=self._usuario_coord(),
+            )
+
+            contexto = horario_router.obter_contexto_horario_escolar_api(
+                usuario=self._usuario_professor(professor_logado_id),
+            )
+            self.assertEqual(contexto["modo_interface"], "professor")
+            self.assertFalse(contexto["permite_edicao"])
+            self.assertEqual(int(contexto["professor_logado_id"]), professor_logado_id)
+            self.assertEqual(contexto["professores"], [])
+            self.assertEqual(contexto["disciplinas"], [])
+
+            listagem = horario_router.listar_horarios_escolares_api(
+                ano_letivo=2034,
+                usuario=self._usuario_professor(professor_logado_id),
+            )
+            self.assertEqual(listagem["modo_interface"], "professor")
+            self.assertEqual(int(listagem["professor_logado_id"]), professor_logado_id)
+            self.assertEqual(int(listagem["total_registros"]), 3)
+            self.assertEqual(len(listagem["grupos_turma"]), 2)
+
+            itens_proprios = [
+                item for item in listagem["itens"] if bool(item["eh_do_professor_logado"])
+            ]
+            itens_colegas = [
+                item for item in listagem["itens"] if not bool(item["eh_do_professor_logado"])
+            ]
+            self.assertEqual(len(itens_proprios), 2)
+            self.assertEqual(len(itens_colegas), 1)
+
+            with self.assertRaises(HTTPException) as ctx:
+                horario_router.obter_matriz_horario_turma_api(
+                    turma_id=turma_a_id,
+                    ano_letivo=2034,
+                    usuario=self._usuario_professor(professor_logado_id),
+                )
+
+            self.assertEqual(int(ctx.exception.status_code), 403)
 
 
 if __name__ == "__main__":

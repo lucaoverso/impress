@@ -89,7 +89,7 @@
         if (cargo === CARGO_COORDENADOR) {
             return new Set(["coordenacao", "horario", "apc", "pcpi", "preconselho"]);
         }
-        return new Set(["impressao", "agendamento", "apc", "preconselho"]);
+        return new Set(["impressao", "agendamento", "horario", "apc", "preconselho"]);
     }
 
     function parseDataSqlUtc(valor) {

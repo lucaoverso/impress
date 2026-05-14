@@ -261,6 +261,14 @@
     border-color: rgba(42, 87, 135, 0.18);
 }
 
+.horario-card-item.is-own {
+    background:
+        linear-gradient(180deg, rgba(255, 251, 235, 0.96) 0%, rgba(254, 243, 199, 0.88) 100%),
+        linear-gradient(180deg, #ffffff 0%, #f4f8fc 100%);
+    border-color: rgba(217, 119, 6, 0.28);
+    box-shadow: 0 10px 24px rgba(217, 119, 6, 0.12);
+}
+
 .horario-card-top {
     display: flex;
     align-items: start;
@@ -402,6 +410,70 @@
     flex-wrap: wrap;
 }
 
+.horario-professor-scope {
+    display: grid;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+    padding: 0.95rem 1rem;
+    border-radius: 16px;
+    background: linear-gradient(180deg, rgba(217, 119, 6, 0.08) 0%, rgba(255, 251, 235, 0.95) 100%);
+    border: 1px solid rgba(217, 119, 6, 0.16);
+}
+
+.horario-professor-scope-label {
+    color: #9a3412;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.horario-professor-scope-options {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+}
+
+.horario-professor-scope-option {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
+    min-height: 38px;
+    padding: 0.45rem 0.8rem;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(217, 119, 6, 0.15);
+    color: #7c2d12;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.horario-professor-scope-option input {
+    margin: 0;
+}
+
+.horario-professor-scope-help {
+    margin: 0;
+    color: #7c2d12;
+    font-size: 0.86rem;
+}
+
+.horario-row-own td {
+    background: rgba(255, 251, 235, 0.92);
+}
+
+.horario-own-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    padding: 0.1rem 0.55rem;
+    border-radius: 999px;
+    background: rgba(217, 119, 6, 0.14);
+    color: #9a3412;
+    font-size: 0.75rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
 .horario-empty-state {
     border: 1px dashed rgba(53, 89, 127, 0.25);
     border-radius: 16px;
@@ -426,6 +498,10 @@
     }
 
     .horario-group-header {
+        flex-direction: column;
+    }
+
+    .horario-professor-scope-options {
         flex-direction: column;
     }
 }

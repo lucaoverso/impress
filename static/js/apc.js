@@ -480,13 +480,6 @@ function criarCardEnvioExistenteApc(periodo, item) {
     nome.innerText = nomeArquivoPrincipalApc(envio);
     envioCard.appendChild(nome);
 
-    if (nomeArquivoPadronizadoDivergeApc(envio)) {
-        const nomeSistema = document.createElement("p");
-        nomeSistema.className = "apc-inline-hint";
-        nomeSistema.innerText = `Salvo no sistema como: ${nomeArquivoSistemaApc(envio)}`;
-        envioCard.appendChild(nomeSistema);
-    }
-
     const acoes = document.createElement("div");
     acoes.className = "apc-inline-actions apc-envio-actions";
 
@@ -550,14 +543,6 @@ function criarCardEntregaProfessorApc(periodo, item) {
         ? `Turma: ${item.turma_nome}`
         : "Entrega sem turma vinculada.";
     resumo.appendChild(turma);
-
-    const meta = document.createElement("p");
-    meta.className = "apc-inline-hint";
-    meta.innerText = (item.horarios || []).length
-        ? `${item.total_aulas || item.horarios.length || 0} aula(s) vinculada(s) a esta entrega.`
-        : "Entrega liberada para este professor sem dependencia do horario escolar.";
-    resumo.appendChild(meta);
-    card.appendChild(resumo);
 
     if (item.envio?.id) {
         const envioExistente = criarCardEnvioExistenteApc(periodo, item);

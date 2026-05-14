@@ -46,7 +46,13 @@ from services.horario_escolar_service import (
     validar_ano_letivo,
 )
 
-from .common import CARGO_PROFESSOR, exigir_gestor, normalizar_cargo_usuario
+from .common import (
+    CARGO_PROFESSOR,
+    exigir_gestor,
+    normalizar_cargo_usuario,
+    usuario_eh_gestor,
+    usuario_eh_professor,
+)
 
 router = APIRouter()
 
@@ -74,6 +80,35 @@ def _serializar_contexto_professores(professores: list[dict]) -> list[dict]:
         }
         for item in professores
         if int(item.get("id") or 0) > 0
+    ]
+
+
+def _exigir_visualizacao_horario(usuario) -> dict:
+    if not (usuario_eh_gestor(usuario) or usuario_eh_professor(usuario)):
+        raise HTTPException(403, "Acesso negado")
+    return usuario
+
+
+def _id_professor_logado(usuario: dict) -> int | None:
+    if not usuario_eh_professor(usuario):
+        return None
+    try:
+        professor_id = int(usuario.get("id") or 0)
+    except (TypeError, ValueError):
+        return None
+    return professor_id if professor_id > 0 else None
+
+
+def _enriquecer_itens_para_usuario(itens: list[dict], usuario: dict) -> list[dict]:
+    professor_logado_id = _id_professor_logado(usuario)
+    return [
+        {
+            **dict(item),
+            "eh_do_professor_logado": bool(
+                professor_logado_id and int(item.get("professor_id") or 0) == professor_logado_id
+            ),
+        }
+        for item in (itens or [])
     ]
 
 
@@ -185,16 +220,21 @@ def _validar_payload_horario(
 
 @router.get("/horario-escolar/contexto")
 def obter_contexto_horario_escolar_api(usuario=Depends(get_usuario_logado)):
-    exigir_gestor(usuario)
+    _exigir_visualizacao_horario(usuario)
     professores = listar_professores_agendamento()
     anos = anos_letivos_sugeridos(listar_anos_letivos_horario_escolar())
+    eh_gestor = usuario_eh_gestor(usuario)
+    professor_logado_id = _id_professor_logado(usuario)
     return {
         "anos_letivos": anos,
         "ano_letivo_atual": datetime.now().year,
         "dias_semana": listar_dias_semana_horario(),
         "turmas": listar_turmas_ativas(),
-        "disciplinas": listar_disciplinas_ativas(),
-        "professores": _serializar_contexto_professores(professores),
+        "disciplinas": listar_disciplinas_ativas() if eh_gestor else [],
+        "professores": _serializar_contexto_professores(professores) if eh_gestor else [],
+        "modo_interface": "gestor" if eh_gestor else "professor",
+        "permite_edicao": eh_gestor,
+        "professor_logado_id": professor_logado_id,
     }
 
 
@@ -207,7 +247,7 @@ def listar_horarios_escolares_api(
     dia_semana: str | None = None,
     usuario=Depends(get_usuario_logado),
 ):
-    exigir_gestor(usuario)
+    _exigir_visualizacao_horario(usuario)
 
     ano_letivo_valor = None
     if ano_letivo is not None:
@@ -232,11 +272,14 @@ def listar_horarios_escolares_api(
             dia_semana=dia_semana_valor,
         )
     )
+    itens = _enriquecer_itens_para_usuario(itens, usuario)
     return {
         "total_registros": len(itens),
         "itens": itens,
         "grupos_turma": agrupar_horarios_por_turma(itens),
         "grupos_professor": agrupar_horarios_por_professor(itens),
+        "modo_interface": "gestor" if usuario_eh_gestor(usuario) else "professor",
+        "professor_logado_id": _id_professor_logado(usuario),
     }
 
 

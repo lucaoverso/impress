@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Horário Escolar</title>
+    <title>Horario Escolar</title>
     {% include "includes/style_bundle.html" %}
 </head>
 
@@ -13,7 +13,7 @@
         <div class="app-topbar-main">
             <div class="app-topbar-brand">
                 <span class="app-topbar-logo">Suite Escolar</span>
-                <span class="app-topbar-context">Gestao escolar</span>
+                <span id="horarioTopbarContext" class="app-topbar-context">Gestao escolar</span>
             </div>
         </div>
         <div class="app-topbar-actions">
@@ -25,8 +25,8 @@
     <main class="horario-page">
         <header class="admin-header admin-header-shell">
             <div class="admin-header-main">
-                <h1>Horário escolar</h1>
-                <p>Organize a grade por turma e acompanhe uma leitura complementar por professor para preparar os próximos módulos operacionais.</p>
+                <h1>Horario escolar</h1>
+                <p id="horarioHeaderDescricao">Organize a grade por turma e acompanhe uma leitura complementar por professor para preparar os proximos modulos operacionais.</p>
             </div>
         </header>
 
@@ -37,7 +37,7 @@
                 <span id="horarioResumoPeriodo" class="horario-summary-meta">Sem filtro aplicado.</span>
             </article>
             <article class="horario-summary-card">
-                <span class="horario-summary-label">Turmas com horário</span>
+                <span class="horario-summary-label">Turmas com horario</span>
                 <strong id="horarioResumoTurmas" class="horario-summary-value">0</strong>
                 <span class="horario-summary-meta">Agrupadas pela grade principal.</span>
             </article>
@@ -48,13 +48,13 @@
             </article>
         </section>
 
-        <section class="horario-builder-grid">
+        <section id="horarioBuilderGrid" class="horario-builder-grid">
             <article class="coordenacao-card horario-config-card">
                 <div class="coordenacao-section-header">
                     <div>
                         <p class="coordenacao-eyebrow">Montagem visual</p>
                         <h2>Construtor da grade</h2>
-                        <p>Selecione a turma e monte o horário arrastando os cards de disciplina e professor para a matriz semanal.</p>
+                        <p>Selecione a turma e monte o horario arrastando os cards de disciplina e professor para a matriz semanal.</p>
                     </div>
                     <p id="msgHorarioForm" class="coordenacao-status-copy"></p>
                 </div>
@@ -72,7 +72,7 @@
 
                     <div class="horario-builder-note">
                         <strong id="horarioBuilderTitulo">Selecione uma turma para abrir a matriz.</strong>
-                        <small id="horarioBuilderMeta">Os cards ao lado serão gerados a partir das atribuições e da carga horária vinculada à turma.</small>
+                        <small id="horarioBuilderMeta">Os cards ao lado serao gerados a partir das atribuicoes e da carga horaria vinculada a turma.</small>
                     </div>
                 </div>
             </article>
@@ -87,21 +87,21 @@
                 </div>
                 <div id="horarioAlertas" class="horario-alert-stack" hidden></div>
                 <div id="horarioMatrizWrap" class="horario-matrix-wrap">
-                    <div class="horario-empty-state">Selecione uma turma para visualizar a matriz do horário.</div>
+                    <div class="horario-empty-state">Selecione uma turma para visualizar a matriz do horario.</div>
                 </div>
             </article>
 
             <article class="coordenacao-card horario-pool-card">
                 <div class="coordenacao-section-header">
                     <div>
-                        <p class="coordenacao-eyebrow">Cards disponíveis</p>
+                        <p class="coordenacao-eyebrow">Cards disponiveis</p>
                         <h2>Disciplinas da turma</h2>
-                        <p>O sistema gera um card para cada aula disponível da disciplina com o professor atribuído.</p>
+                        <p>O sistema gera um card para cada aula disponivel da disciplina com o professor atribuido.</p>
                     </div>
                 </div>
                 <div id="horarioPoolMeta" class="horario-pool-meta"></div>
                 <div id="horarioDropPool" class="horario-drop-pool">
-                    <p class="horario-drop-pool-copy">Arraste uma aula da matriz de volta para esta área para remover o lançamento do horário.</p>
+                    <p class="horario-drop-pool-copy">Arraste uma aula da matriz de volta para esta area para remover o lancamento do horario.</p>
                     <div id="horarioCardsDisponiveis" class="horario-card-pool"></div>
                 </div>
             </article>
@@ -113,8 +113,27 @@
                     <div>
                         <p class="coordenacao-eyebrow">Consulta</p>
                         <h2>Filtrar a grade</h2>
-                        <p>Aplique filtros para revisar a grade por turma e a leitura espelhada por professor.</p>
+                        <p id="horarioFiltroDescricao">Aplique filtros para revisar a grade por turma e a leitura espelhada por professor.</p>
                     </div>
+                </div>
+
+                <div id="horarioEscopoProfessorCard" class="horario-professor-scope" hidden>
+                    <span class="horario-professor-scope-label">Modo de visualizacao</span>
+                    <div class="horario-professor-scope-options">
+                        <label class="horario-professor-scope-option">
+                            <input type="radio" name="horarioEscopoProfessor" value="geral" checked>
+                            <span>Horario geral</span>
+                        </label>
+                        <label class="horario-professor-scope-option">
+                            <input type="radio" name="horarioEscopoProfessor" value="colegas">
+                            <span>Somente colegas</span>
+                        </label>
+                        <label class="horario-professor-scope-option">
+                            <input type="radio" name="horarioEscopoProfessor" value="minhas">
+                            <span>Somente minhas aulas</span>
+                        </label>
+                    </div>
+                    <p class="horario-professor-scope-help">As aulas do professor logado aparecem destacadas no horario geral.</p>
                 </div>
 
                 <form id="formFiltrosHorarioEscolar" class="coordenacao-filter-grid">
@@ -128,7 +147,7 @@
                         <select id="filtroHorarioTurmaId"></select>
                     </label>
 
-                    <label class="coordenacao-field" for="filtroHorarioProfessorId">
+                    <label id="filtroHorarioProfessorField" class="coordenacao-field" for="filtroHorarioProfessorId">
                         <span>Professor</span>
                         <select id="filtroHorarioProfessorId"></select>
                     </label>
@@ -150,20 +169,20 @@
             <article class="coordenacao-card horario-board-card">
                 <div class="coordenacao-section-header">
                     <div>
-                        <p class="coordenacao-eyebrow">Visão principal</p>
-                        <h2>Grade por turma</h2>
-                        <p>Resumo textual da grade organizada por turma para conferência rápida.</p>
+                        <p id="horarioTurmasEyebrow" class="coordenacao-eyebrow">Visao principal</p>
+                        <h2 id="horarioTurmasTitulo">Grade por turma</h2>
+                        <p id="horarioTurmasDescricao">Resumo textual da grade organizada por turma para conferencia rapida.</p>
                     </div>
                 </div>
                 <div id="horarioListaTurmas" class="horario-group-stack"></div>
             </article>
 
-            <article class="coordenacao-card horario-board-card">
+            <article id="horarioBoardProfessores" class="coordenacao-card horario-board-card">
                 <div class="coordenacao-section-header">
                     <div>
-                        <p class="coordenacao-eyebrow">Visão espelhada</p>
+                        <p class="coordenacao-eyebrow">Visao espelhada</p>
                         <h2>Agrupamento por professor</h2>
-                        <p>Leitura complementar no frontend para enxergar rapidamente a carga distribuída por docente.</p>
+                        <p>Leitura complementar no frontend para enxergar rapidamente a carga distribuida por docente.</p>
                     </div>
                 </div>
                 <div id="horarioListaProfessores" class="horario-group-stack"></div>

@@ -17,6 +17,9 @@ let contextoHorario = {
     turmas: [],
     disciplinas: [],
     professores: [],
+    modo_interface: "gestor",
+    permite_edicao: false,
+    professor_logado_id: null,
 };
 let usuarioHorario = null;
 let ultimoResultadoHorario = {
@@ -24,8 +27,88 @@ let ultimoResultadoHorario = {
     itens: [],
     grupos_turma: [],
     grupos_professor: [],
+    modo_interface: "gestor",
+    professor_logado_id: null,
 };
 let estadoMatrizHorario = null;
+let escopoProfessorHorario = "geral";
+
+function interfaceProfessorAtiva() {
+    return String(contextoHorario.modo_interface || "").toLowerCase() === "professor";
+}
+
+function permiteEdicaoHorario() {
+    return Boolean(contextoHorario.permite_edicao);
+}
+
+function obterProfessorLogadoId() {
+    const contextoId = Number(contextoHorario.professor_logado_id || 0);
+    if (contextoId > 0) return contextoId;
+    const usuarioId = Number(usuarioHorario?.id || 0);
+    return usuarioId > 0 ? usuarioId : 0;
+}
+
+function itemEhDoProfessorLogado(item = {}) {
+    if (typeof item.eh_do_professor_logado === "boolean") {
+        return item.eh_do_professor_logado;
+    }
+    const professorId = obterProfessorLogadoId();
+    return professorId > 0 && Number(item.professor_id || 0) === professorId;
+}
+
+function filtrarItensEscopoProfessor(itens) {
+    const lista = Array.isArray(itens) ? itens : [];
+    if (!interfaceProfessorAtiva()) {
+        return lista;
+    }
+    if (escopoProfessorHorario === "minhas") {
+        return lista.filter((item) => itemEhDoProfessorLogado(item));
+    }
+    if (escopoProfessorHorario === "colegas") {
+        return lista.filter((item) => !itemEhDoProfessorLogado(item));
+    }
+    return lista;
+}
+
+function agruparItensPorChave(itens, modo) {
+    const grupos = new Map();
+    (itens || []).forEach((item) => {
+        const chave = modo === "professor"
+            ? `${item.ano_letivo}:${item.professor_id}`
+            : `${item.ano_letivo}:${item.turma_id}`;
+        if (!grupos.has(chave)) {
+            grupos.set(
+                chave,
+                modo === "professor"
+                    ? {
+                        ano_letivo: Number(item.ano_letivo || 0),
+                        professor_id: Number(item.professor_id || 0),
+                        professor_nome: item.professor_nome || "",
+                        professor_email: item.professor_email || "",
+                        itens: [],
+                    }
+                    : {
+                        ano_letivo: Number(item.ano_letivo || 0),
+                        turma_id: Number(item.turma_id || 0),
+                        turma_nome: item.turma_nome || "",
+                        turno: item.turno || "",
+                        itens: [],
+                    }
+            );
+        }
+        grupos.get(chave).itens.push(item);
+    });
+    return Array.from(grupos.values());
+}
+
+function obterResultadoHorarioFiltrado() {
+    const itens = filtrarItensEscopoProfessor(ultimoResultadoHorario.itens);
+    return {
+        itens,
+        grupos_turma: agruparItensPorChave(itens, "turma"),
+        grupos_professor: agruparItensPorChave(itens, "professor"),
+    };
+}
 
 function setMensagemHorario(texto, erro = false) {
     const alvo = el("msgHorarioForm");
@@ -88,29 +171,80 @@ function labelAulaHorario(item = {}) {
     const faixaGlobal = Number(item.faixa_global || 0);
     const aulaNumero = Number(item.aula_numero || 0);
     if (aulaNumero > 0 && faixaGlobal > 0) {
-        return `${aulaNumero}ª aula (faixa ${faixaGlobal})`;
+        return `${aulaNumero}a aula (faixa ${faixaGlobal})`;
     }
     if (aulaNumero > 0) {
-        return `${aulaNumero}ª aula`;
+        return `${aulaNumero}a aula`;
     }
     return "";
 }
 
-function preencherContextoHorario() {
-    preencherSelectAnos("horarioAnoLetivo", contextoHorario.anos_letivos);
-    preencherSelect("horarioTurmaId", contextoHorario.turmas, {
-        placeholder: "Selecione a turma",
-    });
+function aplicarModoPaginaHorario() {
+    document.body.classList.toggle("horario-professor-mode", interfaceProfessorAtiva());
 
+    const topbarContext = el("horarioTopbarContext");
+    if (topbarContext) {
+        topbarContext.innerText = interfaceProfessorAtiva() ? "Visao do professor" : "Gestao escolar";
+    }
+
+    const headerDescricao = el("horarioHeaderDescricao");
+    if (headerDescricao) {
+        headerDescricao.innerText = interfaceProfessorAtiva()
+            ? "Consulte sua grade completa por turma, acompanhe o horario geral da escola e destaque rapidamente suas proprias aulas."
+            : "Organize a grade por turma e acompanhe uma leitura complementar por professor para preparar os proximos modulos operacionais.";
+    }
+
+    const filtroDescricao = el("horarioFiltroDescricao");
+    if (filtroDescricao) {
+        filtroDescricao.innerText = interfaceProfessorAtiva()
+            ? "Filtre por ano, turma e dia para comparar o horario geral, somente colegas ou apenas suas aulas."
+            : "Aplique filtros para revisar a grade por turma e a leitura espelhada por professor.";
+    }
+
+    const turmasEyebrow = el("horarioTurmasEyebrow");
+    if (turmasEyebrow) {
+        turmasEyebrow.innerText = interfaceProfessorAtiva() ? "Visao do professor" : "Visao principal";
+    }
+
+    const turmasTitulo = el("horarioTurmasTitulo");
+    if (turmasTitulo) {
+        turmasTitulo.innerText = interfaceProfessorAtiva() ? "Horario por turma" : "Grade por turma";
+    }
+
+    const turmasDescricao = el("horarioTurmasDescricao");
+    if (turmasDescricao) {
+        turmasDescricao.innerText = interfaceProfessorAtiva()
+            ? "Leitura organizada por turma com destaque visual para as aulas do professor logado."
+            : "Resumo textual da grade organizada por turma para conferencia rapida.";
+    }
+
+    const builderGrid = el("horarioBuilderGrid");
+    if (builderGrid) {
+        builderGrid.hidden = interfaceProfessorAtiva();
+    }
+
+    const professorScope = el("horarioEscopoProfessorCard");
+    if (professorScope) {
+        professorScope.hidden = !interfaceProfessorAtiva();
+    }
+
+    const professorField = el("filtroHorarioProfessorField");
+    if (professorField) {
+        professorField.hidden = interfaceProfessorAtiva();
+    }
+
+    const boardProfessores = el("horarioBoardProfessores");
+    if (boardProfessores) {
+        boardProfessores.hidden = interfaceProfessorAtiva();
+    }
+}
+
+function preencherContextoHorario() {
     preencherSelectAnos("filtroHorarioAnoLetivo", contextoHorario.anos_letivos, {
         incluirTodos: true,
     });
     preencherSelect("filtroHorarioTurmaId", contextoHorario.turmas, {
         incluirTodos: true,
-    });
-    preencherSelect("filtroHorarioProfessorId", contextoHorario.professores, {
-        incluirTodos: true,
-        label: "label",
     });
     preencherSelect("filtroHorarioDiaSemana", contextoHorario.dias_semana, {
         incluirTodos: true,
@@ -118,24 +252,34 @@ function preencherContextoHorario() {
         label: "label",
     });
 
+    if (permiteEdicaoHorario()) {
+        preencherSelectAnos("horarioAnoLetivo", contextoHorario.anos_letivos);
+        preencherSelect("horarioTurmaId", contextoHorario.turmas, {
+            placeholder: "Selecione a turma",
+        });
+        preencherSelect("filtroHorarioProfessorId", contextoHorario.professores, {
+            incluirTodos: true,
+            label: "label",
+        });
+    }
+
     const anoAtual = String(contextoHorario.ano_letivo_atual || "");
     if (anoAtual) {
-        el("horarioAnoLetivo").value = anoAtual;
-        el("filtroHorarioAnoLetivo").value = anoAtual;
+        if (el("filtroHorarioAnoLetivo")) {
+            el("filtroHorarioAnoLetivo").value = anoAtual;
+        }
+        if (el("horarioAnoLetivo")) {
+            el("horarioAnoLetivo").value = anoAtual;
+        }
     }
 }
 
 function atualizarResumoHorario() {
-    const gruposTurma = Array.isArray(ultimoResultadoHorario.grupos_turma)
-        ? ultimoResultadoHorario.grupos_turma
-        : [];
-    const gruposProfessor = Array.isArray(ultimoResultadoHorario.grupos_professor)
-        ? ultimoResultadoHorario.grupos_professor
-        : [];
+    const resultadoFiltrado = obterResultadoHorarioFiltrado();
+    const gruposTurma = resultadoFiltrado.grupos_turma;
+    const gruposProfessor = resultadoFiltrado.grupos_professor;
 
-    el("horarioResumoRegistros").innerText = String(
-        ultimoResultadoHorario.total_registros || 0
-    );
+    el("horarioResumoRegistros").innerText = String(resultadoFiltrado.itens.length);
     el("horarioResumoTurmas").innerText = String(gruposTurma.length);
     el("horarioResumoProfessores").innerText = String(gruposProfessor.length);
 
@@ -150,7 +294,7 @@ function atualizarResumoHorario() {
         const turma = obterTurmaPorId(turmaId);
         if (turma?.nome) partes.push(`Turma ${turma.nome}`);
     }
-    if (professorId) {
+    if (professorId && !interfaceProfessorAtiva()) {
         const professor = (contextoHorario.professores || []).find(
             (item) => String(item.id) === professorId
         );
@@ -159,6 +303,14 @@ function atualizarResumoHorario() {
     if (dia) {
         const diaInfo = obterDiaInfo(dia);
         if (diaInfo?.label) partes.push(diaInfo.label);
+    }
+    if (interfaceProfessorAtiva()) {
+        const legendaEscopo = {
+            geral: "Horario geral",
+            colegas: "Somente colegas",
+            minhas: "Somente minhas aulas",
+        };
+        partes.push(legendaEscopo[escopoProfessorHorario] || "Horario geral");
     }
 
     el("horarioResumoPeriodo").innerText =
@@ -187,7 +339,7 @@ function lerDragPayload(event) {
 }
 
 function registrarDragCard(elemento, payload) {
-    if (!elemento) return;
+    if (!elemento || !permiteEdicaoHorario()) return;
     elemento.draggable = true;
     elemento.addEventListener("dragstart", (event) => {
         event.dataTransfer.effectAllowed = "move";
@@ -206,7 +358,7 @@ function registrarDragCard(elemento, payload) {
 }
 
 function configurarDropTarget(elemento, onDrop) {
-    if (!elemento) return;
+    if (!elemento || !permiteEdicaoHorario()) return;
     elemento.addEventListener("dragover", (event) => {
         const payload = lerDragPayload(event);
         if (!payload) return;
@@ -240,35 +392,50 @@ function atualizarCabecalhoBuilder() {
     const meta = el("horarioBuilderMeta");
     const tituloMatriz = el("horarioMatrizTitulo");
 
+    if (!titulo || !meta || !tituloMatriz) return;
+
     if (!turma || ano <= 0) {
         titulo.innerText = "Selecione uma turma para abrir a matriz.";
         meta.innerText =
-            "Os cards ao lado serão gerados a partir das atribuições e da carga horária vinculada à turma.";
+            "Os cards ao lado serao gerados a partir das atribuicoes e da carga horaria vinculada a turma.";
         tituloMatriz.innerText = "Matriz semanal";
         return;
     }
 
     titulo.innerText = `${turma.nome} - ${ano}`;
-    meta.innerText = `${turma.turno || "Turno não informado"} com montagem visual por arraste.`;
+    meta.innerText = `${turma.turno || "Turno nao informado"} com montagem visual por arraste.`;
     tituloMatriz.innerText = `Matriz semanal da turma ${turma.nome}`;
 }
 
 function limparMatrizHorario() {
     estadoMatrizHorario = null;
-    el("horarioMatrizWrap").innerHTML =
-        '<div class="horario-empty-state">Selecione uma turma para visualizar a matriz do horário.</div>';
-    el("horarioCardsDisponiveis").innerHTML = "";
-    el("horarioPoolMeta").innerHTML = "";
-    el("horarioAlertas").hidden = true;
-    el("horarioAlertas").innerHTML = "";
+    if (el("horarioMatrizWrap")) {
+        el("horarioMatrizWrap").innerHTML =
+            '<div class="horario-empty-state">Selecione uma turma para visualizar a matriz do horario.</div>';
+    }
+    if (el("horarioCardsDisponiveis")) {
+        el("horarioCardsDisponiveis").innerHTML = "";
+    }
+    if (el("horarioPoolMeta")) {
+        el("horarioPoolMeta").innerHTML = "";
+    }
+    if (el("horarioAlertas")) {
+        el("horarioAlertas").hidden = true;
+        el("horarioAlertas").innerHTML = "";
+    }
     atualizarCabecalhoBuilder();
 }
 
 async function recarregarDadosHorarioCompleto() {
-    await Promise.all([carregarMatrizHorario(), carregarRegistrosHorario()]);
+    if (permiteEdicaoHorario()) {
+        await Promise.all([carregarMatrizHorario(), carregarRegistrosHorario()]);
+        return;
+    }
+    await carregarRegistrosHorario();
 }
 
 async function excluirRegistroHorario(id, mensagem = "Registro removido com sucesso.") {
+    if (!permiteEdicaoHorario()) return;
     try {
         const resposta = await fetchJson(`/horario-escolar/registros/${id}`, {
             method: "DELETE",
@@ -282,6 +449,7 @@ async function excluirRegistroHorario(id, mensagem = "Registro removido com suce
 }
 
 async function abrirTurmaNaMatriz(item) {
+    if (!permiteEdicaoHorario()) return;
     if (item?.ano_letivo) {
         el("horarioAnoLetivo").value = String(item.ano_letivo);
     }
@@ -306,14 +474,14 @@ function renderizarGrupoHorario(grupo, modo = "turma") {
     const titulo = document.createElement("h3");
     titulo.innerText =
         modo === "turma"
-            ? `${grupo.turma_nome || "Turma não informada"}`
-            : `${grupo.professor_nome || "Professor não informado"}`;
+            ? `${grupo.turma_nome || "Turma nao informada"}`
+            : `${grupo.professor_nome || "Professor nao informado"}`;
     info.appendChild(titulo);
 
     const subtitulo = document.createElement("p");
     subtitulo.innerText =
         modo === "turma"
-            ? `${grupo.turno || "Turno não informado"} - Ano ${grupo.ano_letivo || "-"}`
+            ? `${grupo.turno || "Turno nao informado"} - Ano ${grupo.ano_letivo || "-"}`
             : `${grupo.professor_email || "Sem e-mail"} - Ano ${grupo.ano_letivo || "-"}`;
     info.appendChild(subtitulo);
     header.appendChild(info);
@@ -330,16 +498,22 @@ function renderizarGrupoHorario(grupo, modo = "turma") {
     const table = document.createElement("table");
     table.className = "horario-table";
 
-    const thead = document.createElement("thead");
-    thead.innerHTML =
-        modo === "turma"
-            ? "<tr><th>Dia</th><th>Aula</th><th>Disciplina</th><th>Professor</th><th>Ações</th></tr>"
-            : "<tr><th>Dia</th><th>Aula</th><th>Turma</th><th>Disciplina</th><th>Ações</th></tr>";
-    table.appendChild(thead);
+    if (modo === "turma") {
+        table.innerHTML = permiteEdicaoHorario()
+            ? "<thead><tr><th>Dia</th><th>Aula</th><th>Disciplina</th><th>Professor</th><th>Destaque</th><th>Acoes</th></tr></thead>"
+            : "<thead><tr><th>Dia</th><th>Aula</th><th>Disciplina</th><th>Professor</th><th>Destaque</th></tr></thead>";
+    } else {
+        table.innerHTML = permiteEdicaoHorario()
+            ? "<thead><tr><th>Dia</th><th>Aula</th><th>Turma</th><th>Disciplina</th><th>Acoes</th></tr></thead>"
+            : "<thead><tr><th>Dia</th><th>Aula</th><th>Turma</th><th>Disciplina</th></tr></thead>";
+    }
 
     const tbody = document.createElement("tbody");
     (grupo.itens || []).forEach((item) => {
         const tr = document.createElement("tr");
+        if (modo === "turma" && itemEhDoProfessorLogado(item)) {
+            tr.classList.add("horario-row-own");
+        }
 
         const celulas = modo === "turma"
             ? [
@@ -360,21 +534,37 @@ function renderizarGrupoHorario(grupo, modo = "turma") {
             tr.appendChild(td);
         });
 
-        const tdAcoes = document.createElement("td");
-        const acoes = document.createElement("div");
-        acoes.className = "horario-inline-actions";
-        acoes.appendChild(
-            criarBotaoAcao("Abrir matriz", () => abrirTurmaNaMatriz(item))
-        );
-        acoes.appendChild(
-            criarBotaoAcao(
-                "Remover",
-                () => excluirRegistroHorario(item.id),
-                true
-            )
-        );
-        tdAcoes.appendChild(acoes);
-        tr.appendChild(tdAcoes);
+        if (modo === "turma") {
+            const tdDestaque = document.createElement("td");
+            if (itemEhDoProfessorLogado(item)) {
+                const badge = document.createElement("span");
+                badge.className = "horario-own-badge";
+                badge.innerText = "Minhas aulas";
+                tdDestaque.appendChild(badge);
+            } else {
+                tdDestaque.innerText = interfaceProfessorAtiva() ? "Colega" : "";
+            }
+            tr.appendChild(tdDestaque);
+        }
+
+        if (permiteEdicaoHorario()) {
+            const tdAcoes = document.createElement("td");
+            const acoes = document.createElement("div");
+            acoes.className = "horario-inline-actions";
+            acoes.appendChild(
+                criarBotaoAcao("Abrir matriz", () => abrirTurmaNaMatriz(item))
+            );
+            acoes.appendChild(
+                criarBotaoAcao(
+                    "Remover",
+                    () => excluirRegistroHorario(item.id),
+                    true
+                )
+            );
+            tdAcoes.appendChild(acoes);
+            tr.appendChild(tdAcoes);
+        }
+
         tbody.appendChild(tr);
     });
 
@@ -387,36 +577,34 @@ function renderizarGrupoHorario(grupo, modo = "turma") {
 function renderizarAgrupamentosHorario() {
     const listaTurmas = el("horarioListaTurmas");
     const listaProfessores = el("horarioListaProfessores");
+    const resultadoFiltrado = obterResultadoHorarioFiltrado();
     listaTurmas.innerHTML = "";
-    listaProfessores.innerHTML = "";
+    if (listaProfessores) {
+        listaProfessores.innerHTML = "";
+    }
 
-    const gruposTurma = Array.isArray(ultimoResultadoHorario.grupos_turma)
-        ? ultimoResultadoHorario.grupos_turma
-        : [];
-    const gruposProfessor = Array.isArray(ultimoResultadoHorario.grupos_professor)
-        ? ultimoResultadoHorario.grupos_professor
-        : [];
-
-    if (gruposTurma.length === 0) {
+    if (resultadoFiltrado.grupos_turma.length === 0) {
         const vazio = document.createElement("p");
         vazio.className = "horario-empty-state";
-        vazio.innerText = "Nenhum horário encontrado para os filtros selecionados.";
+        vazio.innerText = "Nenhum horario encontrado para os filtros selecionados.";
         listaTurmas.appendChild(vazio);
     } else {
-        gruposTurma.forEach((grupo) => {
+        resultadoFiltrado.grupos_turma.forEach((grupo) => {
             listaTurmas.appendChild(renderizarGrupoHorario(grupo, "turma"));
         });
     }
 
-    if (gruposProfessor.length === 0) {
-        const vazio = document.createElement("p");
-        vazio.className = "horario-empty-state";
-        vazio.innerText = "Nenhum professor com horário no recorte atual.";
-        listaProfessores.appendChild(vazio);
-    } else {
-        gruposProfessor.forEach((grupo) => {
-            listaProfessores.appendChild(renderizarGrupoHorario(grupo, "professor"));
-        });
+    if (!interfaceProfessorAtiva() && listaProfessores) {
+        if (resultadoFiltrado.grupos_professor.length === 0) {
+            const vazio = document.createElement("p");
+            vazio.className = "horario-empty-state";
+            vazio.innerText = "Nenhum professor com horario no recorte atual.";
+            listaProfessores.appendChild(vazio);
+        } else {
+            resultadoFiltrado.grupos_professor.forEach((grupo) => {
+                listaProfessores.appendChild(renderizarGrupoHorario(grupo, "professor"));
+            });
+        }
     }
 }
 
@@ -429,7 +617,7 @@ async function carregarRegistrosHorario() {
 
     if (ano) params.set("ano_letivo", ano);
     if (turmaId) params.set("turma_id", turmaId);
-    if (professorId) params.set("professor_id", professorId);
+    if (professorId && !interfaceProfessorAtiva()) params.set("professor_id", professorId);
     if (dia) params.set("dia_semana", dia);
 
     const sufixo = params.toString() ? `?${params.toString()}` : "";
@@ -442,6 +630,7 @@ async function carregarRegistrosHorario() {
 
 function renderizarAlertasHorario(alertas) {
     const container = el("horarioAlertas");
+    if (!container) return;
     container.innerHTML = "";
     if (!Array.isArray(alertas) || alertas.length === 0) {
         container.hidden = true;
@@ -459,6 +648,7 @@ function renderizarAlertasHorario(alertas) {
 
 function renderizarMetaPool(cardsResumo, cardsDisponiveis) {
     const alvo = el("horarioPoolMeta");
+    if (!alvo) return;
     alvo.innerHTML = "";
 
     const totalDisponiveis = Array.isArray(cardsDisponiveis) ? cardsDisponiveis.length : 0;
@@ -469,7 +659,7 @@ function renderizarMetaPool(cardsResumo, cardsDisponiveis) {
 
     const resumo = document.createElement("p");
     resumo.className = "horario-pool-summary";
-    resumo.innerText = `${totalDisponiveis} card(s) disponível(is) de ${totalPlanejado} aula(s) planejada(s).`;
+    resumo.innerText = `${totalDisponiveis} card(s) disponivel(is) de ${totalPlanejado} aula(s) planejada(s).`;
     alvo.appendChild(resumo);
 
     if (!Array.isArray(cardsResumo) || cardsResumo.length === 0) {
@@ -488,7 +678,7 @@ function renderizarMetaPool(cardsResumo, cardsDisponiveis) {
 }
 
 async function processarDropNaCelula(payload, diaSemana, aulaNumero, celulaOcupada) {
-    if (!payload || !diaSemana || !aulaNumero) return;
+    if (!payload || !diaSemana || !aulaNumero || !permiteEdicaoHorario()) return;
 
     if (payload.source === "scheduled") {
         if (
@@ -498,7 +688,7 @@ async function processarDropNaCelula(payload, diaSemana, aulaNumero, celulaOcupa
             return;
         }
         if (celulaOcupada) {
-            setMensagemHorario("Esse campo já possui uma aula. Remova ou reposicione a atual antes de continuar.", true);
+            setMensagemHorario("Esse campo ja possui uma aula. Remova ou reposicione a atual antes de continuar.", true);
             return;
         }
         try {
@@ -519,14 +709,14 @@ async function processarDropNaCelula(payload, diaSemana, aulaNumero, celulaOcupa
             setMensagemHorario("Aula reposicionada com sucesso.");
             await recarregarDadosHorarioCompleto();
         } catch (err) {
-            setMensagemHorario(err.message || "Não foi possível reposicionar a aula.", true);
+            setMensagemHorario(err.message || "Nao foi possivel reposicionar a aula.", true);
         }
         return;
     }
 
     if (payload.source === "available") {
         if (celulaOcupada) {
-            setMensagemHorario("Esse campo já possui uma aula. Escolha outro horário vazio.", true);
+            setMensagemHorario("Esse campo ja possui uma aula. Escolha outro horario vazio.", true);
             return;
         }
         try {
@@ -547,7 +737,7 @@ async function processarDropNaCelula(payload, diaSemana, aulaNumero, celulaOcupa
             setMensagemHorario("Aula criada com sucesso.");
             await recarregarDadosHorarioCompleto();
         } catch (err) {
-            setMensagemHorario(err.message || "Não foi possível criar a aula.", true);
+            setMensagemHorario(err.message || "Nao foi possivel criar a aula.", true);
         }
     }
 }
@@ -555,6 +745,9 @@ async function processarDropNaCelula(payload, diaSemana, aulaNumero, celulaOcupa
 function criarCardVisualHorario(payload, { agendado = false } = {}) {
     const card = document.createElement("article");
     card.className = `horario-card-item${agendado ? " is-scheduled" : ""}`;
+    if (itemEhDoProfessorLogado(payload)) {
+        card.classList.add("is-own");
+    }
 
     const topo = document.createElement("div");
     topo.className = "horario-card-top";
@@ -565,28 +758,30 @@ function criarCardVisualHorario(payload, { agendado = false } = {}) {
 
     const badge = document.createElement("span");
     badge.className = "horario-card-badge";
-    badge.innerText = agendado ? "Alocada" : "Disponível";
+    badge.innerText = agendado ? "Alocada" : "Disponivel";
     topo.appendChild(badge);
     card.appendChild(topo);
 
     const professor = document.createElement("p");
     professor.className = "horario-card-professor";
-    professor.innerText = payload.professor_nome || "Professor não informado";
+    professor.innerText = payload.professor_nome || "Professor nao informado";
     card.appendChild(professor);
 
-    if (!agendado) {
-        const meta = document.createElement("small");
-        meta.className = "horario-card-meta";
-        meta.innerText = `Card ${payload.indice_disponivel || 1} de ${payload.quantidade_total || 1}`;
-        card.appendChild(meta);
-    } else {
-        const meta = document.createElement("small");
-        meta.className = "horario-card-meta";
-        meta.innerText = `${payload.dia_semana_nome || payload.dia_semana || ""} - ${labelAulaHorario(payload)}`;
-        card.appendChild(meta);
+    const meta = document.createElement("small");
+    meta.className = "horario-card-meta";
+    meta.innerText = agendado
+        ? `${payload.dia_semana_nome || payload.dia_semana || ""} - ${labelAulaHorario(payload)}`
+        : `Card ${payload.indice_disponivel || 1} de ${payload.quantidade_total || 1}`;
+    card.appendChild(meta);
+
+    if (itemEhDoProfessorLogado(payload)) {
+        const destaque = document.createElement("span");
+        destaque.className = "horario-own-badge";
+        destaque.innerText = "Minhas aulas";
+        card.appendChild(destaque);
     }
 
-    if (agendado) {
+    if (agendado && permiteEdicaoHorario()) {
         const remover = criarBotaoAcao(
             "Remover",
             () => excluirRegistroHorario(payload.registro_id, "Aula removida da matriz."),
@@ -602,12 +797,13 @@ function criarCardVisualHorario(payload, { agendado = false } = {}) {
 
 function renderizarPoolCards(cardsDisponiveis) {
     const container = el("horarioCardsDisponiveis");
+    if (!container) return;
     container.innerHTML = "";
 
     if (!Array.isArray(cardsDisponiveis) || cardsDisponiveis.length === 0) {
         const vazio = document.createElement("p");
         vazio.className = "horario-empty-state";
-        vazio.innerText = "Nenhum card disponível para esta turma. Verifique a carga horária ou as aulas já alocadas.";
+        vazio.innerText = "Nenhum card disponivel para esta turma. Verifique a carga horaria ou as aulas ja alocadas.";
         container.appendChild(vazio);
         return;
     }
@@ -626,11 +822,12 @@ function renderizarPoolCards(cardsDisponiveis) {
 
 function renderizarMatrizHorario() {
     const wrap = el("horarioMatrizWrap");
+    if (!wrap) return;
     wrap.innerHTML = "";
 
     if (!estadoMatrizHorario || !estadoMatrizHorario.turma) {
         wrap.innerHTML =
-            '<div class="horario-empty-state">Selecione uma turma para visualizar a matriz do horário.</div>';
+            '<div class="horario-empty-state">Selecione uma turma para visualizar a matriz do horario.</div>';
         return;
     }
 
@@ -715,6 +912,8 @@ function renderizarMatrizHorario() {
 }
 
 async function carregarMatrizHorario() {
+    if (!permiteEdicaoHorario()) return;
+
     atualizarCabecalhoBuilder();
 
     const turmaId = obterTurmaBuilderId();
@@ -739,12 +938,13 @@ async function carregarMatrizHorario() {
         renderizarMatrizHorario();
     } catch (err) {
         limparMatrizHorario();
-        setMensagemHorario(err.message || "Não foi possível carregar a matriz da turma.", true);
+        setMensagemHorario(err.message || "Nao foi possivel carregar a matriz da turma.", true);
     }
 }
 
 function configurarDropPool() {
     const pool = el("horarioDropPool");
+    if (!pool) return;
     configurarDropTarget(pool, async (payload) => {
         if (!payload || payload.source !== "scheduled" || !payload.registro_id) {
             return;
@@ -760,10 +960,19 @@ function registrarEventosHorario() {
     });
     el("btnLimparFiltrosHorario")?.addEventListener("click", async () => {
         el("formFiltrosHorarioEscolar").reset();
+        document.querySelector('input[name="horarioEscopoProfessor"][value="geral"]')?.click();
         if (contextoHorario.ano_letivo_atual) {
             el("filtroHorarioAnoLetivo").value = String(contextoHorario.ano_letivo_atual);
         }
         await carregarRegistrosHorario();
+    });
+
+    document.querySelectorAll('input[name="horarioEscopoProfessor"]').forEach((input) => {
+        input.addEventListener("change", async (event) => {
+            escopoProfessorHorario = String(event.target?.value || "geral");
+            atualizarResumoHorario();
+            renderizarAgrupamentosHorario();
+        });
     });
 
     el("horarioAnoLetivo")?.addEventListener("change", async () => {
@@ -790,6 +999,7 @@ async function carregarContextoHorario() {
     contextoHorario = await fetchJson("/horario-escolar/contexto", {
         headers: headersHorario,
     });
+    aplicarModoPaginaHorario();
     preencherContextoHorario();
 }
 
@@ -814,7 +1024,11 @@ async function initHorarioEscolar() {
         const acessoValido = await validarAcessoHorario();
         if (!acessoValido) return;
         await carregarContextoHorario();
-        await Promise.all([carregarMatrizHorario(), carregarRegistrosHorario()]);
+        if (permiteEdicaoHorario()) {
+            await Promise.all([carregarMatrizHorario(), carregarRegistrosHorario()]);
+            return;
+        }
+        await carregarRegistrosHorario();
     } catch (_err) {
         encerrarSessao();
     }
