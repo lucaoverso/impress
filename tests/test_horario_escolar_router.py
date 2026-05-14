@@ -283,6 +283,7 @@ class HorarioEscolarRouterTest(unittest.TestCase):
             turma_a_id = int(database.criar_turma("7A", "MATUTINO", 30))
             turma_b_id = int(database.criar_turma("8A", "VESPERTINO", 30))
             disciplina_id = int(database.criar_disciplina("Matematica", 5))
+            disciplina_colega_id = int(database.criar_disciplina("Historia", 2))
             professor_logado_id = int(
                 database.criar_professor(
                     nome="Professor Logado",
@@ -304,13 +305,31 @@ class HorarioEscolarRouterTest(unittest.TestCase):
                     aulas_semanais=20,
                     turmas_quantidade=1,
                     turmas=["7A"],
-                    disciplinas=["Matematica"],
+                    disciplinas=["Historia"],
                 )
             )
 
             database.criar_atribuicao_docente(professor_logado_id, turma_a_id, disciplina_id)
             database.criar_atribuicao_docente(professor_logado_id, turma_b_id, disciplina_id)
-            database.criar_atribuicao_docente(professor_colega_id, turma_a_id, disciplina_id)
+            database.criar_atribuicao_docente(professor_colega_id, turma_a_id, disciplina_colega_id)
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_a_id,
+                disciplina_id=disciplina_id,
+                carga_horaria=2,
+                professor_usuario_id=professor_logado_id,
+            )
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_b_id,
+                disciplina_id=disciplina_id,
+                carga_horaria=1,
+                professor_usuario_id=professor_logado_id,
+            )
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_a_id,
+                disciplina_id=disciplina_colega_id,
+                carga_horaria=1,
+                professor_usuario_id=professor_colega_id,
+            )
 
             horario_router.criar_horario_escolar_api(
                 payload=models.HorarioEscolarRegistroIn(
@@ -338,7 +357,7 @@ class HorarioEscolarRouterTest(unittest.TestCase):
                 payload=models.HorarioEscolarRegistroIn(
                     ano_letivo=2034,
                     turma_id=turma_a_id,
-                    disciplina_id=disciplina_id,
+                    disciplina_id=disciplina_colega_id,
                     professor_id=professor_colega_id,
                     dia_semana="quarta",
                     aula_numero=3,
