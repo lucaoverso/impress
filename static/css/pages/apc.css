@@ -155,7 +155,7 @@
 }
 
 .apc-page.is-professor .apc-content {
-    grid-template-columns: minmax(0, 1fr) minmax(290px, 320px);
+    grid-template-columns: minmax(0, 1.55fr) minmax(290px, 0.78fr);
 }
 
 .apc-page.is-professor .apc-calendar-card,
