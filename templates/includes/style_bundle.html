@@ -1,2 +1,11 @@
 {% set css_version = asset_version | default('1') %}
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/style.css') }}?v={{ css_version }}">
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/base.css') }}?v={{ css_version }}">
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/components.css') }}?v={{ css_version }}">
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/auth.css') }}?v={{ css_version }}">
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/professor.css') }}?v={{ css_version }}">
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/services-scheduler.css') }}?v={{ css_version }}">
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/pcpi-preconselho.css') }}?v={{ css_version }}">
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/admin.css') }}?v={{ css_version }}">
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/coordenacao.css') }}?v={{ css_version }}">
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/horario-escolar.css') }}?v={{ css_version }}">
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/apc.css') }}?v={{ css_version }}">

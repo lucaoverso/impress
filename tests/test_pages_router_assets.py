@@ -67,7 +67,8 @@ class PagesRouterAssetsTest(unittest.TestCase):
         html = resposta.body.decode("utf-8")
 
         self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
-        self.assertIn("css/style.css?v=build-login-123", html)
+        self.assertIn("css/base.css?v=build-login-123", html)
+        self.assertIn("css/pages/auth.css?v=build-login-123", html)
         self.assertIn("js/app.js?v=build-login-123", html)
 
     def test_cadastro_professor_injeta_asset_version_e_no_store(self):
@@ -79,7 +80,8 @@ class PagesRouterAssetsTest(unittest.TestCase):
         html = resposta.body.decode("utf-8")
 
         self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
-        self.assertIn("css/style.css?v=build-cadastro-456", html)
+        self.assertIn("css/base.css?v=build-cadastro-456", html)
+        self.assertIn("css/pages/professor.css?v=build-cadastro-456", html)
         self.assertIn("js/cadastro-professor.js?v=build-cadastro-456", html)
 
     def test_horario_escolar_injeta_asset_version_e_no_store(self):
@@ -92,7 +94,8 @@ class PagesRouterAssetsTest(unittest.TestCase):
 
         self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
         self.assertIn("charset=utf-8", resposta.headers.get("content-type", "").lower())
-        self.assertIn("css/style.css?v=build-horario-789", html)
+        self.assertIn("css/base.css?v=build-horario-789", html)
+        self.assertIn("css/pages/horario-escolar.css?v=build-horario-789", html)
         self.assertIn("js/horario_escolar.js?v=build-horario-789", html)
         self.assertIn("Horário escolar", html)
 
@@ -106,7 +109,8 @@ class PagesRouterAssetsTest(unittest.TestCase):
 
         self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
         self.assertIn("charset=utf-8", resposta.headers.get("content-type", "").lower())
-        self.assertIn("css/style.css?v=build-apc-321", html)
+        self.assertIn("css/base.css?v=build-apc-321", html)
+        self.assertIn("css/pages/apc.css?v=build-apc-321", html)
         self.assertIn("js/apc.js?v=build-apc-321", html)
         self.assertIn("Voltar aos serviços", html)
         self.assertIn('id="apcUsuario"', html)
