@@ -605,7 +605,7 @@ function renderizarGrupoHorario(grupo, modo = "turma") {
     return card;
 }
 
-function renderizarGradeProfessorTurma(grupo) {
+function renderizarGradeTurmaSemanal(grupo) {
     const card = document.createElement("article");
     card.className = "horario-group-card horario-professor-grid-card";
 
@@ -627,6 +627,15 @@ function renderizarGradeProfessorTurma(grupo) {
     count.innerText = `${(grupo.itens || []).length} aula(s)`;
     header.appendChild(count);
     card.appendChild(header);
+
+    if (permiteEdicaoHorario()) {
+        const acoes = document.createElement("div");
+        acoes.className = "horario-inline-actions";
+        acoes.appendChild(
+            criarBotaoAcao("Abrir matriz", () => abrirTurmaNaMatriz(grupo))
+        );
+        card.appendChild(acoes);
+    }
 
     const wrap = document.createElement("div");
     wrap.className = "horario-professor-grid-wrap";
@@ -707,9 +716,7 @@ function renderizarAgrupamentosHorario() {
     } else {
         resultadoFiltrado.grupos_turma.forEach((grupo) => {
             listaTurmas.appendChild(
-                interfaceProfessorAtiva()
-                    ? renderizarGradeProfessorTurma(grupo)
-                    : renderizarGrupoHorario(grupo, "turma")
+                renderizarGradeTurmaSemanal(grupo)
             );
         });
     }
