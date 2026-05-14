@@ -404,6 +404,63 @@
     font-weight: 700;
 }
 
+.horario-professor-grid-wrap {
+    overflow-x: auto;
+}
+
+.horario-professor-grid {
+    width: 100%;
+    min-width: 760px;
+    border-collapse: collapse;
+    table-layout: fixed;
+    background: #ffffff;
+    border: 1px solid rgba(28, 54, 88, 0.18);
+}
+
+.horario-professor-grid th,
+.horario-professor-grid td {
+    border: 1px solid rgba(28, 54, 88, 0.18);
+    padding: 0.7rem 0.8rem;
+    text-align: left;
+    vertical-align: top;
+    font-size: 0.93rem;
+    line-height: 1.35;
+}
+
+.horario-professor-grid thead th {
+    background: linear-gradient(180deg, #e9f0f8 0%, #dce8f4 100%);
+    color: #17324d;
+    font-weight: 700;
+}
+
+.horario-professor-grid tbody th {
+    width: 92px;
+    background: #f6f9fc;
+    color: #35597f;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.horario-professor-grid td {
+    color: #1f2937;
+    background: #ffffff;
+    word-break: break-word;
+}
+
+.horario-professor-grid td.is-empty {
+    background: #f9fbfd;
+}
+
+.horario-professor-grid td.is-own {
+    background: linear-gradient(180deg, rgba(38, 77, 115, 0.12) 0%, rgba(38, 77, 115, 0.05) 100%);
+    box-shadow: inset 3px 0 0 #264d73;
+    font-weight: 600;
+}
+
+.horario-professor-grid td.is-colleague {
+    background: linear-gradient(180deg, rgba(245, 248, 252, 0.96) 0%, rgba(237, 244, 251, 0.92) 100%);
+}
+
 .horario-inline-actions {
     display: inline-flex;
     gap: 0.5rem;
@@ -495,6 +552,10 @@
 
     .horario-matrix-table {
         min-width: 560px;
+    }
+
+    .horario-professor-grid {
+        min-width: 620px;
     }
 
     .horario-group-header {
