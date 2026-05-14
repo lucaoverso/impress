@@ -604,6 +604,7 @@ class ApcEnvioOut(BaseModel):
     disciplina_nome: str = ""
     professor_nome: str = ""
     professor_email: str = ""
+    arquivo_nome_cliente: str = ""
     arquivo_nome_original: str
     arquivo_tipo: str = ""
     arquivo_tamanho: int = 0

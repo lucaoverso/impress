@@ -171,6 +171,7 @@ class ApcRouterTest(unittest.TestCase):
             )
             self.assertEqual(int(envio["periodo_id"]), int(quinta["id"]))
             self.assertEqual(int(envio["professor_id"]), professor_id)
+            self.assertEqual(envio["arquivo_nome_cliente"], "atividade.pdf")
             self.assertEqual(
                 envio["arquivo_nome_original"],
                 "Atividade pedagogica semanal - Professor APC - 2031-05-08.pdf",
@@ -182,6 +183,7 @@ class ApcRouterTest(unittest.TestCase):
                 usuario=self._usuario_professor(professor_id),
             )
             self.assertIsNotNone(detalhe_professor["envio"])
+            self.assertEqual(detalhe_professor["envio"]["arquivo_nome_cliente"], "atividade.pdf")
             self.assertEqual(int(detalhe_professor["total_aulas"]), 1)
 
             detalhe_gestao_atualizado = apc_router.obter_periodo_apc_api(
@@ -640,6 +642,7 @@ class ApcRouterTest(unittest.TestCase):
                 usuario=self._usuario_professor(professor_id),
             )
             self.assertTrue(Path(str(novo_envio["arquivo_path"])).exists())
+            self.assertEqual(novo_envio["arquivo_nome_cliente"], "atividade-corrigida.pdf")
             self.assertEqual(
                 novo_envio["arquivo_nome_original"],
                 "Atividade complementar - Professor Reenvio - 2035-11-14.pdf",

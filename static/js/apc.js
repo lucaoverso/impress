@@ -284,6 +284,24 @@ function criarMetaApc(texto) {
     return meta;
 }
 
+function nomeArquivoClienteApc(envio) {
+    return String(envio?.arquivo_nome_cliente || envio?.arquivo_nome_original || "").trim();
+}
+
+function nomeArquivoSistemaApc(envio) {
+    return String(envio?.arquivo_nome_original || "").trim();
+}
+
+function nomeArquivoPrincipalApc(envio) {
+    return nomeArquivoClienteApc(envio) || "Arquivo enviado";
+}
+
+function nomeArquivoPadronizadoDivergeApc(envio) {
+    const nomeCliente = nomeArquivoClienteApc(envio);
+    const nomeSistema = nomeArquivoSistemaApc(envio);
+    return Boolean(nomeCliente && nomeSistema && nomeCliente !== nomeSistema);
+}
+
 function ativarAbaGestaoApc(aba) {
     abaGestaoApc = aba || "professores";
     document.querySelectorAll("[data-apc-gestao-tab-trigger]").forEach((botao) => {
@@ -459,8 +477,15 @@ function criarCardEnvioExistenteApc(periodo, item) {
 
     const nome = document.createElement("strong");
     nome.className = "apc-envio-nome";
-    nome.innerText = envio.arquivo_nome_original || "Arquivo enviado";
+    nome.innerText = nomeArquivoPrincipalApc(envio);
     envioCard.appendChild(nome);
+
+    if (nomeArquivoPadronizadoDivergeApc(envio)) {
+        const nomeSistema = document.createElement("p");
+        nomeSistema.className = "apc-inline-hint";
+        nomeSistema.innerText = `Salvo no sistema como: ${nomeArquivoSistemaApc(envio)}`;
+        envioCard.appendChild(nomeSistema);
+    }
 
     const acoes = document.createElement("div");
     acoes.className = "apc-inline-actions apc-envio-actions";
@@ -827,6 +852,20 @@ function preencherMetaPreviewArquivoApc(envio) {
     `;
 }
 
+function preencherMetaPreviewArquivoApcClaro(envio) {
+    const nomeSistema = nomeArquivoPadronizadoDivergeApc(envio)
+        ? `<p>Salvo no sistema como: ${nomeArquivoSistemaApc(envio)}</p>`
+        : "";
+    const meta = el("apcArquivoPreviewMeta");
+    meta.innerHTML = `
+        <h4>${nomeArquivoPrincipalApc(envio)}</h4>
+        ${nomeSistema}
+        <p>${envio.professor_nome || "Professor"}${envio.professor_email ? ` • ${envio.professor_email}` : ""}</p>
+        <p>${envio.disciplina_nome || "Entrega geral"}${envio.turma_nome ? ` • ${envio.turma_nome}` : ""}</p>
+        <p>Enviado em ${formatarDataHoraApc(envio.enviado_em)}</p>
+    `;
+}
+
 async function carregarPreviewArquivoApc(envio) {
     if (!envio?.id) {
         limparPreviewArquivoApc();
@@ -835,8 +874,10 @@ async function carregarPreviewArquivoApc(envio) {
 
     revogarPreviewArquivoApc();
     envioPreviewApcId = Number(envio.id);
-    arquivoPreviewNomeApc = String(envio.arquivo_nome_original || "arquivo");
-    preencherMetaPreviewArquivoApc(envio);
+    arquivoPreviewNomeApc = String(
+        nomeArquivoSistemaApc(envio) || nomeArquivoPrincipalApc(envio) || "arquivo"
+    );
+    preencherMetaPreviewArquivoApcClaro(envio);
     el("apcArquivoPreviewState").hidden = false;
     el("apcArquivoPreviewState").innerHTML = '<div class="booking-empty">Carregando arquivo...</div>';
     el("apcArquivoPreviewFrame").hidden = true;
@@ -911,9 +952,13 @@ function renderArquivosGestaoApc(detalhe) {
             const envio = item.envio;
             const card = document.createElement("article");
             card.className = "apc-arquivo-item-card";
+            const nomeSistema = nomeArquivoPadronizadoDivergeApc(envio)
+                ? `<small>Salvo no sistema como: ${nomeArquivoSistemaApc(envio)}</small>`
+                : "";
             card.innerHTML = `
                 <strong>${envio.disciplina_nome || item.disciplina_nome || "Entrega geral"}${envio.turma_nome ? ` - ${envio.turma_nome}` : ""}</strong>
-                <span>${envio.arquivo_nome_original}</span>
+                <span>${nomeArquivoPrincipalApc(envio)}</span>
+                ${nomeSistema}
                 <small>Enviado em ${formatarDataHoraApc(envio.enviado_em)}</small>
             `;
             const acoes = document.createElement("div");

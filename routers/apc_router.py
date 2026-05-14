@@ -465,11 +465,12 @@ def enviar_arquivo_apc_api(
 
     envio_existente = item_envio.get("envio")
     diretorio = _garantir_diretorio_apc()
+    nome_cliente = str(arquivo.filename or "").strip()
     nome_publico = nome_publico_arquivo_apc(
         periodo_norm.get("titulo"),
         str(item_envio.get("professor_nome") or usuario.get("nome") or "").strip(),
         periodo_norm.get("data_referencia"),
-        arquivo.filename,
+        nome_cliente,
     )
     nome_destino = nome_arquivo_armazenado(
         periodo_id,
@@ -490,6 +491,7 @@ def enviar_arquivo_apc_api(
         if envio_existente:
             envio = atualizar_apc_envio(
                 envio_id=int(envio_existente["id"]),
+                arquivo_nome_cliente=nome_cliente,
                 arquivo_nome_original=nome_publico,
                 arquivo_path=str(caminho_destino),
                 arquivo_tamanho=len(conteudo),
@@ -504,6 +506,7 @@ def enviar_arquivo_apc_api(
                 professor_usuario_id=int(usuario["id"]),
                 turma_id=int(item_envio.get("turma_id") or 0),
                 disciplina_id=int(item_envio.get("disciplina_id") or 0),
+                arquivo_nome_cliente=nome_cliente,
                 arquivo_nome_original=nome_publico,
                 arquivo_path=str(caminho_destino),
                 arquivo_tamanho=len(conteudo),

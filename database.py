@@ -5363,6 +5363,8 @@ def excluir_apc_periodo(periodo_id: int):
 
 
 def _mapear_apc_envio(row) -> dict:
+    arquivo_nome_original = str(row["arquivo_nome_original"] or "").strip()
+    arquivo_nome_cliente = str(row["arquivo_nome_cliente"] or "").strip()
     return {
         "id": int(row["id"]),
         "periodo_id": int(row["periodo_id"] or 0),
@@ -5371,7 +5373,8 @@ def _mapear_apc_envio(row) -> dict:
         "turma_nome": str(row["turma_nome"] or "").strip(),
         "disciplina_id": int(row["disciplina_id"] or 0),
         "disciplina_nome": str(row["disciplina_nome"] or "").strip(),
-        "arquivo_nome_original": str(row["arquivo_nome_original"] or "").strip(),
+        "arquivo_nome_cliente": arquivo_nome_cliente or arquivo_nome_original,
+        "arquivo_nome_original": arquivo_nome_original,
         "arquivo_path": str(row["arquivo_path"] or "").strip(),
         "arquivo_tamanho": int(row["arquivo_tamanho"] or 0),
         "arquivo_tipo": str(row["arquivo_tipo"] or "").strip(),
@@ -5395,6 +5398,7 @@ def _consultar_apc_envios(cursor, *, filtros_sql=None, params=None):
             ae.professor_usuario_id,
             ae.turma_id,
             ae.disciplina_id,
+            ae.arquivo_nome_cliente,
             ae.arquivo_nome_original,
             ae.arquivo_path,
             ae.arquivo_tamanho,
@@ -5496,6 +5500,7 @@ def criar_apc_envio(
     professor_usuario_id: int,
     turma_id: int = 0,
     disciplina_id: int = 0,
+    arquivo_nome_cliente: str,
     arquivo_nome_original: str,
     arquivo_path: str,
     arquivo_tamanho: int,
@@ -5510,6 +5515,7 @@ def criar_apc_envio(
             professor_usuario_id,
             turma_id,
             disciplina_id,
+            arquivo_nome_cliente,
             arquivo_nome_original,
             arquivo_path,
             arquivo_tamanho,
@@ -5517,13 +5523,14 @@ def criar_apc_envio(
             enviado_em,
             atualizado_em
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
         """,
         (
             int(periodo_id),
             int(professor_usuario_id),
             int(turma_id or 0),
             int(disciplina_id or 0),
+            str(arquivo_nome_cliente or "").strip(),
             str(arquivo_nome_original or "").strip(),
             str(arquivo_path or "").strip(),
             int(arquivo_tamanho or 0),
@@ -5539,6 +5546,7 @@ def criar_apc_envio(
 def atualizar_apc_envio(
     *,
     envio_id: int,
+    arquivo_nome_cliente: str,
     arquivo_nome_original: str,
     arquivo_path: str,
     arquivo_tamanho: int,
@@ -5549,7 +5557,8 @@ def atualizar_apc_envio(
     cursor.execute(
         """
         UPDATE apc_envios
-        SET arquivo_nome_original = ?,
+        SET arquivo_nome_cliente = ?,
+            arquivo_nome_original = ?,
             arquivo_path = ?,
             arquivo_tamanho = ?,
             arquivo_tipo = ?,
@@ -5558,6 +5567,7 @@ def atualizar_apc_envio(
         WHERE id = ?
         """,
         (
+            str(arquivo_nome_cliente or "").strip(),
             str(arquivo_nome_original or "").strip(),
             str(arquivo_path or "").strip(),
             int(arquivo_tamanho or 0),
