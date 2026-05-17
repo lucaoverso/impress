@@ -20,6 +20,19 @@ APC_PUBLICO_ALVO_LABELS = {
     APC_PUBLICO_ALVO_TODOS_PROFESSORES: "Todos os professores",
     APC_PUBLICO_ALVO_HORARIO_DIA: "Professores com aula na data",
 }
+APC_TIPO_ENTREGA_GERAL = "GERAL"
+APC_TIPO_ENTREGA_APC = "APC"
+APC_TIPO_ENTREGA_PROVA_BIMESTRAL = "PROVA_BIMESTRAL"
+APC_TIPOS_ENTREGA_VALIDOS = (
+    APC_TIPO_ENTREGA_GERAL,
+    APC_TIPO_ENTREGA_APC,
+    APC_TIPO_ENTREGA_PROVA_BIMESTRAL,
+)
+APC_TIPO_ENTREGA_LABELS = {
+    APC_TIPO_ENTREGA_GERAL: "Solicitacao geral",
+    APC_TIPO_ENTREGA_APC: "APC",
+    APC_TIPO_ENTREGA_PROVA_BIMESTRAL: "Prova bimestral",
+}
 
 
 def validar_mes_referencia(valor: str) -> str:
@@ -89,6 +102,40 @@ def nome_publico_alvo(publico_alvo: str) -> str:
     return APC_PUBLICO_ALVO_LABELS.get(publico, publico)
 
 
+def normalizar_tipo_entrega(valor: str) -> str:
+    tipo = str(valor or "").strip().upper()
+    if not tipo:
+        return APC_TIPO_ENTREGA_GERAL
+    if tipo not in APC_TIPOS_ENTREGA_VALIDOS:
+        raise ValueError("Tipo de entrega inválido.")
+    return tipo
+
+
+def nome_tipo_entrega(tipo_entrega: str) -> str:
+    tipo = normalizar_tipo_entrega(tipo_entrega)
+    return APC_TIPO_ENTREGA_LABELS.get(tipo, tipo)
+
+
+def horario_elegivel_para_tipo_entrega(horario: dict, tipo_entrega: str) -> bool:
+    tipo = normalizar_tipo_entrega(tipo_entrega)
+    if tipo == APC_TIPO_ENTREGA_GERAL:
+        return True
+    if tipo == APC_TIPO_ENTREGA_APC:
+        return bool(horario.get("tem_apc"))
+    if tipo == APC_TIPO_ENTREGA_PROVA_BIMESTRAL:
+        return bool(horario.get("tem_prova_bimestral"))
+    return True
+
+
+def filtrar_horarios_por_tipo_entrega(horarios: list[dict], tipo_entrega: str) -> list[dict]:
+    tipo = normalizar_tipo_entrega(tipo_entrega)
+    if tipo == APC_TIPO_ENTREGA_GERAL:
+        return list(horarios or [])
+    return [
+        item for item in (horarios or []) if horario_elegivel_para_tipo_entrega(item, tipo)
+    ]
+
+
 def _parse_sqlite_datetime(valor: str):
     texto = str(valor or "").strip()
     if not texto:
@@ -122,6 +169,7 @@ def enriquecer_periodo_apc(item: dict, agora: datetime | None = None) -> dict:
     dia_semana = dia_semana_por_data(data_referencia)
     prazo = str(periodo.get("prazo_envio") or "").strip()
     publico_alvo = normalizar_publico_alvo(periodo.get("publico_alvo"))
+    tipo_entrega = normalizar_tipo_entrega(periodo.get("tipo_entrega"))
     return {
         **periodo,
         "id": int(periodo.get("id") or 0),
@@ -137,6 +185,8 @@ def enriquecer_periodo_apc(item: dict, agora: datetime | None = None) -> dict:
         "observacao": str(periodo.get("observacao") or "").strip(),
         "publico_alvo": publico_alvo,
         "publico_alvo_label": nome_publico_alvo(publico_alvo),
+        "tipo_entrega": tipo_entrega,
+        "tipo_entrega_label": nome_tipo_entrega(tipo_entrega),
         "criado_em": str(periodo.get("criado_em") or "").strip(),
         "atualizado_em": str(periodo.get("atualizado_em") or "").strip(),
     }

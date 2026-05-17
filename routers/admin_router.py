@@ -437,12 +437,19 @@ def criar_disciplina_admin(
     exigir_gestor(usuario)
     nome = payload.nome.strip()
     aulas_semanais = validar_numero_nao_negativo(payload.aulas_semanais, "Aulas semanais")
+    tem_apc = bool(payload.tem_apc)
+    tem_prova_bimestral = bool(payload.tem_prova_bimestral)
 
     if not nome:
         raise HTTPException(400, "Nome da disciplina é obrigatório.")
 
     try:
-        disciplina_id = criar_disciplina(nome=nome, aulas_semanais=aulas_semanais)
+        disciplina_id = criar_disciplina(
+            nome=nome,
+            aulas_semanais=aulas_semanais,
+            tem_apc=tem_apc,
+            tem_prova_bimestral=tem_prova_bimestral,
+        )
     except sqlite3.IntegrityError as exc:
         raise HTTPException(409, "Já existe uma disciplina com este nome.") from exc
 
@@ -460,6 +467,8 @@ def atualizar_disciplina_admin(
     alterado = atualizar_disciplina_dados(
         disciplina_id=disciplina_id,
         aulas_semanais=aulas_semanais,
+        tem_apc=bool(payload.tem_apc),
+        tem_prova_bimestral=bool(payload.tem_prova_bimestral),
     )
     if not alterado:
         raise HTTPException(404, "Disciplina não encontrada.")

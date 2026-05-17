@@ -460,6 +460,8 @@ def criar_tabelas():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT UNIQUE NOT NULL,
             aulas_semanais INTEGER NOT NULL DEFAULT 0,
+            tem_apc INTEGER NOT NULL DEFAULT 0,
+            tem_prova_bimestral INTEGER NOT NULL DEFAULT 0,
             ativo INTEGER NOT NULL DEFAULT 1,
             criado_em TEXT NOT NULL
         )
@@ -1541,6 +1543,12 @@ def _garantir_colunas_disciplinas(cursor):
     if "aulas_semanais" not in colunas:
         cursor.execute(
             "ALTER TABLE disciplinas ADD COLUMN aulas_semanais INTEGER NOT NULL DEFAULT 0"
+        )
+    if "tem_apc" not in colunas:
+        cursor.execute("ALTER TABLE disciplinas ADD COLUMN tem_apc INTEGER NOT NULL DEFAULT 0")
+    if "tem_prova_bimestral" not in colunas:
+        cursor.execute(
+            "ALTER TABLE disciplinas ADD COLUMN tem_prova_bimestral INTEGER NOT NULL DEFAULT 0"
         )
 
 
@@ -3424,6 +3432,10 @@ def _mapear_turma_disciplina_admin(row) -> dict:
         "disciplina_id": int(item["disciplina_id"]),
         "disciplina_nome": item.get("disciplina_nome", "") or "",
         "disciplina_ativa": bool(int(item.get("disciplina_ativa", 1) or 0)),
+        "tem_apc": bool(int(item.get("disciplina_tem_apc", 0) or 0)),
+        "tem_prova_bimestral": bool(
+            int(item.get("disciplina_tem_prova_bimestral", 0) or 0)
+        ),
         "carga_horaria": int(item.get("carga_horaria") or 0),
         "carga_horaria_padrao": int(item.get("carga_horaria_padrao") or 0),
         "professor_id": professor_id if professor_id > 0 else None,
@@ -3468,6 +3480,8 @@ def _consultar_turmas_disciplinas_admin(
             d.nome AS disciplina_nome,
             COALESCE(d.aulas_semanais, 0) AS carga_horaria_padrao,
             COALESCE(d.ativo, 1) AS disciplina_ativa,
+            COALESCE(d.tem_apc, 0) AS disciplina_tem_apc,
+            COALESCE(d.tem_prova_bimestral, 0) AS disciplina_tem_prova_bimestral,
             COALESCE(u.nome, '') AS professor_nome,
             COALESCE(u.email, '') AS professor_email,
             COALESCE(u.ativo, 1) AS professor_ativo
@@ -4908,6 +4922,10 @@ def _mapear_horario_escolar(row) -> dict:
         "turno": item.get("turno", "") or "",
         "disciplina_id": int(item["disciplina_id"]),
         "disciplina_nome": item.get("disciplina_nome", "") or "",
+        "tem_apc": bool(int(item.get("disciplina_tem_apc", 0) or 0)),
+        "tem_prova_bimestral": bool(
+            int(item.get("disciplina_tem_prova_bimestral", 0) or 0)
+        ),
         "professor_id": int(item["professor_usuario_id"]),
         "professor_nome": item.get("professor_nome", "") or "",
         "professor_email": item.get("professor_email", "") or "",
@@ -4940,6 +4958,8 @@ def _consultar_horarios_escolares(cursor, *, filtros_sql=None, params=None):
             COALESCE(t.nome, '') AS turma_nome,
             COALESCE(t.turno, '') AS turno,
             COALESCE(d.nome, '') AS disciplina_nome,
+            COALESCE(d.tem_apc, 0) AS disciplina_tem_apc,
+            COALESCE(d.tem_prova_bimestral, 0) AS disciplina_tem_prova_bimestral,
             COALESCE(u.nome, '') AS professor_nome,
             COALESCE(u.email, '') AS professor_email
         FROM horarios_escolares he
@@ -5175,6 +5195,7 @@ def _mapear_apc_periodo(row) -> dict:
         "titulo": str(row["titulo"] or "").strip(),
         "observacao": str(row["observacao"] or "").strip(),
         "publico_alvo": str(row["publico_alvo"] or "").strip(),
+        "tipo_entrega": str(row["tipo_entrega"] or "").strip(),
         "criado_por_usuario_id": int(row["criado_por_usuario_id"] or 0),
         "criado_em": str(row["criado_em"] or "").strip(),
         "atualizado_em": str(row["atualizado_em"] or "").strip(),
@@ -5196,6 +5217,7 @@ def _consultar_apc_periodos(cursor, *, filtros_sql=None, params=None):
             titulo,
             observacao,
             publico_alvo,
+            tipo_entrega,
             criado_por_usuario_id,
             criado_em,
             atualizado_em
@@ -5269,6 +5291,7 @@ def criar_apc_periodo(
     titulo: str,
     observacao: str,
     publico_alvo: str,
+    tipo_entrega: str,
     criado_por_usuario_id: int,
 ):
     conn = get_connection()
@@ -5282,11 +5305,12 @@ def criar_apc_periodo(
             titulo,
             observacao,
             publico_alvo,
+            tipo_entrega,
             criado_por_usuario_id,
             criado_em,
             atualizado_em
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
         """,
         (
             int(ano_letivo),
@@ -5295,6 +5319,7 @@ def criar_apc_periodo(
             str(titulo or "").strip(),
             str(observacao or "").strip(),
             str(publico_alvo or "").strip().upper(),
+            str(tipo_entrega or "").strip().upper(),
             int(criado_por_usuario_id),
         ),
     )
@@ -5313,6 +5338,7 @@ def atualizar_apc_periodo(
     titulo: str,
     observacao: str,
     publico_alvo: str,
+    tipo_entrega: str,
 ):
     conn = get_connection()
     cursor = conn.cursor()
@@ -5325,6 +5351,7 @@ def atualizar_apc_periodo(
             titulo = ?,
             observacao = ?,
             publico_alvo = ?,
+            tipo_entrega = ?,
             atualizado_em = datetime('now')
         WHERE id = ?
         """,
@@ -5335,6 +5362,7 @@ def atualizar_apc_periodo(
             str(titulo or "").strip(),
             str(observacao or "").strip(),
             str(publico_alvo or "").strip().upper(),
+            str(tipo_entrega or "").strip().upper(),
             int(periodo_id),
         ),
     )
@@ -5732,12 +5760,25 @@ def atualizar_status_turma(turma_id: int, ativo: bool):
     return alterado
 
 
+def _mapear_disciplina(row) -> dict:
+    item = dict(row)
+    return {
+        "id": int(item["id"]),
+        "nome": str(item.get("nome") or "").strip(),
+        "aulas_semanais": int(item.get("aulas_semanais") or 0),
+        "tem_apc": bool(int(item.get("tem_apc", 0) or 0)),
+        "tem_prova_bimestral": bool(int(item.get("tem_prova_bimestral", 0) or 0)),
+        "ativo": bool(int(item.get("ativo", 1) or 0)),
+        "criado_em": str(item.get("criado_em") or "").strip(),
+    }
+
+
 def listar_disciplinas(incluir_inativas: bool = False):
     conn = get_connection()
     cursor = conn.cursor()
 
     query = """
-        SELECT id, nome, aulas_semanais, ativo, criado_em
+        SELECT id, nome, aulas_semanais, tem_apc, tem_prova_bimestral, ativo, criado_em
         FROM disciplinas
     """
     params = []
@@ -5751,7 +5792,7 @@ def listar_disciplinas(incluir_inativas: bool = False):
     rows = cursor.fetchall()
     conn.close()
 
-    return [dict(row) for row in rows]
+    return [_mapear_disciplina(row) for row in rows]
 
 
 def listar_disciplinas_ativas():
@@ -5764,7 +5805,7 @@ def buscar_disciplina_por_id(disciplina_id: int):
 
     cursor.execute(
         """
-        SELECT id, nome, aulas_semanais, ativo, criado_em
+        SELECT id, nome, aulas_semanais, tem_apc, tem_prova_bimestral, ativo, criado_em
         FROM disciplinas
         WHERE id = ?
     """,
@@ -5773,7 +5814,7 @@ def buscar_disciplina_por_id(disciplina_id: int):
 
     row = cursor.fetchone()
     conn.close()
-    return dict(row) if row else None
+    return _mapear_disciplina(row) if row else None
 
 
 def buscar_disciplina_por_nome(nome: str, incluir_inativas: bool = True):
@@ -5785,7 +5826,7 @@ def buscar_disciplina_por_nome(nome: str, incluir_inativas: bool = True):
     cursor = conn.cursor()
 
     query = """
-        SELECT id, nome, aulas_semanais, ativo, criado_em
+        SELECT id, nome, aulas_semanais, tem_apc, tem_prova_bimestral, ativo, criado_em
         FROM disciplinas
         WHERE nome = ? COLLATE NOCASE
     """
@@ -5797,10 +5838,16 @@ def buscar_disciplina_por_nome(nome: str, incluir_inativas: bool = True):
     cursor.execute(query, params)
     row = cursor.fetchone()
     conn.close()
-    return dict(row) if row else None
+    return _mapear_disciplina(row) if row else None
 
 
-def criar_disciplina(nome: str, aulas_semanais: int = 0):
+def criar_disciplina(
+    nome: str,
+    aulas_semanais: int = 0,
+    *,
+    tem_apc: bool = False,
+    tem_prova_bimestral: bool = False,
+):
     nome_limpo = _normalizar_nome_catalogo(nome)
     if not nome_limpo:
         raise ValueError("Nome da disciplina é obrigatório.")
@@ -5813,10 +5860,22 @@ def criar_disciplina(nome: str, aulas_semanais: int = 0):
 
     cursor.execute(
         """
-        INSERT INTO disciplinas (nome, aulas_semanais, ativo, criado_em)
-        VALUES (?, ?, 1, datetime('now'))
+        INSERT INTO disciplinas (
+            nome,
+            aulas_semanais,
+            tem_apc,
+            tem_prova_bimestral,
+            ativo,
+            criado_em
+        )
+        VALUES (?, ?, ?, ?, 1, datetime('now'))
     """,
-        (nome_limpo, aulas_semanais_valor),
+        (
+            nome_limpo,
+            aulas_semanais_valor,
+            _normalizar_booleano_sql(tem_apc),
+            _normalizar_booleano_sql(tem_prova_bimestral),
+        ),
     )
 
     disciplina_id = cursor.lastrowid
@@ -5825,7 +5884,13 @@ def criar_disciplina(nome: str, aulas_semanais: int = 0):
     return disciplina_id
 
 
-def atualizar_disciplina_dados(disciplina_id: int, aulas_semanais: int):
+def atualizar_disciplina_dados(
+    disciplina_id: int,
+    aulas_semanais: int,
+    *,
+    tem_apc: bool | None = None,
+    tem_prova_bimestral: bool | None = None,
+):
     aulas_semanais_valor = int(aulas_semanais or 0)
     if aulas_semanais_valor < 0:
         raise ValueError("Aulas semanais não pode ser negativo.")
@@ -5836,10 +5901,19 @@ def atualizar_disciplina_dados(disciplina_id: int, aulas_semanais: int):
     cursor.execute(
         """
         UPDATE disciplinas
-        SET aulas_semanais = ?
+        SET aulas_semanais = ?,
+            tem_apc = COALESCE(?, tem_apc),
+            tem_prova_bimestral = COALESCE(?, tem_prova_bimestral)
         WHERE id = ?
     """,
-        (aulas_semanais_valor, disciplina_id),
+        (
+            aulas_semanais_valor,
+            _normalizar_booleano_sql(tem_apc) if tem_apc is not None else None,
+            _normalizar_booleano_sql(tem_prova_bimestral)
+            if tem_prova_bimestral is not None
+            else None,
+            disciplina_id,
+        ),
     )
 
     alterado = cursor.rowcount > 0

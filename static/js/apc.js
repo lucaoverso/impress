@@ -180,6 +180,21 @@ function preencherSelectPublicoApc() {
     }
 }
 
+function preencherSelectTiposEntregaApc() {
+    const select = el("apcTipoEntrega");
+    if (!select) return;
+    select.innerHTML = "";
+    (contextoApc?.tipos_entrega || []).forEach((item) => {
+        const option = document.createElement("option");
+        option.value = String(item.valor || "");
+        option.innerText = String(item.label || item.valor || "");
+        select.appendChild(option);
+    });
+    if ((contextoApc?.tipos_entrega || []).length) {
+        select.value = String(contextoApc.tipos_entrega[0].valor || "GERAL");
+    }
+}
+
 function periodosResumoPorData(dataIso) {
     return (calendarioApc.periodos || []).filter((item) => item.data_referencia === dataIso);
 }
@@ -249,6 +264,7 @@ function preencherFormularioPeriodo(periodo) {
     el("apcTitulo").value = periodo?.titulo || "Documento";
     el("apcObservacao").value = periodo?.observacao || "";
     el("apcPublicoAlvo").value = periodo?.publico_alvo || "TODOS_PROFESSORES";
+    el("apcTipoEntrega").value = periodo?.tipo_entrega || "GERAL";
     el("btnExcluirApc").hidden = !Boolean(periodo?.id);
 }
 
@@ -401,6 +417,7 @@ function criarCorpoResumoGestaoApc(periodo, detalhe) {
     const chips = document.createElement("div");
     chips.className = "apc-chip-row";
     chips.appendChild(criarChipApc(periodo.publico_alvo_label || "Publico nao informado"));
+    chips.appendChild(criarChipApc(periodo.tipo_entrega_label || "Solicitacao geral"));
     chips.appendChild(criarChipApc(`Prazo: ${formatarDataHoraApc(periodo.prazo_envio)}`));
 
     if (detalhe) {
@@ -686,6 +703,7 @@ function renderSolicitacoesData(periodos, detalheSelecionado = null) {
         const meta = document.createElement("div");
         meta.className = "apc-solicitacao-summary-meta";
         meta.appendChild(criarMetaApc(periodo.publico_alvo_label || ""));
+        meta.appendChild(criarMetaApc(periodo.tipo_entrega_label || "Solicitacao geral"));
         meta.appendChild(criarMetaApc(`Prazo: ${formatarDataHoraApc(periodo.prazo_envio)}`));
         summaryMain.appendChild(meta);
         summary.appendChild(summaryMain);
@@ -1068,6 +1086,7 @@ async function carregarDetalheSelecionadoApc() {
                 { label: "Enviados", valor: String(detalhe.total_enviados || 0) },
                 { label: "Pendentes", valor: String(detalhe.total_pendentes || 0) },
                 { label: "Publico", valor: periodo.publico_alvo_label || "-" },
+                { label: "Tipo", valor: periodo.tipo_entrega_label || "-" },
             ])
         );
         el("apcGestaoTabs").hidden = false;
@@ -1206,6 +1225,7 @@ async function salvarPeriodoApc(event) {
         titulo: el("apcTitulo").value.trim(),
         observacao: el("apcObservacao").value.trim(),
         publico_alvo: el("apcPublicoAlvo").value,
+        tipo_entrega: el("apcTipoEntrega").value,
     };
 
     try {
@@ -1351,6 +1371,7 @@ async function initApc() {
         modoApc = modoInicialApc();
         preencherSelectAnosApc();
         preencherSelectPublicoApc();
+        preencherSelectTiposEntregaApc();
         aplicarVisibilidadeApc();
         registrarEventosApc();
         await carregarCalendarioApc();

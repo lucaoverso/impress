@@ -505,6 +505,8 @@ class TurmaDisciplinaOut(BaseModel):
     disciplina_id: int
     disciplina_nome: str = ""
     disciplina_ativa: bool = True
+    tem_apc: bool = False
+    tem_prova_bimestral: bool = False
     carga_horaria: int = 0
     carga_horaria_padrao: int = 0
     professor_id: int | None = None
@@ -557,6 +559,12 @@ ApcPublicoAlvo = Literal[
     "HORARIO_DIA",
 ]
 
+ApcTipoEntrega = Literal[
+    "GERAL",
+    "APC",
+    "PROVA_BIMESTRAL",
+]
+
 
 class ApcPeriodoIn(BaseModel):
     ano_letivo: int
@@ -565,6 +573,7 @@ class ApcPeriodoIn(BaseModel):
     titulo: str = "Documento"
     observacao: str = ""
     publico_alvo: ApcPublicoAlvo = "TODOS_PROFESSORES"
+    tipo_entrega: ApcTipoEntrega = "GERAL"
 
 
 class ApcPeriodoUpdateIn(BaseModel):
@@ -574,6 +583,7 @@ class ApcPeriodoUpdateIn(BaseModel):
     titulo: str = "Documento"
     observacao: str = ""
     publico_alvo: ApcPublicoAlvo = "TODOS_PROFESSORES"
+    tipo_entrega: ApcTipoEntrega = "GERAL"
 
 
 class ApcPeriodoOut(BaseModel):
@@ -589,6 +599,8 @@ class ApcPeriodoOut(BaseModel):
     observacao: str = ""
     publico_alvo: ApcPublicoAlvo = "TODOS_PROFESSORES"
     publico_alvo_label: str = ""
+    tipo_entrega: ApcTipoEntrega = "GERAL"
+    tipo_entrega_label: str = ""
     criado_por_usuario_id: int = 0
     criado_em: str = ""
     atualizado_em: str = ""
@@ -626,10 +638,14 @@ class TurmaUpdateIn(BaseModel):
 class DisciplinaCreateIn(BaseModel):
     nome: str
     aulas_semanais: int = 0
+    tem_apc: bool = False
+    tem_prova_bimestral: bool = False
 
 
 class DisciplinaUpdateIn(BaseModel):
     aulas_semanais: int
+    tem_apc: bool = False
+    tem_prova_bimestral: bool = False
 
 
 class RecursoCreateIn(BaseModel):

@@ -159,6 +159,14 @@
                         <form id="formDisciplina" class="admin-form">
                             <input id="disciplinaNome" type="text" placeholder="Nome da disciplina" required>
                             <input id="disciplinaAulasSemanais" type="number" min="0" placeholder="Carga horária base" value="" required>
+                            <label class="admin-checkbox-item">
+                                <input id="disciplinaTemApc" type="checkbox">
+                                <span>Tem entrega de APC</span>
+                            </label>
+                            <label class="admin-checkbox-item">
+                                <input id="disciplinaTemProvaBimestral" type="checkbox">
+                                <span>Tem prova bimestral</span>
+                            </label>
                             <button class="btn-destaque" type="submit">Cadastrar disciplina</button>
                         </form>
                         <p id="msgDisciplina"></p>

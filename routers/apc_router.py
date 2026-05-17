@@ -30,18 +30,24 @@ from services.apc_service import (
     chave_entrega_apc,
     contexto_apc_anos,
     enriquecer_periodo_apc,
+    filtrar_horarios_por_tipo_entrega,
     intervalo_mes_referencia,
     montar_painel_periodo_apc,
     montar_painel_professor_apc,
     nome_arquivo_armazenado,
     nome_publico_arquivo_apc,
     nome_publico_alvo,
+    nome_tipo_entrega,
     normalizar_data_apc,
     normalizar_prazo_envio,
     normalizar_publico_alvo,
+    normalizar_tipo_entrega,
     ordenar_periodos_apc,
     periodo_apc_aberto,
     validar_mes_referencia,
+    APC_TIPO_ENTREGA_APC,
+    APC_TIPO_ENTREGA_GERAL,
+    APC_TIPO_ENTREGA_PROVA_BIMESTRAL,
 )
 from services.file_service import arquivo_suportado
 
@@ -102,6 +108,7 @@ def _dados_periodo_payload(payload: ApcPeriodoIn | ApcPeriodoUpdateIn) -> dict:
         data_referencia = normalizar_data_apc(payload.data_referencia)
         prazo_envio = normalizar_prazo_envio(data_referencia, payload.prazo_envio)
         publico_alvo = normalizar_publico_alvo(payload.publico_alvo)
+        tipo_entrega = normalizar_tipo_entrega(payload.tipo_entrega)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 
@@ -114,6 +121,7 @@ def _dados_periodo_payload(payload: ApcPeriodoIn | ApcPeriodoUpdateIn) -> dict:
         "titulo": titulo,
         "observacao": observacao,
         "publico_alvo": publico_alvo,
+        "tipo_entrega": tipo_entrega,
     }
 
 
@@ -137,7 +145,11 @@ def _obter_elegiveis_periodo(periodo: dict, professor_id: int | None = None) -> 
         return agrupar_professores_elegiveis(professores)
 
     horarios = _obter_horarios_periodo(periodo_norm, professor_id=professor_id)
-    return agrupar_horarios_professor_dia(horarios)
+    horarios_filtrados = filtrar_horarios_por_tipo_entrega(
+        horarios,
+        periodo_norm["tipo_entrega"],
+    )
+    return agrupar_horarios_professor_dia(horarios_filtrados)
 
 
 def _selecionar_item_professor_periodo(
@@ -268,6 +280,20 @@ def obter_contexto_apc_api(usuario=Depends(get_usuario_logado)):
                 "label": nome_publico_alvo(APC_PUBLICO_ALVO_HORARIO_DIA),
             },
         ],
+        "tipos_entrega": [
+            {
+                "valor": APC_TIPO_ENTREGA_GERAL,
+                "label": nome_tipo_entrega(APC_TIPO_ENTREGA_GERAL),
+            },
+            {
+                "valor": APC_TIPO_ENTREGA_APC,
+                "label": nome_tipo_entrega(APC_TIPO_ENTREGA_APC),
+            },
+            {
+                "valor": APC_TIPO_ENTREGA_PROVA_BIMESTRAL,
+                "label": nome_tipo_entrega(APC_TIPO_ENTREGA_PROVA_BIMESTRAL),
+            },
+        ],
         "usuario": {
             "id": int(usuario["id"]),
             "nome": str(usuario.get("nome") or "").strip(),
@@ -356,6 +382,7 @@ def criar_periodo_apc_api(payload: ApcPeriodoIn, usuario=Depends(get_usuario_log
             titulo=dados["titulo"],
             observacao=dados["observacao"],
             publico_alvo=dados["publico_alvo"],
+            tipo_entrega=dados["tipo_entrega"],
             criado_por_usuario_id=int(usuario["id"]),
         )
     except sqlite3.IntegrityError as exc:
@@ -386,6 +413,7 @@ def atualizar_periodo_apc_api(
             titulo=dados["titulo"],
             observacao=dados["observacao"],
             publico_alvo=dados["publico_alvo"],
+            tipo_entrega=dados["tipo_entrega"],
         )
     except sqlite3.IntegrityError as exc:
         raise HTTPException(

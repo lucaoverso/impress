@@ -310,6 +310,122 @@ class ApcRouterTest(unittest.TestCase):
 
             self.assertEqual(int(ctx.exception.status_code), 403)
 
+    def test_central_filtra_entregas_por_flag_da_disciplina_e_tipo_da_solicitacao(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            apc_dir = os.path.join(tmp_dir, "apc")
+            database, models, apc_router = _reload_modules(db_path, apc_dir)
+            database.criar_tabelas()
+
+            turma_id = int(database.criar_turma("8C", "MATUTINO", 31))
+            disciplina_apc_id = int(
+                database.criar_disciplina(
+                    "Projeto APC",
+                    2,
+                    tem_apc=True,
+                )
+            )
+            disciplina_prova_id = int(
+                database.criar_disciplina(
+                    "Projeto Prova",
+                    2,
+                    tem_prova_bimestral=True,
+                )
+            )
+            professor_id = int(
+                database.criar_professor(
+                    nome="Professor Filtro",
+                    email="filtro@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1988-10-03",
+                    aulas_semanais=12,
+                    turmas_quantidade=1,
+                    turmas=["8C"],
+                    disciplinas=["Projeto APC", "Projeto Prova"],
+                )
+            )
+
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_id,
+                disciplina_id=disciplina_apc_id,
+                carga_horaria=2,
+                professor_usuario_id=professor_id,
+            )
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_id,
+                disciplina_id=disciplina_prova_id,
+                carga_horaria=2,
+                professor_usuario_id=professor_id,
+            )
+            database.criar_horario_escolar(
+                ano_letivo=2032,
+                turma_id=turma_id,
+                disciplina_id=disciplina_apc_id,
+                professor_usuario_id=professor_id,
+                dia_semana="SEGUNDA",
+                aula_numero=1,
+            )
+            database.criar_horario_escolar(
+                ano_letivo=2032,
+                turma_id=turma_id,
+                disciplina_id=disciplina_prova_id,
+                professor_usuario_id=professor_id,
+                dia_semana="SEGUNDA",
+                aula_numero=2,
+            )
+
+            periodo_apc = apc_router.criar_periodo_apc_api(
+                payload=models.ApcPeriodoIn(
+                    ano_letivo=2032,
+                    data_referencia="2032-08-02",
+                    prazo_envio="2032-08-02T23:59",
+                    titulo="Entrega de APC",
+                    observacao="Somente disciplinas marcadas com APC.",
+                    publico_alvo="HORARIO_DIA",
+                    tipo_entrega="APC",
+                ),
+                usuario=self._usuario_coord(),
+            )
+            periodo_prova = apc_router.criar_periodo_apc_api(
+                payload=models.ApcPeriodoIn(
+                    ano_letivo=2032,
+                    data_referencia="2032-08-02",
+                    prazo_envio="2032-08-02T23:59",
+                    titulo="Entrega de prova",
+                    observacao="Somente disciplinas com prova bimestral.",
+                    publico_alvo="HORARIO_DIA",
+                    tipo_entrega="PROVA_BIMESTRAL",
+                ),
+                usuario=self._usuario_coord(),
+            )
+
+            detalhe_apc = apc_router.obter_periodo_apc_api(
+                periodo_id=int(periodo_apc["id"]),
+                usuario=self._usuario_professor(professor_id),
+            )
+            self.assertEqual(detalhe_apc["periodo"]["tipo_entrega"], "APC")
+            self.assertEqual(int(detalhe_apc["total_entregas"]), 1)
+            self.assertEqual(len(detalhe_apc["itens"]), 1)
+            self.assertEqual(int(detalhe_apc["itens"][0]["disciplina_id"]), disciplina_apc_id)
+
+            detalhe_prova = apc_router.obter_periodo_apc_api(
+                periodo_id=int(periodo_prova["id"]),
+                usuario=self._usuario_professor(professor_id),
+            )
+            self.assertEqual(detalhe_prova["periodo"]["tipo_entrega"], "PROVA_BIMESTRAL")
+            self.assertEqual(int(detalhe_prova["total_entregas"]), 1)
+            self.assertEqual(len(detalhe_prova["itens"]), 1)
+            self.assertEqual(
+                int(detalhe_prova["itens"][0]["disciplina_id"]),
+                disciplina_prova_id,
+            )
+
+            detalhe_gestao_apc = apc_router.obter_periodo_apc_api(
+                periodo_id=int(periodo_apc["id"]),
+                usuario=self._usuario_coord(),
+            )
+            self.assertEqual(int(detalhe_gestao_apc["total_elegiveis"]), 1)
+
     def test_professor_envia_arquivos_separados_por_disciplina_no_mesmo_dia(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")

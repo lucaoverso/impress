@@ -26,6 +26,13 @@ function disciplinaBasePorId(disciplinaId) {
         .find((item) => Number(item.id) === Number(disciplinaId)) || null;
 }
 
+function resumoMarcacoesDisciplina(disciplina) {
+    return [
+        disciplina?.tem_apc ? "APC" : null,
+        disciplina?.tem_prova_bimestral ? "Prova bimestral" : null
+    ].filter(Boolean).join(" | ");
+}
+
 function construirSelectProfessorTurmaDisciplina(valorAtual = "", professorAtual = null) {
     const select = document.createElement("select");
     const vazio = document.createElement("option");
@@ -73,7 +80,10 @@ function construirSelectDisciplinasTurma(itensTurma = []) {
     disciplinas.forEach((disciplina) => {
         const option = document.createElement("option");
         option.value = String(disciplina.id);
-        option.innerText = `${disciplina.nome} (${disciplina.aulas_semanais ?? 0}h base)`;
+        const marcacoes = resumoMarcacoesDisciplina(disciplina);
+        option.innerText = marcacoes
+            ? `${disciplina.nome} (${disciplina.aulas_semanais ?? 0}h base • ${marcacoes})`
+            : `${disciplina.nome} (${disciplina.aulas_semanais ?? 0}h base)`;
         select.appendChild(option);
     });
     return select;
@@ -153,7 +163,10 @@ function criarTabelaTurmaDisciplina(itensTurma = []) {
         titulo.innerText = item.disciplina_nome;
         const detalhe = document.createElement("div");
         detalhe.className = "admin-table-meta";
-        detalhe.innerText = `Base: ${item.carga_horaria_padrao ?? 0}h | ${
+        const marcacoes = [];
+        if (item.tem_apc) marcacoes.push("APC");
+        if (item.tem_prova_bimestral) marcacoes.push("Prova bimestral");
+        detalhe.innerText = `Base: ${item.carga_horaria_padrao ?? 0}h${marcacoes.length ? ` | ${marcacoes.join(" | ")}` : ""} | ${
             item.disciplina_ativa ? "Disciplina ativa" : "Disciplina inativa"
         }`;
         tdDisciplina.appendChild(titulo);
@@ -527,7 +540,7 @@ async function carregarDisciplinasAdmin() {
 
         const detalhe = document.createElement("p");
         detalhe.className = "booking-detail";
-        detalhe.innerText = `Carga horaria base: ${disciplina.aulas_semanais ?? 0}h | Status: ${disciplina.ativo ? "Ativa" : "Inativa"}`;
+        detalhe.innerText = `Carga horaria base: ${disciplina.aulas_semanais ?? 0}h | APC: ${disciplina.tem_apc ? "Sim" : "Nao"} | Prova bimestral: ${disciplina.tem_prova_bimestral ? "Sim" : "Nao"} | Status: ${disciplina.ativo ? "Ativa" : "Inativa"}`;
 
         const linha = document.createElement("div");
         linha.className = "admin-inline";
@@ -538,19 +551,41 @@ async function carregarDisciplinasAdmin() {
         inputAulas.value = String(disciplina.aulas_semanais ?? 0);
         inputAulas.title = "Carga horaria base";
 
+        const labelApc = document.createElement("label");
+        labelApc.className = "admin-checkbox-item";
+        const inputTemApc = document.createElement("input");
+        inputTemApc.type = "checkbox";
+        inputTemApc.checked = Boolean(disciplina.tem_apc);
+        const textoApc = document.createElement("span");
+        textoApc.innerText = "Tem APC";
+        labelApc.appendChild(inputTemApc);
+        labelApc.appendChild(textoApc);
+
+        const labelProva = document.createElement("label");
+        labelProva.className = "admin-checkbox-item";
+        const inputTemProva = document.createElement("input");
+        inputTemProva.type = "checkbox";
+        inputTemProva.checked = Boolean(disciplina.tem_prova_bimestral);
+        const textoProva = document.createElement("span");
+        textoProva.innerText = "Tem prova bimestral";
+        labelProva.appendChild(inputTemProva);
+        labelProva.appendChild(textoProva);
+
         const btnSalvarDados = document.createElement("button");
         btnSalvarDados.type = "button";
-        btnSalvarDados.innerText = "Salvar carga";
+        btnSalvarDados.innerText = "Salvar dados";
         btnSalvarDados.addEventListener("click", async () => {
             try {
                 await fetchJson(`/admin/disciplinas/${disciplina.id}`, {
                     method: "PUT",
                     headers: headersJson,
                     body: JSON.stringify({
-                        aulas_semanais: Number(inputAulas.value)
+                        aulas_semanais: Number(inputAulas.value),
+                        tem_apc: inputTemApc.checked,
+                        tem_prova_bimestral: inputTemProva.checked
                     })
                 });
-                setMensagem("msgDisciplina", `Carga horaria base da disciplina ${disciplina.nome} atualizada.`);
+                setMensagem("msgDisciplina", `Dados da disciplina ${disciplina.nome} atualizados.`);
                 await Promise.all([carregarDisciplinasAdmin(), atualizarAtribuicoesDocentesSePermitido()]);
             } catch (err) {
                 setMensagem("msgDisciplina", err.message, true);
@@ -578,6 +613,8 @@ async function carregarDisciplinasAdmin() {
         });
 
         linha.appendChild(inputAulas);
+        linha.appendChild(labelApc);
+        linha.appendChild(labelProva);
         linha.appendChild(btnSalvarDados);
 
         li.appendChild(titulo);
@@ -596,13 +633,21 @@ async function cadastrarDisciplina(event) {
             headers: headersJson,
             body: JSON.stringify({
                 nome: el("disciplinaNome").value.trim(),
-                aulas_semanais: Number(el("disciplinaAulasSemanais").value)
+                aulas_semanais: Number(el("disciplinaAulasSemanais").value),
+                tem_apc: Boolean(el("disciplinaTemApc")?.checked),
+                tem_prova_bimestral: Boolean(el("disciplinaTemProvaBimestral")?.checked)
             })
         });
 
         setMensagem("msgDisciplina", "Disciplina cadastrada com sucesso.");
         el("formDisciplina").reset();
         el("disciplinaAulasSemanais").value = "0";
+        if (el("disciplinaTemApc")) {
+            el("disciplinaTemApc").checked = false;
+        }
+        if (el("disciplinaTemProvaBimestral")) {
+            el("disciplinaTemProvaBimestral").checked = false;
+        }
         await Promise.all([
             carregarDisciplinasAdmin(),
             atualizarOpcoesProfessorSePermitido(),
@@ -612,4 +657,3 @@ async function cadastrarDisciplina(event) {
         setMensagem("msgDisciplina", err.message, true);
     }
 }
-

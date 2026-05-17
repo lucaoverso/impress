@@ -152,6 +152,8 @@ class AdminTurmasDisciplinasTest(unittest.TestCase):
             )
             self.assertIsNotNone(projeto)
             self.assertEqual(int(projeto["aulas_semanais"]), 2)
+            self.assertFalse(bool(projeto["tem_apc"]))
+            self.assertFalse(bool(projeto["tem_prova_bimestral"]))
 
             turma_disciplinas = database.listar_turmas_disciplinas_admin(
                 turma_id=turma_id,
@@ -159,6 +161,47 @@ class AdminTurmasDisciplinasTest(unittest.TestCase):
             )
             self.assertEqual(len(turma_disciplinas), 1)
             self.assertEqual(turma_disciplinas[0]["disciplina_nome"], "Projeto de Vida")
+
+    def test_admin_define_flags_de_apc_e_prova_bimestral_na_disciplina(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, main, models = _reload_modules(db_path)
+            database.criar_tabelas()
+
+            resposta = main.criar_disciplina_admin(
+                payload=models.DisciplinaCreateIn(
+                    nome="Ciencias Aplicadas",
+                    aulas_semanais=4,
+                    tem_apc=True,
+                    tem_prova_bimestral=False,
+                ),
+                usuario=self._usuario_admin(),
+            )
+            disciplina_id = int(resposta["disciplina_id"])
+
+            disciplina = database.buscar_disciplina_por_id(disciplina_id)
+            self.assertIsNotNone(disciplina)
+            self.assertTrue(bool(disciplina["tem_apc"]))
+            self.assertFalse(bool(disciplina["tem_prova_bimestral"]))
+
+            retorno = main.atualizar_disciplina_admin(
+                disciplina_id=disciplina_id,
+                payload=models.DisciplinaUpdateIn(
+                    aulas_semanais=5,
+                    tem_apc=False,
+                    tem_prova_bimestral=True,
+                ),
+                usuario=self._usuario_admin(),
+            )
+            self.assertEqual(
+                retorno["mensagem"],
+                "Dados da disciplina atualizados com sucesso.",
+            )
+
+            disciplina_atualizada = database.buscar_disciplina_por_id(disciplina_id)
+            self.assertEqual(int(disciplina_atualizada["aulas_semanais"]), 5)
+            self.assertFalse(bool(disciplina_atualizada["tem_apc"]))
+            self.assertTrue(bool(disciplina_atualizada["tem_prova_bimestral"]))
 
 
 if __name__ == "__main__":
