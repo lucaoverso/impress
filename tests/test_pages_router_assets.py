@@ -130,6 +130,7 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn("js/relatorios.js?v=build-relatorios-654", html)
         self.assertIn("cdn.jsdelivr.net/npm/chart.js", html)
         self.assertIn('id="relatoriosCards"', html)
+        self.assertIn('id="anexosResumo"', html)
         self.assertIn("Insights da Gestao", html)
 
 

@@ -3,7 +3,7 @@ from datetime import date
 from fastapi import APIRouter, Depends, HTTPException
 
 from auth import get_usuario_logado
-from db.relatorios import gerar_dashboard_relatorios
+from db.relatorios import gerar_dashboard_relatorios, gerar_relatorio_anexos
 
 from .common import usuario_tem_acesso_coordenacao, validar_data_agendamento
 
@@ -48,3 +48,14 @@ def dashboard_relatorios_api(
     _exigir_acesso_relatorios(usuario)
     inicio, fim = _resolver_periodo(data_inicio, data_fim)
     return gerar_dashboard_relatorios(inicio, fim)
+
+
+@router.get("/api/relatorios/anexos")
+def relatorios_anexos_api(
+    data_inicio: str | None = None,
+    data_fim: str | None = None,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_acesso_relatorios(usuario)
+    inicio, fim = _resolver_periodo(data_inicio, data_fim)
+    return gerar_relatorio_anexos(inicio, fim)

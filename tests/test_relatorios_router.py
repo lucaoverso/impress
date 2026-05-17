@@ -79,6 +79,11 @@ class RelatoriosRouterTest(unittest.TestCase):
 
             self.assertEqual(resposta["periodo"]["data_inicio"], "2026-05-01")
             self.assertEqual(resposta["periodo"]["data_fim"], "2026-05-31")
+            self.assertEqual(resposta["periodo"]["capacidade_aulas_por_dia_padrao"], 5)
+            self.assertEqual(
+                resposta["periodo"]["capacidade_aulas_por_dia_sala_tecnologia"],
+                10,
+            )
             self.assertEqual(resposta["impressoes"]["resumo"]["total_paginas"], 0)
             self.assertEqual(resposta["impressoes"]["resumo"]["total_jobs"], 0)
             self.assertEqual(resposta["recursos"]["resumo"]["total_reservas"], 0)
@@ -114,6 +119,33 @@ class RelatoriosRouterTest(unittest.TestCase):
             self.assertIn("recursos", payload)
             self.assertIn(
                 "/api/relatorios/dashboard",
+                [route.path for route in relatorios_router.router.routes],
+            )
+
+    def test_api_anexos_retorna_json_valido_quando_nao_ha_dados(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, relatorios_router = _reload_modulos(db_path)
+            database.criar_tabelas()
+
+            payload = relatorios_router.relatorios_anexos_api(
+                data_inicio="2026-05-01",
+                data_fim="2026-05-31",
+                usuario=self._usuario_gestor(),
+            )
+
+            self.assertIsInstance(payload, dict)
+            self.assertEqual(payload["resumo"]["total_documentos_esperados"], 0)
+            self.assertEqual(payload["resumo"]["total_documentos_entregues"], 0)
+            self.assertEqual(payload["resumo"]["total_pendencias"], 0)
+            self.assertEqual(payload["cards"][5]["valor"], "0.0%")
+            self.assertEqual(payload["tabelas"]["professores_pendencias"], [])
+            self.assertEqual(
+                payload["graficos"]["situacao_entregas"]["valores"],
+                [0, 0, 0],
+            )
+            self.assertIn(
+                "/api/relatorios/anexos",
                 [route.path for route in relatorios_router.router.routes],
             )
 
@@ -288,22 +320,9 @@ class RelatoriosRouterTest(unittest.TestCase):
             finally:
                 conn.close()
 
-            datas = [
-                "2026-05-01",
-                "2026-05-01",
-                "2026-05-01",
-                "2026-05-01",
-                "2026-05-01",
-                "2026-05-04",
-                "2026-05-04",
-                "2026-05-04",
-                "2026-05-04",
-                "2026-05-04",
-                "2026-05-05",
-                "2026-05-05",
-            ]
-            aulas = ["1", "2", "3", "4", "5", "1", "2", "3", "4", "5", "1", "2"]
-            faixas = [1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2]
+            datas = ["2026-05-01"] * 10 + ["2026-05-04"] * 8
+            aulas = [str(item) for item in range(1, 11)] + [str(item) for item in range(1, 9)]
+            faixas = list(range(1, 11)) + list(range(1, 9))
 
             for data_agendada, aula, faixa in zip(datas, aulas, faixas):
                 database.criar_agendamento(
@@ -344,6 +363,14 @@ class RelatoriosRouterTest(unittest.TestCase):
             self.assertIn(
                 "Existem recursos tecnológicos com baixa utilização no período.",
                 textos_insights,
+            )
+            self.assertEqual(
+                resposta["recursos"]["ranking_recursos"][0]["capacidade_aulas_dia"],
+                10,
+            )
+            self.assertEqual(
+                resposta["recursos"]["ranking_recursos"][0]["capacidade_periodo"],
+                30,
             )
 
     def test_dashboard_aplica_filtros_de_periodo(self):
@@ -394,6 +421,191 @@ class RelatoriosRouterTest(unittest.TestCase):
             self.assertEqual(
                 resposta["recursos"]["ranking_recursos"][0]["total_reservas"],
                 1,
+            )
+
+    def test_anexos_consolida_entregas_prazos_e_pendencias_reais(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, relatorios_router = _reload_modulos(db_path)
+            database.criar_tabelas()
+
+            database.criar_usuario_se_nao_existir(
+                nome="Ana Souza",
+                email="ana@escola",
+                senha_hash="hash-ana",
+                perfil="professor",
+                cargo="PROFESSOR",
+            )
+            database.criar_usuario_se_nao_existir(
+                nome="Bruno Lima",
+                email="bruno@escola",
+                senha_hash="hash-bruno",
+                perfil="professor",
+                cargo="PROFESSOR",
+            )
+
+            professora_ana = database.buscar_usuario_por_email("ana@escola")
+            professor_bruno = database.buscar_usuario_por_email("bruno@escola")
+
+            turma_ana_id = int(database.criar_turma("9A", "MATUTINO", 30))
+            turma_bruno_id = int(database.criar_turma("9B", "MATUTINO", 29))
+            disciplina_ana_id = int(database.criar_disciplina("Matematica", 4, tem_apc=True))
+            disciplina_bruno_id = int(database.criar_disciplina("Historia", 3, tem_apc=True))
+
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_ana_id,
+                disciplina_id=disciplina_ana_id,
+                carga_horaria=4,
+                professor_usuario_id=int(professora_ana["id"]),
+            )
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_bruno_id,
+                disciplina_id=disciplina_bruno_id,
+                carga_horaria=3,
+                professor_usuario_id=int(professor_bruno["id"]),
+            )
+            database.criar_horario_escolar(
+                ano_letivo=2032,
+                turma_id=turma_ana_id,
+                disciplina_id=disciplina_ana_id,
+                professor_usuario_id=int(professora_ana["id"]),
+                dia_semana="SEGUNDA",
+                aula_numero=1,
+            )
+            database.criar_horario_escolar(
+                ano_letivo=2032,
+                turma_id=turma_bruno_id,
+                disciplina_id=disciplina_bruno_id,
+                professor_usuario_id=int(professor_bruno["id"]),
+                dia_semana="SEGUNDA",
+                aula_numero=2,
+            )
+
+            periodo_geral = database.criar_apc_periodo(
+                ano_letivo=2032,
+                data_referencia="2032-08-02",
+                prazo_envio="2032-08-02 23:59:00",
+                titulo="Prova bimestral",
+                observacao="Entrega geral.",
+                publico_alvo="HORARIO_DIA",
+                tipo_entrega="GERAL",
+                criado_por_usuario_id=int(professora_ana["id"]),
+            )
+            periodo_apc = database.criar_apc_periodo(
+                ano_letivo=2032,
+                data_referencia="2032-08-09",
+                prazo_envio="2032-08-09 12:00:00",
+                titulo="Planejamento APC",
+                observacao="Outra solicitacao.",
+                publico_alvo="HORARIO_DIA",
+                tipo_entrega="APC",
+                criado_por_usuario_id=int(professora_ana["id"]),
+            )
+            database.criar_apc_periodo(
+                ano_letivo=2032,
+                data_referencia="2032-09-06",
+                prazo_envio="2032-09-06 23:59:00",
+                titulo="Fora do periodo",
+                observacao="Nao entra no filtro.",
+                publico_alvo="HORARIO_DIA",
+                tipo_entrega="GERAL",
+                criado_por_usuario_id=int(professora_ana["id"]),
+            )
+
+            envio_no_prazo = database.criar_apc_envio(
+                periodo_id=int(periodo_geral["id"]),
+                professor_usuario_id=int(professora_ana["id"]),
+                turma_id=turma_ana_id,
+                disciplina_id=disciplina_ana_id,
+                arquivo_nome_cliente="prova-ana.pdf",
+                arquivo_nome_original="Prova bimestral - Ana.pdf",
+                arquivo_path="/tmp/prova-ana.pdf",
+                arquivo_tamanho=123,
+                arquivo_tipo="application/pdf",
+            )
+            envio_atrasado = database.criar_apc_envio(
+                periodo_id=int(periodo_apc["id"]),
+                professor_usuario_id=int(professor_bruno["id"]),
+                turma_id=turma_bruno_id,
+                disciplina_id=disciplina_bruno_id,
+                arquivo_nome_cliente="planejamento-bruno.pdf",
+                arquivo_nome_original="Planejamento APC - Bruno.pdf",
+                arquivo_path="/tmp/planejamento-bruno.pdf",
+                arquivo_tamanho=456,
+                arquivo_tipo="application/pdf",
+            )
+
+            conn = database.get_connection()
+            try:
+                conn.execute(
+                    """
+                    UPDATE apc_envios
+                    SET enviado_em = ?, atualizado_em = ?
+                    WHERE id = ?
+                    """,
+                    ("2032-08-02 20:00:00", "2032-08-02 20:00:00", int(envio_no_prazo["id"])),
+                )
+                conn.execute(
+                    """
+                    UPDATE apc_envios
+                    SET enviado_em = ?, atualizado_em = ?
+                    WHERE id = ?
+                    """,
+                    ("2032-08-10 08:00:00", "2032-08-10 08:00:00", int(envio_atrasado["id"])),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+
+            resposta = relatorios_router.relatorios_anexos_api(
+                data_inicio="2032-08-01",
+                data_fim="2032-08-31",
+                usuario=self._usuario_gestor(),
+            )
+
+            self.assertEqual(resposta["resumo"]["total_documentos_esperados"], 4)
+            self.assertEqual(resposta["resumo"]["total_documentos_entregues"], 2)
+            self.assertEqual(resposta["resumo"]["total_entregas_no_prazo"], 1)
+            self.assertEqual(resposta["resumo"]["total_entregas_atrasadas"], 1)
+            self.assertEqual(resposta["resumo"]["total_pendencias"], 2)
+            self.assertEqual(resposta["cards"][5]["valor"], "25.0%")
+
+            pendencias = resposta["tabelas"]["professores_pendencias"]
+            self.assertEqual(len(pendencias), 2)
+            self.assertEqual({item["professor"] for item in pendencias}, {"Ana Souza", "Bruno Lima"})
+            self.assertTrue(
+                any(
+                    item["professor"] == "Ana Souza"
+                    and item["documento"].startswith("Planejamento APC")
+                    for item in pendencias
+                )
+            )
+            self.assertTrue(
+                any(
+                    item["professor"] == "Bruno Lima"
+                    and item["documento"].startswith("Prova bimestral")
+                    for item in pendencias
+                )
+            )
+
+            recentes = resposta["tabelas"]["entregas_recentes"]
+            self.assertEqual(len(recentes), 4)
+            self.assertEqual(
+                {item["situacao"] for item in recentes},
+                {"No prazo", "Atrasado", "Pendente"},
+            )
+
+            self.assertEqual(
+                resposta["graficos"]["situacao_entregas"]["valores"],
+                [1, 1, 2],
+            )
+            self.assertEqual(
+                resposta["graficos"]["documentos_por_tipo"]["labels"],
+                ["APC", "Solicitacao geral"],
+            )
+            self.assertEqual(
+                resposta["graficos"]["documentos_por_tipo"]["valores"],
+                [2, 2],
             )
 
     def test_dashboard_rejeita_periodo_invalido(self):

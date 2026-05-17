@@ -49,6 +49,7 @@ COTA_POR_TURMA_PADRAO = 12
 COTA_MENSAL_ESCOLA_PADRAO = 4000
 RESERVA_INSTITUCIONAL_PERCENTUAL = 10
 RELATORIOS_CAPACIDADE_AULAS_DIA = 5
+RELATORIOS_CAPACIDADE_AULAS_DIA_SALA_TECNOLOGIA = 10
 RELATORIOS_INSIGHT_PAGINAS_ELEVADAS_MIN = 150
 RELATORIOS_INSIGHT_PAGINAS_ELEVADAS_POR_DIA_UTIL = 10
 RELATORIOS_INSIGHT_CONCENTRACAO_IMPRESSAO_PERCENTUAL = 50.0
@@ -6433,6 +6434,303 @@ def _recurso_parece_sala_tecnologia(nome_recurso: str) -> bool:
     return "sala de tecnologia" in chave or chave.startswith("ste ") or " ste " in f" {chave} "
 
 
+def _capacidade_aulas_por_dia_recurso(nome_recurso: str) -> int:
+    if _recurso_parece_sala_tecnologia(nome_recurso):
+        return RELATORIOS_CAPACIDADE_AULAS_DIA_SALA_TECNOLOGIA
+    return RELATORIOS_CAPACIDADE_AULAS_DIA
+
+
+def _descricao_base_capacidade_relatorios() -> str:
+    return (
+        f"Base estimada por recurso: {RELATORIOS_CAPACIDADE_AULAS_DIA} uso(s) por dia util; "
+        f"Sala de Tecnologia: {RELATORIOS_CAPACIDADE_AULAS_DIA_SALA_TECNOLOGIA}."
+    )
+
+
+def _parse_datetime_relatorios(valor: str):
+    texto = str(valor or "").strip()
+    if not texto:
+        return None
+
+    formatos = (
+        "%Y-%m-%d %H:%M:%S",
+        "%Y-%m-%dT%H:%M:%S",
+        "%Y-%m-%dT%H:%M",
+        "%Y-%m-%d",
+    )
+    for formato in formatos:
+        try:
+            return datetime.strptime(texto, formato)
+        except ValueError:
+            continue
+    return None
+
+
+def _rotulo_situacao_relatorio_anexos(prazo_envio: str, envio: dict | None) -> dict:
+    if not envio:
+        return {"id": "pendente", "label": "Pendente", "ordem": 2}
+
+    prazo_dt = _parse_datetime_relatorios(prazo_envio)
+    enviado_dt = _parse_datetime_relatorios(envio.get("enviado_em"))
+    if prazo_dt and enviado_dt and enviado_dt > prazo_dt:
+        return {"id": "atrasado", "label": "Atrasado", "ordem": 1}
+    return {"id": "no_prazo", "label": "No prazo", "ordem": 0}
+
+
+def _descricao_documento_relatorio_anexos(periodo: dict, item: dict) -> str:
+    titulo = str(periodo.get("titulo") or "Documento").strip() or "Documento"
+    disciplina = str(item.get("disciplina_nome") or "").strip()
+    turma = str(item.get("turma_nome") or "").strip()
+
+    contexto = []
+    if disciplina:
+        contexto.append(disciplina)
+    if turma:
+        contexto.append(turma)
+
+    if not contexto:
+        return titulo
+    return f"{titulo} | {' | '.join(contexto)}"
+
+
+def _obter_elegiveis_periodo_apc_relatorios(periodo: dict) -> list[dict]:
+    from services.apc_service import (
+        APC_PUBLICO_ALVO_TODOS_PROFESSORES,
+        agrupar_horarios_professor_dia,
+        agrupar_professores_elegiveis,
+        enriquecer_periodo_apc,
+        filtrar_horarios_por_tipo_entrega,
+    )
+
+    periodo_norm = enriquecer_periodo_apc(periodo)
+    if periodo_norm["publico_alvo"] == APC_PUBLICO_ALVO_TODOS_PROFESSORES:
+        return agrupar_professores_elegiveis(listar_professores_agendamento())
+
+    horarios = listar_horarios_escolares(
+        ano_letivo=int(periodo_norm["ano_letivo"]),
+        dia_semana=periodo_norm["dia_semana"],
+    )
+    horarios_filtrados = filtrar_horarios_por_tipo_entrega(
+        horarios,
+        periodo_norm["tipo_entrega"],
+    )
+    return agrupar_horarios_professor_dia(horarios_filtrados)
+
+
+def gerar_relatorio_anexos(data_inicio: str | None = None, data_fim: str | None = None):
+    from services.apc_service import enriquecer_periodo_apc, montar_painel_periodo_apc
+
+    hoje = date.today()
+    inicio_periodo = str(data_inicio or hoje.replace(day=1).isoformat())
+    fim_periodo = str(data_fim or hoje.isoformat())
+
+    if inicio_periodo > fim_periodo:
+        raise ValueError("Periodo invalido: data inicial maior que data final.")
+
+    datas_periodo = _listar_datas_periodo(inicio_periodo, fim_periodo)
+    periodos = []
+    try:
+        periodos = [enriquecer_periodo_apc(item) for item in listar_apc_periodos(
+            data_inicio=inicio_periodo,
+            data_fim=fim_periodo,
+        )]
+    except sqlite3.OperationalError:
+        periodos = []
+
+    periodos_ids = [int(item.get("id") or 0) for item in periodos if int(item.get("id") or 0) > 0]
+    envios_por_periodo: dict[int, list[dict]] = {}
+    if periodos_ids:
+        conn = None
+        try:
+            placeholders = ",".join("?" for _ in periodos_ids)
+            conn = get_connection()
+            cursor = conn.cursor()
+            envios = _consultar_apc_envios(
+                cursor,
+                filtros_sql=[f"ae.periodo_id IN ({placeholders})"],
+                params=periodos_ids,
+            )
+        except sqlite3.OperationalError:
+            envios = []
+        finally:
+            if conn is not None:
+                conn.close()
+
+        for envio in envios:
+            periodo_id = int(envio.get("periodo_id") or 0)
+            envios_por_periodo.setdefault(periodo_id, []).append(envio)
+
+    total_esperados = 0
+    total_entregues = 0
+    total_no_prazo = 0
+    total_atrasadas = 0
+    total_pendencias = 0
+    contagem_por_tipo: dict[str, int] = {}
+    itens_consolidados = []
+
+    for periodo in periodos:
+        try:
+            elegiveis = _obter_elegiveis_periodo_apc_relatorios(periodo)
+        except sqlite3.OperationalError:
+            elegiveis = []
+
+        painel = montar_painel_periodo_apc(
+            periodo,
+            elegiveis,
+            envios_por_periodo.get(int(periodo.get("id") or 0), []),
+        )
+        periodo_painel = painel["periodo"]
+        tipo_documento = str(periodo_painel.get("tipo_entrega_label") or "Nao informado").strip()
+
+        total_esperados += int(painel.get("total_elegiveis") or 0)
+        total_entregues += int(painel.get("total_enviados") or 0)
+        total_pendencias += int(painel.get("total_pendentes") or 0)
+        contagem_por_tipo[tipo_documento] = (
+            int(contagem_por_tipo.get(tipo_documento) or 0)
+            + int(painel.get("total_elegiveis") or 0)
+        )
+
+        for item in painel.get("itens") or []:
+            envio = item.get("envio")
+            situacao = _rotulo_situacao_relatorio_anexos(periodo_painel.get("prazo_envio"), envio)
+            if situacao["id"] == "no_prazo":
+                total_no_prazo += 1
+            elif situacao["id"] == "atrasado":
+                total_atrasadas += 1
+
+            itens_consolidados.append(
+                {
+                    "periodo_id": int(periodo_painel.get("id") or 0),
+                    "professor": str(item.get("professor_nome") or "").strip() or "Professor nao informado",
+                    "documento": _descricao_documento_relatorio_anexos(periodo_painel, item),
+                    "prazo": str(periodo_painel.get("prazo_envio") or "").strip(),
+                    "data_envio": str((envio or {}).get("enviado_em") or "").strip(),
+                    "situacao": situacao["label"],
+                    "situacao_id": situacao["id"],
+                    "situacao_ordem": int(situacao["ordem"] or 0),
+                    "tipo_documento": tipo_documento,
+                }
+            )
+
+    percentual_cumprimento_prazo = (
+        round((total_no_prazo / total_esperados) * 100, 1) if total_esperados > 0 else 0.0
+    )
+
+    professores_pendencias = [
+        {
+            "professor": item["professor"],
+            "documento": item["documento"],
+            "prazo": item["prazo"],
+            "situacao": item["situacao"],
+        }
+        for item in sorted(
+            [item for item in itens_consolidados if item["situacao_id"] == "pendente"],
+            key=lambda item: (
+                _parse_datetime_relatorios(item.get("prazo")) or datetime.max,
+                str(item.get("professor") or "").casefold(),
+                str(item.get("documento") or "").casefold(),
+            ),
+        )
+    ]
+
+    entregas_recentes = [
+        {
+            "professor": item["professor"],
+            "documento": item["documento"],
+            "data_envio": item["data_envio"],
+            "prazo": item["prazo"],
+            "situacao": item["situacao"],
+        }
+        for item in sorted(
+            itens_consolidados,
+            key=lambda item: (
+                _parse_datetime_relatorios(item.get("data_envio"))
+                or _parse_datetime_relatorios(item.get("prazo"))
+                or datetime.min,
+                -int(item.get("situacao_ordem") or 0),
+                str(item.get("professor") or "").casefold(),
+            ),
+            reverse=True,
+        )
+    ]
+
+    tipos_ordenados = sorted(
+        contagem_por_tipo.items(),
+        key=lambda item: (-int(item[1] or 0), str(item[0] or "").casefold()),
+    )
+
+    cards = [
+        {
+            "id": "documentos_esperados",
+            "titulo": "Documentos esperados",
+            "valor": total_esperados,
+            "descricao": f"{len(periodos)} solicitacao(oes) no periodo",
+        },
+        {
+            "id": "documentos_entregues",
+            "titulo": "Documentos entregues",
+            "valor": total_entregues,
+            "descricao": "Arquivos registrados na Central de Anexos",
+        },
+        {
+            "id": "entregas_no_prazo",
+            "titulo": "Entregas no prazo",
+            "valor": total_no_prazo,
+            "descricao": "Envios realizados dentro do prazo",
+        },
+        {
+            "id": "entregas_atrasadas",
+            "titulo": "Entregas atrasadas",
+            "valor": total_atrasadas,
+            "descricao": "Envios registrados apos o prazo",
+        },
+        {
+            "id": "pendencias",
+            "titulo": "Pendencias",
+            "valor": total_pendencias,
+            "descricao": "Documentos esperados ainda sem envio",
+        },
+        {
+            "id": "cumprimento_no_prazo",
+            "titulo": "Cumprimento no prazo",
+            "valor": f"{percentual_cumprimento_prazo:.1f}%",
+            "descricao": "Percentual calculado sobre os documentos esperados",
+        },
+    ]
+
+    return {
+        "periodo": {
+            "data_inicio": inicio_periodo,
+            "data_fim": fim_periodo,
+            "dias_periodo": len(datas_periodo),
+            "total_solicitacoes": len(periodos),
+        },
+        "cards": cards,
+        "resumo": {
+            "total_documentos_esperados": total_esperados,
+            "total_documentos_entregues": total_entregues,
+            "total_entregas_no_prazo": total_no_prazo,
+            "total_entregas_atrasadas": total_atrasadas,
+            "total_pendencias": total_pendencias,
+            "percentual_cumprimento_prazo": percentual_cumprimento_prazo,
+        },
+        "tabelas": {
+            "professores_pendencias": professores_pendencias,
+            "entregas_recentes": entregas_recentes,
+        },
+        "graficos": {
+            "situacao_entregas": {
+                "labels": ["No prazo", "Atrasadas", "Pendentes"],
+                "valores": [total_no_prazo, total_atrasadas, total_pendencias],
+            },
+            "documentos_por_tipo": {
+                "labels": [item[0] for item in tipos_ordenados],
+                "valores": [int(item[1] or 0) for item in tipos_ordenados],
+            },
+        },
+    }
+
+
 def _gerar_insights_gestao_relatorios(
     *,
     dias_uteis: int,
@@ -6589,10 +6887,12 @@ def gerar_dashboard_relatorios(data_inicio: str | None = None, data_fim: str | N
     for item in ranking_recursos:
         recurso_id = int(item.get("recurso_id") or 0)
         recurso_catalogo = recursos_catalogo.get(recurso_id, {})
+        recurso_nome = str(item.get("recurso_nome") or "").strip()
         quantidade_itens = max(int(recurso_catalogo.get("quantidade_itens") or 1), 1)
         ativo = bool(int(recurso_catalogo.get("ativo", 1) or 0))
         total_reservas = int(item.get("total_reservas") or 0)
-        capacidade_periodo = dias_uteis * RELATORIOS_CAPACIDADE_AULAS_DIA * quantidade_itens
+        capacidade_aulas_dia = _capacidade_aulas_por_dia_recurso(recurso_nome)
+        capacidade_periodo = dias_uteis * capacidade_aulas_dia * quantidade_itens
         percentual_uso = 0.0
         if capacidade_periodo > 0:
             percentual_uso = round((total_reservas / capacidade_periodo) * 100, 1)
@@ -6600,12 +6900,13 @@ def gerar_dashboard_relatorios(data_inicio: str | None = None, data_fim: str | N
         ranking_recursos_enriquecido.append(
             {
                 "recurso_id": recurso_id,
-                "recurso_nome": str(item.get("recurso_nome") or "").strip(),
+                "recurso_nome": recurso_nome,
                 "recurso_tipo": str(item.get("recurso_tipo") or "").strip(),
                 "total_reservas": total_reservas,
                 "professores_distintos": int(item.get("professores_distintos") or 0),
                 "quantidade_itens": quantidade_itens,
                 "ativo": ativo,
+                "capacidade_aulas_dia": capacidade_aulas_dia,
                 "capacidade_periodo": capacidade_periodo,
                 "percentual_uso": percentual_uso,
             }
@@ -6748,9 +7049,7 @@ def gerar_dashboard_relatorios(data_inicio: str | None = None, data_fim: str | N
             "id": "taxa_uso_recursos",
             "titulo": "Capacidade de uso dos recursos",
             "valor": f"{taxa_uso_geral:.1f}%",
-            "descricao": (
-                f"Base estimada de {RELATORIOS_CAPACIDADE_AULAS_DIA} uso(s) por dia util e por item"
-            ),
+            "descricao": _descricao_base_capacidade_relatorios(),
         },
     ]
     insights_gestao = _gerar_insights_gestao_relatorios(
@@ -6769,6 +7068,9 @@ def gerar_dashboard_relatorios(data_inicio: str | None = None, data_fim: str | N
             "dias_periodo": len(datas_periodo),
             "dias_uteis": dias_uteis,
             "capacidade_aulas_por_dia": RELATORIOS_CAPACIDADE_AULAS_DIA,
+            "capacidade_aulas_por_dia_padrao": RELATORIOS_CAPACIDADE_AULAS_DIA,
+            "capacidade_aulas_por_dia_sala_tecnologia": RELATORIOS_CAPACIDADE_AULAS_DIA_SALA_TECNOLOGIA,
+            "descricao_capacidade": _descricao_base_capacidade_relatorios(),
         },
         "cards": cards,
         "dashboard_geral": {
@@ -6827,7 +7129,7 @@ def gerar_dashboard_relatorios(data_inicio: str | None = None, data_fim: str | N
                 {"id": "dashboard", "label": "Dashboard Geral", "habilitado": True},
                 {"id": "impressoes", "label": "Impressoes", "habilitado": True},
                 {"id": "recursos", "label": "Recursos Tecnologicos", "habilitado": True},
-                {"id": "anexos", "label": "Central de Anexos", "habilitado": False},
+                {"id": "anexos", "label": "Central de Anexos", "habilitado": True},
                 {"id": "coordenacao", "label": "Coordenacao", "habilitado": False},
                 {"id": "ocorrencias", "label": "Ocorrencias", "habilitado": False},
                 {"id": "preconselho", "label": "Pre-Conselho", "habilitado": False},

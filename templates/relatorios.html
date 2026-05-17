@@ -81,8 +81,8 @@
             <button class="admin-tab-btn" data-relatorios-tab-trigger="recursos" aria-selected="false" type="button">
                 Recursos Tecnologicos
             </button>
-            <button class="admin-tab-btn reports-tab-btn-disabled" data-relatorios-tab-trigger="anexos"
-                aria-selected="false" type="button" disabled>
+            <button class="admin-tab-btn" data-relatorios-tab-trigger="anexos"
+                aria-selected="false" type="button">
                 Central de Anexos
             </button>
             <button class="admin-tab-btn reports-tab-btn-disabled" data-relatorios-tab-trigger="coordenacao"
@@ -147,7 +147,7 @@
                 <article class="calendar-card reports-chart-card reports-chart-card-wide">
                     <header class="booking-card-header">
                         <h3>Capacidade utilizada dos recursos</h3>
-                        <p class="booking-empty">Base estimada de 5 uso(s) por dia util e por item do recurso.</p>
+                        <p class="booking-empty">Base estimada por recurso: 5 uso(s) por dia util; Sala de Tecnologia: 10.</p>
                     </header>
                     <div class="reports-chart-wrap">
                         <canvas id="graficoUtilizacaoRecursos"></canvas>
@@ -251,10 +251,72 @@
         </section>
 
         <section class="admin-tab-panel" data-relatorios-tab-panel="anexos" hidden>
-            <article class="calendar-card reports-placeholder-card">
-                <h3>Central de Anexos</h3>
-                <p class="booking-empty">Estrutura reservada para a proxima etapa do modulo.</p>
-            </article>
+            <div id="anexosResumo" class="reports-summary-grid"></div>
+
+            <div class="reports-grid">
+                <article class="calendar-card reports-chart-card">
+                    <header class="booking-card-header">
+                        <h3>Situacao das entregas</h3>
+                        <p class="booking-empty">Comparativo entre envios no prazo, atrasados e pendentes.</p>
+                    </header>
+                    <div class="reports-chart-wrap">
+                        <canvas id="graficoAnexosSituacao"></canvas>
+                        <p id="graficoAnexosSituacaoVazio" class="reports-chart-empty" hidden></p>
+                    </div>
+                </article>
+
+                <article class="calendar-card reports-chart-card">
+                    <header class="booking-card-header">
+                        <h3>Documentos por tipo</h3>
+                        <p class="booking-empty">Quantidade de documentos esperados por tipo de solicitacao.</p>
+                    </header>
+                    <div class="reports-chart-wrap">
+                        <canvas id="graficoAnexosTipo"></canvas>
+                        <p id="graficoAnexosTipoVazio" class="reports-chart-empty" hidden></p>
+                    </div>
+                </article>
+
+                <article class="calendar-card reports-table-card reports-chart-card-wide">
+                    <header class="booking-card-header">
+                        <h3>Professores com pendencias</h3>
+                        <p class="booking-empty">Documentos esperados no periodo ainda sem envio registrado.</p>
+                    </header>
+                    <div class="reports-table-wrap">
+                        <table class="reports-table">
+                            <thead>
+                                <tr>
+                                    <th>Professor</th>
+                                    <th>Documento</th>
+                                    <th>Prazo</th>
+                                    <th>Situacao</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaAnexosPendenciasBody"></tbody>
+                        </table>
+                    </div>
+                </article>
+
+                <article class="calendar-card reports-table-card reports-chart-card-wide">
+                    <header class="booking-card-header">
+                        <h3>Entregas recentes</h3>
+                        <p class="booking-empty">Ultimos registros consolidados de envio e pendencia no periodo.</p>
+                    </header>
+                    <div class="reports-table-wrap">
+                        <table class="reports-table">
+                            <thead>
+                                <tr>
+                                    <th>Professor</th>
+                                    <th>Documento</th>
+                                    <th>Data de envio</th>
+                                    <th>Prazo</th>
+                                    <th>Situacao</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaAnexosRecentesBody"></tbody>
+                        </table>
+                    </div>
+                </article>
+            </div>
         </section>
 
         <section class="admin-tab-panel" data-relatorios-tab-panel="coordenacao" hidden>

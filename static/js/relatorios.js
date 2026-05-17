@@ -6,7 +6,7 @@ const {
     normalizarCargoUsuario,
 } = window.AppAuth;
 const { fetchJson } = window.AppApi;
-const { paraIso } = window.AppFormat;
+const { paraIso, paraDataBr } = window.AppFormat;
 
 const token = garantirToken();
 const headers = criarHeadersAuth(token);
@@ -14,6 +14,7 @@ const headers = criarHeadersAuth(token);
 const graficos = {};
 const VIEWPORT_TABLET_MAX = 960;
 let dashboardAtual = null;
+let anexosAtual = null;
 let viewportCompactoAtual = viewportEhCompactoInicial();
 
 function viewportEhCompactoInicial() {
@@ -29,6 +30,21 @@ function formatarDecimal(valor, casas = 1) {
         minimumFractionDigits: casas,
         maximumFractionDigits: casas,
     }).format(Number(valor || 0));
+}
+
+function formatarDataHoraRelatorios(valor) {
+    const texto = String(valor || "").trim();
+    if (!texto) {
+        return "-";
+    }
+
+    const partes = texto.replace("T", " ").split(" ");
+    if (partes.length === 1) {
+        return partes[0].includes("-") ? paraDataBr(partes[0]) : texto;
+    }
+
+    const hora = String(partes[1] || "").slice(0, 5);
+    return `${paraDataBr(partes[0])} ${hora}`;
 }
 
 function formatarValorCard(valor) {
@@ -94,10 +110,10 @@ function atualizarResumoPeriodo(periodo = {}) {
     const dataFim = String(periodo.data_fim || "").trim();
     const diasPeriodo = formatarNumero(periodo.dias_periodo || 0);
     const diasUteis = formatarNumero(periodo.dias_uteis || 0);
-    const capacidadeDia = formatarNumero(periodo.capacidade_aulas_por_dia || 0);
+    const descricaoCapacidade = String(periodo.descricao_capacidade || "").trim();
 
     el("relatoriosPeriodoInfo").innerText = dataInicio && dataFim
-        ? `Periodo: ${dataInicio} ate ${dataFim} | ${diasPeriodo} dia(s), ${diasUteis} dia(s) uteis | base de ${capacidadeDia} uso(s) por dia util.`
+        ? `Periodo: ${dataInicio} ate ${dataFim} | ${diasPeriodo} dia(s), ${diasUteis} dia(s) uteis | ${descricaoCapacidade || "Base estimada configurada para o periodo."}`
         : "";
 }
 
@@ -161,6 +177,16 @@ function renderResumoSimples(containerId, itens = []) {
         article.appendChild(valor);
         container.appendChild(article);
     });
+}
+
+function renderResumoCards(containerId, cards = []) {
+    renderResumoSimples(
+        containerId,
+        (Array.isArray(cards) ? cards : []).map((card) => ({
+            titulo: card.titulo || "Resumo",
+            valor: formatarValorCard(card.valor),
+        }))
+    );
 }
 
 function renderInsights(insights = []) {
@@ -377,6 +403,25 @@ function renderTabelaRecursosProfessor(itens = []) {
     renderTabelaComLinhas("tabelaRecursosProfessorBody", itens, 2, (item) => [
         item.nome || "Professor nao informado",
         formatarNumero(item.total_reservas || 0),
+    ]);
+}
+
+function renderTabelaPendenciasAnexos(itens = []) {
+    renderTabelaComLinhas("tabelaAnexosPendenciasBody", itens, 4, (item) => [
+        item.professor || "Professor nao informado",
+        item.documento || "Documento nao informado",
+        formatarDataHoraRelatorios(item.prazo),
+        item.situacao || "Pendente",
+    ]);
+}
+
+function renderTabelaRecentesAnexos(itens = []) {
+    renderTabelaComLinhas("tabelaAnexosRecentesBody", itens, 5, (item) => [
+        item.professor || "Professor nao informado",
+        item.documento || "Documento nao informado",
+        formatarDataHoraRelatorios(item.data_envio),
+        formatarDataHoraRelatorios(item.prazo),
+        item.situacao || "Pendente",
     ]);
 }
 
@@ -608,6 +653,85 @@ function renderRecursos(payload = {}) {
     renderTabelaRecursosProfessor(payload.recursos?.ranking_professores || []);
 }
 
+function renderAnexos(payload = {}) {
+    renderResumoCards("anexosResumo", payload.cards || []);
+
+    const graficosAnexos = payload.graficos || {};
+    criarGrafico(
+        "anexosSituacao",
+        "graficoAnexosSituacao",
+        "graficoAnexosSituacaoVazio",
+        {
+            type: "doughnut",
+            data: {
+                labels: graficosAnexos.situacao_entregas?.labels || [],
+                datasets: [
+                    {
+                        data: graficosAnexos.situacao_entregas?.valores || [],
+                        backgroundColor: [
+                            "#0f766e",
+                            "#f59e0b",
+                            "#d0d7e3",
+                        ],
+                    },
+                ],
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: aspectRatioGrafico("rosca"),
+                layout: {
+                    padding: {
+                        top: 10,
+                        right: 10,
+                        bottom: 10,
+                        left: 10,
+                    },
+                },
+                plugins: {
+                    legend: {
+                        position: "bottom",
+                        labels: {
+                            color: "#405165",
+                            padding: 14,
+                            boxWidth: 14,
+                        },
+                    },
+                },
+            },
+        },
+        "Nenhum documento esperado no periodo."
+    );
+
+    criarGrafico(
+        "anexosTipo",
+        "graficoAnexosTipo",
+        "graficoAnexosTipoVazio",
+        {
+            type: "bar",
+            data: {
+                labels: graficosAnexos.documentos_por_tipo?.labels || [],
+                datasets: [
+                    {
+                        label: "Documentos esperados",
+                        data: graficosAnexos.documentos_por_tipo?.valores || [],
+                        backgroundColor: "#1d4ed8",
+                        borderRadius: 10,
+                    },
+                ],
+            },
+            options: opcoesBaseGrafico({
+                aspectRatio: aspectRatioGrafico("barra"),
+                plugins: { legend: { display: false } },
+            }),
+        },
+        "Nenhum tipo de documento encontrado no periodo."
+    );
+
+    renderTabelaPendenciasAnexos(payload.tabelas?.professores_pendencias || []);
+    renderTabelaRecentesAnexos(payload.tabelas?.entregas_recentes || []);
+}
+
 function ativarTab(tabId) {
     document.querySelectorAll("[data-relatorios-tab-trigger]").forEach((botao) => {
         const ativo = botao.dataset.relatoriosTabTrigger === tabId;
@@ -634,15 +758,21 @@ async function carregarUsuario() {
     return usuario;
 }
 
-async function carregarDashboard() {
+async function carregarRelatorios() {
     setMensagem("Atualizando relatorios...");
-    const payload = await fetchJson(`/api/relatorios/dashboard${queryPeriodo()}`, { headers });
-    dashboardAtual = payload;
+    const [payloadDashboard, payloadAnexos] = await Promise.all([
+        fetchJson(`/api/relatorios/dashboard${queryPeriodo()}`, { headers }),
+        fetchJson(`/api/relatorios/anexos${queryPeriodo()}`, { headers }),
+    ]);
 
-    atualizarResumoPeriodo(payload.periodo || {});
-    renderDashboard(payload);
-    renderImpressoes(payload);
-    renderRecursos(payload);
+    dashboardAtual = payloadDashboard;
+    anexosAtual = payloadAnexos;
+
+    atualizarResumoPeriodo(payloadDashboard.periodo || {});
+    renderDashboard(payloadDashboard);
+    renderImpressoes(payloadDashboard);
+    renderRecursos(payloadDashboard);
+    renderAnexos(payloadAnexos);
     setMensagem("Relatorios atualizados.");
 }
 
@@ -660,6 +790,9 @@ function registrarResizeGraficos() {
             renderDashboard(dashboardAtual);
             renderImpressoes(dashboardAtual);
             renderRecursos(dashboardAtual);
+            if (anexosAtual) {
+                renderAnexos(anexosAtual);
+            }
         }, 120);
     });
 }
@@ -675,7 +808,7 @@ function registrarEventos() {
 
     el("btnAplicarRelatorios").addEventListener("click", async () => {
         try {
-            await carregarDashboard();
+            await carregarRelatorios();
         } catch (err) {
             setMensagem(err.message || "Nao foi possivel carregar os relatorios.", "erro");
         }
@@ -684,7 +817,7 @@ function registrarEventos() {
     el("btnPeriodoAtual").addEventListener("click", async () => {
         aplicarPeriodoAtual();
         try {
-            await carregarDashboard();
+            await carregarRelatorios();
         } catch (err) {
             setMensagem(err.message || "Nao foi possivel carregar os relatorios.", "erro");
         }
@@ -708,7 +841,7 @@ async function init() {
         if (!usuario) {
             return;
         }
-        await carregarDashboard();
+        await carregarRelatorios();
     } catch (err) {
         setMensagem(err.message || "Erro ao carregar o modulo de relatorios.", "erro");
     }
