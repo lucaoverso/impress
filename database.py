@@ -49,6 +49,11 @@ COTA_POR_TURMA_PADRAO = 12
 COTA_MENSAL_ESCOLA_PADRAO = 4000
 RESERVA_INSTITUCIONAL_PERCENTUAL = 10
 RELATORIOS_CAPACIDADE_AULAS_DIA = 5
+RELATORIOS_INSIGHT_PAGINAS_ELEVADAS_MIN = 150
+RELATORIOS_INSIGHT_PAGINAS_ELEVADAS_POR_DIA_UTIL = 10
+RELATORIOS_INSIGHT_CONCENTRACAO_IMPRESSAO_PERCENTUAL = 50.0
+RELATORIOS_INSIGHT_OCUPACAO_ALTA_PERCENTUAL = 60.0
+RELATORIOS_INSIGHT_BAIXO_USO_PERCENTUAL = 10.0
 DISCIPLINAS_MULTIPLICADOR_ALTO = {
     "lingua portuguesa",
     "portugues",
@@ -6409,6 +6414,134 @@ def _recurso_top(itens: list[dict]) -> dict:
     }
 
 
+def _criar_insight_relatorio(
+    insight_id: str,
+    titulo: str,
+    texto: str,
+    tipo: str = "informativo",
+) -> dict:
+    return {
+        "id": str(insight_id or "").strip(),
+        "titulo": str(titulo or "").strip(),
+        "texto": str(texto or "").strip(),
+        "tipo": str(tipo or "informativo").strip(),
+    }
+
+
+def _recurso_parece_sala_tecnologia(nome_recurso: str) -> bool:
+    chave = _normalizar_texto_chave(nome_recurso)
+    return "sala de tecnologia" in chave or chave.startswith("ste ") or " ste " in f" {chave} "
+
+
+def _gerar_insights_gestao_relatorios(
+    *,
+    dias_uteis: int,
+    total_paginas: int,
+    total_reservas: int,
+    total_professores_impressoes: int,
+    top_impressao: dict,
+    ranking_recursos_visiveis: list[dict],
+) -> list[dict]:
+    if total_paginas <= 0 and total_reservas <= 0:
+        return [
+            _criar_insight_relatorio(
+                "dados_insuficientes",
+                "Dados insuficientes",
+                "Ainda não há dados suficientes para gerar insights neste período.",
+                "informativo",
+            )
+        ]
+
+    insights = []
+
+    limite_paginas_elevadas = max(
+        RELATORIOS_INSIGHT_PAGINAS_ELEVADAS_MIN,
+        max(int(dias_uteis or 0), 1) * RELATORIOS_INSIGHT_PAGINAS_ELEVADAS_POR_DIA_UTIL,
+    )
+    if total_paginas >= limite_paginas_elevadas:
+        insights.append(
+            _criar_insight_relatorio(
+                "volume_impressoes_elevado",
+                "Volume de impressões elevado",
+                (
+                    "O volume de impressões no período está elevado. Recomenda-se acompanhar "
+                    "o uso de papel e estimular alternativas digitais quando possível."
+                ),
+                "atencao",
+            )
+        )
+
+    paginas_top_impressao = int(top_impressao.get("total_paginas") or 0)
+    percentual_top_impressao = 0.0
+    if total_paginas > 0:
+        percentual_top_impressao = (paginas_top_impressao / total_paginas) * 100
+    if (
+        total_professores_impressoes >= 2
+        and percentual_top_impressao >= RELATORIOS_INSIGHT_CONCENTRACAO_IMPRESSAO_PERCENTUAL
+    ):
+        insights.append(
+            _criar_insight_relatorio(
+                "concentracao_impressoes",
+                "Concentração de impressões",
+                "Há concentração significativa de impressões em poucos professores.",
+                "atencao",
+            )
+        )
+
+    if total_reservas > 0:
+        recursos_alta_demanda = [
+            item
+            for item in ranking_recursos_visiveis
+            if float(item.get("percentual_uso") or 0)
+            >= RELATORIOS_INSIGHT_OCUPACAO_ALTA_PERCENTUAL
+        ]
+        if recursos_alta_demanda:
+            recurso_alta_demanda = recursos_alta_demanda[0]
+            nome_recurso = str(recurso_alta_demanda.get("recurso_nome") or "").strip()
+            if _recurso_parece_sala_tecnologia(nome_recurso):
+                titulo = "Alta demanda da Sala de Tecnologia"
+                texto = "A Sala de Tecnologia apresentou alta demanda no período."
+            else:
+                titulo = "Recurso com alta ocupação"
+                texto = f'O recurso "{nome_recurso}" apresentou alta demanda no período.'
+            insights.append(
+                _criar_insight_relatorio(
+                    "alta_ocupacao_recurso",
+                    titulo,
+                    texto,
+                    "observacao",
+                )
+            )
+
+        recursos_baixo_uso = [
+            item
+            for item in ranking_recursos_visiveis
+            if bool(item.get("ativo"))
+            and float(item.get("percentual_uso") or 0) <= RELATORIOS_INSIGHT_BAIXO_USO_PERCENTUAL
+        ]
+        if len(ranking_recursos_visiveis) >= 2 and recursos_baixo_uso:
+            insights.append(
+                _criar_insight_relatorio(
+                    "baixo_uso_recursos",
+                    "Baixa utilização de recursos",
+                    "Existem recursos tecnológicos com baixa utilização no período.",
+                    "oportunidade",
+                )
+            )
+
+    if insights:
+        return insights
+
+    return [
+        _criar_insight_relatorio(
+            "sem_alertas_relevantes",
+            "Sem alertas relevantes",
+            "Os indicadores atuais não apontam alertas relevantes neste período.",
+            "informativo",
+        )
+    ]
+
+
 def gerar_dashboard_relatorios(data_inicio: str | None = None, data_fim: str | None = None):
     hoje = date.today()
     inicio_periodo = str(data_inicio or hoje.replace(day=1).isoformat())
@@ -6483,9 +6616,13 @@ def gerar_dashboard_relatorios(data_inicio: str | None = None, data_fim: str | N
         for item in ranking_recursos_enriquecido
         if item["ativo"] or item["total_reservas"] > 0
     ]
-    ranking_recursos_visiveis.sort(
-        key=lambda item: (item["total_reservas"], item["percentual_uso"], item["recurso_nome"]),
-        reverse=True,
+    ranking_recursos_visiveis = sorted(
+        ranking_recursos_visiveis,
+        key=lambda item: (
+            -int(item.get("total_reservas") or 0),
+            -float(item.get("percentual_uso") or 0),
+            str(item.get("recurso_nome") or "").casefold(),
+        ),
     )
 
     total_paginas = sum(int(item.get("total_paginas") or 0) for item in ranking_impressao_ativo)
@@ -6616,6 +6753,14 @@ def gerar_dashboard_relatorios(data_inicio: str | None = None, data_fim: str | N
             ),
         },
     ]
+    insights_gestao = _gerar_insights_gestao_relatorios(
+        dias_uteis=dias_uteis,
+        total_paginas=total_paginas,
+        total_reservas=total_reservas,
+        total_professores_impressoes=total_professores_impressoes,
+        top_impressao=top_impressao,
+        ranking_recursos_visiveis=ranking_recursos_visiveis,
+    )
 
     return {
         "periodo": {
@@ -6627,6 +6772,7 @@ def gerar_dashboard_relatorios(data_inicio: str | None = None, data_fim: str | N
         },
         "cards": cards,
         "dashboard_geral": {
+            "insights": insights_gestao,
             "graficos": {
                 "impressoes_por_professor": {
                     "labels": [item["nome"] for item in ranking_impressao_ativo[:7]],

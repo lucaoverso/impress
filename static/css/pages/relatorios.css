@@ -2,19 +2,32 @@
 
 .reports-page {
     display: grid;
-    gap: 16px;
+    gap: 20px;
+}
+
+.reports-page .page-user-copy {
+    display: block;
+}
+
+.reports-page .page-header {
+    gap: 20px;
+    padding: 4px 2px 2px;
+}
+
+.reports-page .page-header-main {
+    gap: 10px;
 }
 
 .reports-filter-card {
-    padding: 16px;
+    padding: 18px;
 }
 
 .reports-filter-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 220px)) minmax(220px, 1fr);
-    gap: 12px;
+    gap: 14px;
     align-items: end;
-    margin-top: 12px;
+    margin-top: 14px;
 }
 
 .reports-filter-field {
@@ -44,9 +57,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 12px;
+    gap: 14px;
     flex-wrap: wrap;
-    margin-top: 12px;
+    margin-top: 14px;
 }
 
 .reports-message {
@@ -68,7 +81,56 @@
 .reports-summary-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.reports-insights-card {
+    padding: 16px;
+}
+
+.reports-insights-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 14px;
+}
+
+.reports-insight-item {
+    border: 1px solid #d9e2ef;
+    border-radius: 16px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    padding: 14px;
+    display: grid;
+    gap: 8px;
+}
+
+.reports-insight-item[data-tipo="atencao"] {
+    border-color: #f0c9c0;
+    background: linear-gradient(180deg, #fff8f6 0%, #fffdfc 100%);
+}
+
+.reports-insight-item[data-tipo="observacao"] {
+    border-color: #c6d8f2;
+    background: linear-gradient(180deg, #f7fbff 0%, #ffffff 100%);
+}
+
+.reports-insight-item[data-tipo="oportunidade"] {
+    border-color: #cce3d6;
+    background: linear-gradient(180deg, #f6fcf8 0%, #ffffff 100%);
+}
+
+.reports-insight-title,
+.reports-insight-text {
+    margin: 0;
+}
+
+.reports-insight-title {
+    font-size: 15px;
+    color: #12304a;
+}
+
+.reports-insight-text {
+    color: #5f6f82;
+    line-height: 1.5;
 }
 
 .reports-metric-card,
@@ -80,16 +142,16 @@
 }
 
 .reports-metric-card {
-    padding: 16px;
+    padding: 18px;
     display: grid;
-    gap: 10px;
+    gap: 12px;
     min-height: 162px;
 }
 
 .reports-summary-card {
-    padding: 14px 16px;
+    padding: 16px 18px;
     display: grid;
-    gap: 8px;
+    gap: 10px;
 }
 
 .reports-metric-label,
@@ -125,13 +187,20 @@
 .reports-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 14px;
+    gap: 16px;
 }
 
 .reports-chart-card,
 .reports-table-card,
 .reports-placeholder-card {
-    padding: 14px;
+    padding: 16px;
+}
+
+.reports-insights-card .booking-card-header,
+.reports-chart-card .booking-card-header,
+.reports-table-card .booking-card-header,
+.reports-placeholder-card .booking-card-header {
+    margin-bottom: 14px;
 }
 
 .reports-chart-card-wide {
@@ -140,16 +209,17 @@
 
 .reports-chart-wrap {
     position: relative;
-    min-height: 280px;
+    padding-top: 4px;
 }
 
 .reports-chart-wrap canvas {
     width: 100% !important;
-    height: 280px !important;
+    height: auto !important;
+    display: block;
 }
 
 .reports-chart-empty {
-    min-height: 280px;
+    min-height: 300px;
     margin: 0;
     border: 1px dashed #cbd5e1;
     border-radius: 14px;
@@ -167,6 +237,7 @@
     border: 1px solid #d9e2ef;
     border-radius: 14px;
     background: #f8fbff;
+    margin-top: 4px;
 }
 
 .reports-table {
@@ -219,6 +290,10 @@
     .reports-summary-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+
+    .reports-insights-list {
+        grid-template-columns: 1fr;
+    }
 }
 
 @media (max-width: 960px) {
@@ -238,11 +313,15 @@
         grid-template-columns: 1fr;
     }
 
+    .reports-page {
+        gap: 18px;
+    }
+
     .reports-filter-meta {
         align-items: flex-start;
     }
 
-    .reports-table {
-        min-width: 100%;
+    .reports-chart-empty {
+        min-height: 240px;
     }
 }

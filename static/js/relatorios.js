@@ -11,9 +11,14 @@ const { paraIso } = window.AppFormat;
 const token = garantirToken();
 const headers = criarHeadersAuth(token);
 
-let usuarioAtual = null;
-let dashboardAtual = null;
 const graficos = {};
+const VIEWPORT_TABLET_MAX = 960;
+let dashboardAtual = null;
+let viewportCompactoAtual = viewportEhCompactoInicial();
+
+function viewportEhCompactoInicial() {
+    return window.innerWidth <= VIEWPORT_TABLET_MAX;
+}
 
 function formatarNumero(valor) {
     return new Intl.NumberFormat("pt-BR").format(Number(valor || 0));
@@ -158,6 +163,38 @@ function renderResumoSimples(containerId, itens = []) {
     });
 }
 
+function renderInsights(insights = []) {
+    const container = el("relatoriosInsights");
+    container.innerHTML = "";
+
+    const listaInsights = Array.isArray(insights) ? insights : [];
+    if (listaInsights.length === 0) {
+        listaInsights.push({
+            titulo: "Dados insuficientes",
+            texto: "Ainda não há dados suficientes para gerar insights neste período.",
+            tipo: "informativo",
+        });
+    }
+
+    listaInsights.forEach((insight) => {
+        const article = document.createElement("article");
+        article.className = "reports-insight-item";
+        article.dataset.tipo = insight.tipo || "informativo";
+
+        const titulo = document.createElement("strong");
+        titulo.className = "reports-insight-title";
+        titulo.innerText = insight.titulo || "Insight";
+
+        const texto = document.createElement("p");
+        texto.className = "reports-insight-text";
+        texto.innerText = insight.texto || "";
+
+        article.appendChild(titulo);
+        article.appendChild(texto);
+        container.appendChild(article);
+    });
+}
+
 function destruirGrafico(idGrafico) {
     if (graficos[idGrafico]) {
         graficos[idGrafico].destroy();
@@ -219,26 +256,59 @@ function criarGrafico(idGrafico, canvasId, vazioId, configuracao, mensagemVazio)
     graficos[idGrafico] = new window.Chart(canvas, configuracao);
 }
 
+function viewportEhCompacto() {
+    return window.innerWidth <= VIEWPORT_TABLET_MAX;
+}
+
+function aspectRatioGrafico(tipo = "padrao") {
+    const compacto = viewportEhCompacto();
+
+    if (tipo === "linha-amplo") {
+        return compacto ? 1.45 : 2.25;
+    }
+    if (tipo === "barra-amplo") {
+        return compacto ? 1.35 : 2.0;
+    }
+    if (tipo === "barra") {
+        return compacto ? 1.18 : 1.45;
+    }
+    if (tipo === "rosca") {
+        return compacto ? 1.1 : 1.22;
+    }
+    return compacto ? 1.2 : 1.55;
+}
+
 function opcoesBaseGrafico(extra = {}) {
     return Object.assign(
         {
             responsive: true,
-            maintainAspectRatio: false,
+            maintainAspectRatio: true,
+            aspectRatio: aspectRatioGrafico(),
+            layout: {
+                padding: {
+                    top: 8,
+                    right: 8,
+                    bottom: 4,
+                    left: 4,
+                },
+            },
             plugins: {
                 legend: {
                     labels: {
                         color: "#405165",
+                        padding: 14,
+                        boxWidth: 14,
                     },
                 },
             },
             scales: {
                 x: {
-                    ticks: { color: "#5b6b7f" },
+                    ticks: { color: "#5b6b7f", padding: 8 },
                     grid: { color: "rgba(148, 163, 184, 0.15)" },
                 },
                 y: {
                     beginAtZero: true,
-                    ticks: { color: "#5b6b7f" },
+                    ticks: { color: "#5b6b7f", padding: 8 },
                     grid: { color: "rgba(148, 163, 184, 0.15)" },
                 },
             },
@@ -260,10 +330,19 @@ function renderTabelaVazia(tbodyId, colspan, mensagem = "Sem dados no periodo se
     tbody.appendChild(tr);
 }
 
-function renderTabelaImpressoes(itens = []) {
-    const tbodyId = "tabelaImpressoesBody";
+function appendLinhaTabela(tbody, colunas = []) {
+    const tr = document.createElement("tr");
+    colunas.forEach((coluna) => {
+        const td = document.createElement("td");
+        td.innerText = coluna;
+        tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+}
+
+function renderTabelaComLinhas(tbodyId, itens, colspan, criarColunas) {
     if (!Array.isArray(itens) || itens.length === 0) {
-        renderTabelaVazia(tbodyId, 3);
+        renderTabelaVazia(tbodyId, colspan);
         return;
     }
 
@@ -271,64 +350,42 @@ function renderTabelaImpressoes(itens = []) {
     tbody.innerHTML = "";
 
     itens.forEach((item) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${item.nome || "Professor nao informado"}</td>
-            <td>${formatarNumero(item.total_jobs || 0)}</td>
-            <td>${formatarNumero(item.total_paginas || 0)}</td>
-        `;
-        tbody.appendChild(tr);
+        appendLinhaTabela(tbody, criarColunas(item));
     });
+}
+
+function renderTabelaImpressoes(itens = []) {
+    renderTabelaComLinhas("tabelaImpressoesBody", itens, 3, (item) => [
+        item.nome || "Professor nao informado",
+        formatarNumero(item.total_jobs || 0),
+        formatarNumero(item.total_paginas || 0),
+    ]);
 }
 
 function renderTabelaRecursos(itens = []) {
-    const tbodyId = "tabelaRecursosBody";
-    if (!Array.isArray(itens) || itens.length === 0) {
-        renderTabelaVazia(tbodyId, 6);
-        return;
-    }
-
-    const tbody = el(tbodyId);
-    tbody.innerHTML = "";
-
-    itens.forEach((item) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${item.recurso_nome || "Recurso nao informado"}</td>
-            <td>${item.recurso_tipo || "-"}</td>
-            <td>${formatarNumero(item.total_reservas || 0)}</td>
-            <td>${formatarNumero(item.professores_distintos || 0)}</td>
-            <td>${formatarNumero(item.capacidade_periodo || 0)}</td>
-            <td>${formatarDecimal(item.percentual_uso || 0)}%</td>
-        `;
-        tbody.appendChild(tr);
-    });
+    renderTabelaComLinhas("tabelaRecursosBody", itens, 6, (item) => [
+        item.recurso_nome || "Recurso nao informado",
+        item.recurso_tipo || "-",
+        formatarNumero(item.total_reservas || 0),
+        formatarNumero(item.professores_distintos || 0),
+        formatarNumero(item.capacidade_periodo || 0),
+        `${formatarDecimal(item.percentual_uso || 0)}%`,
+    ]);
 }
 
 function renderTabelaRecursosProfessor(itens = []) {
-    const tbodyId = "tabelaRecursosProfessorBody";
-    if (!Array.isArray(itens) || itens.length === 0) {
-        renderTabelaVazia(tbodyId, 2);
-        return;
-    }
-
-    const tbody = el(tbodyId);
-    tbody.innerHTML = "";
-
-    itens.forEach((item) => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-            <td>${item.nome || "Professor nao informado"}</td>
-            <td>${formatarNumero(item.total_reservas || 0)}</td>
-        `;
-        tbody.appendChild(tr);
-    });
+    renderTabelaComLinhas("tabelaRecursosProfessorBody", itens, 2, (item) => [
+        item.nome || "Professor nao informado",
+        formatarNumero(item.total_reservas || 0),
+    ]);
 }
 
 function renderDashboard(payload = {}) {
     renderCards(payload.cards || []);
 
-    const dashboard = payload.dashboard_geral?.graficos || {};
+    const dashboard = payload.dashboard_geral || {};
+    const dashboardGraficos = dashboard.graficos || {};
+    renderInsights(dashboard.insights || []);
 
     criarGrafico(
         "movimentoPeriodo",
@@ -337,11 +394,11 @@ function renderDashboard(payload = {}) {
         {
             type: "line",
             data: {
-                labels: dashboard.movimento_periodo?.labels || [],
+                labels: dashboardGraficos.movimento_periodo?.labels || [],
                 datasets: [
                     {
                         label: "Paginas impressas",
-                        data: dashboard.movimento_periodo?.paginas || [],
+                        data: dashboardGraficos.movimento_periodo?.paginas || [],
                         borderColor: "#0f766e",
                         backgroundColor: "rgba(15, 118, 110, 0.18)",
                         tension: 0.25,
@@ -349,7 +406,7 @@ function renderDashboard(payload = {}) {
                     },
                     {
                         label: "Reservas de recursos",
-                        data: dashboard.movimento_periodo?.reservas || [],
+                        data: dashboardGraficos.movimento_periodo?.reservas || [],
                         borderColor: "#1d4ed8",
                         backgroundColor: "rgba(29, 78, 216, 0.12)",
                         tension: 0.25,
@@ -357,7 +414,9 @@ function renderDashboard(payload = {}) {
                     },
                 ],
             },
-            options: opcoesBaseGrafico(),
+            options: opcoesBaseGrafico({
+                aspectRatio: aspectRatioGrafico("linha-amplo"),
+            }),
         },
         "Sem movimento registrado no periodo."
     );
@@ -369,17 +428,18 @@ function renderDashboard(payload = {}) {
         {
             type: "bar",
             data: {
-                labels: dashboard.impressoes_por_professor?.labels || [],
+                labels: dashboardGraficos.impressoes_por_professor?.labels || [],
                 datasets: [
                     {
                         label: "Paginas",
-                        data: dashboard.impressoes_por_professor?.valores || [],
+                        data: dashboardGraficos.impressoes_por_professor?.valores || [],
                         backgroundColor: "#0f766e",
                         borderRadius: 10,
                     },
                 ],
             },
             options: opcoesBaseGrafico({
+                aspectRatio: aspectRatioGrafico("barra"),
                 plugins: { legend: { display: false } },
             }),
         },
@@ -393,10 +453,10 @@ function renderDashboard(payload = {}) {
         {
             type: "doughnut",
             data: {
-                labels: dashboard.reservas_por_recurso?.labels || [],
+                labels: dashboardGraficos.reservas_por_recurso?.labels || [],
                 datasets: [
                     {
-                        data: dashboard.reservas_por_recurso?.valores || [],
+                        data: dashboardGraficos.reservas_por_recurso?.valores || [],
                         backgroundColor: [
                             "#0f766e",
                             "#1d4ed8",
@@ -411,12 +471,23 @@ function renderDashboard(payload = {}) {
             },
             options: {
                 responsive: true,
-                maintainAspectRatio: false,
+                maintainAspectRatio: true,
+                aspectRatio: aspectRatioGrafico("rosca"),
+                layout: {
+                    padding: {
+                        top: 10,
+                        right: 10,
+                        bottom: 10,
+                        left: 10,
+                    },
+                },
                 plugins: {
                     legend: {
                         position: "bottom",
                         labels: {
                             color: "#405165",
+                            padding: 14,
+                            boxWidth: 14,
                         },
                     },
                 },
@@ -432,17 +503,18 @@ function renderDashboard(payload = {}) {
         {
             type: "bar",
             data: {
-                labels: dashboard.utilizacao_recursos?.labels || [],
+                labels: dashboardGraficos.utilizacao_recursos?.labels || [],
                 datasets: [
                     {
                         label: "% de uso",
-                        data: dashboard.utilizacao_recursos?.valores || [],
+                        data: dashboardGraficos.utilizacao_recursos?.valores || [],
                         backgroundColor: "#1d4ed8",
                         borderRadius: 10,
                     },
                 ],
             },
             options: opcoesBaseGrafico({
+                aspectRatio: aspectRatioGrafico("barra-amplo"),
                 plugins: {
                     legend: { display: false },
                 },
@@ -485,7 +557,9 @@ function renderImpressoes(payload = {}) {
                     },
                 ],
             },
-            options: opcoesBaseGrafico(),
+            options: opcoesBaseGrafico({
+                aspectRatio: aspectRatioGrafico("barra-amplo"),
+            }),
         },
         "Nenhuma impressao registrada no periodo."
     );
@@ -523,6 +597,7 @@ function renderRecursos(payload = {}) {
                 ],
             },
             options: opcoesBaseGrafico({
+                aspectRatio: aspectRatioGrafico("linha-amplo"),
                 plugins: { legend: { display: false } },
             }),
         },
@@ -554,7 +629,6 @@ async function carregarUsuario() {
         return null;
     }
 
-    usuarioAtual = usuario;
     const cargo = normalizarCargoUsuario(usuario);
     el("relatoriosUsuario").innerText = `${usuario.nome} | ${cargo}`;
     return usuario;
@@ -570,6 +644,24 @@ async function carregarDashboard() {
     renderImpressoes(payload);
     renderRecursos(payload);
     setMensagem("Relatorios atualizados.");
+}
+
+function registrarResizeGraficos() {
+    let resizeTimeoutId = 0;
+    window.addEventListener("resize", () => {
+        window.clearTimeout(resizeTimeoutId);
+        resizeTimeoutId = window.setTimeout(() => {
+            const compacto = viewportEhCompacto();
+            if (compacto === viewportCompactoAtual || !dashboardAtual) {
+                return;
+            }
+
+            viewportCompactoAtual = compacto;
+            renderDashboard(dashboardAtual);
+            renderImpressoes(dashboardAtual);
+            renderRecursos(dashboardAtual);
+        }, 120);
+    });
 }
 
 function registrarEventos() {
@@ -611,6 +703,7 @@ async function init() {
     try {
         aplicarPeriodoAtual();
         registrarEventos();
+        registrarResizeGraficos();
         const usuario = await carregarUsuario();
         if (!usuario) {
             return;
