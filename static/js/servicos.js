@@ -15,8 +15,8 @@ function modulosPermitidos(usuario = {}) {
     }
 
     const cargo = normalizarCargoUsuario(usuario);
-    if (cargo === "ADMIN") return new Set(["impressao", "agendamento", "download", "gestao", "coordenacao", "horario", "apc", "pcpi", "preconselho"]);
-    if (cargo === "COORDENADOR") return new Set(["download", "coordenacao", "horario", "apc", "preconselho"]);
+    if (cargo === "ADMIN") return new Set(["impressao", "agendamento", "download", "gestao", "relatorios", "coordenacao", "horario", "apc", "pcpi", "preconselho"]);
+    if (cargo === "COORDENADOR") return new Set(["download", "relatorios", "coordenacao", "horario", "apc", "preconselho"]);
     return new Set(["impressao", "agendamento", "download", "horario", "apc", "preconselho"]);
 }
 
@@ -52,6 +52,13 @@ function registrarEventos() {
     document.getElementById("cardAgendamento").addEventListener("click", () => {
         window.location.href = "/agendamento";
     });
+
+    const btnIrRelatorios = document.getElementById("cardRelatorios");
+    if (btnIrRelatorios) {
+        btnIrRelatorios.addEventListener("click", () => {
+            window.location.href = "/relatorios";
+        });
+    }
 
     document.getElementById("cardDownload").addEventListener("click", () => {
         window.location.href = "/download";

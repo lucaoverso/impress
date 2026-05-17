@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatorios Gerenciais</title>
+    {% include "includes/style_bundle.html" %}
+</head>
+
+<body>
+    <header class="app-topbar">
+        <div class="app-topbar-main">
+            <div class="app-topbar-brand">
+                <span class="app-topbar-logo">Suite Escolar</span>
+                <span class="app-topbar-context">Gestao escolar</span>
+            </div>
+        </div>
+        <div class="app-topbar-actions">
+            <button id="btnVoltarServicos" type="button">Servicos</button>
+            <button id="btnSair" type="button">Sair</button>
+        </div>
+    </header>
+
+    <main class="page-shell page-shell--wide reports-page">
+        <section class="page-header">
+            <div class="page-header-main">
+                <span class="section-eyebrow">MVP de relatorios</span>
+                <h1 class="page-title">Relatorios gerenciais</h1>
+                <p class="page-lead">
+                    Acompanhe impressoes, uso de recursos tecnologicos e indicadores para apoiar a tomada de decisao da gestao escolar.
+                </p>
+                <p id="relatoriosUsuario" class="page-user-copy"></p>
+            </div>
+            <div class="page-actions">
+                <button id="btnExportarPdf" type="button" disabled>PDF em breve</button>
+                <button id="btnExportarExcel" type="button" disabled>Excel em breve</button>
+            </div>
+        </section>
+
+        <section class="calendar-card reports-filter-card">
+            <div class="section-header">
+                <div class="section-header-main">
+                    <h2>Filtro por periodo</h2>
+                    <p class="section-copy">Selecione a data inicial e a data final para atualizar o dashboard.</p>
+                </div>
+            </div>
+
+            <div class="reports-filter-grid">
+                <div class="reports-filter-field">
+                    <label for="relDataInicio">Data inicial</label>
+                    <input id="relDataInicio" type="date">
+                </div>
+
+                <div class="reports-filter-field">
+                    <label for="relDataFim">Data final</label>
+                    <input id="relDataFim" type="date">
+                </div>
+
+                <div class="reports-filter-actions">
+                    <button id="btnAplicarRelatorios" class="btn-destaque" type="button">Atualizar dashboard</button>
+                    <button id="btnPeriodoAtual" type="button">Mes atual</button>
+                </div>
+            </div>
+
+            <div class="reports-filter-meta">
+                <p id="relatoriosPeriodoInfo" class="hint-copy"></p>
+                <p id="msgRelatorios" class="reports-message"></p>
+            </div>
+        </section>
+
+        <nav class="admin-tabs" aria-label="Abas do modulo de relatorios">
+            <button class="admin-tab-btn is-active" data-relatorios-tab-trigger="dashboard" aria-selected="true"
+                type="button">
+                Dashboard Geral
+            </button>
+            <button class="admin-tab-btn" data-relatorios-tab-trigger="impressoes" aria-selected="false"
+                type="button">
+                Impressoes
+            </button>
+            <button class="admin-tab-btn" data-relatorios-tab-trigger="recursos" aria-selected="false" type="button">
+                Recursos Tecnologicos
+            </button>
+            <button class="admin-tab-btn reports-tab-btn-disabled" data-relatorios-tab-trigger="anexos"
+                aria-selected="false" type="button" disabled>
+                Central de Anexos
+            </button>
+            <button class="admin-tab-btn reports-tab-btn-disabled" data-relatorios-tab-trigger="coordenacao"
+                aria-selected="false" type="button" disabled>
+                Coordenacao
+            </button>
+            <button class="admin-tab-btn reports-tab-btn-disabled" data-relatorios-tab-trigger="ocorrencias"
+                aria-selected="false" type="button" disabled>
+                Ocorrencias
+            </button>
+            <button class="admin-tab-btn reports-tab-btn-disabled" data-relatorios-tab-trigger="preconselho"
+                aria-selected="false" type="button" disabled>
+                Pre-Conselho
+            </button>
+        </nav>
+
+        <section class="admin-tab-panel is-active" data-relatorios-tab-panel="dashboard">
+            <div id="relatoriosCards" class="reports-metrics-grid"></div>
+
+            <div class="reports-grid">
+                <article class="calendar-card reports-chart-card reports-chart-card-wide">
+                    <header class="booking-card-header">
+                        <h3>Movimento do periodo</h3>
+                        <p class="booking-empty">Comparativo entre paginas impressas e reservas de recursos.</p>
+                    </header>
+                    <div class="reports-chart-wrap">
+                        <canvas id="graficoMovimentoPeriodo"></canvas>
+                        <p id="graficoMovimentoPeriodoVazio" class="reports-chart-empty" hidden></p>
+                    </div>
+                </article>
+
+                <article class="calendar-card reports-chart-card">
+                    <header class="booking-card-header">
+                        <h3>Top professores por impressoes</h3>
+                        <p class="booking-empty">Paginas impressas no periodo selecionado.</p>
+                    </header>
+                    <div class="reports-chart-wrap">
+                        <canvas id="graficoImpressoesProfessor"></canvas>
+                        <p id="graficoImpressoesProfessorVazio" class="reports-chart-empty" hidden></p>
+                    </div>
+                </article>
+
+                <article class="calendar-card reports-chart-card">
+                    <header class="booking-card-header">
+                        <h3>Uso por recurso</h3>
+                        <p class="booking-empty">Quantidade de reservas por recurso tecnologico.</p>
+                    </header>
+                    <div class="reports-chart-wrap">
+                        <canvas id="graficoReservasRecurso"></canvas>
+                        <p id="graficoReservasRecursoVazio" class="reports-chart-empty" hidden></p>
+                    </div>
+                </article>
+
+                <article class="calendar-card reports-chart-card reports-chart-card-wide">
+                    <header class="booking-card-header">
+                        <h3>Capacidade utilizada dos recursos</h3>
+                        <p class="booking-empty">Base estimada de 5 uso(s) por dia util e por item do recurso.</p>
+                    </header>
+                    <div class="reports-chart-wrap">
+                        <canvas id="graficoUtilizacaoRecursos"></canvas>
+                        <p id="graficoUtilizacaoRecursosVazio" class="reports-chart-empty" hidden></p>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="admin-tab-panel" data-relatorios-tab-panel="impressoes" hidden>
+            <div id="impressoesResumo" class="reports-summary-grid"></div>
+
+            <div class="reports-grid">
+                <article class="calendar-card reports-chart-card reports-chart-card-wide">
+                    <header class="booking-card-header">
+                        <h3>Evolucao diaria de impressoes</h3>
+                        <p class="booking-empty">Jobs concluidos e paginas impressas por dia.</p>
+                    </header>
+                    <div class="reports-chart-wrap">
+                        <canvas id="graficoImpressoesDiarias"></canvas>
+                        <p id="graficoImpressoesDiariasVazio" class="reports-chart-empty" hidden></p>
+                    </div>
+                </article>
+
+                <article class="calendar-card reports-table-card reports-chart-card-wide">
+                    <header class="booking-card-header">
+                        <h3>Ranking de professores por impressao</h3>
+                        <p class="booking-empty">Mostra quem mais imprimiu no periodo selecionado.</p>
+                    </header>
+                    <div class="reports-table-wrap">
+                        <table class="reports-table">
+                            <thead>
+                                <tr>
+                                    <th>Professor</th>
+                                    <th>Jobs</th>
+                                    <th>Paginas</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaImpressoesBody"></tbody>
+                        </table>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="admin-tab-panel" data-relatorios-tab-panel="recursos" hidden>
+            <div id="recursosResumo" class="reports-summary-grid"></div>
+
+            <div class="reports-grid">
+                <article class="calendar-card reports-chart-card">
+                    <header class="booking-card-header">
+                        <h3>Reservas por dia</h3>
+                        <p class="booking-empty">Movimento diario de uso dos recursos tecnologicos.</p>
+                    </header>
+                    <div class="reports-chart-wrap">
+                        <canvas id="graficoRecursosDiarios"></canvas>
+                        <p id="graficoRecursosDiariosVazio" class="reports-chart-empty" hidden></p>
+                    </div>
+                </article>
+
+                <article class="calendar-card reports-table-card">
+                    <header class="booking-card-header">
+                        <h3>Professores que mais usam recursos</h3>
+                        <p class="booking-empty">Quantidade de reservas por professor.</p>
+                    </header>
+                    <div class="reports-table-wrap">
+                        <table class="reports-table">
+                            <thead>
+                                <tr>
+                                    <th>Professor</th>
+                                    <th>Reservas</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaRecursosProfessorBody"></tbody>
+                        </table>
+                    </div>
+                </article>
+
+                <article class="calendar-card reports-table-card reports-chart-card-wide">
+                    <header class="booking-card-header">
+                        <h3>Panorama dos recursos tecnologicos</h3>
+                        <p class="booking-empty">Capacidade estimada e percentual de uso por recurso.</p>
+                    </header>
+                    <div class="reports-table-wrap">
+                        <table class="reports-table">
+                            <thead>
+                                <tr>
+                                    <th>Recurso</th>
+                                    <th>Tipo</th>
+                                    <th>Reservas</th>
+                                    <th>Professores</th>
+                                    <th>Capacidade</th>
+                                    <th>Uso</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaRecursosBody"></tbody>
+                        </table>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="admin-tab-panel" data-relatorios-tab-panel="anexos" hidden>
+            <article class="calendar-card reports-placeholder-card">
+                <h3>Central de Anexos</h3>
+                <p class="booking-empty">Estrutura reservada para a proxima etapa do modulo.</p>
+            </article>
+        </section>
+
+        <section class="admin-tab-panel" data-relatorios-tab-panel="coordenacao" hidden>
+            <article class="calendar-card reports-placeholder-card">
+                <h3>Coordenacao</h3>
+                <p class="booking-empty">Estrutura reservada para a proxima etapa do modulo.</p>
+            </article>
+        </section>
+
+        <section class="admin-tab-panel" data-relatorios-tab-panel="ocorrencias" hidden>
+            <article class="calendar-card reports-placeholder-card">
+                <h3>Ocorrencias</h3>
+                <p class="booking-empty">Estrutura reservada para a proxima etapa do modulo.</p>
+            </article>
+        </section>
+
+        <section class="admin-tab-panel" data-relatorios-tab-panel="preconselho" hidden>
+            <article class="calendar-card reports-placeholder-card">
+                <h3>Pre-Conselho</h3>
+                <p class="booking-empty">Estrutura reservada para a proxima etapa do modulo.</p>
+            </article>
+        </section>
+    </main>
+
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" referrerpolicy="no-referrer"></script>
+    <script src="{{ request.url_for('static', path='js/relatorios.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+
+</html>

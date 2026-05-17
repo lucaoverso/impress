@@ -19,6 +19,7 @@ import routers.agendamento_router as agendamento_router_module
 import routers.common as common_module
 import routers.config as config_module
 import routers.impressao_router as impressao_router_module
+import routers.relatorios_router as relatorios_router_module
 import routers.download_router as download_router_module
 import routers.horario_escolar_router as horario_escolar_router_module
 import routers.apc_router as apc_router_module
@@ -48,6 +49,7 @@ professores_common_module = _reload_or_import(professores_common_module)
 system_router_module = _reload_or_import(system_router_module)
 pages_router_module = _reload_or_import(pages_router_module)
 impressao_router_module = _reload_or_import(impressao_router_module)
+relatorios_router_module = _reload_or_import(relatorios_router_module)
 download_router_module = _reload_or_import(download_router_module)
 horario_escolar_router_module = _reload_or_import(horario_escolar_router_module)
 apc_router_module = _reload_or_import(apc_router_module)
@@ -61,6 +63,7 @@ STATIC_DIR = config_module.STATIC_DIR
 system_router = system_router_module.router
 pages_router = pages_router_module.router
 impressao_router = impressao_router_module.router
+relatorios_router = relatorios_router_module.router
 download_router = download_router_module.router
 horario_escolar_router = horario_escolar_router_module.router
 apc_router = apc_router_module.router
@@ -78,6 +81,7 @@ servicos_page = pages_router_module.servicos_page
 impressao_page = pages_router_module.impressao_page
 professor_redirect = pages_router_module.professor_redirect
 agendamento_page = pages_router_module.agendamento_page
+relatorios_page = pages_router_module.relatorios_page
 download_page = pages_router_module.download_page
 download_details_page = pages_router_module.download_details_page
 pcpi_page = pages_router_module.pcpi_page
@@ -182,6 +186,7 @@ app.include_router(auth_router)
 app.include_router(system_router)
 app.include_router(pages_router)
 app.include_router(impressao_router)
+app.include_router(relatorios_router)
 app.include_router(download_router)
 app.include_router(horario_escolar_router)
 app.include_router(apc_router)

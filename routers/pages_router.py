@@ -54,6 +54,16 @@ def agendamento_page(request: Request):
     )
 
 
+@router.get("/relatorios")
+def relatorios_page(request: Request):
+    return render_template_response(
+        request,
+        "relatorios.html",
+        {"asset_version": ASSET_VERSION},
+        cache_control="no-store",
+    )
+
+
 @router.get("/download")
 def download_page(request: Request):
     return render_template_response(

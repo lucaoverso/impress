@@ -84,10 +84,10 @@
 
         const cargo = normalizarCargoUsuario(usuario);
         if (cargo === CARGO_ADMIN) {
-            return new Set(["impressao", "agendamento", "gestao", "coordenacao", "horario", "apc", "pcpi", "preconselho"]);
+            return new Set(["impressao", "agendamento", "gestao", "relatorios", "coordenacao", "horario", "apc", "pcpi", "preconselho"]);
         }
         if (cargo === CARGO_COORDENADOR) {
-            return new Set(["coordenacao", "horario", "apc", "pcpi", "preconselho"]);
+            return new Set(["relatorios", "coordenacao", "horario", "apc", "pcpi", "preconselho"]);
         }
         return new Set(["impressao", "agendamento", "horario", "apc", "preconselho"]);
     }

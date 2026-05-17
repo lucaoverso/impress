@@ -5,6 +5,7 @@ import json
 import os
 import shutil
 import unicodedata
+from datetime import date, datetime, timedelta
 from pathlib import Path
 from db.schema_migrations import apply_pending_migrations
 from security.nt_hash import generate_nt_hash
@@ -47,6 +48,7 @@ COTA_POR_AULA_PADRAO = 6
 COTA_POR_TURMA_PADRAO = 12
 COTA_MENSAL_ESCOLA_PADRAO = 4000
 RESERVA_INSTITUCIONAL_PERCENTUAL = 10
+RELATORIOS_CAPACIDADE_AULAS_DIA = 5
 DISCIPLINAS_MULTIPLICADOR_ALTO = {
     "lingua portuguesa",
     "portugues",
@@ -6334,6 +6336,362 @@ def gerar_relatorio_impressao(data_inicio: str = None, data_fim: str = None):
     rows = cursor.fetchall()
     conn.close()
     return [dict(row) for row in rows]
+
+
+def _listar_datas_periodo(data_inicio: str, data_fim: str) -> list[str]:
+    inicio = date.fromisoformat(str(data_inicio))
+    fim = date.fromisoformat(str(data_fim))
+    datas = []
+    atual = inicio
+
+    while atual <= fim:
+        datas.append(atual.isoformat())
+        atual += timedelta(days=1)
+
+    return datas
+
+
+def _contar_dias_uteis_periodo(datas_iso: list[str]) -> int:
+    dias_uteis = 0
+    for item in datas_iso:
+        if date.fromisoformat(item).weekday() < 5:
+            dias_uteis += 1
+    return dias_uteis
+
+
+def _rotulo_periodo_curto(data_iso: str) -> str:
+    try:
+        valor = date.fromisoformat(str(data_iso))
+    except ValueError:
+        return str(data_iso or "")
+    return valor.strftime("%d/%m")
+
+
+def _professor_top_por_campo(itens: list[dict], campo: str) -> dict:
+    for item in itens or []:
+        valor = int(item.get(campo) or 0)
+        if valor > 0:
+            return {
+                "usuario_id": int(item.get("usuario_id") or 0),
+                "nome": str(item.get("nome") or "").strip(),
+                "valor": valor,
+                "total_jobs": int(item.get("total_jobs") or 0),
+                "total_paginas": int(item.get("total_paginas") or 0),
+                "total_reservas": int(item.get("total_reservas") or 0),
+            }
+    return {
+        "usuario_id": 0,
+        "nome": "Sem dados",
+        "valor": 0,
+        "total_jobs": 0,
+        "total_paginas": 0,
+        "total_reservas": 0,
+    }
+
+
+def _recurso_top(itens: list[dict]) -> dict:
+    for item in itens or []:
+        total_reservas = int(item.get("total_reservas") or 0)
+        if total_reservas > 0:
+            return {
+                "recurso_id": int(item.get("recurso_id") or 0),
+                "recurso_nome": str(item.get("recurso_nome") or "").strip(),
+                "recurso_tipo": str(item.get("recurso_tipo") or "").strip(),
+                "total_reservas": total_reservas,
+                "percentual_uso": float(item.get("percentual_uso") or 0),
+            }
+    return {
+        "recurso_id": 0,
+        "recurso_nome": "Sem dados",
+        "recurso_tipo": "",
+        "total_reservas": 0,
+        "percentual_uso": 0.0,
+    }
+
+
+def gerar_dashboard_relatorios(data_inicio: str | None = None, data_fim: str | None = None):
+    hoje = date.today()
+    inicio_periodo = str(data_inicio or hoje.replace(day=1).isoformat())
+    fim_periodo = str(data_fim or hoje.isoformat())
+
+    if inicio_periodo > fim_periodo:
+        raise ValueError("Periodo invalido: data inicial maior que data final.")
+
+    datas_periodo = _listar_datas_periodo(inicio_periodo, fim_periodo)
+    dias_uteis = _contar_dias_uteis_periodo(datas_periodo)
+
+    ranking_impressao = gerar_relatorio_impressao(inicio_periodo, fim_periodo)
+    ranking_recursos = gerar_relatorio_uso_recursos(inicio_periodo, fim_periodo)
+    ranking_recursos_professor = gerar_relatorio_uso_recursos_por_professor(
+        inicio_periodo, fim_periodo
+    )
+    recursos_catalogo = {
+        int(item["id"]): item for item in listar_recursos(incluir_inativos=True)
+    }
+
+    ranking_impressao_ativo = [
+        {
+            **item,
+            "usuario_id": int(item.get("usuario_id") or 0),
+            "nome": str(item.get("nome") or "").strip(),
+            "total_jobs": int(item.get("total_jobs") or 0),
+            "total_paginas": int(item.get("total_paginas") or 0),
+        }
+        for item in ranking_impressao
+        if int(item.get("total_jobs") or 0) > 0 or int(item.get("total_paginas") or 0) > 0
+    ]
+
+    ranking_recursos_professor_ativo = [
+        {
+            **item,
+            "usuario_id": int(item.get("usuario_id") or 0),
+            "nome": str(item.get("nome") or "").strip(),
+            "total_reservas": int(item.get("total_reservas") or 0),
+        }
+        for item in ranking_recursos_professor
+        if int(item.get("total_reservas") or 0) > 0
+    ]
+
+    ranking_recursos_enriquecido = []
+    for item in ranking_recursos:
+        recurso_id = int(item.get("recurso_id") or 0)
+        recurso_catalogo = recursos_catalogo.get(recurso_id, {})
+        quantidade_itens = max(int(recurso_catalogo.get("quantidade_itens") or 1), 1)
+        ativo = bool(int(recurso_catalogo.get("ativo", 1) or 0))
+        total_reservas = int(item.get("total_reservas") or 0)
+        capacidade_periodo = dias_uteis * RELATORIOS_CAPACIDADE_AULAS_DIA * quantidade_itens
+        percentual_uso = 0.0
+        if capacidade_periodo > 0:
+            percentual_uso = round((total_reservas / capacidade_periodo) * 100, 1)
+
+        ranking_recursos_enriquecido.append(
+            {
+                "recurso_id": recurso_id,
+                "recurso_nome": str(item.get("recurso_nome") or "").strip(),
+                "recurso_tipo": str(item.get("recurso_tipo") or "").strip(),
+                "total_reservas": total_reservas,
+                "professores_distintos": int(item.get("professores_distintos") or 0),
+                "quantidade_itens": quantidade_itens,
+                "ativo": ativo,
+                "capacidade_periodo": capacidade_periodo,
+                "percentual_uso": percentual_uso,
+            }
+        )
+
+    ranking_recursos_visiveis = [
+        item
+        for item in ranking_recursos_enriquecido
+        if item["ativo"] or item["total_reservas"] > 0
+    ]
+    ranking_recursos_visiveis.sort(
+        key=lambda item: (item["total_reservas"], item["percentual_uso"], item["recurso_nome"]),
+        reverse=True,
+    )
+
+    total_paginas = sum(int(item.get("total_paginas") or 0) for item in ranking_impressao_ativo)
+    total_jobs = sum(int(item.get("total_jobs") or 0) for item in ranking_impressao_ativo)
+    total_reservas = sum(int(item.get("total_reservas") or 0) for item in ranking_recursos_visiveis)
+    total_professores_impressoes = len(ranking_impressao_ativo)
+    total_professores_recursos = len(ranking_recursos_professor_ativo)
+    total_recursos_utilizados = len(
+        [item for item in ranking_recursos_visiveis if item["total_reservas"] > 0]
+    )
+    capacidade_total_recursos = sum(
+        int(item.get("capacidade_periodo") or 0) for item in ranking_recursos_visiveis
+    )
+    taxa_uso_geral = 0.0
+    if capacidade_total_recursos > 0:
+        taxa_uso_geral = round((total_reservas / capacidade_total_recursos) * 100, 1)
+
+    top_impressao = _professor_top_por_campo(ranking_impressao_ativo, "total_paginas")
+    top_recurso_professor = _professor_top_por_campo(
+        ranking_recursos_professor_ativo,
+        "total_reservas",
+    )
+    top_recurso = _recurso_top(ranking_recursos_visiveis)
+
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT
+            date(j.criado_em) AS data,
+            COUNT(j.id) AS total_jobs,
+            COALESCE(SUM(j.paginas_totais), 0) AS total_paginas
+        FROM jobs j
+        WHERE j.status IN (?, ?)
+          AND date(j.criado_em) >= ?
+          AND date(j.criado_em) <= ?
+        GROUP BY date(j.criado_em)
+        ORDER BY date(j.criado_em) ASC
+    """,
+        (STATUS_CONCLUIDO, STATUS_FINALIZADO_LEGADO, inicio_periodo, fim_periodo),
+    )
+    serie_impressoes_rows = [dict(row) for row in cursor.fetchall()]
+
+    cursor.execute(
+        """
+        SELECT
+            a.data,
+            COUNT(a.id) AS total_reservas
+        FROM agendamentos a
+        WHERE a.status = ?
+          AND a.data >= ?
+          AND a.data <= ?
+        GROUP BY a.data
+        ORDER BY a.data ASC
+    """,
+        (STATUS_AGENDAMENTO_ATIVO, inicio_periodo, fim_periodo),
+    )
+    serie_recursos_rows = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+
+    serie_impressoes_por_data = {
+        str(item.get("data") or ""): {
+            "total_jobs": int(item.get("total_jobs") or 0),
+            "total_paginas": int(item.get("total_paginas") or 0),
+        }
+        for item in serie_impressoes_rows
+    }
+    serie_recursos_por_data = {
+        str(item.get("data") or ""): int(item.get("total_reservas") or 0)
+        for item in serie_recursos_rows
+    }
+
+    labels_periodo = [_rotulo_periodo_curto(item) for item in datas_periodo]
+    serie_paginas = []
+    serie_jobs = []
+    serie_reservas = []
+    for data_iso in datas_periodo:
+        registro_impressao = serie_impressoes_por_data.get(
+            data_iso, {"total_jobs": 0, "total_paginas": 0}
+        )
+        serie_paginas.append(int(registro_impressao.get("total_paginas") or 0))
+        serie_jobs.append(int(registro_impressao.get("total_jobs") or 0))
+        serie_reservas.append(int(serie_recursos_por_data.get(data_iso) or 0))
+
+    media_paginas_por_job = round((total_paginas / total_jobs), 1) if total_jobs > 0 else 0.0
+    media_reservas_por_dia = (
+        round((total_reservas / len(datas_periodo)), 1) if len(datas_periodo) > 0 else 0.0
+    )
+
+    cards = [
+        {
+            "id": "paginas_impressas",
+            "titulo": "Paginas impressas",
+            "valor": total_paginas,
+            "descricao": f"{total_jobs} job(s) concluidos no periodo",
+        },
+        {
+            "id": "reservas_recursos",
+            "titulo": "Reservas de recursos",
+            "valor": total_reservas,
+            "descricao": f"{total_recursos_utilizados} recurso(s) com uso registrado",
+        },
+        {
+            "id": "top_impressao",
+            "titulo": "Professor que mais imprime",
+            "valor": top_impressao["nome"],
+            "descricao": f"{top_impressao['total_paginas']} pagina(s) no periodo",
+        },
+        {
+            "id": "top_recurso_professor",
+            "titulo": "Professor que mais usa recursos",
+            "valor": top_recurso_professor["nome"],
+            "descricao": f"{top_recurso_professor['total_reservas']} reserva(s) no periodo",
+        },
+        {
+            "id": "recurso_top",
+            "titulo": "Recurso tecnologico mais usado",
+            "valor": top_recurso["recurso_nome"],
+            "descricao": f"{top_recurso['total_reservas']} reserva(s) no periodo",
+        },
+        {
+            "id": "taxa_uso_recursos",
+            "titulo": "Capacidade de uso dos recursos",
+            "valor": f"{taxa_uso_geral:.1f}%",
+            "descricao": (
+                f"Base estimada de {RELATORIOS_CAPACIDADE_AULAS_DIA} uso(s) por dia util e por item"
+            ),
+        },
+    ]
+
+    return {
+        "periodo": {
+            "data_inicio": inicio_periodo,
+            "data_fim": fim_periodo,
+            "dias_periodo": len(datas_periodo),
+            "dias_uteis": dias_uteis,
+            "capacidade_aulas_por_dia": RELATORIOS_CAPACIDADE_AULAS_DIA,
+        },
+        "cards": cards,
+        "dashboard_geral": {
+            "graficos": {
+                "impressoes_por_professor": {
+                    "labels": [item["nome"] for item in ranking_impressao_ativo[:7]],
+                    "valores": [item["total_paginas"] for item in ranking_impressao_ativo[:7]],
+                },
+                "reservas_por_recurso": {
+                    "labels": [item["recurso_nome"] for item in ranking_recursos_visiveis[:7]],
+                    "valores": [item["total_reservas"] for item in ranking_recursos_visiveis[:7]],
+                },
+                "movimento_periodo": {
+                    "labels": labels_periodo,
+                    "paginas": serie_paginas,
+                    "reservas": serie_reservas,
+                },
+                "utilizacao_recursos": {
+                    "labels": [item["recurso_nome"] for item in ranking_recursos_visiveis[:7]],
+                    "valores": [item["percentual_uso"] for item in ranking_recursos_visiveis[:7]],
+                },
+            }
+        },
+        "impressoes": {
+            "resumo": {
+                "total_paginas": total_paginas,
+                "total_jobs": total_jobs,
+                "media_paginas_por_job": media_paginas_por_job,
+                "professores_com_impressoes": total_professores_impressoes,
+            },
+            "ranking_professores": ranking_impressao_ativo,
+            "serie_diaria": {
+                "labels": labels_periodo,
+                "paginas": serie_paginas,
+                "jobs": serie_jobs,
+            },
+        },
+        "recursos": {
+            "resumo": {
+                "total_reservas": total_reservas,
+                "professores_com_reservas": total_professores_recursos,
+                "recursos_utilizados": total_recursos_utilizados,
+                "taxa_uso_geral": taxa_uso_geral,
+                "media_reservas_por_dia": media_reservas_por_dia,
+            },
+            "ranking_recursos": ranking_recursos_visiveis,
+            "ranking_professores": ranking_recursos_professor_ativo,
+            "serie_diaria": {
+                "labels": labels_periodo,
+                "reservas": serie_reservas,
+            },
+        },
+        "futuro": {
+            "abas": [
+                {"id": "dashboard", "label": "Dashboard Geral", "habilitado": True},
+                {"id": "impressoes", "label": "Impressoes", "habilitado": True},
+                {"id": "recursos", "label": "Recursos Tecnologicos", "habilitado": True},
+                {"id": "anexos", "label": "Central de Anexos", "habilitado": False},
+                {"id": "coordenacao", "label": "Coordenacao", "habilitado": False},
+                {"id": "ocorrencias", "label": "Ocorrencias", "habilitado": False},
+                {"id": "preconselho", "label": "Pre-Conselho", "habilitado": False},
+            ],
+            "exportacoes": [
+                {"id": "pdf", "label": "PDF", "habilitado": False},
+                {"id": "excel", "label": "Excel", "habilitado": False},
+            ],
+        },
+    }
 
 
 def gerar_relatorio_uso_recursos(data_inicio: str = None, data_fim: str = None):

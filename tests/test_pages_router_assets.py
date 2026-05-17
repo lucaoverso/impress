@@ -115,6 +115,22 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn("Voltar aos serviços", html)
         self.assertIn('id="apcUsuario"', html)
 
+    def test_relatorios_injeta_asset_version_e_no_store(self):
+        config, pages_router = _reload_modulos("build-relatorios-654")
+        app = FastAPI()
+        app.mount("/static", StaticFiles(directory=str(config.STATIC_DIR)), name="static")
+
+        resposta = pages_router.relatorios_page(_criar_request(app, "/relatorios"))
+        html = resposta.body.decode("utf-8")
+
+        self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
+        self.assertIn("charset=utf-8", resposta.headers.get("content-type", "").lower())
+        self.assertIn("css/base.css?v=build-relatorios-654", html)
+        self.assertIn("css/pages/relatorios.css?v=build-relatorios-654", html)
+        self.assertIn("js/relatorios.js?v=build-relatorios-654", html)
+        self.assertIn("cdn.jsdelivr.net/npm/chart.js", html)
+        self.assertIn('id="relatoriosCards"', html)
+
 
 if __name__ == "__main__":
     unittest.main()
