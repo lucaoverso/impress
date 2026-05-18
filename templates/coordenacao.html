@@ -297,7 +297,7 @@
                                         </div>
                                     </div>
 
-                                    <div class="coordenacao-field coordenacao-field-wide">
+                                    <div id="ocorrenciaFieldRegimento" class="coordenacao-field coordenacao-field-wide">
                                         <span>Base legal vinculada</span>
                                         <div id="ocorrenciaRegimentoItens" class="coordenacao-regimento-selector">
                                             <div class="coordenacao-autocomplete-shell">
@@ -342,9 +342,9 @@
                             <aside class="coordenacao-preview-shell" aria-label="Pre-visualizacao do PDF">
                                 <div class="coordenacao-preview-header">
                                     <div>
-                                        <p class="coordenacao-eyebrow">Pre-visualizacao</p>
-                                        <h3>Documento para impressao</h3>
-                                        <p>A folha ao lado acompanha a digitacao e mostra como o PDF sera montado.</p>
+                                        <p class="coordenacao-eyebrow">Pré-visualização</p>
+                                        <h3>Documento para impressão</h3>
+                                        <p>A folha ao lado acompanha a digitação e mostra como o PDF será montado.</p>
                                     </div>
                                     <span class="coordenacao-preview-badge">A4</span>
                                 </div>
@@ -361,10 +361,10 @@
                                                     src="{{ request.url_for('static', path='img/logo_escola.PNG') }}"
                                                     alt="Logo da escola">
                                                 <p id="previewTituloDocumento" class="coordenacao-preview-title">
-                                                    REGISTRO DE OCORRENCIAS DISCIPLINARES
+                                                    REGISTRO DE OCORRÊNCIAS DISCIPLINARES
                                                 </p>
                                                 <p id="previewGravidade" class="coordenacao-preview-gravidade">
-                                                    Gravidade: Nao identificada
+                                                    Gravidade: Não identificada
                                                 </p>
                                             </header>
 
@@ -396,7 +396,7 @@
                                             </section>
 
                                             <section class="coordenacao-preview-section">
-                                                <h4>DESCRIÇÃO DA OCORRENCIA</h4>
+                                                <h4>DESCRIÇÃO DA OCORRÊNCIA</h4>
                                                 <div id="previewDescricao" class="coordenacao-preview-paragraph">
                                                     A descrição digitada no formulário aparecerá aqui automaticamente.
                                                 </div>
@@ -437,9 +437,9 @@
                     <article class="coordenacao-card">
                         <div class="coordenacao-section-header">
                             <div>
-                                <p class="coordenacao-eyebrow">Relatorios</p>
-                                <h2>Gere relatorios de ocorrencias</h2>
-                                <p>Monte um recorte por periodo, turma, estudante ou status para ter uma visao
+                                <p class="coordenacao-eyebrow">Relatórios</p>
+                                <h2>Gere relatórios de ocorrências</h2>
+                                <p>Monte um recorte por período, turma, estudante ou status para ter uma visão
                                     consolidada sem poluir a tela principal.</p>
                             </div>
                             <p id="msgRelatorios"></p>
@@ -447,8 +447,8 @@
 
                         <form id="formRelatorioOcorrencias" class="coordenacao-filter-grid">
                             <label class="coordenacao-field" for="relatorioNomeEstudante">
-                                <span>Referencia</span>
-                                <input id="relatorioNomeEstudante" type="text" placeholder="Estudante, professor ou titulo">
+                                <span>Referência</span>
+                                <input id="relatorioNomeEstudante" type="text" placeholder="Estudante, professor ou título">
                             </label>
                             <label class="coordenacao-field" for="relatorioTipoRegistro">
                                 <span>Tipo</span>
@@ -479,14 +479,14 @@
 
                     <section class="coordenacao-stat-grid">
                         <article class="coordenacao-card coordenacao-stat-card">
-                            <span class="coordenacao-stat-label">Total de ocorrencias</span>
+                            <span class="coordenacao-stat-label">Total de ocorrências</span>
                             <strong id="relatorioMetricasTotal" class="coordenacao-stat-value">0</strong>
-                            <span class="coordenacao-stat-meta">Registros encontrados para o relatorio.</span>
+                            <span class="coordenacao-stat-meta">Registros encontrados para o relatório.</span>
                         </article>
                         <article class="coordenacao-card coordenacao-stat-card">
-                            <span class="coordenacao-stat-label">Pendencias abertas</span>
+                            <span class="coordenacao-stat-label">Pendências abertas</span>
                             <strong id="relatorioMetricasAbertas" class="coordenacao-stat-value">0</strong>
-                            <span class="coordenacao-stat-meta">Ocorrencias ainda nao resolvidas.</span>
+                            <span class="coordenacao-stat-meta">Ocorrências ainda não resolvidas.</span>
                         </article>
                         <article class="coordenacao-card coordenacao-stat-card">
                             <span class="coordenacao-stat-label">Resolvidas</span>

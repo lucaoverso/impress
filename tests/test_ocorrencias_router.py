@@ -143,6 +143,59 @@ class OcorrenciasRouterTest(unittest.TestCase):
                 [professor["nome"]],
             )
 
+    def test_criar_registro_de_professor_ignora_base_legal_enviada(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, ocorrencias_router = _reload_modulos(db_path)
+            database.criar_tabelas()
+
+            professor = self._criar_professor(
+                database,
+                "Professor Sem Base Legal",
+                "professor.sem.base@escola.test",
+            )
+            item_id = database.criar_regimento_item(
+                lei_nome="Regimento Interno",
+                artigo_numero="77",
+                artigo_descricao="Da conservacao do patrimonio escolar.",
+            )
+
+            payload = ocorrencias_router.OcorrenciaCreateIn(
+                tipo_registro="professor",
+                nome_estudante=None,
+                estudante_id=None,
+                turma_id=None,
+                professor_requerente=professor["nome"],
+                professor_requerente_id=int(professor["id"]),
+                disciplina="Alinhamento pedagogico",
+                data_ocorrencia="2026-03-24",
+                aula=None,
+                horario_ocorrencia="09:00",
+                descricao="Registro individual de orientacao ao professor.",
+                regimento_item_ids=[item_id],
+                acao_aplicada="orientacao_professor",
+                status="registrado",
+            )
+
+            resposta = ocorrencias_router.criar_ocorrencia_api(
+                payload,
+                usuario={"cargo": "ADMIN"},
+            )
+
+            self.assertEqual(resposta["regimento_itens"], [])
+            conn = database.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM ocorrencia_regimento_itens
+                WHERE ocorrencia_id = ?
+                """,
+                (int(resposta["id"]),),
+            )
+            self.assertEqual(int(cursor.fetchone()["total"]), 0)
+            conn.close()
+
     def test_criar_registro_de_estudante_com_multiplos_vinculados(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")
@@ -397,6 +450,77 @@ class OcorrenciasRouterTest(unittest.TestCase):
                 (int(resposta["id"]),),
             )
             self.assertEqual([row["regimento_item_id"] for row in cursor.fetchall()], [item_id])
+            conn.close()
+
+    def test_atualizar_tipo_para_professor_remove_base_legal_existente(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, ocorrencias_router = _reload_modulos(db_path)
+            database.criar_tabelas()
+
+            turma_id = int(database.criar_turma("Turma Migracao", "MATUTINO", 30))
+            professor = self._criar_professor(
+                database,
+                "Professor Migracao",
+                "professor.migracao@escola.test",
+            )
+            item_id = database.criar_regimento_item(
+                lei_nome="Regimento Interno",
+                artigo_numero="77",
+                artigo_descricao="Da conservacao do patrimonio escolar.",
+            )
+            payload = ocorrencias_router.OcorrenciaCreateIn(
+                nome_estudante="Estudante Migracao",
+                estudante_id=None,
+                turma_id=turma_id,
+                professor_requerente="Professor Teste",
+                professor_requerente_id=None,
+                disciplina="Portugues",
+                data_ocorrencia="2026-03-21",
+                aula="2",
+                horario_ocorrencia="07:30",
+                descricao="Descricao com base legal.",
+                regimento_item_ids=[item_id],
+                acao_aplicada="orientacao_verbal",
+                status="registrado",
+            )
+            resposta = ocorrencias_router.criar_ocorrencia_api(
+                payload,
+                usuario={"cargo": "ADMIN"},
+            )
+
+            update_payload = ocorrencias_router.OcorrenciaUpdateIn(
+                tipo_registro="professor",
+                professor_requerente=professor["nome"],
+                professor_requerente_id=int(professor["id"]),
+                professores_vinculados=[
+                    ocorrencias_router.OcorrenciaProfessorVinculadoIn(
+                        professor_id=int(professor["id"]),
+                        nome=professor["nome"],
+                    )
+                ],
+                disciplina="Acompanhamento funcional",
+                acao_aplicada="orientacao_professor",
+            )
+            atualizada = ocorrencias_router.atualizar_ocorrencia_parcial_api(
+                int(resposta["id"]),
+                update_payload,
+                usuario={"cargo": "ADMIN"},
+            )
+
+            self.assertEqual(atualizada["tipo_registro"], "professor")
+            self.assertEqual(atualizada["regimento_itens"], [])
+            conn = database.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM ocorrencia_regimento_itens
+                WHERE ocorrencia_id = ?
+                """,
+                (int(resposta["id"]),),
+            )
+            self.assertEqual(int(cursor.fetchone()["total"]), 0)
             conn.close()
 
 

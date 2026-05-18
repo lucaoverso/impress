@@ -292,7 +292,7 @@ function montarPayloadOcorrencia() {
         aula: tipoRegistro === "estudante" ? String(el("ocorrenciaAula").value || "").trim() : null,
         horario_ocorrencia: el("ocorrenciaHorario").value.trim(),
         descricao: el("ocorrenciaDescricao").value.trim(),
-        regimento_item_ids: obterIdsRegimentoSelecionadosFormulario(),
+        regimento_item_ids: tipoRegistro === "estudante" ? obterIdsRegimentoSelecionadosFormulario() : [],
         acao_aplicada: el("ocorrenciaAcaoAplicada").value,
         status: el("ocorrenciaStatus").value || opcoesOcorrencias.status_padrao || "registrado"
     };

@@ -932,6 +932,8 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
     regimento_item_ids = _normalizar_regimento_item_ids(payload.regimento_item_ids)
     if _registro_exige_base_legal(tipo_registro):
         regimento_item_ids = _exigir_regimento_item_ids(regimento_item_ids)
+    else:
+        regimento_item_ids = []
     regimento_itens = (
         buscar_regimento_itens_por_ids(regimento_item_ids) if regimento_item_ids else []
     )
@@ -1195,6 +1197,10 @@ def atualizar_ocorrencia_parcial_api(
         )
         if _registro_exige_base_legal(tipo_registro_merge):
             regimento_item_ids_validados = _exigir_regimento_item_ids(regimento_item_ids_validados)
+        else:
+            regimento_item_ids_validados = []
+    elif "tipo_registro" in dados_brutos and not _registro_exige_base_legal(tipo_registro_merge):
+        regimento_item_ids_validados = []
     if "acao_aplicada" in dados_brutos:
         dados_validados["acao_aplicada"] = _validar_acao_aplicada_para_tipo(
             dados_brutos["acao_aplicada"],

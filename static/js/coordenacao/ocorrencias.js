@@ -328,6 +328,7 @@ function atualizarModoFormularioRegistro({ limparCamposOcultos = false } = {}) {
     definirVisibilidadeCampoRegistro("ocorrenciaFieldGeral", ehGeral);
     definirVisibilidadeCampoRegistro("ocorrenciaFieldTurma", ehEstudante);
     definirVisibilidadeCampoRegistro("ocorrenciaFieldAula", ehEstudante);
+    definirVisibilidadeCampoRegistro("ocorrenciaFieldRegimento", ehEstudante);
     definirVisibilidadeCampoRegistro("ocorrenciaProfessoresSelecionados", ehProfessor);
     definirVisibilidadeCampoRegistro("ocorrenciaProfessorHint", ehProfessor);
 
@@ -384,6 +385,10 @@ function atualizarModoFormularioRegistro({ limparCamposOcultos = false } = {}) {
         }
         if (!ehGeral) {
             el("ocorrenciaTituloGeral").value = "";
+        }
+        if (!ehEstudante) {
+            el("ocorrenciaBuscaRegimento").value = "";
+            renderSelecionadorRegimento([]);
         }
     }
 
@@ -1209,8 +1214,17 @@ function renderizarBaseLegalPreview(itens) {
     const section = el("previewBaseLegalSection");
     if (!container) return;
 
+    const tipoRegistro = obterTipoRegistroFormulario();
+    if (!registroExigeBaseLegal(tipoRegistro)) {
+        if (section) {
+            section.hidden = true;
+        }
+        container.innerHTML = "";
+        return;
+    }
+
     const itensNorm = Array.isArray(itens) ? itens : [];
-    const mostrarSecao = registroExigeBaseLegal() || itensNorm.length > 0;
+    const mostrarSecao = true;
     if (section) {
         section.hidden = !mostrarSecao;
     }
@@ -1270,7 +1284,7 @@ function renderizarAssinaturasPreview(tipoRegistro) {
     if (assinaturaIndividual && tipoRegistro === "professor") {
         const grade = document.createElement("div");
         grade.className = "coordenacao-preview-signature-grid";
-        ["Professor(a)", "Coordenacao Pedagogica", "Direcao"].forEach((titulo) => {
+        ["Professor(a)", "Coordenação Pedagógica", "Direção"].forEach((titulo) => {
             grade.appendChild(criarItem(titulo));
         });
         container.appendChild(grade);
@@ -1349,34 +1363,34 @@ function atualizarPreviewOcorrencia() {
     const referenciaLabel = el("previewReferenciaLabel");
     if (referenciaLabel) {
         referenciaLabel.innerText = tipoRegistro === "professor"
-            ? "Professor(es):"
+            ? "Professores:"
             : (tipoRegistro === "geral" ? "Registro geral:" : "Estudante(s):");
     }
     const professorLabel = el("previewProfessorLabel");
     if (professorLabel) {
         professorLabel.innerText = tipoRegistro === "professor"
-            ? "Professor(es):"
-            : (tipoRegistro === "geral" ? "Publico:" : "Professor requerente:");
+            ? "Professores:"
+            : (tipoRegistro === "geral" ? "Público:" : "Professor requerente:");
     }
     const disciplinaLabel = el("previewDisciplinaLabel");
     if (disciplinaLabel) {
         disciplinaLabel.innerText = tipoRegistro === "geral"
             ? "Tema ou pauta:"
-            : (tipoRegistro === "professor" ? "Assunto ou pauta:" : "Disciplina ou funcao:");
+            : (tipoRegistro === "professor" ? "Assunto ou pauta:" : "Disciplina ou função:");
     }
 
     definirVisibilidadeCampoRegistro("previewTurmaLinha", tipoRegistro === "estudante");
+    definirVisibilidadeCampoRegistro("previewProfessorLinha", tipoRegistro !== "professor");
     definirVisibilidadeCampoRegistro("previewAulaLinha", tipoRegistro === "estudante");
-
     definirTextoPreview("previewNomeEstudante", referencia);
-    definirTextoPreview("previewTurma", obterTurmaPreviewFormulario(), "Nao informada");
+    definirTextoPreview("previewTurma", obterTurmaPreviewFormulario(), "Não informada");
     definirTextoPreview("previewProfessor", professor);
-    definirTextoPreview("previewDisciplina", disciplina, "Nao informada");
-    definirTextoPreview("previewData", formatarDataBr(dataOcorrencia), "Nao informada");
-    definirTextoPreview("previewAula", obterAulaPreviewFormulario(), "Nao informada");
-    definirTextoPreview("previewHorario", obterHorarioPreviewFormulario(), "Nao informado");
-    definirTextoPreview("previewAcao", rotuloAcao(acaoAplicada), "Nao informada");
-    definirTextoPreview("previewStatus", rotuloStatus(status), "Nao informado");
+    definirTextoPreview("previewDisciplina", disciplina, "Não informada");
+    definirTextoPreview("previewData", formatarDataBr(dataOcorrencia), "Não informada");
+    definirTextoPreview("previewAula", obterAulaPreviewFormulario(), "Não informada");
+    definirTextoPreview("previewHorario", obterHorarioPreviewFormulario(), "Não informado");
+    definirTextoPreview("previewAcao", rotuloAcao(acaoAplicada), "Não informada");
+    definirTextoPreview("previewStatus", rotuloStatus(status), "Não informado");
     atualizarCabecalhoPreviewOcorrencia(acaoAplicada, gravidade, tipoRegistro);
 
     const descricaoPreview = el("previewDescricao");
@@ -1385,7 +1399,7 @@ function atualizarPreviewOcorrencia() {
             descricaoPreview,
             descricaoFormatada,
             descricao,
-            "A descricao digitada no formulario aparecera aqui automaticamente."
+            "A descrição digitada no formulário aparecerá aqui automaticamente."
         );
     }
 
@@ -1586,7 +1600,7 @@ function obterNomeArquivoContentDisposition(contentDisposition, ocorrencia) {
 
 async function abrirPdfOcorrencia(ocorrencia) {
     if (!ocorrencia?.id) {
-        setMensagemOcorrencias("Selecione um registro valido para gerar o PDF.", true);
+        setMensagemOcorrencias("Selecione um registro válido para gerar o PDF.", true);
         return;
     }
 
@@ -1611,7 +1625,7 @@ async function abrirPdfOcorrencia(ocorrencia) {
             document.body.appendChild(link);
             link.click();
             link.remove();
-            setMensagemOcorrencias("PDF gerado e baixado para impressao.");
+            setMensagemOcorrencias("PDF gerado e baixado para impressão.");
         } else {
             novaGuia.focus();
             setMensagemOcorrencias("PDF gerado e aberto em nova guia.");
@@ -1625,13 +1639,17 @@ async function abrirPdfOcorrencia(ocorrencia) {
             URL.revokeObjectURL(blobUrl);
         }
         setMensagemOcorrencias(
-            err?.message || "Nao foi possivel gerar o PDF do registro.",
+            err?.message || "Não foi possível gerar o PDF do registro.",
             true
         );
     }
 }
 
 function criarBlocoDetalhesRegimento(ocorrencia) {
+    if (!registroExigeBaseLegal(ocorrencia?.tipo_registro)) {
+        return null;
+    }
+
     const wrapper = document.createElement("div");
     wrapper.className = "coordenacao-detail-block";
 
@@ -1742,5 +1760,8 @@ function renderDetalhesOcorrencia(ocorrencia) {
         container.appendChild(linha);
     });
 
-    container.appendChild(criarBlocoDetalhesRegimento(ocorrencia));
+    const blocoRegimento = criarBlocoDetalhesRegimento(ocorrencia);
+    if (blocoRegimento) {
+        container.appendChild(blocoRegimento);
+    }
 }

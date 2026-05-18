@@ -337,22 +337,22 @@ def _obter_observacao_final(ocorrencia: dict) -> str:
     tipo_registro = _obter_tipo_registro(ocorrencia)
     observacoes = {
         "advertencia_verbal": (
-            "OBS.: Aplicada advertencia verbal com orientacao pedagogica, conforme a base legal selecionada."
+            "OBS.: Aplicada advertência verbal com orientação pedagógica, conforme a base legal selecionada."
         ),
         "retirada_sala_orientacao": (
-            "OBS.: Aplicada retirada do estudante da sala ou atividade, com encaminhamento para orientacao."
+            "OBS.: Aplicada retirada do estudante da sala ou atividade, com encaminhamento para orientação."
         ),
         "suspensao_extracurricular": (
-            "OBS.: Aplicada suspensao temporaria de participacao em programas extracurriculares."
+            "OBS.: Aplicada suspensão temporária de participação em programas extracurriculares."
         ),
         "suspensao_orientada_2_dias": (
-            "OBS.: Aplicada suspensao orientada das aulas pelo periodo definido pela equipe escolar."
+            "OBS.: Aplicada suspensão orientada das aulas pelo período definido pela equipe escolar."
         ),
         "suspensao_aulas_3_dias": (
-            "OBS.: Aplicada suspensao das aulas, respeitado o limite previsto na base legal."
+            "OBS.: Aplicada suspensão das aulas, respeitado o limite previsto na base legal."
         ),
         "transferencia_compulsoria": (
-            "OBS.: Aplicada transferencia compulsoria, conforme decisao institucional cabivel ao caso."
+            "OBS.: Aplicada transferência compulsória, conforme decisão institucional cabível ao caso."
         ),
         "orientacao_verbal": (
             "OBS.: O registro fica arquivado para acompanhamento pedag\u00f3gico e "
@@ -1461,11 +1461,11 @@ class _RenderizadorRegistroOcorrencia:
         self._adicionar_titulo_secao(SECAO_DESCRICAO)
         self._adicionar_paragrafos(descricao, fonte=self.fontes.corpo)
         self._desenhar_linha()
-        if regimento_itens:
+        if tipo_registro == TIPO_REGISTRO_ESTUDANTE and regimento_itens:
             self._adicionar_secao_regimento(regimento_itens)
         elif tipo_registro == TIPO_REGISTRO_ESTUDANTE:
             self._adicionar_area_regimento_em_branco()
-        if regimento_itens or tipo_registro == TIPO_REGISTRO_ESTUDANTE:
+        if tipo_registro == TIPO_REGISTRO_ESTUDANTE:
             self._desenhar_linha()
 
         self._adicionar_paragrafos(
