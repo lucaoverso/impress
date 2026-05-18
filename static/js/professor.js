@@ -17,6 +17,7 @@ let resizeTimer = null;
 let previewScrollRaf = null;
 let previewAbortController = null;
 let previewLoadSeq = 0;
+let previewEmCarregamento = false;
 let envioEmAndamento = false;
 let filaPollingTimer = null;
 let usuarioAtual = null;
@@ -1099,6 +1100,16 @@ async function enviarImpressao(confirmadoAlertaConsumo = false) {
         return;
     }
 
+    if (previewEmCarregamento) {
+        el("msg").innerText = "Aguarde a prÃ©-visualizaÃ§Ã£o terminar para validar o volume da impressÃ£o.";
+        return;
+    }
+
+    if (!usaHistorico && arquivo && !pdfDoc) {
+        el("msg").innerText = "A prÃ©-visualizaÃ§Ã£o ainda nÃ£o ficou disponÃ­vel. Tente novamente em instantes.";
+        return;
+    }
+
     if (pdfDoc) {
         try {
             obterPaginasSelecionadas();
@@ -1281,6 +1292,7 @@ async function carregarDocumentoPdfNoPreview(arrayBuffer, cargaAtual) {
 
     folhaAtual = 1;
     el("intervaloInfo").innerText = "";
+    previewEmCarregamento = false;
     atualizarPreview();
 }
 
@@ -1296,6 +1308,7 @@ async function carregarJobHistoricoNoPreview(job) {
         previewAbortController = null;
     }
 
+    previewEmCarregamento = true;
     pdfDoc = null;
     folhaAtual = 1;
     el("intervaloPaginas").value = "";
@@ -1359,6 +1372,7 @@ async function carregarJobHistoricoNoPreview(job) {
         renderTokenAtual += 1;
         el("msg").innerText = err?.message || "Falha ao carregar o arquivo do histórico.";
         el("intervaloInfo").innerText = "";
+        previewEmCarregamento = false;
         mostrarPreviewVazio("Não foi possível carregar o arquivo do histórico.");
         calcularConsumo();
         atualizarContador();
@@ -1534,6 +1548,7 @@ async function carregarPreview(file) {
     }
 
     if (!file) {
+        previewEmCarregamento = false;
         jobHistoricoSelecionadoAtual = null;
         arquivoSelecionadoAtual = null;
         sincronizarInputArquivo(null);
@@ -1551,6 +1566,7 @@ async function carregarPreview(file) {
     }
 
     if (!arquivoSuportado(file)) {
+        previewEmCarregamento = false;
         jobHistoricoSelecionadoAtual = null;
         arquivoSelecionadoAtual = null;
         sincronizarInputArquivo(null);
@@ -1568,6 +1584,7 @@ async function carregarPreview(file) {
     }
 
     // Novo upload deve iniciar com todas as páginas selecionadas.
+    previewEmCarregamento = true;
     pdfDoc = null;
     folhaAtual = 1;
     el("intervaloPaginas").value = "";
@@ -1623,6 +1640,7 @@ async function carregarPreview(file) {
         renderTokenAtual += 1;
         el("msg").innerText = err?.message || "Falha ao carregar a pré-visualização do documento.";
         el("intervaloInfo").innerText = "";
+        previewEmCarregamento = false;
         mostrarPreviewVazio("Não foi possível carregar a pré-visualização do documento.");
         calcularConsumo();
         atualizarContador();
