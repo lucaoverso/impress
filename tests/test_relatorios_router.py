@@ -64,6 +64,13 @@ class RelatoriosRouterTest(unittest.TestCase):
         }
         return Request(scope)
 
+    def _cards_por_id(self, payload: dict) -> dict:
+        return {
+            str(card.get("id") or ""): card
+            for card in payload.get("cards", [])
+            if isinstance(card, dict)
+        }
+
     def test_dashboard_retorna_zeros_quando_nao_ha_dados(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")
@@ -87,8 +94,10 @@ class RelatoriosRouterTest(unittest.TestCase):
             self.assertEqual(resposta["impressoes"]["resumo"]["total_paginas"], 0)
             self.assertEqual(resposta["impressoes"]["resumo"]["total_jobs"], 0)
             self.assertEqual(resposta["recursos"]["resumo"]["total_reservas"], 0)
-            self.assertEqual(resposta["cards"][2]["valor"], "Sem dados")
-            self.assertEqual(resposta["cards"][3]["valor"], "Sem dados")
+            cards = self._cards_por_id(resposta)
+            self.assertEqual(cards["top_impressao"]["valor"], "Sem dados")
+            self.assertEqual(cards["top_tag_impressao"]["valor"], "Sem dados")
+            self.assertEqual(cards["top_recurso_professor"]["valor"], "Sem dados")
             self.assertEqual(
                 resposta["dashboard_geral"]["insights"][0]["texto"],
                 "Ainda não há dados suficientes para gerar insights neste período.",
@@ -237,9 +246,10 @@ class RelatoriosRouterTest(unittest.TestCase):
             self.assertEqual(resposta["impressoes"]["resumo"]["tags_utilizadas"], 2)
             self.assertEqual(resposta["impressoes"]["resumo"]["tag_mais_frequente"], "Atividade")
             self.assertEqual(resposta["recursos"]["resumo"]["total_reservas"], 3)
-            self.assertEqual(resposta["cards"][2]["valor"], "Ana Souza")
-            self.assertEqual(resposta["cards"][3]["valor"], "Atividade")
-            self.assertEqual(resposta["cards"][4]["valor"], "Ana Souza")
+            cards = self._cards_por_id(resposta)
+            self.assertEqual(cards["top_impressao"]["valor"], "Ana Souza")
+            self.assertEqual(cards["top_tag_impressao"]["valor"], "Atividade")
+            self.assertEqual(cards["top_recurso_professor"]["valor"], "Ana Souza")
             self.assertEqual(
                 resposta["dashboard_geral"]["graficos"]["impressoes_por_professor"]["valores"],
                 [20, 12],
