@@ -4,13 +4,13 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from auth import get_usuario_logado
 from db.agendamento import listar_agendamentos
-from db.pcpi import (
+from repositories.pcpi_repository import (
     buscar_registro_pcpi_manual_por_id,
     criar_registro_pcpi_manual,
     listar_registros_pcpi_manuais,
 )
 from db.usuarios import listar_cargas_professores_por_usuario_ids
-from models import (
+from schemas.pcpi_schemas import (
     PcpiRegistroManualIn,
     PcpiRegistroManualOut,
     PcpiRegistrosManuaisOut,
