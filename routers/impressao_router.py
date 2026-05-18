@@ -161,13 +161,22 @@ def validar_parametros_impressao(
 
 
 def normalizar_tags_impressao(tags: list[str] | None) -> list[str]:
-    if not tags:
+    if tags is None:
+        return []
+
+    if isinstance(tags, str):
+        tags_iteraveis = [tags]
+    elif isinstance(tags, (list, tuple, set)):
+        tags_iteraveis = list(tags)
+    else:
+        # Em chamadas diretas dos testes, parametros Form(...) podem chegar aqui
+        # sem terem sido resolvidos pelo FastAPI.
         return []
 
     catalogo = {item.casefold(): item for item in TAGS_IMPRESSAO_DISPONIVEIS}
     tags_normalizadas = []
     vistos = set()
-    for item in tags:
+    for item in tags_iteraveis:
         tag = str(item or "").strip()
         if not tag:
             continue
