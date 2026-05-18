@@ -199,6 +199,12 @@ def resolver_tags_impressao(tags: list[str] | None, job_base: dict | None = None
     return []
 
 
+def validar_tags_obrigatorias(tags: list[str] | None):
+    if tags:
+        return
+    raise HTTPException(400, "Selecione ao menos uma tag para identificar a impressao.")
+
+
 def extrair_tags_job(job: dict | None) -> list[str]:
     try:
         tags = json.loads(str((job or {}).get("tags_json") or "[]"))
@@ -354,6 +360,7 @@ def criar_job_a_partir_pdf_pronto(
         intervalo_paginas=intervalo_normalizado,
     )
     tags_normalizadas = resolver_tags_impressao(tags_impressao)
+    validar_tags_obrigatorias(tags_normalizadas)
 
     try:
         criar_job(

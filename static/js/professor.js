@@ -33,7 +33,7 @@ const LABEL_PREVIEW_RESERVA = 38;
 const RESERVA_BORDA_PREVIEW = 24;
 const BREAKPOINT_MOBILE_PREVIEW = 980;
 const FILA_POLLING_MS = 6000;
-const LIMITE_ALERTA_CONSUMO_PAGINAS = 30;
+const LIMITE_ALERTA_IMPRESSAO_PAGINAS = 30;
 const EXTENSOES_SUPORTADAS = new Set(["pdf", "doc", "docx", "png", "jpg", "jpeg"]);
 const STATUS_JOB_LABEL = {
     PENDENTE: "Na fila",
@@ -882,14 +882,14 @@ function alternarSelecaoPagina(numeroPagina) {
     calcularConsumo();
 }
 
-function calcularConsumo() {
+function calcularResumoImpressao() {
     if (!pdfDoc) {
         const arquivo = obterArquivoSelecionado();
         if (arquivo && arquivoSuportado(arquivo) && !el("intervaloInfo").innerText.trim()) {
             el("intervaloInfo").innerText = "Aguardando pré-visualização do documento.";
         }
         el("consumo").innerText = "";
-        return 0;
+        return null;
     }
 
     try {
@@ -897,18 +897,35 @@ function calcularConsumo() {
         const copias = Math.max(1, Number(el("copias").value) || 1);
         const paginasPorFolha = Number(el("paginasPorFolha").value);
         const duplex = el("duplex").checked;
+        const paginasImpressas = paginasSelecionadas.length * copias;
 
         const facesPorCopia = Math.ceil(paginasSelecionadas.length / paginasPorFolha);
         const folhasPorCopia = duplex ? Math.ceil(facesPorCopia / 2) : facesPorCopia;
         const consumo = folhasPorCopia * copias;
 
-        el("consumo").innerText = `Consumo estimado: ${consumo} folha(s)`;
-        return consumo;
+        return {
+            consumo,
+            copias,
+            paginasSelecionadas: paginasSelecionadas.length,
+            paginasImpressas,
+            paginasPorFolha,
+            duplex,
+        };
     } catch (err) {
         el("consumo").innerText = "";
         el("intervaloInfo").innerText = err.message;
+        return null;
+    }
+}
+
+function calcularConsumo() {
+    const resumo = calcularResumoImpressao();
+    if (!resumo) {
         return 0;
     }
+
+    el("consumo").innerText = `Consumo estimado: ${resumo.consumo} folha(s) | ${resumo.paginasImpressas} pagina(s) na impressao`;
+    return resumo.consumo;
 }
 
 function modalAlertaConsumoAberto() {
@@ -931,7 +948,7 @@ function fecharModalAlertaConsumo(confirmado) {
     }
 }
 
-function abrirModalAlertaConsumo({ consumo, paginasPorFolha, orientacao, copias }) {
+function abrirModalAlertaConsumo({ consumo, paginasPorFolha, orientacao, copias, paginasImpressas, paginasSelecionadas }) {
     const modal = el("modalAlertaConsumoImpressao");
     const painel = el("painelAlertaConsumoImpressao");
     const texto = el("textoAlertaConsumoImpressao");
@@ -939,7 +956,7 @@ function abrirModalAlertaConsumo({ consumo, paginasPorFolha, orientacao, copias 
 
     if (!modal || !painel || !texto || !sugestao) {
         return Promise.resolve(window.confirm(
-            `Esta impressao deve consumir ${consumo} folha(s). Deseja imprimir mesmo assim?`
+            `Esta impressao deve gerar ${paginasImpressas} pagina(s) e consumir cerca de ${consumo} folha(s). Deseja imprimir mesmo assim?`
         ));
     }
 
@@ -952,8 +969,8 @@ function abrirModalAlertaConsumo({ consumo, paginasPorFolha, orientacao, copias 
     }
 
     texto.innerText = copias > 1
-        ? `Esta impressao esta estimada em ${consumo} folha(s) para ${copias} copia(s), acima do limite de alerta de ${LIMITE_ALERTA_CONSUMO_PAGINAS} folhas.`
-        : `Esta impressao esta estimada em ${consumo} folha(s), acima do limite de alerta de ${LIMITE_ALERTA_CONSUMO_PAGINAS} folhas.`;
+        ? `Esta impressao vai gerar ${paginasImpressas} pagina(s) ao todo (${paginasSelecionadas} pagina(s) por copia em ${copias} copia(s)) e consumir cerca de ${consumo} folha(s).`
+        : `Esta impressao vai gerar ${paginasImpressas} pagina(s) e consumir cerca de ${consumo} folha(s).`;
     sugestao.innerText = ajustes.length > 0
         ? `Sugestao: ${ajustes.join(" e ")} antes de enviar para economizar papel.`
         : "Esta configuracao ja esta otimizada, mas o consumo continua alto. Revise o intervalo e a quantidade de copias se desejar.";
@@ -1077,6 +1094,11 @@ async function enviarImpressao(confirmadoAlertaConsumo = false) {
         return;
     }
 
+    if (tagsSelecionadas.length === 0) {
+        el("msg").innerText = "Selecione ao menos uma tag antes de imprimir.";
+        return;
+    }
+
     if (pdfDoc) {
         try {
             obterPaginasSelecionadas();
@@ -1086,13 +1108,15 @@ async function enviarImpressao(confirmadoAlertaConsumo = false) {
         }
     }
 
-    const consumoEstimado = calcularConsumo();
-    if (!confirmadoAlertaConsumo && consumoEstimado > LIMITE_ALERTA_CONSUMO_PAGINAS) {
+    const resumoImpressao = calcularResumoImpressao();
+    if (!confirmadoAlertaConsumo && resumoImpressao && resumoImpressao.paginasImpressas > LIMITE_ALERTA_IMPRESSAO_PAGINAS) {
         const confirmar = await abrirModalAlertaConsumo({
-            consumo: consumoEstimado,
+            consumo: resumoImpressao.consumo,
             paginasPorFolha,
             orientacao,
             copias,
+            paginasImpressas: resumoImpressao.paginasImpressas,
+            paginasSelecionadas: resumoImpressao.paginasSelecionadas,
         });
         if (!confirmar) {
             el("msg").innerText = "Revise a configuracao antes de enviar a impressao.";
