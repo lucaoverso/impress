@@ -237,6 +237,7 @@ class ImpressaoReusoHistoricoTest(unittest.TestCase):
                         duplex=False,
                         orientacao="retrato",
                         intervalo_paginas="",
+                        tags_impressao=["Atividade"],
                         usuario_responsavel=admin,
                     )
             finally:
@@ -272,6 +273,7 @@ class ImpressaoReusoHistoricoTest(unittest.TestCase):
                         duplex=False,
                         orientacao="retrato",
                         intervalo_paginas="",
+                        tags_impressao=["Atividade"],
                         usuario_responsavel=admin,
                     )
             finally:
