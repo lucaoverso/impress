@@ -190,6 +190,15 @@ def normalizar_tags_impressao(tags: list[str] | None) -> list[str]:
     return tags_normalizadas
 
 
+def resolver_tags_impressao(tags: list[str] | None, job_base: dict | None = None) -> list[str]:
+    tags_normalizadas = normalizar_tags_impressao(tags)
+    if tags_normalizadas:
+        return tags_normalizadas
+    if job_base:
+        return extrair_tags_job(job_base)
+    return []
+
+
 def extrair_tags_job(job: dict | None) -> list[str]:
     try:
         tags = json.loads(str((job or {}).get("tags_json") or "[]"))
@@ -344,7 +353,7 @@ def criar_job_a_partir_pdf_pronto(
         orientacao=orientacao,
         intervalo_paginas=intervalo_normalizado,
     )
-    tags_normalizadas = normalizar_tags_impressao(tags_impressao)
+    tags_normalizadas = resolver_tags_impressao(tags_impressao)
 
     try:
         criar_job(
@@ -606,7 +615,7 @@ def reimprimir_job_historico(
         orientacao=orientacao,
         intervalo_paginas=intervalo_paginas,
         usuario_responsavel=usuario_responsavel,
-        tags_impressao=tags or extrair_tags_job(job),
+        tags_impressao=resolver_tags_impressao(tags, job),
     )
 
 
