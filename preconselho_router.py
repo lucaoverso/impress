@@ -1,7 +1,5 @@
 from collections import Counter
 from datetime import datetime
-from sqlite3 import IntegrityError
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from auth import get_usuario_logado
@@ -18,18 +16,11 @@ from db.docencia import (
 )
 from db.ocorrencias import buscar_estudante_por_id, listar_estudantes
 from repositories.preconselho_repository import (
-    atualizar_motivo_pre_conselho_dados,
-    atualizar_periodo_pre_conselho_dados,
-    atualizar_status_motivo_pre_conselho,
-    atualizar_status_periodo_pre_conselho,
-    buscar_motivo_pre_conselho_por_id,
     buscar_motivos_pre_conselho_por_ids,
     buscar_periodo_pre_conselho_por_id,
     buscar_registro_pre_conselho_por_id,
     contar_registros_pre_conselho_por_professor_periodo,
-    criar_motivo_pre_conselho,
     criar_ou_atualizar_registro_pre_conselho,
-    criar_periodo_pre_conselho,
     excluir_registro_pre_conselho,
     listar_estudantes_pre_conselho_painel,
     listar_motivos_pre_conselho,
@@ -1374,28 +1365,6 @@ def criar_periodo_preconselho_api(
 ):
     _exigir_admin(usuario)
     return criar_periodo_preconselho_admin(payload)
-    try:
-        etapa = validar_etapa_pre_conselho(payload.etapa)
-        status = validar_status_periodo_pre_conselho(
-            payload.status or STATUS_PERIODO_PRE_CONSELHO_ABERTO
-        )
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
-    try:
-        periodo_id = criar_periodo_pre_conselho(
-            nome=payload.nome,
-            ano_letivo=int(payload.ano_letivo),
-            etapa=etapa,
-            data_inicio=_validar_data_iso(payload.data_inicio, "Data inicial"),
-            data_fim=_validar_data_iso(payload.data_fim, "Data final"),
-            status=status,
-        )
-    except IntegrityError as exc:
-        raise HTTPException(
-            400, "Já existe um período cadastrado para este ano letivo e etapa."
-        ) from exc
-    periodo = buscar_periodo_pre_conselho_por_id(periodo_id)
-    return {**periodo, "editavel": True}
 
 
 @router.put("/preconselho/periodos/{periodo_id}", response_model=PreConselhoPeriodoOut)
@@ -1406,26 +1375,6 @@ def atualizar_periodo_preconselho_api(
 ):
     _exigir_admin(usuario)
     return atualizar_periodo_preconselho_admin(periodo_id, payload)
-    try:
-        etapa = validar_etapa_pre_conselho(payload.etapa)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
-    try:
-        if not atualizar_periodo_pre_conselho_dados(
-            periodo_id,
-            nome=payload.nome,
-            ano_letivo=int(payload.ano_letivo),
-            etapa=etapa,
-            data_inicio=_validar_data_iso(payload.data_inicio, "Data inicial"),
-            data_fim=_validar_data_iso(payload.data_fim, "Data final"),
-        ):
-            raise HTTPException(404, "Período não encontrado.")
-    except IntegrityError as exc:
-        raise HTTPException(
-            400, "Já existe um período cadastrado para este ano letivo e etapa."
-        ) from exc
-    periodo = buscar_periodo_pre_conselho_por_id(periodo_id)
-    return {**periodo, "editavel": True}
 
 
 @router.put("/preconselho/periodos/{periodo_id}/status", response_model=PreConselhoPeriodoOut)
@@ -1436,14 +1385,6 @@ def atualizar_status_periodo_preconselho_api(
 ):
     _exigir_admin(usuario)
     return atualizar_status_periodo_preconselho_admin(periodo_id, payload.status)
-    try:
-        status = validar_status_periodo_pre_conselho(payload.status)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
-    if not atualizar_status_periodo_pre_conselho(periodo_id, status):
-        raise HTTPException(404, "Período não encontrado.")
-    periodo = buscar_periodo_pre_conselho_por_id(periodo_id)
-    return {**periodo, "editavel": True}
 
 
 @router.get("/preconselho/motivos", response_model=list[PreConselhoMotivoOut])
@@ -1456,9 +1397,6 @@ def listar_motivos_preconselho_api(
         incluir_inativos=incluir_inativos,
         usuario_eh_admin=_usuario_eh_admin(usuario),
     )
-    if incluir_inativos and not _usuario_eh_admin(usuario):
-        raise HTTPException(403, "Acesso negado.")
-    return listar_motivos_pre_conselho(incluir_inativos=incluir_inativos)
 
 
 @router.post("/preconselho/motivos", response_model=PreConselhoMotivoOut)
@@ -1467,23 +1405,6 @@ def criar_motivo_preconselho_api(
 ):
     _exigir_admin(usuario)
     return criar_motivo_preconselho_admin(payload)
-    try:
-        categoria = validar_categoria_motivo_pre_conselho(payload.categoria)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
-    try:
-        motivo_id = criar_motivo_pre_conselho(
-            categoria=categoria,
-            codigo=_texto_obrigatorio(payload.codigo, "Código", max_len=120)
-            .lower()
-            .replace(" ", "_"),
-            descricao=_texto_obrigatorio(payload.descricao, "Descrição", max_len=255),
-            ordem=int(payload.ordem or 0),
-        )
-    except IntegrityError as exc:
-        raise HTTPException(400, "Já existe um motivo cadastrado com este código.") from exc
-    motivo = buscar_motivo_pre_conselho_por_id(motivo_id)
-    return motivo
 
 
 @router.put("/preconselho/motivos/{motivo_id}", response_model=PreConselhoMotivoOut)
@@ -1494,19 +1415,6 @@ def atualizar_motivo_preconselho_api(
 ):
     _exigir_admin(usuario)
     return atualizar_motivo_preconselho_admin(motivo_id, payload)
-    try:
-        categoria = validar_categoria_motivo_pre_conselho(payload.categoria)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
-    if not atualizar_motivo_pre_conselho_dados(
-        motivo_id,
-        categoria=categoria,
-        descricao=_texto_obrigatorio(payload.descricao, "Descrição", max_len=255),
-        ordem=int(payload.ordem or 0),
-    ):
-        raise HTTPException(404, "Motivo não encontrado.")
-    motivo = buscar_motivo_pre_conselho_por_id(motivo_id)
-    return motivo
 
 
 @router.put("/preconselho/motivos/{motivo_id}/status", response_model=PreConselhoMotivoOut)
@@ -1517,10 +1425,6 @@ def atualizar_status_motivo_preconselho_api(
 ):
     _exigir_admin(usuario)
     return atualizar_status_motivo_preconselho_admin(motivo_id, payload.ativo)
-    if not atualizar_status_motivo_pre_conselho(motivo_id, payload.ativo):
-        raise HTTPException(404, "Motivo não encontrado.")
-    motivo = buscar_motivo_pre_conselho_por_id(motivo_id)
-    return motivo
 
 
 @router.get("/preconselho/niveis-atencao")
