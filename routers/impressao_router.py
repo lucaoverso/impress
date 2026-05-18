@@ -36,6 +36,17 @@ from .config import DEFAULT_PRINTER_NAME, FORMATOS_UPLOAD_DESCRICAO, SPOOL_DIR
 router = APIRouter()
 logger = logging.getLogger(__name__)
 
+TAGS_IMPRESSAO_DISPONIVEIS = (
+    "Atividade",
+    "Prova bimestral",
+    "Trabalho avaliativo",
+    "Lista de exercicios",
+    "Recuperacao",
+    "Simulado",
+    "Material de apoio",
+    "Comunicado",
+)
+
 
 def contar_paginas_intervalo(intervalo: str, total_paginas: int) -> int:
     if not intervalo or not intervalo.strip():
@@ -149,6 +160,45 @@ def validar_parametros_impressao(
         raise HTTPException(400, "Orientação inválida")
 
 
+def normalizar_tags_impressao(tags: list[str] | None) -> list[str]:
+    if not tags:
+        return []
+
+    catalogo = {item.casefold(): item for item in TAGS_IMPRESSAO_DISPONIVEIS}
+    tags_normalizadas = []
+    vistos = set()
+    for item in tags:
+        tag = str(item or "").strip()
+        if not tag:
+            continue
+        chave = tag.casefold()
+        if chave not in catalogo:
+            raise HTTPException(400, f"Tag de impressao invalida: {tag}")
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        tags_normalizadas.append(catalogo[chave])
+    return tags_normalizadas
+
+
+def extrair_tags_job(job: dict | None) -> list[str]:
+    try:
+        tags = json.loads(str((job or {}).get("tags_json") or "[]"))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return []
+
+    if not isinstance(tags, list):
+        return []
+
+    return [str(item).strip() for item in tags if str(item or "").strip()]
+
+
+def serializar_job_impressao(job: dict) -> dict:
+    payload = dict(job)
+    payload["tags"] = extrair_tags_job(job)
+    return payload
+
+
 def obter_job_com_acesso(job_id: int, usuario: dict) -> dict:
     job = buscar_job(job_id)
     if not job:
@@ -211,6 +261,7 @@ def criar_job_a_partir_pdf_pronto(
     orientacao: str,
     intervalo_paginas: str,
     usuario_responsavel: dict,
+    tags_impressao: list[str] | None = None,
     remover_arquivo_em_falha: bool = True,
 ):
     def limpar_em_falha():
@@ -284,6 +335,7 @@ def criar_job_a_partir_pdf_pronto(
         orientacao=orientacao,
         intervalo_paginas=intervalo_normalizado,
     )
+    tags_normalizadas = normalizar_tags_impressao(tags_impressao)
 
     try:
         criar_job(
@@ -298,6 +350,7 @@ def criar_job_a_partir_pdf_pronto(
             intervalo_paginas=intervalo_normalizado,
             printer_name=DEFAULT_PRINTER_NAME,
             cups_options=json.dumps(opcoes_cups, ensure_ascii=True),
+            tags_json=json.dumps(tags_normalizadas, ensure_ascii=False),
         )
     except HTTPException:
         limpar_em_falha()
@@ -321,6 +374,7 @@ def criar_job_a_partir_pdf_pronto(
         "paginas_consumidas": paginas_totais,
         "paginas_restantes": restante,
         "cota_ilimitada": cota_ilimitada,
+        "tags": tags_normalizadas,
     }
 
 
@@ -339,6 +393,11 @@ def turmas_impressao(_usuario=Depends(get_usuario_logado)):
     return turmas
 
 
+@router.get("/impressao/tags")
+def tags_impressao(_usuario=Depends(get_usuario_logado)):
+    return [{"id": item, "label": item} for item in TAGS_IMPRESSAO_DISPONIVEIS]
+
+
 @router.post("/imprimir")
 def imprimir(
     copias: int = Form(...),
@@ -347,6 +406,7 @@ def imprimir(
     duplex: bool = Form(False),
     orientacao: str = Form("retrato"),
     intervalo_paginas: str = Form(""),
+    tags: list[str] = Form(default=[]),
     professor_id: int | None = Form(None),
     usuario=Depends(get_usuario_logado),
 ):
@@ -411,6 +471,7 @@ def imprimir(
         orientacao=orientacao,
         intervalo_paginas=intervalo_paginas,
         usuario_responsavel=usuario_responsavel,
+        tags_impressao=tags,
     )
 
 
@@ -504,6 +565,7 @@ def reimprimir_job_historico(
     duplex: bool = Form(False),
     orientacao: str = Form("retrato"),
     intervalo_paginas: str = Form(""),
+    tags: list[str] = Form(default=[]),
     professor_id: int | None = Form(None),
     usuario=Depends(get_usuario_logado),
 ):
@@ -535,6 +597,7 @@ def reimprimir_job_historico(
         orientacao=orientacao,
         intervalo_paginas=intervalo_paginas,
         usuario_responsavel=usuario_responsavel,
+        tags_impressao=tags or extrair_tags_job(job),
     )
 
 
@@ -593,7 +656,7 @@ def meus_jobs(
         contexto="na impressão",
         permitir_professor_com_acesso_coordenacao=True,
     )
-    return listar_jobs_por_usuario(usuario_consulta["id"])
+    return [serializar_job_impressao(job) for job in listar_jobs_por_usuario(usuario_consulta["id"])]
 
 
 @router.get("/minha-cota")

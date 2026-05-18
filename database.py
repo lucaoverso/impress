@@ -183,6 +183,7 @@ def criar_job(
     intervalo_paginas: str = "",
     printer_name: str = "",
     cups_options: str = "{}",
+    tags_json: str = "[]",
 ):
     conn = get_connection()
     cursor = conn.cursor()
@@ -191,9 +192,9 @@ def criar_job(
         """
         INSERT INTO jobs (
             usuario_id, arquivo, arquivo_path, copias, paginas_por_folha, duplex, orientacao,
-            intervalo_paginas, cups_options, printer_name, paginas_totais, status, prioridade, criado_em
+            intervalo_paginas, cups_options, printer_name, paginas_totais, tags_json, status, prioridade, criado_em
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDENTE', 0, datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDENTE', 0, datetime('now'))
     """,
         (
             usuario_id,
@@ -207,6 +208,7 @@ def criar_job(
             cups_options,
             printer_name or None,
             paginas_totais,
+            tags_json or "[]",
         ),
     )
 
@@ -395,6 +397,7 @@ def criar_tabelas():
             cups_job_id INTEGER,
             erro_mensagem TEXT,
             paginas_totais INTEGER NOT NULL DEFAULT 0,
+            tags_json TEXT NOT NULL DEFAULT '[]',
             status TEXT NOT NULL,
             prioridade INTEGER NOT NULL,
             criado_em TEXT NOT NULL,
@@ -1440,6 +1443,8 @@ def _garantir_colunas_jobs(cursor):
         cursor.execute("ALTER TABLE jobs ADD COLUMN cups_job_id INTEGER")
     if "erro_mensagem" not in colunas:
         cursor.execute("ALTER TABLE jobs ADD COLUMN erro_mensagem TEXT")
+    if "tags_json" not in colunas:
+        cursor.execute("ALTER TABLE jobs ADD COLUMN tags_json TEXT NOT NULL DEFAULT '[]'")
     if "finalizado_em" not in colunas:
         cursor.execute("ALTER TABLE jobs ADD COLUMN finalizado_em TEXT")
 
@@ -6593,6 +6598,78 @@ def gerar_relatorio_impressao(data_inicio: str = None, data_fim: str = None):
     return [dict(row) for row in rows]
 
 
+def _normalizar_tags_job(tags_json: str | None) -> list[str]:
+    try:
+        tags_brutas = json.loads(str(tags_json or "[]"))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return []
+
+    if not isinstance(tags_brutas, list):
+        return []
+
+    tags_normalizadas = []
+    vistos = set()
+    for item in tags_brutas:
+        tag = str(item or "").strip()
+        if not tag:
+            continue
+        chave = tag.casefold()
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        tags_normalizadas.append(tag)
+    return tags_normalizadas
+
+
+def gerar_relatorio_tags_impressao(data_inicio: str = None, data_fim: str = None):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT
+            j.tags_json,
+            j.paginas_totais
+        FROM jobs j
+        WHERE j.status IN (?, ?)
+    """
+    params = [STATUS_CONCLUIDO, STATUS_FINALIZADO_LEGADO]
+
+    if data_inicio:
+        query += " AND date(j.criado_em) >= ?"
+        params.append(data_inicio)
+
+    if data_fim:
+        query += " AND date(j.criado_em) <= ?"
+        params.append(data_fim)
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+
+    agregados = {}
+    for row in rows:
+        paginas_totais = max(int(row["paginas_totais"] or 0), 0)
+        for tag in _normalizar_tags_job(row["tags_json"]):
+            chave = tag.casefold()
+            if chave not in agregados:
+                agregados[chave] = {
+                    "tag": tag,
+                    "total_jobs": 0,
+                    "total_paginas": 0,
+                }
+            agregados[chave]["total_jobs"] += 1
+            agregados[chave]["total_paginas"] += paginas_totais
+
+    return sorted(
+        agregados.values(),
+        key=lambda item: (
+            -int(item.get("total_jobs") or 0),
+            -int(item.get("total_paginas") or 0),
+            str(item.get("tag") or "").casefold(),
+        ),
+    )
+
+
 def _listar_datas_periodo(data_inicio: str, data_fim: str) -> list[str]:
     inicio = date.fromisoformat(str(data_inicio))
     fim = date.fromisoformat(str(data_fim))
@@ -7101,6 +7178,7 @@ def gerar_dashboard_relatorios(data_inicio: str | None = None, data_fim: str | N
     dias_uteis = _contar_dias_uteis_periodo(datas_periodo)
 
     ranking_impressao = gerar_relatorio_impressao(inicio_periodo, fim_periodo)
+    ranking_tags_impressao = gerar_relatorio_tags_impressao(inicio_periodo, fim_periodo)
     ranking_recursos = gerar_relatorio_uso_recursos(inicio_periodo, fim_periodo)
     ranking_recursos_professor = gerar_relatorio_uso_recursos_por_professor(
         inicio_periodo, fim_periodo
@@ -7191,6 +7269,11 @@ def gerar_dashboard_relatorios(data_inicio: str | None = None, data_fim: str | N
         taxa_uso_geral = round((total_reservas / capacidade_total_recursos) * 100, 1)
 
     top_impressao = _professor_top_por_campo(ranking_impressao_ativo, "total_paginas")
+    top_tag_impressao = (
+        ranking_tags_impressao[0]
+        if ranking_tags_impressao
+        else {"tag": "Sem dados", "total_jobs": 0, "total_paginas": 0}
+    )
     top_recurso_professor = _professor_top_por_campo(
         ranking_recursos_professor_ativo,
         "total_reservas",
@@ -7283,6 +7366,12 @@ def gerar_dashboard_relatorios(data_inicio: str | None = None, data_fim: str | N
             "descricao": f"{top_impressao['total_paginas']} pagina(s) no periodo",
         },
         {
+            "id": "top_tag_impressao",
+            "titulo": "Tipo mais impresso",
+            "valor": top_tag_impressao["tag"],
+            "descricao": f"{top_tag_impressao['total_jobs']} job(s) classificados no periodo",
+        },
+        {
             "id": "top_recurso_professor",
             "titulo": "Professor que mais usa recursos",
             "valor": top_recurso_professor["nome"],
@@ -7329,6 +7418,10 @@ def gerar_dashboard_relatorios(data_inicio: str | None = None, data_fim: str | N
                     "labels": [item["nome"] for item in ranking_impressao_ativo[:7]],
                     "valores": [item["total_paginas"] for item in ranking_impressao_ativo[:7]],
                 },
+                "tags_impressao": {
+                    "labels": [item["tag"] for item in ranking_tags_impressao[:7]],
+                    "valores": [item["total_jobs"] for item in ranking_tags_impressao[:7]],
+                },
                 "reservas_por_recurso": {
                     "labels": [item["recurso_nome"] for item in ranking_recursos_visiveis[:7]],
                     "valores": [item["total_reservas"] for item in ranking_recursos_visiveis[:7]],
@@ -7350,8 +7443,11 @@ def gerar_dashboard_relatorios(data_inicio: str | None = None, data_fim: str | N
                 "total_jobs": total_jobs,
                 "media_paginas_por_job": media_paginas_por_job,
                 "professores_com_impressoes": total_professores_impressoes,
+                "tags_utilizadas": len(ranking_tags_impressao),
+                "tag_mais_frequente": top_tag_impressao["tag"],
             },
             "ranking_professores": ranking_impressao_ativo,
+            "ranking_tags": ranking_tags_impressao,
             "serie_diaria": {
                 "labels": labels_periodo,
                 "paginas": serie_paginas,

@@ -22,8 +22,10 @@ let filaPollingTimer = null;
 let usuarioAtual = null;
 let professoresImpressao = [];
 let turmasImpressao = [];
+let tagsImpressaoDisponiveis = [];
 let arquivoSelecionadoAtual = null;
 let jobHistoricoSelecionadoAtual = null;
+let resolverModalAlertaConsumoAtual = null;
 const QUALIDADE_MAX_DPR = 1.4;
 const FOLHA_PADDING = 8;
 const FOLHA_GAP = 6;
@@ -31,6 +33,7 @@ const LABEL_PREVIEW_RESERVA = 38;
 const RESERVA_BORDA_PREVIEW = 24;
 const BREAKPOINT_MOBILE_PREVIEW = 980;
 const FILA_POLLING_MS = 6000;
+const LIMITE_ALERTA_CONSUMO_PAGINAS = 30;
 const EXTENSOES_SUPORTADAS = new Set(["pdf", "doc", "docx", "png", "jpg", "jpeg"]);
 const STATUS_JOB_LABEL = {
     PENDENTE: "Na fila",
@@ -342,6 +345,85 @@ async function carregarTurmasImpressao() {
     }
 
     atualizarResumoTurmaImpressao();
+}
+
+function obterTagsImpressaoSelecionadas() {
+    return Array.from(document.querySelectorAll("#tagsImpressao input[type='checkbox']:checked"))
+        .map((input) => String(input.value || "").trim())
+        .filter(Boolean);
+}
+
+function atualizarContadorTagsImpressao() {
+    const contador = el("contadorTagsImpressao");
+    if (!contador) {
+        return;
+    }
+    const total = obterTagsImpressaoSelecionadas().length;
+    contador.innerText = `${total} tag(s)`;
+}
+
+function aplicarTagsImpressaoSelecionadas(tags = []) {
+    const selecionadas = new Set(
+        (Array.isArray(tags) ? tags : [])
+            .map((item) => String(item || "").trim().toLowerCase())
+            .filter(Boolean)
+    );
+
+    document.querySelectorAll("#tagsImpressao input[type='checkbox']").forEach((input) => {
+        input.checked = selecionadas.has(String(input.value || "").trim().toLowerCase());
+    });
+    atualizarContadorTagsImpressao();
+}
+
+function renderTagsImpressao() {
+    const container = el("tagsImpressao");
+    if (!container) {
+        return;
+    }
+
+    container.innerHTML = "";
+    if (!Array.isArray(tagsImpressaoDisponiveis) || tagsImpressaoDisponiveis.length === 0) {
+        const vazio = document.createElement("p");
+        vazio.className = "print-file-hint";
+        vazio.innerText = "Nenhuma tag cadastrada para impressao.";
+        container.appendChild(vazio);
+        atualizarContadorTagsImpressao();
+        return;
+    }
+
+    tagsImpressaoDisponiveis.forEach((tag) => {
+        const valor = String(tag?.id || tag?.label || "").trim();
+        if (!valor) {
+            return;
+        }
+
+        const label = document.createElement("label");
+        label.className = "print-tag-chip";
+
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.value = valor;
+
+        const texto = document.createElement("span");
+        texto.innerText = String(tag?.label || valor);
+
+        label.appendChild(input);
+        label.appendChild(texto);
+        container.appendChild(label);
+    });
+
+    atualizarContadorTagsImpressao();
+}
+
+async function carregarTagsImpressao() {
+    const res = await fetchComAuth("/impressao/tags", { headers });
+    if (!res.ok) {
+        throw new Error("NÃ£o foi possÃ­vel carregar as tags de impressÃ£o.");
+    }
+
+    const data = await lerJsonResposta(res, "NÃ£o foi possÃ­vel carregar as tags de impressÃ£o.");
+    tagsImpressaoDisponiveis = Array.isArray(data) ? data : [];
+    renderTagsImpressao();
 }
 
 function obterExtensaoArquivo(nomeArquivo) {
@@ -829,6 +911,64 @@ function calcularConsumo() {
     }
 }
 
+function modalAlertaConsumoAberto() {
+    const modal = el("modalAlertaConsumoImpressao");
+    return Boolean(modal) && !modal.hidden;
+}
+
+function fecharModalAlertaConsumo(confirmado) {
+    const modal = el("modalAlertaConsumoImpressao");
+    if (!modal || modal.hidden) {
+        return;
+    }
+
+    modal.hidden = true;
+    document.body.classList.remove("print-alert-modal-open");
+    if (typeof resolverModalAlertaConsumoAtual === "function") {
+        const resolver = resolverModalAlertaConsumoAtual;
+        resolverModalAlertaConsumoAtual = null;
+        resolver(Boolean(confirmado));
+    }
+}
+
+function abrirModalAlertaConsumo({ consumo, paginasPorFolha, orientacao, copias }) {
+    const modal = el("modalAlertaConsumoImpressao");
+    const painel = el("painelAlertaConsumoImpressao");
+    const texto = el("textoAlertaConsumoImpressao");
+    const sugestao = el("sugestaoAlertaConsumoImpressao");
+
+    if (!modal || !painel || !texto || !sugestao) {
+        return Promise.resolve(window.confirm(
+            `Esta impressao deve consumir ${consumo} folha(s). Deseja imprimir mesmo assim?`
+        ));
+    }
+
+    const ajustes = [];
+    if (paginasPorFolha < 2) {
+        ajustes.push("alterar para 2 paginas por folha");
+    }
+    if (orientacao !== "paisagem") {
+        ajustes.push("mudar a orientacao para paisagem");
+    }
+
+    texto.innerText = copias > 1
+        ? `Esta impressao esta estimada em ${consumo} folha(s) para ${copias} copia(s), acima do limite de alerta de ${LIMITE_ALERTA_CONSUMO_PAGINAS} folhas.`
+        : `Esta impressao esta estimada em ${consumo} folha(s), acima do limite de alerta de ${LIMITE_ALERTA_CONSUMO_PAGINAS} folhas.`;
+    sugestao.innerText = ajustes.length > 0
+        ? `Sugestao: ${ajustes.join(" e ")} antes de enviar para economizar papel.`
+        : "Esta configuracao ja esta otimizada, mas o consumo continua alto. Revise o intervalo e a quantidade de copias se desejar.";
+
+    modal.hidden = false;
+    document.body.classList.add("print-alert-modal-open");
+
+    return new Promise((resolve) => {
+        resolverModalAlertaConsumoAtual = resolve;
+        window.setTimeout(() => {
+            painel.focus();
+        }, 0);
+    });
+}
+
 function normalizarStatusJob(status) {
     return String(status || "").trim().toUpperCase();
 }
@@ -911,7 +1051,7 @@ function atualizarEstadoEnvio(ativo, mensagem = "") {
     estado.innerText = mensagem || "";
 }
 
-async function enviarImpressao() {
+async function enviarImpressao(confirmadoAlertaConsumo = false) {
     if (envioEmAndamento) {
         return;
     }
@@ -923,6 +1063,7 @@ async function enviarImpressao() {
     const duplex = el("duplex").checked;
     const orientacao = obterOrientacaoPreview();
     const intervaloPaginas = el("intervaloPaginas").value.trim();
+    const tagsSelecionadas = obterTagsImpressaoSelecionadas();
     const professorSolicitanteId = obterProfessorSolicitanteSelecionadoId();
     const usaHistorico = jobHistoricoId > 0;
 
@@ -941,6 +1082,20 @@ async function enviarImpressao() {
             obterPaginasSelecionadas();
         } catch (err) {
             el("msg").innerText = err.message;
+            return;
+        }
+    }
+
+    const consumoEstimado = calcularConsumo();
+    if (!confirmadoAlertaConsumo && consumoEstimado > LIMITE_ALERTA_CONSUMO_PAGINAS) {
+        const confirmar = await abrirModalAlertaConsumo({
+            consumo: consumoEstimado,
+            paginasPorFolha,
+            orientacao,
+            copias,
+        });
+        if (!confirmar) {
+            el("msg").innerText = "Revise a configuracao antes de enviar a impressao.";
             return;
         }
     }
@@ -974,6 +1129,9 @@ async function enviarImpressao() {
         if (professorSolicitanteId > 0) {
             formData.append("professor_id", professorSolicitanteId);
         }
+        tagsSelecionadas.forEach((tag) => {
+            formData.append("tags", tag);
+        });
 
         const endpoint = usaHistorico ? `/jobs/${jobHistoricoId}/reimprimir` : "/imprimir";
         const res = await fetchComAuth(endpoint, {
@@ -1150,6 +1308,7 @@ async function carregarJobHistoricoNoPreview(job) {
             arquivo: String(job?.arquivo || "")
         };
         arquivoSelecionadoAtual = arquivoHistorico;
+        aplicarTagsImpressaoSelecionadas(job?.tags || []);
         sincronizarInputArquivo(null);
         atualizarEstadoArquivoSelecionado();
         atualizarDestaqueJobSelecionado();
@@ -1214,6 +1373,13 @@ function criarItemJob(job) {
 
     li.appendChild(topo);
     li.appendChild(meta);
+
+    if (Array.isArray(job?.tags) && job.tags.length > 0) {
+        const tags = document.createElement("p");
+        tags.classList.add("print-job-tags");
+        tags.innerText = `Tags: ${job.tags.join(", ")}`;
+        li.appendChild(tags);
+    }
 
     const podeReutilizar = jobPodeSerReutilizado(job);
     if (podeReutilizar) {
@@ -1863,10 +2029,37 @@ function registrarEventos() {
         }
         calcularConsumo();
     });
+    const tagsImpressao = el("tagsImpressao");
+    if (tagsImpressao) {
+        tagsImpressao.addEventListener("change", (event) => {
+            if (event.target instanceof HTMLInputElement && event.target.type === "checkbox") {
+                atualizarContadorTagsImpressao();
+            }
+        });
+    }
+    const modalAlertaConsumo = el("modalAlertaConsumoImpressao");
+    if (modalAlertaConsumo) {
+        modalAlertaConsumo.addEventListener("click", (event) => {
+            if (event.target === modalAlertaConsumo) {
+                fecharModalAlertaConsumo(false);
+            }
+        });
+    }
+    el("btnConfirmarAlertaConsumoImpressao")?.addEventListener("click", () => {
+        fecharModalAlertaConsumo(true);
+    });
+    el("btnVoltarAjustarAlertaConsumoImpressao")?.addEventListener("click", () => {
+        fecharModalAlertaConsumo(false);
+    });
     el("btnEnviar").addEventListener("click", enviarImpressao);
     el("btnAnterior").addEventListener("click", folhaAnterior);
     el("btnProxima").addEventListener("click", proximaFolha);
     window.addEventListener("resize", reagendarRenderAposResize);
+    window.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && modalAlertaConsumoAberto()) {
+            fecharModalAlertaConsumo(false);
+        }
+    });
 
     const professorSolicitante = el("professorSolicitante");
     if (professorSolicitante) {
@@ -1926,6 +2119,7 @@ async function inicializarPagina() {
         atualizarTopbarUsuario();
         await carregarProfessoresImpressaoAdmin();
         await carregarTurmasImpressao();
+        await carregarTagsImpressao();
         await carregarCota();
         await carregarFila();
     } catch (err) {

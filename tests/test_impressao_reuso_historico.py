@@ -76,6 +76,7 @@ class ImpressaoReusoHistoricoTest(unittest.TestCase):
             arquivo_path=str(caminho_pdf),
             copias=1,
             paginas_totais=4,
+            tags_json='["Atividade"]',
         )
         database.atualizar_status(job_id, "CONCLUIDO")
         return admin, job_id, caminho_pdf
@@ -127,6 +128,7 @@ class ImpressaoReusoHistoricoTest(unittest.TestCase):
             novo_job = next(job for job in jobs if int(job["id"]) != int(job_id))
             self.assertEqual(novo_job["arquivo"], "atividade.docx")
             self.assertEqual(novo_job["status"], "PENDENTE")
+            self.assertEqual(novo_job["tags_json"], '["Atividade"]')
 
             caminho_novo = Path(str(novo_job["arquivo_path"]))
             self.assertTrue(caminho_novo.exists())
@@ -194,6 +196,20 @@ class ImpressaoReusoHistoricoTest(unittest.TestCase):
             self.assertEqual(resposta.media_type, "application/pdf")
             self.assertEqual(resposta.body, PDF_MINIMO)
             self.assertEqual(int(usuario_hibrido["id"]), professor_hibrido_id)
+
+    def test_meus_jobs_retorna_tags_para_historico(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            spool_dir = Path(tmp_dir) / "spool"
+            spool_dir.mkdir(parents=True, exist_ok=True)
+
+            database, impressao_router = _reload_modulos(db_path, str(spool_dir))
+            admin, _job_id, _caminho_pdf = self._criar_cenario_base(database, spool_dir)
+
+            jobs = impressao_router.meus_jobs(professor_id=None, usuario=admin)
+
+            self.assertEqual(len(jobs), 1)
+            self.assertEqual(jobs[0]["tags"], ["Atividade"])
 
     def test_criar_job_pdf_invalido_retorna_http_500_controlado(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

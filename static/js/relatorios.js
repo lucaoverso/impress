@@ -388,6 +388,14 @@ function renderTabelaImpressoes(itens = []) {
     ]);
 }
 
+function renderTabelaTagsImpressao(itens = []) {
+    renderTabelaComLinhas("tabelaTagsImpressaoBody", itens, 3, (item) => [
+        item.tag || "Sem classificacao",
+        formatarNumero(item.total_jobs || 0),
+        formatarNumero(item.total_paginas || 0),
+    ]);
+}
+
 function renderTabelaRecursos(itens = []) {
     renderTabelaComLinhas("tabelaRecursosBody", itens, 6, (item) => [
         item.recurso_nome || "Recurso nao informado",
@@ -576,6 +584,8 @@ function renderImpressoes(payload = {}) {
         { titulo: "Jobs concluidos", valor: formatarNumero(resumo.total_jobs || 0) },
         { titulo: "Media por job", valor: formatarDecimal(resumo.media_paginas_por_job || 0) },
         { titulo: "Professores com impressoes", valor: formatarNumero(resumo.professores_com_impressoes || 0) },
+        { titulo: "Tags usadas", valor: formatarNumero(resumo.tags_utilizadas || 0) },
+        { titulo: "Tag mais frequente", valor: resumo.tag_mais_frequente || "Sem dados" },
     ]);
 
     const serie = payload.impressoes?.serie_diaria || {};
@@ -609,7 +619,34 @@ function renderImpressoes(payload = {}) {
         "Nenhuma impressao registrada no periodo."
     );
 
+    const tags = payload.impressoes?.ranking_tags || [];
+    criarGrafico(
+        "tagsImpressao",
+        "graficoTagsImpressao",
+        "graficoTagsImpressaoVazio",
+        {
+            type: "bar",
+            data: {
+                labels: tags.map((item) => item.tag || "Sem classificacao"),
+                datasets: [
+                    {
+                        label: "Jobs classificados",
+                        data: tags.map((item) => item.total_jobs || 0),
+                        backgroundColor: "#f59e0b",
+                        borderRadius: 10,
+                    },
+                ],
+            },
+            options: opcoesBaseGrafico({
+                aspectRatio: aspectRatioGrafico("barra"),
+                plugins: { legend: { display: false } },
+            }),
+        },
+        "Nenhuma classificacao registrada no periodo."
+    );
+
     renderTabelaImpressoes(payload.impressoes?.ranking_professores || []);
+    renderTabelaTagsImpressao(tags);
 }
 
 function renderRecursos(payload = {}) {

@@ -190,6 +190,36 @@
                         </table>
                     </div>
                 </article>
+
+                <article class="calendar-card reports-chart-card">
+                    <header class="booking-card-header">
+                        <h3>Classificacao das impressoes</h3>
+                        <p class="booking-empty">Tags mais usadas pelos professores no periodo.</p>
+                    </header>
+                    <div class="reports-chart-wrap">
+                        <canvas id="graficoTagsImpressao"></canvas>
+                        <p id="graficoTagsImpressaoVazio" class="reports-chart-empty" hidden></p>
+                    </div>
+                </article>
+
+                <article class="calendar-card reports-table-card">
+                    <header class="booking-card-header">
+                        <h3>Ranking por tag</h3>
+                        <p class="booking-empty">Mostra o que mais foi impresso no periodo selecionado.</p>
+                    </header>
+                    <div class="reports-table-wrap">
+                        <table class="reports-table">
+                            <thead>
+                                <tr>
+                                    <th>Tag</th>
+                                    <th>Jobs</th>
+                                    <th>Paginas</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaTagsImpressaoBody"></tbody>
+                        </table>
+                    </div>
+                </article>
             </div>
         </section>
 

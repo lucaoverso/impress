@@ -181,6 +181,7 @@ class RelatoriosRouterTest(unittest.TestCase):
                 arquivo_path="/tmp/atividade-ana.pdf",
                 copias=1,
                 paginas_totais=20,
+                tags_json='["Atividade", "Trabalho avaliativo"]',
             )
             database.atualizar_status(job_ana, database.STATUS_CONCLUIDO)
 
@@ -190,6 +191,7 @@ class RelatoriosRouterTest(unittest.TestCase):
                 arquivo_path="/tmp/atividade-bruno.pdf",
                 copias=1,
                 paginas_totais=12,
+                tags_json='["Atividade"]',
             )
             database.atualizar_status(job_bruno, database.STATUS_CONCLUIDO)
 
@@ -232,12 +234,23 @@ class RelatoriosRouterTest(unittest.TestCase):
 
             self.assertEqual(resposta["impressoes"]["resumo"]["total_paginas"], 32)
             self.assertEqual(resposta["impressoes"]["resumo"]["total_jobs"], 2)
+            self.assertEqual(resposta["impressoes"]["resumo"]["tags_utilizadas"], 2)
+            self.assertEqual(resposta["impressoes"]["resumo"]["tag_mais_frequente"], "Atividade")
             self.assertEqual(resposta["recursos"]["resumo"]["total_reservas"], 3)
             self.assertEqual(resposta["cards"][2]["valor"], "Ana Souza")
-            self.assertEqual(resposta["cards"][3]["valor"], "Ana Souza")
+            self.assertEqual(resposta["cards"][3]["valor"], "Atividade")
+            self.assertEqual(resposta["cards"][4]["valor"], "Ana Souza")
             self.assertEqual(
                 resposta["dashboard_geral"]["graficos"]["impressoes_por_professor"]["valores"],
                 [20, 12],
+            )
+            self.assertEqual(
+                resposta["impressoes"]["ranking_tags"][0]["tag"],
+                "Atividade",
+            )
+            self.assertEqual(
+                resposta["impressoes"]["ranking_tags"][0]["total_jobs"],
+                2,
             )
             self.assertEqual(
                 resposta["recursos"]["ranking_recursos"][0]["total_reservas"],
