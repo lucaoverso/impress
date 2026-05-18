@@ -88,6 +88,30 @@ FONTES_BOLD_ITALIC = (
     "/usr/share/fonts/truetype/dejavu/DejaVuSans-BoldOblique.ttf",
     "/usr/share/fonts/truetype/liberation2/LiberationSans-BoldItalic.ttf",
 )
+FONTES_SERIF_REGULARES = (
+    "C:/Windows/Fonts/times.ttf",
+    "C:/Windows/Fonts/times new roman.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
+    "/usr/share/fonts/truetype/liberation2/LiberationSerif-Regular.ttf",
+)
+FONTES_SERIF_BOLD = (
+    "C:/Windows/Fonts/timesbd.ttf",
+    "C:/Windows/Fonts/times new roman bold.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
+    "/usr/share/fonts/truetype/liberation2/LiberationSerif-Bold.ttf",
+)
+FONTES_SERIF_ITALIC = (
+    "C:/Windows/Fonts/timesi.ttf",
+    "C:/Windows/Fonts/times new roman italic.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf",
+    "/usr/share/fonts/truetype/liberation2/LiberationSerif-Italic.ttf",
+)
+FONTES_SERIF_BOLD_ITALIC = (
+    "C:/Windows/Fonts/timesbi.ttf",
+    "C:/Windows/Fonts/times new roman bold italic.ttf",
+    "/usr/share/fonts/truetype/dejavu/DejaVuSerif-BoldItalic.ttf",
+    "/usr/share/fonts/truetype/liberation2/LiberationSerif-BoldItalic.ttf",
+)
 
 
 @dataclass
@@ -132,16 +156,16 @@ def _carregar_fontes() -> _FontPack:
     return _FontPack(
         escola=_carregar_fonte(FONTES_REGULARES, 58),
         subtitulo=_carregar_fonte(FONTES_REGULARES, 43),
-        titulo=_carregar_fonte(FONTES_BOLD, 50),
-        secao=_carregar_fonte(FONTES_BOLD, 46),
-        corpo=_carregar_fonte(FONTES_REGULARES, 40),
-        corpo_bold=_carregar_fonte(FONTES_BOLD, 40),
-        corpo_italico=_carregar_fonte(FONTES_ITALIC, 40),
-        corpo_bold_italico=_carregar_fonte(FONTES_BOLD_ITALIC, 40),
-        pequeno=_carregar_fonte(FONTES_REGULARES, 34),
-        pequeno_bold=_carregar_fonte(FONTES_BOLD, 34),
-        rodape=_carregar_fonte(FONTES_REGULARES, 32),
-        rodape_italico=_carregar_fonte(FONTES_ITALIC, 30),
+        titulo=_carregar_fonte(FONTES_SERIF_BOLD, 50),
+        secao=_carregar_fonte(FONTES_SERIF_BOLD, 48),
+        corpo=_carregar_fonte(FONTES_SERIF_REGULARES, 50),
+        corpo_bold=_carregar_fonte(FONTES_SERIF_BOLD, 50),
+        corpo_italico=_carregar_fonte(FONTES_SERIF_ITALIC, 50),
+        corpo_bold_italico=_carregar_fonte(FONTES_SERIF_BOLD_ITALIC, 50),
+        pequeno=_carregar_fonte(FONTES_SERIF_REGULARES, 42),
+        pequeno_bold=_carregar_fonte(FONTES_SERIF_BOLD, 42),
+        rodape=_carregar_fonte(FONTES_SERIF_REGULARES, 36),
+        rodape_italico=_carregar_fonte(FONTES_SERIF_ITALIC, 34),
     )
 
 
@@ -1060,7 +1084,7 @@ class _RenderizadorRegistroOcorrencia:
         prefixo = f"{rotulo}: "
         largura_prefixo, _ = self._medir_texto(prefixo, self.fontes.corpo_bold)
         largura_disponivel = self.direita - self.esquerda
-        altura_linha = self._altura_linha(self.fontes.corpo)
+        altura_linha = self._altura_linha(self.fontes.corpo, fator=1.5)
 
         if largura_prefixo > largura_disponivel * 0.52:
             linhas_rotulo = self._quebrar_linhas(rotulo, self.fontes.corpo_bold, largura_disponivel)
@@ -1077,7 +1101,7 @@ class _RenderizadorRegistroOcorrencia:
                     (self.esquerda, self.y), linha, fill=COR_TEXTO, font=self.fontes.corpo
                 )
                 self.y += altura_linha
-            self._adicionar_espaco(10)
+            self._adicionar_espaco(12)
             return
 
         linhas_valor = self._quebrar_linhas(
@@ -1099,11 +1123,11 @@ class _RenderizadorRegistroOcorrencia:
             for linha in linhas_valor[1:]:
                 self.y += altura_linha
                 self.draw.text((x_valor, self.y), linha, fill=COR_TEXTO, font=self.fontes.corpo)
-        self.y += altura_linha + 10
+        self.y += altura_linha + 12
 
     def _adicionar_titulo_secao(self, texto: str):
-        altura = self._altura_linha(self.fontes.secao, fator=1.1)
-        self._garantir_espaco(altura + 14)
+        altura = self._altura_linha(self.fontes.secao, fator=1.2)
+        self._garantir_espaco(altura + 18)
         largura, _ = self._medir_texto(texto, self.fontes.secao)
         self.draw.text(
             ((self.largura - largura) / 2, self.y),
@@ -1111,7 +1135,7 @@ class _RenderizadorRegistroOcorrencia:
             fill=COR_TEXTO,
             font=self.fontes.secao,
         )
-        self.y += altura + 8
+        self.y += altura + 12
 
     def _adicionar_paragrafos(
         self,
@@ -1124,7 +1148,7 @@ class _RenderizadorRegistroOcorrencia:
     ):
         x_inicio = self.esquerda + max(0, int(recuo))
         largura_disponivel = self.direita - x_inicio
-        altura_linha = self._altura_linha(fonte)
+        altura_linha = self._altura_linha(fonte, fator=1.5)
         paragrafos = str(texto or "").replace("\r", "").split("\n")
 
         for indice, paragrafo in enumerate(paragrafos):
@@ -1138,7 +1162,7 @@ class _RenderizadorRegistroOcorrencia:
                 self.y += altura_linha
 
             if indice != len(paragrafos) - 1:
-                self.y += altura_linha // 3
+                self.y += altura_linha // 2
 
         self.y += max(0, int(espaco_final))
 
@@ -1219,7 +1243,7 @@ class _RenderizadorRegistroOcorrencia:
     ):
         x_inicio = self.esquerda + max(0, int(recuo))
         largura_disponivel = self.direita - x_inicio
-        altura_linha = self._altura_linha(self.fontes.corpo, fator=1.15)
+        altura_linha = self._altura_linha(self.fontes.corpo, fator=1.5)
         linhas = self._quebrar_runs_formatados(runs, largura_disponivel)
 
         for linha in linhas:
