@@ -50,6 +50,19 @@ class CoordenacaoOpcoesTest(unittest.TestCase):
                 {item["id"] for item in resposta["tipos_registro"]},
                 {"estudante", "professor", "geral"},
             )
+            acoes_por_id = {item["id"]: item for item in resposta["acoes_aplicadas"]}
+            self.assertEqual(
+                acoes_por_id["orientacao_professor"]["tipos_registro"],
+                ["professor"],
+            )
+            self.assertEqual(
+                acoes_por_id["orientacao_geral_docentes"]["tipos_registro"],
+                ["geral"],
+            )
+            self.assertEqual(
+                acoes_por_id["advertencia"]["tipos_registro"],
+                ["estudante"],
+            )
             self.assertIn("regimento_itens", resposta)
             self.assertTrue(
                 any(item["lei_nome"] == "Regimento Interno" for item in resposta["regimento_itens"])

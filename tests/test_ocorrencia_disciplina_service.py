@@ -1,6 +1,7 @@
 import unittest
 
 from services.ocorrencia_disciplina_service import (
+    acao_permitida_para_tipo_registro,
     acao_compativel_com_gravidade,
     inferir_gravidade_item_base_legal,
     inferir_gravidade_ocorrencia,
@@ -35,6 +36,11 @@ class OcorrenciaDisciplinaServiceTest(unittest.TestCase):
         self.assertTrue(acao_compativel_com_gravidade("advertencia_verbal", "leve"))
         self.assertFalse(acao_compativel_com_gravidade("advertencia_verbal", "grave"))
         self.assertTrue(acao_compativel_com_gravidade("advertencia", "grave"))
+
+    def test_acao_e_validada_pelo_tipo_de_registro(self):
+        self.assertTrue(acao_permitida_para_tipo_registro("orientacao_professor", "professor"))
+        self.assertTrue(acao_permitida_para_tipo_registro("orientacao_geral_docentes", "geral"))
+        self.assertFalse(acao_permitida_para_tipo_registro("advertencia", "professor"))
 
 
 if __name__ == "__main__":

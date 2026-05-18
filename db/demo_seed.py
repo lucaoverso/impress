@@ -806,6 +806,20 @@ def _sync_ocorrencias(
         )
         cursor.execute(
             f"""
+            DELETE FROM ocorrencia_estudantes
+            WHERE ocorrencia_id IN ({ocorrencia_placeholders})
+            """,
+            ocorrencia_ids,
+        )
+        cursor.execute(
+            f"""
+            DELETE FROM ocorrencia_professores
+            WHERE ocorrencia_id IN ({ocorrencia_placeholders})
+            """,
+            ocorrencia_ids,
+        )
+        cursor.execute(
+            f"""
             DELETE FROM ocorrencias
             WHERE id IN ({ocorrencia_placeholders})
             """,

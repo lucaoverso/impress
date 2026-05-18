@@ -68,6 +68,12 @@ function registrarEventosOcorrencias() {
     });
     el("ocorrenciaBuscaEstudante").addEventListener("change", aplicarSelecaoEstudantePorTexto);
     el("ocorrenciaBuscaEstudante").addEventListener("blur", aplicarSelecaoEstudantePorTexto);
+    el("ocorrenciaBuscaEstudante").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            aplicarSelecaoEstudantePorTexto();
+        }
+    });
     el("ocorrenciaBuscaEstudante").addEventListener("focus", () => {
         atualizarSugestoesEstudantesBusca(true).catch((err) => setMensagemOcorrencias(err.message, true));
     });
@@ -78,6 +84,12 @@ function registrarEventosOcorrencias() {
     });
     el("ocorrenciaBuscaProfessor").addEventListener("change", aplicarSelecaoProfessorPorTexto);
     el("ocorrenciaBuscaProfessor").addEventListener("blur", aplicarSelecaoProfessorPorTexto);
+    el("ocorrenciaBuscaProfessor").addEventListener("keydown", (event) => {
+        if (event.key === "Enter") {
+            event.preventDefault();
+            aplicarSelecaoProfessorPorTexto();
+        }
+    });
     el("ocorrenciaBuscaProfessor").addEventListener("focus", () => {
         atualizarSugestoesProfessoresBusca(true);
     });
@@ -106,6 +118,8 @@ function registrarEventosOcorrencias() {
 
     el("ocorrenciaTurmaId").addEventListener("change", () => {
         el("ocorrenciaEstudanteId").value = "";
+        estudantesVinculadosSelecionados = [];
+        renderSelecionadorEstudantesVinculados([]);
         atualizarSelectAulasPorTurma(el("ocorrenciaTurmaId").value);
         agendarBuscaEstudantes();
         ocultarSugestoes("listaEstudantesBusca");

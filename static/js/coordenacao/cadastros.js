@@ -25,17 +25,28 @@ function aplicarSelecaoEstudantePorTexto() {
     }
 
     const item = obterItemSugestaoPorTexto(mapaBuscaEstudantes, texto);
-    if (!item) {
-        hidden.value = "";
-        ocultarSugestoes("listaEstudantesBusca");
-        return;
+    const turma = obterTurmaOpcaoPorId(el("ocorrenciaTurmaId").value);
+    if (item) {
+        adicionarEstudanteVinculado({
+            estudante_id: Number(item.id || 0) || null,
+            nome: String(item.nome || item.label || texto).trim(),
+            turma_id: Number(item.turma_id || 0) || null,
+            turma_nome: String(item.turma_nome || turma?.nome || "").trim()
+        });
+        el("ocorrenciaTurmaId").value = String(item.turma_id);
+        atualizarSelectAulasPorTurma(item.turma_id);
+    } else {
+        adicionarEstudanteVinculado({
+            estudante_id: null,
+            nome: texto,
+            turma_id: Number(el("ocorrenciaTurmaId").value || 0) || null,
+            turma_nome: String(turma?.nome || "").trim()
+        });
     }
-
-    input.value = String(item.nome || item.label || texto).trim();
-    hidden.value = String(item.id);
-    el("ocorrenciaTurmaId").value = String(item.turma_id);
-    atualizarSelectAulasPorTurma(item.turma_id);
+    input.value = "";
+    hidden.value = "";
     ocultarSugestoes("listaEstudantesBusca");
+    atualizarPreviewOcorrencia();
 }
 
 function aplicarSelecaoProfessorPorTexto() {
@@ -49,6 +60,19 @@ function aplicarSelecaoProfessorPorTexto() {
     }
 
     const item = obterItemSugestaoPorTexto(mapaBuscaProfessores, texto, opcoesOcorrencias.professores || []);
+    if (obterTipoRegistroFormulario() === "professor") {
+        adicionarProfessorVinculado({
+            professor_id: item ? Number(item.id || 0) || null : null,
+            nome: String(item?.nome || item?.label || texto).trim(),
+            email: String(item?.email || "").trim()
+        });
+        input.value = "";
+        hidden.value = "";
+        ocultarSugestoes("listaProfessoresBusca");
+        atualizarPreviewOcorrencia();
+        return;
+    }
+
     if (item) {
         input.value = String(item.nome || item.label || texto).trim();
     }
@@ -73,8 +97,14 @@ function aplicarSelecaoDisciplinaPorTexto() {
 
 function selecionarSugestaoEstudante(item) {
     if (!item) return;
-    el("ocorrenciaBuscaEstudante").value = String(item.nome || item.label || "").trim();
-    el("ocorrenciaEstudanteId").value = String(item.id || "");
+    adicionarEstudanteVinculado({
+        estudante_id: Number(item.id || 0) || null,
+        nome: String(item.nome || item.label || "").trim(),
+        turma_id: Number(item.turma_id || 0) || null,
+        turma_nome: String(item.turma_nome || "").trim()
+    });
+    el("ocorrenciaBuscaEstudante").value = "";
+    el("ocorrenciaEstudanteId").value = "";
     if (item.turma_id) {
         el("ocorrenciaTurmaId").value = String(item.turma_id);
         atualizarSelectAulasPorTurma(item.turma_id);
@@ -84,6 +114,17 @@ function selecionarSugestaoEstudante(item) {
 
 function selecionarSugestaoProfessor(item) {
     if (!item) return;
+    if (obterTipoRegistroFormulario() === "professor") {
+        adicionarProfessorVinculado({
+            professor_id: Number(item.id || 0) || null,
+            nome: String(item.nome || item.label || "").trim(),
+            email: String(item.email || "").trim()
+        });
+        el("ocorrenciaBuscaProfessor").value = "";
+        el("ocorrenciaProfessorRequerenteId").value = "";
+        atualizarPreviewOcorrencia();
+        return;
+    }
     el("ocorrenciaBuscaProfessor").value = String(item.nome || item.label || "").trim();
     el("ocorrenciaProfessorRequerenteId").value = String(item.id || "");
     atualizarPreviewOcorrencia();
@@ -125,7 +166,13 @@ async function atualizarSugestoesEstudantesBusca(forcar = false) {
     params.set("q", termo);
     if (turmaId) params.set("turma_id", turmaId);
     params.set("limite", "20");
-    const itens = await fetchJson(`/ocorrencias/busca/estudantes?${params.toString()}`, { headers });
+    const idsSelecionados = new Set(
+        obterEstudantesVinculadosFormulario()
+            .map((item) => Number(item.estudante_id || 0))
+            .filter((item) => item > 0)
+    );
+    const itens = (await fetchJson(`/ocorrencias/busca/estudantes?${params.toString()}`, { headers }))
+        .filter((item) => !idsSelecionados.has(Number(item.id || 0)));
     preencherDatalist("listaEstudantesBusca", mapaBuscaEstudantes, itens, {
         onSelect: selecionarSugestaoEstudante,
         textoVazio: "Nenhum estudante encontrado."
@@ -150,10 +197,18 @@ function atualizarSugestoesProfessoresBusca(forcar = false) {
         return;
     }
 
+    const professoresSelecionados = new Set(
+        obterProfessoresVinculadosFormulario()
+            .map((item) => Number(item.professor_id || 0))
+            .filter((item) => item > 0)
+    );
     const itens = filtrarSugestoesLocais(opcoesOcorrencias.professores, termo, {
         limite: 12,
         campos: ["nome", "email", "label"]
-    });
+    }).filter((item) => (
+        obterTipoRegistroFormulario() !== "professor"
+        || !professoresSelecionados.has(Number(item.id || 0))
+    ));
     preencherDatalist("listaProfessoresBusca", mapaBuscaProfessores, itens, {
         onSelect: selecionarSugestaoProfessor,
         textoVazio: "Nenhum professor encontrado."
@@ -177,37 +232,61 @@ function atualizarSugestoesDisciplinasBusca(forcar = false) {
     });
 }
 
+function sincronizarVinculadosPendentesAntesSalvar() {
+    const tipoRegistro = obterTipoRegistroFormulario();
+    const textoEstudante = String(el("ocorrenciaBuscaEstudante")?.value || "").trim();
+    if (tipoRegistro === "estudante" && textoEstudante) {
+        aplicarSelecaoEstudantePorTexto();
+    }
+
+    const textoProfessor = String(el("ocorrenciaBuscaProfessor")?.value || "").trim();
+    if ((tipoRegistro === "professor" || tipoRegistro === "estudante") && textoProfessor) {
+        aplicarSelecaoProfessorPorTexto();
+    }
+    return true;
+}
+
 function montarPayloadOcorrencia() {
     sincronizarDescricaoEditor();
     const tipoRegistro = obterTipoRegistroFormulario();
-    const textoEstudante = el("ocorrenciaBuscaEstudante").value.trim();
-    const itemEstudante = obterItemSugestaoPorTexto(mapaBuscaEstudantes, textoEstudante);
+    const estudantesVinculados = obterEstudantesVinculadosFormulario();
+    const professoresVinculados = obterProfessoresVinculadosFormulario();
     const textoProfessor = el("ocorrenciaBuscaProfessor").value.trim();
     const itemProfessor = obterItemSugestaoPorTexto(mapaBuscaProfessores, textoProfessor, opcoesOcorrencias.professores || []);
     const tituloGeral = String(el("ocorrenciaTituloGeral")?.value || "").trim();
 
-    const estudanteIdHidden = Number(el("ocorrenciaEstudanteId").value || 0);
     const professorIdSelecionado = Number(el("ocorrenciaProfessorRequerenteId").value || 0);
     const professorSelecionado = professorIdSelecionado > 0
         ? obterProfessorOpcaoPorId(professorIdSelecionado)
         : itemProfessor;
-
-    const estudanteId = estudanteIdHidden || (itemEstudante ? Number(itemEstudante.id) : 0);
-    const nomeEstudante = itemEstudante ? itemEstudante.nome : textoEstudante;
+    const primeiroEstudante = estudantesVinculados[0] || null;
+    const primeiroProfessor = professoresVinculados[0] || null;
 
     return {
         tipo_registro: tipoRegistro,
         nome_estudante: tipoRegistro === "geral"
             ? (tituloGeral || null)
-            : (tipoRegistro === "estudante" ? (nomeEstudante || null) : null),
-        estudante_id: tipoRegistro === "estudante" && estudanteId > 0 ? estudanteId : null,
+            : (tipoRegistro === "estudante" ? (resumoNomesVinculados(estudantesVinculados) || null) : null),
+        estudante_id: tipoRegistro === "estudante" && Number(primeiroEstudante?.estudante_id || 0) > 0
+            ? Number(primeiroEstudante.estudante_id)
+            : null,
+        estudantes_vinculados: tipoRegistro === "estudante" ? estudantesVinculados : [],
         turma_id: tipoRegistro === "estudante" ? Number(el("ocorrenciaTurmaId").value) : null,
         professor_requerente: tipoRegistro === "geral"
             ? null
-            : (professorSelecionado ? professorSelecionado.nome : (textoProfessor || null)),
+            : (
+                tipoRegistro === "professor"
+                    ? (resumoNomesVinculados(professoresVinculados) || null)
+                    : (professorSelecionado ? professorSelecionado.nome : (textoProfessor || null))
+            ),
         professor_requerente_id: tipoRegistro === "geral"
             ? null
-            : (professorSelecionado ? Number(professorSelecionado.id) : null),
+            : (
+                tipoRegistro === "professor"
+                    ? (Number(primeiroProfessor?.professor_id || 0) > 0 ? Number(primeiroProfessor.professor_id) : null)
+                    : (professorSelecionado ? Number(professorSelecionado.id) : null)
+            ),
+        professores_vinculados: tipoRegistro === "professor" ? professoresVinculados : [],
         disciplina: el("ocorrenciaDisciplina").value.trim() || null,
         data_ocorrencia: el("ocorrenciaData").value,
         aula: tipoRegistro === "estudante" ? String(el("ocorrenciaAula").value || "").trim() : null,
@@ -221,6 +300,7 @@ function montarPayloadOcorrencia() {
 
 async function salvarOcorrencia(event) {
     event.preventDefault();
+    sincronizarVinculadosPendentesAntesSalvar();
     if (!sincronizarRegimentoPendenteAntesSalvar()) {
         return;
     }

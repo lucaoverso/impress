@@ -714,6 +714,52 @@
     color: #607086;
 }
 
+.coordenacao-selection-list {
+    display: grid;
+    gap: 8px;
+}
+
+.coordenacao-selection-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 10px 12px;
+    border: 1px solid #d7e2ee;
+    border-radius: 14px;
+    background: #f9fbff;
+}
+
+.coordenacao-selection-card-body {
+    display: grid;
+    gap: 3px;
+}
+
+.coordenacao-selection-card-body strong {
+    color: #17324c;
+    font-size: 13px;
+}
+
+.coordenacao-selection-card-body span {
+    color: #5b6c81;
+    font-size: 12px;
+}
+
+.coordenacao-selection-remove {
+    border: 0;
+    background: transparent;
+    color: #b42318;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.coordenacao-selection-remove:hover,
+.coordenacao-selection-remove:focus-visible {
+    text-decoration: underline;
+    outline: none;
+}
+
 .coordenacao-rich-editor {
     display: grid;
     gap: 8px;

@@ -860,13 +860,40 @@ TipoRegistroOcorrencia = Literal[
 ]
 
 
+class OcorrenciaEstudanteVinculadoIn(BaseModel):
+    estudante_id: int | None = None
+    nome: str
+    turma_id: int | None = None
+
+
+class OcorrenciaProfessorVinculadoIn(BaseModel):
+    professor_id: int | None = None
+    nome: str
+    email: str = ""
+
+
+class OcorrenciaEstudanteVinculadoOut(BaseModel):
+    estudante_id: int | None = None
+    nome: str
+    turma_id: int | None = None
+    turma_nome: str = ""
+
+
+class OcorrenciaProfessorVinculadoOut(BaseModel):
+    professor_id: int | None = None
+    nome: str
+    email: str = ""
+
+
 class OcorrenciaCreateIn(BaseModel):
     tipo_registro: TipoRegistroOcorrencia = "estudante"
     nome_estudante: str | None = None
     estudante_id: int | None = None
+    estudantes_vinculados: list[OcorrenciaEstudanteVinculadoIn] = Field(default_factory=list)
     turma_id: int | None = None
     professor_requerente: str | None = None
     professor_requerente_id: int | None = None
+    professores_vinculados: list[OcorrenciaProfessorVinculadoIn] = Field(default_factory=list)
     disciplina: str | None = None
     data_ocorrencia: str
     aula: str | None = None
@@ -882,9 +909,11 @@ class OcorrenciaUpdateIn(BaseModel):
     tipo_registro: TipoRegistroOcorrencia | None = None
     nome_estudante: str | None = None
     estudante_id: int | None = None
+    estudantes_vinculados: list[OcorrenciaEstudanteVinculadoIn] | None = None
     turma_id: int | None = None
     professor_requerente: str | None = None
     professor_requerente_id: int | None = None
+    professores_vinculados: list[OcorrenciaProfessorVinculadoIn] | None = None
     disciplina: str | None = None
     data_ocorrencia: str | None = None
     aula: str | None = None
@@ -901,10 +930,12 @@ class OcorrenciaOut(BaseModel):
     tipo_registro: str = "estudante"
     nome_estudante: str
     estudante_id: int | None = None
+    estudantes_vinculados: list[OcorrenciaEstudanteVinculadoOut] = Field(default_factory=list)
     turma_id: int | None = None
     turma_nome: str = ""
     professor_requerente: str
     professor_requerente_id: int | None = None
+    professores_vinculados: list[OcorrenciaProfessorVinculadoOut] = Field(default_factory=list)
     disciplina: str
     data_ocorrencia: str
     aula: str

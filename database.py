@@ -744,6 +744,7 @@ def _aplicar_compatibilidade_schema_legada(cursor):
     _garantir_colunas_pre_conselho_registros(cursor)
     _garantir_colunas_pre_conselho_registro_motivos(cursor)
     _garantir_colunas_ocorrencias(cursor)
+    _garantir_tabelas_ocorrencia_vinculados(cursor)
     _garantir_colunas_ocorrencia_regimento_itens(cursor)
     _migrar_base_legal_legado(cursor)
     _garantir_view_radcheck(cursor)
@@ -952,6 +953,26 @@ def _criar_indices_schema(cursor):
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_ocorrencia_regimento_alinea_id
         ON ocorrencia_regimento_itens(alinea_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ocorrencia_estudantes_ocorrencia
+        ON ocorrencia_estudantes(ocorrencia_id, ordem)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ocorrencia_estudantes_estudante
+        ON ocorrencia_estudantes(estudante_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ocorrencia_professores_ocorrencia
+        ON ocorrencia_professores(ocorrencia_id, ordem)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ocorrencia_professores_professor
+        ON ocorrencia_professores(professor_usuario_id)
     """)
 
     cursor.execute("""
@@ -2560,6 +2581,96 @@ def _garantir_colunas_ocorrencia_regimento_itens(cursor):
         _recriar_tabela_ocorrencia_regimento_itens_sem_fk_legada(cursor)
 
 
+def _garantir_tabelas_ocorrencia_vinculados(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ocorrencia_estudantes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ocorrencia_id INTEGER NOT NULL,
+            estudante_id INTEGER,
+            nome_estudante TEXT NOT NULL,
+            turma_id INTEGER,
+            turma_nome TEXT NOT NULL DEFAULT '',
+            ordem INTEGER NOT NULL DEFAULT 0,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(ocorrencia_id) REFERENCES ocorrencias(id),
+            FOREIGN KEY(estudante_id) REFERENCES estudantes(id),
+            FOREIGN KEY(turma_id) REFERENCES turmas(id)
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ocorrencia_professores (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ocorrencia_id INTEGER NOT NULL,
+            professor_usuario_id INTEGER,
+            nome_professor TEXT NOT NULL,
+            email_professor TEXT NOT NULL DEFAULT '',
+            ordem INTEGER NOT NULL DEFAULT 0,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(ocorrencia_id) REFERENCES ocorrencias(id),
+            FOREIGN KEY(professor_usuario_id) REFERENCES usuarios(id)
+        )
+    """)
+    _migrar_vinculos_ocorrencias_legados(cursor)
+
+
+def _migrar_vinculos_ocorrencias_legados(cursor):
+    cursor.execute("""
+        INSERT INTO ocorrencia_estudantes (
+            ocorrencia_id,
+            estudante_id,
+            nome_estudante,
+            turma_id,
+            turma_nome,
+            ordem,
+            criado_em
+        )
+        SELECT
+            o.id,
+            o.estudante_id,
+            TRIM(COALESCE(o.nome_estudante, '')) AS nome_estudante,
+            o.turma_id,
+            COALESCE(t.nome, '') AS turma_nome,
+            1,
+            datetime('now')
+        FROM ocorrencias o
+        LEFT JOIN turmas t ON t.id = o.turma_id
+        WHERE o.tipo_registro = ?
+          AND TRIM(COALESCE(o.nome_estudante, '')) <> ''
+          AND NOT EXISTS (
+              SELECT 1
+              FROM ocorrencia_estudantes oe
+              WHERE oe.ocorrencia_id = o.id
+          )
+    """, (TIPO_REGISTRO_OCORRENCIA_ESTUDANTE,))
+
+    cursor.execute("""
+        INSERT INTO ocorrencia_professores (
+            ocorrencia_id,
+            professor_usuario_id,
+            nome_professor,
+            email_professor,
+            ordem,
+            criado_em
+        )
+        SELECT
+            o.id,
+            o.professor_requerente_id,
+            TRIM(COALESCE(o.professor_requerente, '')) AS nome_professor,
+            COALESCE(u.email, '') AS email_professor,
+            1,
+            datetime('now')
+        FROM ocorrencias o
+        LEFT JOIN usuarios u ON u.id = o.professor_requerente_id
+        WHERE o.tipo_registro = ?
+          AND TRIM(COALESCE(o.professor_requerente, '')) <> ''
+          AND NOT EXISTS (
+              SELECT 1
+              FROM ocorrencia_professores op
+              WHERE op.ocorrencia_id = o.id
+          )
+    """, (TIPO_REGISTRO_OCORRENCIA_PROFESSOR,))
+
+
 def _ocorrencia_regimento_itens_tem_fk_legada(cursor) -> bool:
     cursor.execute("PRAGMA foreign_key_list(ocorrencia_regimento_itens)")
     return any(
@@ -2769,6 +2880,101 @@ def _anexar_regimento_itens_ocorrencias(cursor, ocorrencias: list[dict]) -> list
     for ocorrencia in ocorrencias:
         ocorrencia_id = int(ocorrencia.get("id") or 0)
         ocorrencia["regimento_itens"] = mapa.get(ocorrencia_id, [])
+    return ocorrencias
+
+
+def _mapear_estudantes_vinculados_por_ocorrencia(
+    cursor, ocorrencia_ids: list[int]
+) -> dict[int, list[dict]]:
+    ids_validos = [int(ocorrencia_id) for ocorrencia_id in ocorrencia_ids if int(ocorrencia_id or 0) > 0]
+    if not ids_validos:
+        return {}
+
+    placeholders = ",".join("?" for _ in ids_validos)
+    cursor.execute(
+        f"""
+        SELECT
+            oe.ocorrencia_id,
+            oe.estudante_id,
+            oe.nome_estudante,
+            oe.turma_id,
+            COALESCE(NULLIF(TRIM(COALESCE(oe.turma_nome, '')), ''), t.nome, '') AS turma_nome,
+            oe.ordem
+        FROM ocorrencia_estudantes oe
+        LEFT JOIN turmas t ON t.id = oe.turma_id
+        WHERE oe.ocorrencia_id IN ({placeholders})
+        ORDER BY oe.ocorrencia_id ASC, oe.ordem ASC, oe.id ASC
+    """,
+        ids_validos,
+    )
+
+    mapa: dict[int, list[dict]] = {}
+    for row in cursor.fetchall():
+        ocorrencia_id = int(row["ocorrencia_id"] or 0)
+        mapa.setdefault(ocorrencia_id, []).append(
+            {
+                "estudante_id": int(row["estudante_id"]) if row["estudante_id"] is not None else None,
+                "nome": str(row["nome_estudante"] or "").strip(),
+                "turma_id": int(row["turma_id"]) if row["turma_id"] is not None else None,
+                "turma_nome": str(row["turma_nome"] or "").strip(),
+            }
+        )
+    return mapa
+
+
+def _mapear_professores_vinculados_por_ocorrencia(
+    cursor, ocorrencia_ids: list[int]
+) -> dict[int, list[dict]]:
+    ids_validos = [int(ocorrencia_id) for ocorrencia_id in ocorrencia_ids if int(ocorrencia_id or 0) > 0]
+    if not ids_validos:
+        return {}
+
+    placeholders = ",".join("?" for _ in ids_validos)
+    cursor.execute(
+        f"""
+        SELECT
+            op.ocorrencia_id,
+            op.professor_usuario_id,
+            op.nome_professor,
+            COALESCE(NULLIF(TRIM(COALESCE(op.email_professor, '')), ''), u.email, '') AS email_professor,
+            op.ordem
+        FROM ocorrencia_professores op
+        LEFT JOIN usuarios u ON u.id = op.professor_usuario_id
+        WHERE op.ocorrencia_id IN ({placeholders})
+        ORDER BY op.ocorrencia_id ASC, op.ordem ASC, op.id ASC
+    """,
+        ids_validos,
+    )
+
+    mapa: dict[int, list[dict]] = {}
+    for row in cursor.fetchall():
+        ocorrencia_id = int(row["ocorrencia_id"] or 0)
+        mapa.setdefault(ocorrencia_id, []).append(
+            {
+                "professor_id": (
+                    int(row["professor_usuario_id"])
+                    if row["professor_usuario_id"] is not None
+                    else None
+                ),
+                "nome": str(row["nome_professor"] or "").strip(),
+                "email": str(row["email_professor"] or "").strip(),
+            }
+        )
+    return mapa
+
+
+def _anexar_vinculados_ocorrencias(cursor, ocorrencias: list[dict]) -> list[dict]:
+    if not ocorrencias:
+        return ocorrencias
+
+    ocorrencia_ids = [int(ocorrencia.get("id") or 0) for ocorrencia in ocorrencias]
+    mapa_estudantes = _mapear_estudantes_vinculados_por_ocorrencia(cursor, ocorrencia_ids)
+    mapa_professores = _mapear_professores_vinculados_por_ocorrencia(cursor, ocorrencia_ids)
+
+    for ocorrencia in ocorrencias:
+        ocorrencia_id = int(ocorrencia.get("id") or 0)
+        ocorrencia["estudantes_vinculados"] = mapa_estudantes.get(ocorrencia_id, [])
+        ocorrencia["professores_vinculados"] = mapa_professores.get(ocorrencia_id, [])
     return ocorrencias
 
 
@@ -8458,6 +8664,202 @@ def salvar_regimento_itens_ocorrencia(ocorrencia_id: int, regimento_item_ids: li
     return True
 
 
+def _normalizar_estudantes_vinculados_banco(
+    estudantes_vinculados: list[dict] | None,
+) -> list[dict]:
+    itens_norm = []
+    vistos = set()
+    for item in estudantes_vinculados or []:
+        if not isinstance(item, dict):
+            continue
+        estudante_id = item.get("estudante_id")
+        estudante_id_valor = int(estudante_id) if estudante_id not in (None, "") else None
+        if estudante_id_valor is not None and estudante_id_valor <= 0:
+            raise ValueError("Estudante invalido.")
+
+        nome = _normalizar_nome_catalogo(item.get("nome"))
+        if not nome:
+            raise ValueError("Nome do estudante e obrigatorio.")
+
+        turma_id = item.get("turma_id")
+        turma_id_valor = int(turma_id) if turma_id not in (None, "") else None
+        if turma_id_valor is not None and turma_id_valor <= 0:
+            raise ValueError("Turma invalida.")
+
+        turma_nome = _normalizar_nome_catalogo(item.get("turma_nome")) or ""
+        chave = f"id:{estudante_id_valor}" if estudante_id_valor else f"nome:{nome.lower()}"
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        itens_norm.append(
+            {
+                "estudante_id": estudante_id_valor,
+                "nome": nome,
+                "turma_id": turma_id_valor,
+                "turma_nome": turma_nome,
+            }
+        )
+    return itens_norm
+
+
+def _normalizar_professores_vinculados_banco(
+    professores_vinculados: list[dict] | None,
+) -> list[dict]:
+    itens_norm = []
+    vistos = set()
+    for item in professores_vinculados or []:
+        if not isinstance(item, dict):
+            continue
+        professor_id = item.get("professor_id")
+        professor_id_valor = int(professor_id) if professor_id not in (None, "") else None
+        if professor_id_valor is not None and professor_id_valor <= 0:
+            raise ValueError("Professor invalido.")
+
+        nome = _normalizar_nome_catalogo(item.get("nome"))
+        if not nome:
+            raise ValueError("Nome do professor e obrigatorio.")
+
+        email = _normalizar_nome_catalogo(item.get("email")) or ""
+        chave = f"id:{professor_id_valor}" if professor_id_valor else f"nome:{nome.lower()}"
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        itens_norm.append(
+            {
+                "professor_id": professor_id_valor,
+                "nome": nome,
+                "email": email,
+            }
+        )
+    return itens_norm
+
+
+def _salvar_ocorrencia_estudantes_cursor(
+    cursor,
+    ocorrencia_id_valor: int,
+    estudantes_vinculados: list[dict],
+):
+    cursor.execute(
+        "DELETE FROM ocorrencia_estudantes WHERE ocorrencia_id = ?",
+        (ocorrencia_id_valor,),
+    )
+    if not estudantes_vinculados:
+        return
+
+    cursor.executemany(
+        """
+        INSERT INTO ocorrencia_estudantes (
+            ocorrencia_id,
+            estudante_id,
+            nome_estudante,
+            turma_id,
+            turma_nome,
+            ordem,
+            criado_em
+        )
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+    """,
+        [
+            (
+                ocorrencia_id_valor,
+                item.get("estudante_id"),
+                item.get("nome"),
+                item.get("turma_id"),
+                item.get("turma_nome") or "",
+                ordem,
+            )
+            for ordem, item in enumerate(estudantes_vinculados, start=1)
+        ],
+    )
+
+
+def _salvar_ocorrencia_professores_cursor(
+    cursor,
+    ocorrencia_id_valor: int,
+    professores_vinculados: list[dict],
+):
+    cursor.execute(
+        "DELETE FROM ocorrencia_professores WHERE ocorrencia_id = ?",
+        (ocorrencia_id_valor,),
+    )
+    if not professores_vinculados:
+        return
+
+    cursor.executemany(
+        """
+        INSERT INTO ocorrencia_professores (
+            ocorrencia_id,
+            professor_usuario_id,
+            nome_professor,
+            email_professor,
+            ordem,
+            criado_em
+        )
+        VALUES (?, ?, ?, ?, ?, datetime('now'))
+    """,
+        [
+            (
+                ocorrencia_id_valor,
+                item.get("professor_id"),
+                item.get("nome"),
+                item.get("email") or "",
+                ordem,
+            )
+            for ordem, item in enumerate(professores_vinculados, start=1)
+        ],
+    )
+
+
+def salvar_ocorrencia_estudantes_vinculados(
+    ocorrencia_id: int,
+    estudantes_vinculados: list[dict] | None,
+):
+    ocorrencia_id_valor = int(ocorrencia_id or 0)
+    if ocorrencia_id_valor <= 0:
+        raise ValueError("Ocorrencia invalida.")
+
+    estudantes_norm = _normalizar_estudantes_vinculados_banco(estudantes_vinculados)
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT 1 FROM ocorrencias WHERE id = ?", (ocorrencia_id_valor,))
+        if not cursor.fetchone():
+            raise ValueError("Ocorrencia nao encontrada.")
+        _salvar_ocorrencia_estudantes_cursor(cursor, ocorrencia_id_valor, estudantes_norm)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return True
+
+
+def salvar_ocorrencia_professores_vinculados(
+    ocorrencia_id: int,
+    professores_vinculados: list[dict] | None,
+):
+    ocorrencia_id_valor = int(ocorrencia_id or 0)
+    if ocorrencia_id_valor <= 0:
+        raise ValueError("Ocorrencia invalida.")
+
+    professores_norm = _normalizar_professores_vinculados_banco(professores_vinculados)
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("SELECT 1 FROM ocorrencias WHERE id = ?", (ocorrencia_id_valor,))
+        if not cursor.fetchone():
+            raise ValueError("Ocorrencia nao encontrada.")
+        _salvar_ocorrencia_professores_cursor(cursor, ocorrencia_id_valor, professores_norm)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
+    return True
+
+
 def _validar_tipo_registro_banco(tipo_registro: str | None) -> str:
     tipo_norm = _normalizar_nome_catalogo(tipo_registro) or TIPO_REGISTRO_OCORRENCIA_ESTUDANTE
     if tipo_norm not in TIPOS_REGISTRO_OCORRENCIA:
@@ -8480,6 +8882,8 @@ def criar_ocorrencia(
     acao_aplicada: str,
     status: str = STATUS_OCORRENCIA_REGISTRADO,
     regimento_item_ids: list[int] | None = None,
+    estudantes_vinculados: list[dict] | None = None,
+    professores_vinculados: list[dict] | None = None,
 ):
     tipo_registro_limpo = _validar_tipo_registro_banco(tipo_registro)
     nome_estudante_limpo = _normalizar_nome_catalogo(nome_estudante)
@@ -8496,6 +8900,8 @@ def criar_ocorrencia(
     professor_requerente_id_valor = (
         int(professor_requerente_id) if professor_requerente_id is not None else None
     )
+    estudantes_vinculados_norm = _normalizar_estudantes_vinculados_banco(estudantes_vinculados)
+    professores_vinculados_norm = _normalizar_professores_vinculados_banco(professores_vinculados)
 
     if turma_id_valor is not None and turma_id_valor <= 0:
         raise ValueError("Turma invalida.")
@@ -8505,8 +8911,20 @@ def criar_ocorrencia(
         raise ValueError("Professor invalido.")
 
     if tipo_registro_limpo == TIPO_REGISTRO_OCORRENCIA_ESTUDANTE:
-        if not nome_estudante_limpo:
-            raise ValueError("Nome do estudante e obrigatorio.")
+        if not estudantes_vinculados_norm and nome_estudante_limpo:
+            estudantes_vinculados_norm = [
+                {
+                    "estudante_id": estudante_id_valor,
+                    "nome": nome_estudante_limpo,
+                    "turma_id": turma_id_valor,
+                    "turma_nome": "",
+                }
+            ]
+        if not estudantes_vinculados_norm:
+            raise ValueError("Selecione ao menos um estudante.")
+        nome_estudante_limpo = ", ".join(item["nome"] for item in estudantes_vinculados_norm)
+        if estudante_id_valor is None:
+            estudante_id_valor = estudantes_vinculados_norm[0].get("estudante_id")
         if turma_id_valor is None or turma_id_valor <= 0:
             raise ValueError("Turma invalida.")
         if not professor_requerente_limpo:
@@ -8514,8 +8932,19 @@ def criar_ocorrencia(
         if not disciplina_limpa:
             raise ValueError("Disciplina e obrigatoria.")
     elif tipo_registro_limpo == TIPO_REGISTRO_OCORRENCIA_PROFESSOR:
-        if not professor_requerente_limpo:
-            raise ValueError("Professor e obrigatorio.")
+        if not professores_vinculados_norm and professor_requerente_limpo:
+            professores_vinculados_norm = [
+                {
+                    "professor_id": professor_requerente_id_valor,
+                    "nome": professor_requerente_limpo,
+                    "email": "",
+                }
+            ]
+        if not professores_vinculados_norm:
+            raise ValueError("Selecione ao menos um professor.")
+        professor_requerente_limpo = ", ".join(item["nome"] for item in professores_vinculados_norm)
+        if professor_requerente_id_valor is None:
+            professor_requerente_id_valor = professores_vinculados_norm[0].get("professor_id")
         if not nome_estudante_limpo:
             nome_estudante_limpo = professor_requerente_limpo
         turma_id_valor = None
@@ -8593,6 +9022,16 @@ def criar_ocorrencia(
         )
 
         ocorrencia_id = cursor.lastrowid
+        _salvar_ocorrencia_estudantes_cursor(
+            cursor,
+            int(ocorrencia_id),
+            estudantes_vinculados_norm if tipo_registro_limpo == TIPO_REGISTRO_OCORRENCIA_ESTUDANTE else [],
+        )
+        _salvar_ocorrencia_professores_cursor(
+            cursor,
+            int(ocorrencia_id),
+            professores_vinculados_norm if tipo_registro_limpo == TIPO_REGISTRO_OCORRENCIA_PROFESSOR else [],
+        )
         if ids_regimento_norm is not None:
             _salvar_regimento_itens_ocorrencia_cursor(
                 cursor,
@@ -8687,6 +9126,7 @@ def listar_ocorrencias(
     rows = cursor.fetchall()
     ocorrencias = [dict(row) for row in rows]
     _anexar_regimento_itens_ocorrencias(cursor, ocorrencias)
+    _anexar_vinculados_ocorrencias(cursor, ocorrencias)
     conn.close()
     return ocorrencias
 
@@ -8726,6 +9166,7 @@ def buscar_ocorrencia_por_id(ocorrencia_id: int):
     ocorrencia = dict(row) if row else None
     if ocorrencia:
         _anexar_regimento_itens_ocorrencias(cursor, [ocorrencia])
+        _anexar_vinculados_ocorrencias(cursor, [ocorrencia])
     conn.close()
     return ocorrencia
 
@@ -8846,6 +9287,14 @@ def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
 def remover_ocorrencia(ocorrencia_id: int):
     conn = get_connection()
     cursor = conn.cursor()
+    cursor.execute(
+        "DELETE FROM ocorrencia_estudantes WHERE ocorrencia_id = ?",
+        (int(ocorrencia_id),),
+    )
+    cursor.execute(
+        "DELETE FROM ocorrencia_professores WHERE ocorrencia_id = ?",
+        (int(ocorrencia_id),),
+    )
     cursor.execute(
         "DELETE FROM ocorrencia_regimento_itens WHERE ocorrencia_id = ?",
         (int(ocorrencia_id),),

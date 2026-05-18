@@ -193,14 +193,20 @@
 
                                     <div id="ocorrenciaFieldEstudante" class="coordenacao-field coordenacao-field-wide">
                                         <label class="coordenacao-field" for="ocorrenciaBuscaEstudante">
-                                            <span>Estudante</span>
+                                            <span id="ocorrenciaEstudanteLabel">Estudante(s)</span>
                                             <div class="coordenacao-autocomplete-shell">
                                                 <input id="ocorrenciaBuscaEstudante" type="text" autocomplete="off"
-                                                    placeholder="Buscar estudante cadastrado ou digitar nome">
+                                                    placeholder="Buscar estudante cadastrado, clicar para adicionar e repetir o processo">
                                                 <div id="listaEstudantesBusca" class="coordenacao-autocomplete-list" hidden>
                                                 </div>
                                             </div>
                                         </label>
+                                        <div id="ocorrenciaEstudantesSelecionados" class="coordenacao-selection-list">
+                                            <p class="coordenacao-empty-state">Nenhum estudante vinculado ainda.</p>
+                                        </div>
+                                        <p class="coordenacao-field-hint">
+                                            Selecione ou digite um estudante por vez para montar a lista do registro.
+                                        </p>
                                     </div>
                                     <input id="ocorrenciaEstudanteId" type="hidden">
 
@@ -214,6 +220,12 @@
                                                     hidden></div>
                                             </div>
                                         </label>
+                                        <div id="ocorrenciaProfessoresSelecionados" class="coordenacao-selection-list" hidden>
+                                            <p class="coordenacao-empty-state">Nenhum professor vinculado ainda.</p>
+                                        </div>
+                                        <p id="ocorrenciaProfessorHint" class="coordenacao-field-hint" hidden>
+                                            Selecione ou digite um professor por vez para montar a lista deste registro.
+                                        </p>
                                     </div>
                                     <input id="ocorrenciaProfessorRequerenteId" type="hidden">
 
@@ -390,7 +402,7 @@
                                                 </div>
                                             </section>
 
-                                            <section class="coordenacao-preview-section">
+                                            <section id="previewBaseLegalSection" class="coordenacao-preview-section">
                                                 <h4>BASE LEGAL</h4>
                                                 <div id="previewBaseLegal" class="coordenacao-preview-legal-box">
                                                     <p class="coordenacao-preview-empty">Nenhuma base legal anexada

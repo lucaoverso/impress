@@ -30,6 +30,8 @@ let relatorioOcorrenciasCache = [];
 let relatorioOcorrenciasCarregado = false;
 let selecaoDescricaoEditor = null;
 let regimentoSelecionadoIds = [];
+let estudantesVinculadosSelecionados = [];
+let professoresVinculadosSelecionados = [];
 let opcoesOcorrencias = {
     tipos_registro: [],
     turmas: [],
@@ -132,7 +134,10 @@ const OBSERVACOES_ACAO_PREVIEW = {
     advertencia: "OBS.: Pela falta de integracao e compromisso e por nao acatar as solicitacoes da docente, recebe esta acao pedagogico-disciplinar de advertencia.",
     chamada_responsavel: "OBS.: Solicitado o comparecimento do responsavel para alinhamento e acompanhamento conjunto do caso.",
     encaminhamento_direcao: "OBS.: O registro segue encaminhado a Direcao para providencias e acompanhamento institucional.",
-    registro_informativo: "OBS.: Documento emitido para registro informativo e acompanhamento pedagogico interno."
+    registro_informativo: "OBS.: Documento emitido para registro informativo e acompanhamento pedagogico interno.",
+    orientacao_professor: "OBS.: Registro emitido para documentar a orientacao individual feita ao professor, com ciencia formal das partes.",
+    reuniao_alinhamento: "OBS.: Registro emitido para documentar reuniao de alinhamento e pactuacao institucional com o professor.",
+    orientacao_geral_docentes: "OBS.: Registro emitido para documentar orientacao geral apresentada ao corpo docente, com coleta de assinaturas ao final."
 };
 const GRAVIDADE_ROTULOS = {
     leve: "Falta leve",
@@ -259,20 +264,143 @@ function classeStatusEstudante(ativo) {
 
 function obterReferenciaRegistro(ocorrencia) {
     const tipo = String(ocorrencia?.tipo_registro || "").trim();
+    const estudantesVinculados = normalizarEstudantesVinculados(ocorrencia?.estudantes_vinculados);
+    const professoresVinculados = normalizarProfessoresVinculados(ocorrencia?.professores_vinculados);
     if (tipo === "professor") {
-        return String(ocorrencia?.professor_requerente || ocorrencia?.nome_estudante || "").trim() || "Nao informado";
+        return resumoNomesVinculados(professoresVinculados)
+            || String(ocorrencia?.professor_requerente || ocorrencia?.nome_estudante || "").trim()
+            || "Nao informado";
+    }
+    if (tipo === "estudante") {
+        return resumoNomesVinculados(estudantesVinculados)
+            || String(ocorrencia?.nome_estudante || "").trim()
+            || "Nao informado";
     }
     return String(ocorrencia?.nome_estudante || "").trim() || "Nao informado";
 }
 
 function obterContextoRegistro(ocorrencia) {
     const tipo = String(ocorrencia?.tipo_registro || "").trim();
-    if (tipo === "professor") return "Professor individual";
+    if (tipo === "professor") {
+        const totalProfessores = normalizarProfessoresVinculados(ocorrencia?.professores_vinculados).length;
+        return totalProfessores > 1 ? `${totalProfessores} professores vinculados` : "Professor individual";
+    }
     if (tipo === "geral") return "Orientacao geral";
     const turmaNome = String(ocorrencia?.turma_nome || "").trim();
     if (turmaNome) return turmaNome;
     const turmaId = Number(ocorrencia?.turma_id || 0);
     return turmaId > 0 ? `ID ${turmaId}` : "Sem turma";
+}
+
+function resumoNomesVinculados(itens) {
+    return (itens || [])
+        .map((item) => String(item?.nome || "").trim())
+        .filter(Boolean)
+        .join(", ");
+}
+
+function normalizarEstudantesVinculados(valores) {
+    const vistos = new Set();
+    return (valores || []).map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const estudanteId = Number(item.estudante_id || 0);
+        const turmaId = Number(item.turma_id || 0);
+        const nome = String(item.nome || "").trim();
+        const turmaNome = String(item.turma_nome || "").trim();
+        if (!nome) return null;
+        return {
+            estudante_id: estudanteId > 0 ? estudanteId : null,
+            nome,
+            turma_id: turmaId > 0 ? turmaId : null,
+            turma_nome: turmaNome
+        };
+    }).filter(Boolean).filter((item) => {
+        const chave = item.estudante_id ? `id:${item.estudante_id}` : `nome:${item.nome.toLowerCase()}`;
+        if (vistos.has(chave)) return false;
+        vistos.add(chave);
+        return true;
+    });
+}
+
+function normalizarProfessoresVinculados(valores) {
+    const vistos = new Set();
+    return (valores || []).map((item) => {
+        if (!item || typeof item !== "object") return null;
+        const professorId = Number(item.professor_id || 0);
+        const nome = String(item.nome || "").trim();
+        const email = String(item.email || "").trim();
+        if (!nome) return null;
+        return {
+            professor_id: professorId > 0 ? professorId : null,
+            nome,
+            email
+        };
+    }).filter(Boolean).filter((item) => {
+        const chave = item.professor_id ? `id:${item.professor_id}` : `nome:${item.nome.toLowerCase()}`;
+        if (vistos.has(chave)) return false;
+        vistos.add(chave);
+        return true;
+    });
+}
+
+function obterEstudantesVinculadosFormulario() {
+    estudantesVinculadosSelecionados = normalizarEstudantesVinculados(estudantesVinculadosSelecionados);
+    return [...estudantesVinculadosSelecionados];
+}
+
+function obterProfessoresVinculadosFormulario() {
+    professoresVinculadosSelecionados = normalizarProfessoresVinculados(professoresVinculadosSelecionados);
+    return [...professoresVinculadosSelecionados];
+}
+
+function renderSelecionadorVinculados(containerId, itens, {
+    textoVazio,
+    metaItem = () => "",
+    onRemove = null
+} = {}) {
+    const container = el(containerId);
+    if (!container) return;
+    container.innerHTML = "";
+
+    if (!Array.isArray(itens) || itens.length === 0) {
+        const vazio = document.createElement("p");
+        vazio.className = "coordenacao-empty-state";
+        vazio.innerText = textoVazio;
+        container.appendChild(vazio);
+        return;
+    }
+
+    itens.forEach((item, indice) => {
+        const card = document.createElement("article");
+        card.className = "coordenacao-selection-card";
+
+        const corpo = document.createElement("div");
+        corpo.className = "coordenacao-selection-card-body";
+
+        const titulo = document.createElement("strong");
+        titulo.innerText = String(item?.nome || "").trim() || "Nao informado";
+        corpo.appendChild(titulo);
+
+        const metaTexto = String(metaItem(item, indice) || "").trim();
+        if (metaTexto) {
+            const meta = document.createElement("span");
+            meta.innerText = metaTexto;
+            corpo.appendChild(meta);
+        }
+
+        card.appendChild(corpo);
+
+        if (typeof onRemove === "function") {
+            const btnRemover = document.createElement("button");
+            btnRemover.type = "button";
+            btnRemover.className = "coordenacao-selection-remove";
+            btnRemover.innerText = "Remover";
+            btnRemover.addEventListener("click", () => onRemove(item, indice));
+            card.appendChild(btnRemover);
+        }
+
+        container.appendChild(card);
+    });
 }
 
 function listarBotoesAbasCoord() {

@@ -92,8 +92,8 @@ ACOES_TIPOS_REGISTRO = {
     ACAO_OCORRENCIA_ORIENTACAO_VERBAL: ("estudante",),
     ACAO_OCORRENCIA_ADVERTENCIA: ("estudante",),
     ACAO_OCORRENCIA_CHAMADA_RESPONSAVEL: ("estudante",),
-    ACAO_OCORRENCIA_ENCAMINHAMENTO_DIRECAO: ("estudante", "professor", "geral"),
-    ACAO_OCORRENCIA_REGISTRO_INFORMATIVO: ("estudante", "professor", "geral"),
+    ACAO_OCORRENCIA_ENCAMINHAMENTO_DIRECAO: ("estudante",),
+    ACAO_OCORRENCIA_REGISTRO_INFORMATIVO: ("estudante",),
     ACAO_OCORRENCIA_ORIENTACAO_PROFESSOR: ("professor",),
     ACAO_OCORRENCIA_REUNIAO_ALINHAMENTO: ("professor",),
     ACAO_OCORRENCIA_ORIENTACAO_GERAL_DOCENTES: ("geral",),
@@ -178,6 +178,20 @@ def rotulo_acao_ocorrencia(valor: str | None) -> str:
 def rotulo_gravidade_ocorrencia(valor: str | None) -> str:
     texto = _texto_limpo(valor).lower()
     return GRAVIDADES_ROTULOS.get(texto, texto or "Nao identificada")
+
+
+def tipos_registro_acao_ocorrencia(valor: str | None) -> tuple[str, ...]:
+    texto = _texto_limpo(valor)
+    return tuple(ACOES_TIPOS_REGISTRO.get(texto, ()))
+
+
+def acao_permitida_para_tipo_registro(acao: str | None, tipo_registro: str | None) -> bool:
+    acao_norm = _texto_limpo(acao)
+    tipo_norm = _texto_limpo(tipo_registro).lower()
+    if not acao_norm or not tipo_norm:
+        return False
+    tipos_permitidos = tipos_registro_acao_ocorrencia(acao_norm)
+    return tipo_norm in tipos_permitidos
 
 
 def listar_acoes_aplicadas() -> list[dict]:

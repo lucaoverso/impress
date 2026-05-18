@@ -48,6 +48,8 @@ remover_inciso = proxy("remover_inciso")
 remover_lei = proxy("remover_lei")
 remover_ocorrencia = proxy("remover_ocorrencia")
 remover_regimento_item = proxy("remover_regimento_item")
+salvar_ocorrencia_estudantes_vinculados = proxy("salvar_ocorrencia_estudantes_vinculados")
+salvar_ocorrencia_professores_vinculados = proxy("salvar_ocorrencia_professores_vinculados")
 salvar_regimento_itens_ocorrencia = proxy("salvar_regimento_itens_ocorrencia")
 
 __all__ = [
@@ -99,5 +101,7 @@ __all__ = [
     "remover_lei",
     "remover_ocorrencia",
     "remover_regimento_item",
+    "salvar_ocorrencia_estudantes_vinculados",
+    "salvar_ocorrencia_professores_vinculados",
     "salvar_regimento_itens_ocorrencia",
 ]

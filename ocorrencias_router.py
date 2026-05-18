@@ -56,6 +56,8 @@ from db.ocorrencias import (
     remover_lei,
     remover_ocorrencia,
     remover_regimento_item,
+    salvar_ocorrencia_estudantes_vinculados,
+    salvar_ocorrencia_professores_vinculados,
     salvar_regimento_itens_ocorrencia,
 )
 from db.usuarios import listar_professores_agendamento
@@ -77,6 +79,8 @@ from models import (
     LeiCreateIn,
     LeiOut,
     LeiUpdateIn,
+    OcorrenciaEstudanteVinculadoIn,
+    OcorrenciaProfessorVinculadoIn,
     OcorrenciaCreateIn,
     OcorrenciaOut,
     OcorrenciaUpdateIn,
@@ -87,6 +91,7 @@ from models import (
 )
 from services.csv_import_service import importar_base_legal_arquivo, importar_estudantes_arquivo
 from services.ocorrencia_disciplina_service import (
+    acao_permitida_para_tipo_registro,
     acao_compativel_com_gravidade,
     inferir_gravidade_ocorrencia,
     listar_acoes_aplicadas,
@@ -210,6 +215,13 @@ def _validar_acao_aplicada(valor: str) -> str:
     return acao
 
 
+def _validar_acao_aplicada_para_tipo(acao: str, tipo_registro: str) -> str:
+    acao_valida = _validar_acao_aplicada(acao)
+    if not acao_permitida_para_tipo_registro(acao_valida, tipo_registro):
+        raise HTTPException(400, "Acao aplicada invalida para o tipo de registro selecionado.")
+    return acao_valida
+
+
 def _validar_tipo_registro(valor: str | None) -> str:
     tipo = str(valor or TIPO_REGISTRO_ESTUDANTE).strip().lower()
     if tipo not in TIPOS_REGISTRO_OCORRENCIA:
@@ -227,6 +239,15 @@ def _registro_exige_base_legal(tipo_registro: str) -> bool:
 
 def _registro_exige_aula(tipo_registro: str) -> bool:
     return tipo_registro == TIPO_REGISTRO_ESTUDANTE
+
+
+def _resumir_nomes_vinculados(itens: list[dict], *, campo_nome: str = "nome") -> str:
+    nomes = [
+        str(item.get(campo_nome) or "").strip()
+        for item in (itens or [])
+        if str(item.get(campo_nome) or "").strip()
+    ]
+    return ", ".join(nomes)
 
 
 def _validar_acao_compativel_com_base_legal(
@@ -381,18 +402,174 @@ def _resolver_dados_professor(
     return str(professor.get("nome") or "").strip(), professor_id_valor
 
 
+def _resolver_estudantes_vinculados(
+    *,
+    estudantes_vinculados: list[OcorrenciaEstudanteVinculadoIn] | list[dict] | None,
+    nome_estudante: str | None,
+    estudante_id: int | None,
+    turma_id: int,
+) -> list[dict]:
+    turma_id_valor = _validar_turma_id(turma_id)
+    turma = buscar_turma_por_id(turma_id_valor)
+    turma_nome = str((turma or {}).get("nome") or "").strip()
+
+    candidatos = []
+    for item in estudantes_vinculados or []:
+        if isinstance(item, dict):
+            candidatos.append(
+                {
+                    "estudante_id": item.get("estudante_id"),
+                    "nome": item.get("nome"),
+                    "turma_id": item.get("turma_id"),
+                }
+            )
+        else:
+            candidatos.append(
+                {
+                    "estudante_id": getattr(item, "estudante_id", None),
+                    "nome": getattr(item, "nome", None),
+                    "turma_id": getattr(item, "turma_id", None),
+                }
+            )
+
+    if not candidatos and (
+        _texto_opcional(nome_estudante, max_len=255) or _validar_estudante_id(estudante_id) is not None
+    ):
+        candidatos.append(
+            {
+                "estudante_id": estudante_id,
+                "nome": nome_estudante,
+                "turma_id": turma_id_valor,
+            }
+        )
+
+    itens_resolvidos = []
+    vistos = set()
+    for item in candidatos:
+        turma_item = item.get("turma_id")
+        if turma_item not in (None, "") and int(turma_item) != turma_id_valor:
+            raise HTTPException(400, "Todos os estudantes do registro devem pertencer a mesma turma.")
+
+        estudante_id_valor = _validar_estudante_id(item.get("estudante_id"))
+        if estudante_id_valor is not None:
+            estudante = buscar_estudante_por_id(estudante_id_valor)
+            if not estudante:
+                raise HTTPException(400, "Estudante selecionado nao encontrado.")
+            if int(estudante.get("ativo") or 0) != 1:
+                raise HTTPException(400, "Estudante selecionado esta inativo.")
+            if int(estudante.get("turma_id") or 0) != turma_id_valor:
+                raise HTTPException(
+                    400,
+                    "Todos os estudantes do registro devem pertencer a turma selecionada.",
+                )
+            nome_resolvido = str(estudante.get("nome") or "").strip()
+        else:
+            nome_resolvido = _texto_obrigatorio(item.get("nome"), "Nome do estudante", max_len=255)
+
+        chave = f"id:{estudante_id_valor}" if estudante_id_valor else f"nome:{nome_resolvido.casefold()}"
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        itens_resolvidos.append(
+            {
+                "estudante_id": estudante_id_valor,
+                "nome": nome_resolvido,
+                "turma_id": turma_id_valor,
+                "turma_nome": turma_nome,
+            }
+        )
+
+    if not itens_resolvidos:
+        raise HTTPException(400, "Selecione ao menos um estudante para o registro.")
+    return itens_resolvidos
+
+
+def _resolver_professores_vinculados(
+    *,
+    professores_vinculados: list[OcorrenciaProfessorVinculadoIn] | list[dict] | None,
+    professor_requerente: str | None,
+    professor_requerente_id: int | None,
+) -> list[dict]:
+    candidatos = []
+    for item in professores_vinculados or []:
+        if isinstance(item, dict):
+            candidatos.append(
+                {
+                    "professor_id": item.get("professor_id"),
+                    "nome": item.get("nome"),
+                    "email": item.get("email"),
+                }
+            )
+        else:
+            candidatos.append(
+                {
+                    "professor_id": getattr(item, "professor_id", None),
+                    "nome": getattr(item, "nome", None),
+                    "email": getattr(item, "email", None),
+                }
+            )
+
+    if not candidatos and (
+        _texto_opcional(professor_requerente, max_len=255)
+        or _validar_professor_id(professor_requerente_id, campo="Professor") is not None
+    ):
+        candidatos.append(
+            {
+                "professor_id": professor_requerente_id,
+                "nome": professor_requerente,
+                "email": "",
+            }
+        )
+
+    itens_resolvidos = []
+    vistos = set()
+    for item in candidatos:
+        professor_id_valor = _validar_professor_id(item.get("professor_id"), campo="Professor")
+        if professor_id_valor is not None:
+            professor = buscar_professor_por_id_ocorrencia(professor_id_valor)
+            if not professor:
+                raise HTTPException(400, "Professor selecionado nao encontrado.")
+            nome_resolvido = str(professor.get("nome") or "").strip()
+            email_resolvido = str(professor.get("email") or "").strip()
+        else:
+            nome_resolvido = _texto_obrigatorio(item.get("nome"), "Nome do professor", max_len=255)
+            email_resolvido = _texto_opcional(item.get("email"), max_len=255) or ""
+
+        if nome_resolvido.strip().lower() == "todos os professores":
+            raise HTTPException(400, "Selecione professores individualmente neste tipo de registro.")
+
+        chave = f"id:{professor_id_valor}" if professor_id_valor else f"nome:{nome_resolvido.casefold()}"
+        if chave in vistos:
+            continue
+        vistos.add(chave)
+        itens_resolvidos.append(
+            {
+                "professor_id": professor_id_valor,
+                "nome": nome_resolvido,
+                "email": email_resolvido,
+            }
+        )
+
+    if not itens_resolvidos:
+        raise HTTPException(400, "Selecione ao menos um professor para o registro.")
+    return itens_resolvidos
+
+
 def _resolver_contexto_registro(
     *,
     tipo_registro: str,
     nome_estudante: str | None,
     estudante_id: int | None,
+    estudantes_vinculados: list[OcorrenciaEstudanteVinculadoIn] | list[dict] | None,
     turma_id: int | None,
     professor_requerente: str | None,
     professor_requerente_id: int | None,
+    professores_vinculados: list[OcorrenciaProfessorVinculadoIn] | list[dict] | None,
 ) -> dict:
     if tipo_registro == TIPO_REGISTRO_ESTUDANTE:
         turma_id_valor = _validar_turma_id(turma_id)
-        nome_estudante_valor, estudante_id_valor = _resolver_dados_estudante(
+        estudantes_resolvidos = _resolver_estudantes_vinculados(
+            estudantes_vinculados=estudantes_vinculados,
             nome_estudante=nome_estudante,
             estudante_id=estudante_id,
             turma_id=turma_id_valor,
@@ -403,27 +580,30 @@ def _resolver_contexto_registro(
             campo_rotulo="Professor requerente",
         )
         return {
-            "nome_estudante": nome_estudante_valor,
-            "estudante_id": estudante_id_valor,
+            "nome_estudante": _resumir_nomes_vinculados(estudantes_resolvidos),
+            "estudante_id": estudantes_resolvidos[0].get("estudante_id"),
+            "estudantes_vinculados": estudantes_resolvidos,
             "turma_id": turma_id_valor,
             "professor_requerente": professor_nome,
             "professor_requerente_id": professor_id_valor,
+            "professores_vinculados": [],
         }
 
     if tipo_registro == TIPO_REGISTRO_PROFESSOR:
-        professor_nome, professor_id_valor = _resolver_dados_professor(
+        professores_resolvidos = _resolver_professores_vinculados(
+            professores_vinculados=professores_vinculados,
             professor_requerente=professor_requerente,
             professor_requerente_id=professor_requerente_id,
-            campo_rotulo="Professor",
         )
-        if professor_nome.strip().lower() == "todos os professores":
-            raise HTTPException(400, "Selecione um professor individual para esse tipo de registro.")
+        nomes_professores = _resumir_nomes_vinculados(professores_resolvidos)
         return {
-            "nome_estudante": professor_nome,
+            "nome_estudante": nomes_professores,
             "estudante_id": None,
+            "estudantes_vinculados": [],
             "turma_id": None,
-            "professor_requerente": professor_nome,
-            "professor_requerente_id": professor_id_valor,
+            "professor_requerente": nomes_professores,
+            "professor_requerente_id": professores_resolvidos[0].get("professor_id"),
+            "professores_vinculados": professores_resolvidos,
         }
 
     return {
@@ -433,9 +613,11 @@ def _resolver_contexto_registro(
             max_len=255,
         ),
         "estudante_id": None,
+        "estudantes_vinculados": [],
         "turma_id": None,
         "professor_requerente": "Todos os professores",
         "professor_requerente_id": None,
+        "professores_vinculados": [],
     }
 
 
@@ -746,7 +928,7 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
 
     tipo_registro = _validar_tipo_registro(payload.tipo_registro)
     status = _validar_status(payload.status or STATUS_OCORRENCIA_REGISTRADO)
-    acao_aplicada = _validar_acao_aplicada(payload.acao_aplicada)
+    acao_aplicada = _validar_acao_aplicada_para_tipo(payload.acao_aplicada, tipo_registro)
     regimento_item_ids = _normalizar_regimento_item_ids(payload.regimento_item_ids)
     if _registro_exige_base_legal(tipo_registro):
         regimento_item_ids = _exigir_regimento_item_ids(regimento_item_ids)
@@ -760,9 +942,11 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
         tipo_registro=tipo_registro,
         nome_estudante=payload.nome_estudante,
         estudante_id=payload.estudante_id,
+        estudantes_vinculados=payload.estudantes_vinculados,
         turma_id=payload.turma_id,
         professor_requerente=payload.professor_requerente,
         professor_requerente_id=payload.professor_requerente_id,
+        professores_vinculados=payload.professores_vinculados,
     )
     turma_id = contexto["turma_id"]
     faixa_aula = (
@@ -792,6 +976,8 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
             acao_aplicada=acao_aplicada,
             status=status,
             regimento_item_ids=regimento_item_ids,
+            estudantes_vinculados=contexto["estudantes_vinculados"],
+            professores_vinculados=contexto["professores_vinculados"],
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -874,9 +1060,12 @@ def atualizar_ocorrencia_parcial_api(
 
     dados_validados = {}
     regimento_item_ids_validados = None
+    estudantes_vinculados_para_salvar = None
+    professores_vinculados_para_salvar = None
+    tipo_registro_atual = _validar_tipo_registro(atual.get("tipo_registro"))
 
     tipo_registro_merge = _validar_tipo_registro(
-        dados_brutos.get("tipo_registro", atual.get("tipo_registro"))
+        dados_brutos.get("tipo_registro", tipo_registro_atual)
     )
 
     if "tipo_registro" in dados_brutos:
@@ -886,23 +1075,74 @@ def atualizar_ocorrencia_parcial_api(
         "tipo_registro",
         "nome_estudante",
         "estudante_id",
+        "estudantes_vinculados",
         "turma_id",
         "professor_requerente",
         "professor_requerente_id",
+        "professores_vinculados",
     }
     if campos_contexto & set(dados_brutos.keys()):
+        usar_estudantes_atuais = (
+            tipo_registro_merge == TIPO_REGISTRO_ESTUDANTE
+            and tipo_registro_atual == TIPO_REGISTRO_ESTUDANTE
+            and "estudantes_vinculados" not in dados_brutos
+        )
+        usar_professores_atuais = (
+            tipo_registro_merge == TIPO_REGISTRO_PROFESSOR
+            and tipo_registro_atual == TIPO_REGISTRO_PROFESSOR
+            and "professores_vinculados" not in dados_brutos
+        )
         contexto_merge = _resolver_contexto_registro(
             tipo_registro=tipo_registro_merge,
-            nome_estudante=dados_brutos.get("nome_estudante", atual.get("nome_estudante")),
-            estudante_id=dados_brutos.get("estudante_id", atual.get("estudante_id")),
+            nome_estudante=(
+                dados_brutos.get("nome_estudante")
+                if "nome_estudante" in dados_brutos
+                else (
+                    atual.get("nome_estudante")
+                    if tipo_registro_merge == tipo_registro_atual
+                    else None
+                )
+            ),
+            estudante_id=(
+                dados_brutos.get("estudante_id")
+                if "estudante_id" in dados_brutos
+                else (
+                    atual.get("estudante_id")
+                    if tipo_registro_merge == TIPO_REGISTRO_ESTUDANTE
+                    and tipo_registro_atual == TIPO_REGISTRO_ESTUDANTE
+                    else None
+                )
+            ),
+            estudantes_vinculados=(
+                dados_brutos.get("estudantes_vinculados")
+                if "estudantes_vinculados" in dados_brutos
+                else (atual.get("estudantes_vinculados") if usar_estudantes_atuais else [])
+            ),
             turma_id=dados_brutos.get("turma_id", atual.get("turma_id")),
             professor_requerente=dados_brutos.get(
                 "professor_requerente",
-                atual.get("professor_requerente"),
+                (
+                    atual.get("professor_requerente")
+                    if tipo_registro_merge == tipo_registro_atual
+                    or tipo_registro_merge == TIPO_REGISTRO_ESTUDANTE
+                    and tipo_registro_atual == TIPO_REGISTRO_ESTUDANTE
+                    else None
+                ),
             ),
             professor_requerente_id=dados_brutos.get(
                 "professor_requerente_id",
-                atual.get("professor_requerente_id"),
+                (
+                    atual.get("professor_requerente_id")
+                    if tipo_registro_merge == tipo_registro_atual
+                    or tipo_registro_merge == TIPO_REGISTRO_ESTUDANTE
+                    and tipo_registro_atual == TIPO_REGISTRO_ESTUDANTE
+                    else None
+                ),
+            ),
+            professores_vinculados=(
+                dados_brutos.get("professores_vinculados")
+                if "professores_vinculados" in dados_brutos
+                else (atual.get("professores_vinculados") if usar_professores_atuais else [])
             ),
         )
         dados_validados["nome_estudante"] = contexto_merge["nome_estudante"]
@@ -910,6 +1150,8 @@ def atualizar_ocorrencia_parcial_api(
         dados_validados["turma_id"] = contexto_merge["turma_id"]
         dados_validados["professor_requerente"] = contexto_merge["professor_requerente"]
         dados_validados["professor_requerente_id"] = contexto_merge["professor_requerente_id"]
+        estudantes_vinculados_para_salvar = contexto_merge["estudantes_vinculados"]
+        professores_vinculados_para_salvar = contexto_merge["professores_vinculados"]
 
         if not _registro_exige_aula(tipo_registro_merge):
             dados_validados["aula"] = ""
@@ -954,9 +1196,15 @@ def atualizar_ocorrencia_parcial_api(
         if _registro_exige_base_legal(tipo_registro_merge):
             regimento_item_ids_validados = _exigir_regimento_item_ids(regimento_item_ids_validados)
     if "acao_aplicada" in dados_brutos:
-        dados_validados["acao_aplicada"] = _validar_acao_aplicada(dados_brutos["acao_aplicada"])
+        dados_validados["acao_aplicada"] = _validar_acao_aplicada_para_tipo(
+            dados_brutos["acao_aplicada"],
+            tipo_registro_merge,
+        )
     if "status" in dados_brutos:
         dados_validados["status"] = _validar_status(dados_brutos["status"])
+
+    if "tipo_registro" in dados_brutos and "acao_aplicada" not in dados_brutos:
+        _validar_acao_aplicada_para_tipo(atual.get("acao_aplicada"), tipo_registro_merge)
 
     if (
         "tipo_registro" in dados_brutos
@@ -986,15 +1234,28 @@ def atualizar_ocorrencia_parcial_api(
             itens_para_validar = list(atual.get("regimento_itens") or [])
         _validar_acao_compativel_com_base_legal(acao_para_validar, itens_para_validar)
 
-    alterado = True
     if dados_validados:
         try:
-            alterado = atualizar_ocorrencia(ocorrencia_id, dados_validados)
+            atualizar_ocorrencia(ocorrencia_id, dados_validados)
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
 
-    if not alterado:
-        raise HTTPException(404, "Ocorrencia nao encontrada.")
+    if estudantes_vinculados_para_salvar is not None:
+        try:
+            salvar_ocorrencia_estudantes_vinculados(
+                ocorrencia_id,
+                estudantes_vinculados_para_salvar,
+            )
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+    if professores_vinculados_para_salvar is not None:
+        try:
+            salvar_ocorrencia_professores_vinculados(
+                ocorrencia_id,
+                professores_vinculados_para_salvar,
+            )
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
     if regimento_item_ids_validados is not None:
         try:
             salvar_regimento_itens_ocorrencia(ocorrencia_id, regimento_item_ids_validados)

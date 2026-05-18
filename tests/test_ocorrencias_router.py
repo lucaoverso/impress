@@ -77,6 +77,10 @@ class OcorrenciasRouterTest(unittest.TestCase):
                 [item_id],
             )
             self.assertEqual(resposta["regimento_itens"][0]["tipo"], "inciso")
+            self.assertEqual(
+                [item["nome"] for item in resposta["estudantes_vinculados"]],
+                ["Estudante Teste"],
+            )
 
             conn = database.get_connection()
             cursor = conn.cursor()
@@ -134,6 +138,132 @@ class OcorrenciasRouterTest(unittest.TestCase):
             self.assertEqual(resposta["aula"], "")
             self.assertEqual(resposta["disciplina"], "Alinhamento pedagogico")
             self.assertEqual(resposta["regimento_itens"], [])
+            self.assertEqual(
+                [item["nome"] for item in resposta["professores_vinculados"]],
+                [professor["nome"]],
+            )
+
+    def test_criar_registro_de_estudante_com_multiplos_vinculados(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, ocorrencias_router = _reload_modulos(db_path)
+            database.criar_tabelas()
+
+            turma_id = int(database.criar_turma("Turma Multi", "MATUTINO", 30))
+            item_id = database.criar_regimento_item(
+                lei_nome="Regimento Interno",
+                artigo_numero="76",
+                artigo_descricao="Dos deveres do estudante.",
+                inciso_numero="VII",
+                inciso_descricao="Integrar-se ao processo pedagogico desenvolvido pela unidade escolar.",
+            )
+            estudante_1_id = int(database.criar_estudante("Estudante Um", turma_id))
+            estudante_2_id = int(database.criar_estudante("Estudante Dois", turma_id))
+
+            payload = ocorrencias_router.OcorrenciaCreateIn(
+                tipo_registro="estudante",
+                nome_estudante=None,
+                estudante_id=None,
+                estudantes_vinculados=[
+                    {"estudante_id": estudante_1_id, "nome": "Ignorado", "turma_id": turma_id},
+                    {"estudante_id": estudante_2_id, "nome": "Ignorado", "turma_id": turma_id},
+                ],
+                turma_id=turma_id,
+                professor_requerente="Professor Teste",
+                professor_requerente_id=None,
+                disciplina="Portugues",
+                data_ocorrencia="2026-03-26",
+                aula="2",
+                horario_ocorrencia="07:30",
+                descricao="Registro envolvendo dois estudantes.",
+                regimento_item_ids=[item_id],
+                acao_aplicada="advertencia",
+                status="registrado",
+            )
+
+            resposta = ocorrencias_router.criar_ocorrencia_api(payload, usuario={"cargo": "ADMIN"})
+
+            self.assertEqual(resposta["nome_estudante"], "Estudante Um, Estudante Dois")
+            self.assertEqual(
+                [item["nome"] for item in resposta["estudantes_vinculados"]],
+                ["Estudante Um", "Estudante Dois"],
+            )
+            self.assertEqual(
+                [item["estudante_id"] for item in resposta["estudantes_vinculados"]],
+                [estudante_1_id, estudante_2_id],
+            )
+
+    def test_criar_registro_de_professor_com_multiplos_vinculados(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, ocorrencias_router = _reload_modulos(db_path)
+            database.criar_tabelas()
+
+            professor_1 = self._criar_professor(database, "Professor Um", "prof.um@escola.test")
+            professor_2 = self._criar_professor(database, "Professor Dois", "prof.dois@escola.test")
+
+            payload = ocorrencias_router.OcorrenciaCreateIn(
+                tipo_registro="professor",
+                nome_estudante=None,
+                estudante_id=None,
+                turma_id=None,
+                professor_requerente=None,
+                professor_requerente_id=None,
+                professores_vinculados=[
+                    {"professor_id": int(professor_1["id"]), "nome": professor_1["nome"]},
+                    {"professor_id": int(professor_2["id"]), "nome": professor_2["nome"]},
+                ],
+                disciplina="Orientacoes de fechamento",
+                data_ocorrencia="2026-03-27",
+                aula=None,
+                horario_ocorrencia="10:15",
+                descricao="Registro envolvendo dois professores.",
+                regimento_item_ids=[],
+                acao_aplicada="reuniao_alinhamento",
+                status="registrado",
+            )
+
+            resposta = ocorrencias_router.criar_ocorrencia_api(payload, usuario={"cargo": "ADMIN"})
+
+            self.assertEqual(resposta["professor_requerente"], "Professor Um, Professor Dois")
+            self.assertEqual(
+                [item["nome"] for item in resposta["professores_vinculados"]],
+                ["Professor Um", "Professor Dois"],
+            )
+
+    def test_registro_de_professor_rejeita_acao_disciplinar_de_estudante(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, ocorrencias_router = _reload_modulos(db_path)
+            database.criar_tabelas()
+
+            professor = self._criar_professor(database, "Professor Restrito", "prof.restrito@escola.test")
+
+            payload = ocorrencias_router.OcorrenciaCreateIn(
+                tipo_registro="professor",
+                nome_estudante=None,
+                estudante_id=None,
+                turma_id=None,
+                professor_requerente=professor["nome"],
+                professor_requerente_id=int(professor["id"]),
+                professores_vinculados=[
+                    {"professor_id": int(professor["id"]), "nome": professor["nome"]},
+                ],
+                disciplina="Assunto institucional",
+                data_ocorrencia="2026-03-28",
+                aula=None,
+                horario_ocorrencia="08:40",
+                descricao="Acao invalida para professor.",
+                regimento_item_ids=[],
+                acao_aplicada="advertencia",
+                status="registrado",
+            )
+
+            with self.assertRaises(ocorrencias_router.HTTPException) as ctx:
+                ocorrencias_router.criar_ocorrencia_api(payload, usuario={"cargo": "ADMIN"})
+
+            self.assertEqual(ctx.exception.status_code, 400)
+            self.assertIn("tipo de registro", str(ctx.exception.detail).lower())
 
     def test_criar_registro_geral_docentes_sem_professor_individual(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

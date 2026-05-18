@@ -496,6 +496,51 @@ def _obter_itens_regimento_ocorrencia(ocorrencia: dict) -> list[dict]:
     )
 
 
+def _obter_estudantes_vinculados_ocorrencia(ocorrencia: dict) -> list[dict]:
+    itens = ocorrencia.get("estudantes_vinculados")
+    if not isinstance(itens, list):
+        return []
+
+    vinculados = []
+    for item in itens:
+        if not isinstance(item, dict):
+            continue
+        nome = str(item.get("nome") or "").strip()
+        if not nome:
+            continue
+        vinculados.append(
+            {
+                "estudante_id": item.get("estudante_id"),
+                "nome": nome,
+                "turma_id": item.get("turma_id"),
+                "turma_nome": str(item.get("turma_nome") or "").strip(),
+            }
+        )
+    return vinculados
+
+
+def _obter_professores_vinculados_ocorrencia(ocorrencia: dict) -> list[dict]:
+    itens = ocorrencia.get("professores_vinculados")
+    if not isinstance(itens, list):
+        return []
+
+    vinculados = []
+    for item in itens:
+        if not isinstance(item, dict):
+            continue
+        nome = str(item.get("nome") or "").strip()
+        if not nome:
+            continue
+        vinculados.append(
+            {
+                "professor_id": item.get("professor_id"),
+                "nome": nome,
+                "email": str(item.get("email") or "").strip(),
+            }
+        )
+    return vinculados
+
+
 def _formatar_linha_artigo(
     numero: str | None, descricao: str | None, rotulo_legado: str | None = None
 ) -> str:
@@ -766,9 +811,17 @@ class _RenderizadorRegistroOcorrencia:
 
     def _reserva_rodape(self) -> int:
         tipo_registro = _obter_tipo_registro(self.ocorrencia)
+        participantes_estudantes = _obter_estudantes_vinculados_ocorrencia(self.ocorrencia)
+        participantes_professores = _obter_professores_vinculados_ocorrencia(self.ocorrencia)
         if tipo_registro == TIPO_REGISTRO_GERAL:
             return 780
+        if tipo_registro == TIPO_REGISTRO_ESTUDANTE and len(participantes_estudantes) > 1:
+            return 520
+        if tipo_registro == TIPO_REGISTRO_PROFESSOR and len(participantes_professores) > 1:
+            return 520
         if tipo_registro == TIPO_REGISTRO_PROFESSOR:
+            return 430
+        if tipo_registro == TIPO_REGISTRO_ESTUDANTE:
             return 430
         return RODAPE_RESERVA
 
@@ -1219,22 +1272,80 @@ class _RenderizadorRegistroOcorrencia:
             font=self.fontes.rodape_italico,
         )
 
+    def _desenhar_assinaturas_corridas(
+        self,
+        *,
+        y_base: int,
+        titulo: str,
+        quantidade_linhas: int,
+    ):
+        largura_titulo, _ = self._medir_texto(titulo, self.fontes.pequeno_bold)
+        self.draw.text(
+            ((self.largura - largura_titulo) / 2, y_base),
+            titulo,
+            fill=COR_TEXTO,
+            font=self.fontes.pequeno_bold,
+        )
+
+        topo_linhas = y_base + 48
+        espaco_coluna = 70
+        largura_total = self.direita - self.esquerda
+        largura_coluna = int((largura_total - espaco_coluna) / 2)
+        altura_linha = 58
+        linhas_totais = max(quantidade_linhas, 4)
+        for indice in range(linhas_totais):
+            y_linha = topo_linhas + indice * altura_linha
+            for coluna in range(2):
+                x_inicio = self.esquerda + coluna * (largura_coluna + espaco_coluna)
+                x_fim = x_inicio + largura_coluna
+                self.draw.line((x_inicio, y_linha, x_fim, y_linha), fill=COR_BORDA, width=2)
+
+        y_gestao = topo_linhas + (linhas_totais * altura_linha) + 46
+        self._desenhar_linha_assinatura(
+            self.centro_x - 330,
+            y_gestao,
+            420,
+            "Coordenacao Pedagogica",
+        )
+        self._desenhar_linha_assinatura(
+            self.centro_x + 330,
+            y_gestao,
+            420,
+            "Direcao",
+        )
+        self._desenhar_emitido_em(y_gestao + 94)
+
     def _desenhar_rodape(self):
         tipo_registro = _obter_tipo_registro(self.ocorrencia)
         if tipo_registro == TIPO_REGISTRO_GERAL:
             altura_bloco = 650
+        elif tipo_registro == TIPO_REGISTRO_ESTUDANTE and len(
+            _obter_estudantes_vinculados_ocorrencia(self.ocorrencia)
+        ) > 1:
+            altura_bloco = 420
+        elif tipo_registro == TIPO_REGISTRO_PROFESSOR and len(
+            _obter_professores_vinculados_ocorrencia(self.ocorrencia)
+        ) > 1:
+            altura_bloco = 420
         elif tipo_registro == TIPO_REGISTRO_PROFESSOR:
             altura_bloco = 300
         else:
-            altura_bloco = 220
+            altura_bloco = 300
 
         if self.y + altura_bloco > self.altura - MARGEM_BASE:
             self._nova_pagina(continuacao=True)
 
         y_base = self.altura - MARGEM_BASE - altura_bloco + 24
-        largura_linha = 560
 
         if tipo_registro == TIPO_REGISTRO_PROFESSOR:
+            professores_vinculados = _obter_professores_vinculados_ocorrencia(self.ocorrencia)
+            if len(professores_vinculados) > 1:
+                self._desenhar_assinaturas_corridas(
+                    y_base=y_base,
+                    titulo="ASSINATURAS DOS PROFESSORES",
+                    quantidade_linhas=len(professores_vinculados),
+                )
+                return
             centros = [
                 self.esquerda + ((self.direita - self.esquerda) * 0.18),
                 self.centro_x,
@@ -1247,61 +1358,31 @@ class _RenderizadorRegistroOcorrencia:
             return
 
         if tipo_registro == TIPO_REGISTRO_GERAL:
-            titulo = "ASSINATURAS DOS PROFESSORES"
-            largura_titulo, _ = self._medir_texto(titulo, self.fontes.pequeno_bold)
-            self.draw.text(
-                ((self.largura - largura_titulo) / 2, y_base),
-                titulo,
-                fill=COR_TEXTO,
-                font=self.fontes.pequeno_bold,
+            self._desenhar_assinaturas_corridas(
+                y_base=y_base,
+                titulo="ASSINATURAS DOS PROFESSORES",
+                quantidade_linhas=12,
             )
-
-            topo_linhas = y_base + 48
-            espaco_coluna = 70
-            largura_total = self.direita - self.esquerda
-            largura_coluna = int((largura_total - espaco_coluna) / 2)
-            altura_linha = 58
-            for indice in range(8):
-                y_linha = topo_linhas + indice * altura_linha
-                for coluna in range(2):
-                    x_inicio = self.esquerda + coluna * (largura_coluna + espaco_coluna)
-                    x_fim = x_inicio + largura_coluna
-                    self.draw.line((x_inicio, y_linha, x_fim, y_linha), fill=COR_BORDA, width=2)
-
-            y_gestao = topo_linhas + (8 * altura_linha) + 46
-            self._desenhar_linha_assinatura(self.centro_x - 330, y_gestao, 420, "Coordenacao Pedagogica")
-            self._desenhar_linha_assinatura(self.centro_x + 330, y_gestao, 420, "Direcao")
-            self._desenhar_emitido_em(y_gestao + 94)
             return
 
-        self.draw.line(
-            (
-                self.centro_x - (largura_linha // 2),
-                y_base,
-                self.centro_x + (largura_linha // 2),
-                y_base,
-            ),
-            fill=COR_BORDA,
-            width=2,
-        )
-
-        linhas = [
-            "E.E. Padre Jose Daniel",
-            "Coordenacao Pedagogica",
-            "Assessoria",
-        ]
-        altura_linha = self._altura_linha(self.fontes.rodape, fator=1.15)
-        y = y_base + 18
-        for linha in linhas:
-            largura, _ = self._medir_texto(linha, self.fontes.rodape)
-            self.draw.text(
-                ((self.largura - largura) / 2, y),
-                linha,
-                fill=COR_TEXTO,
-                font=self.fontes.rodape,
+        estudantes_vinculados = _obter_estudantes_vinculados_ocorrencia(self.ocorrencia)
+        if len(estudantes_vinculados) > 1:
+            self._desenhar_assinaturas_corridas(
+                y_base=y_base,
+                titulo="ASSINATURAS DOS ESTUDANTES",
+                quantidade_linhas=len(estudantes_vinculados),
             )
-            y += altura_linha
-        self._desenhar_emitido_em(y + 8)
+            return
+
+        centros = [
+            self.esquerda + ((self.direita - self.esquerda) * 0.18),
+            self.centro_x,
+            self.direita - ((self.direita - self.esquerda) * 0.18),
+        ]
+        titulos = ["Estudante", "Coordenacao Pedagogica", "Direcao"]
+        for centro, titulo in zip(centros, titulos):
+            self._desenhar_linha_assinatura(int(centro), y_base + 54, 420, titulo)
+        self._desenhar_emitido_em(y_base + 142)
 
     def _desenhar_numeracao_paginas(self):
         total = len(self.paginas)
@@ -1332,8 +1413,9 @@ class _RenderizadorRegistroOcorrencia:
         status = _rotulo_status(self.ocorrencia.get("status"))
 
         if tipo_registro == TIPO_REGISTRO_PROFESSOR:
+            total_professores = len(_obter_professores_vinculados_ocorrencia(self.ocorrencia))
             return [
-                ("Professor", professor),
+                ("Professor(es)" if total_professores > 1 else "Professor", professor),
                 ("Assunto ou pauta", disciplina),
                 ("Data", data),
                 ("Horario", f"As {horario} h" if horario != "Nao informado" else horario),
@@ -1354,8 +1436,9 @@ class _RenderizadorRegistroOcorrencia:
 
         turma = _texto_seguro(self.ocorrencia.get("turma_nome"))
         aula = _formatar_aula(self.ocorrencia, self.turma)
+        total_estudantes = len(_obter_estudantes_vinculados_ocorrencia(self.ocorrencia))
         return [
-            ("Estudante(s)", referencia),
+            ("Estudante(s)" if total_estudantes > 1 else "Estudante", referencia),
             ("Turma", turma),
             ("Professor requerente", professor),
             ("Disciplina ou funcao", disciplina),
