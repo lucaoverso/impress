@@ -66,11 +66,20 @@ from schemas.preconselho_schemas import (
 )
 from services.preconselho_service import (
     STATUS_PERIODO_PRE_CONSELHO_ABERTO,
+    atualizar_motivo_preconselho_admin,
+    atualizar_periodo_preconselho_admin,
+    atualizar_status_motivo_preconselho_admin,
+    atualizar_status_periodo_preconselho_admin,
+    criar_motivo_preconselho_admin,
+    criar_periodo_preconselho_admin,
     gerar_texto_consolidado_pre_conselho,
     gerar_texto_pre_conselho_individual,
     listar_motivos_pos_pre_conselho,
+    listar_motivos_preconselho_visiveis,
     listar_niveis_atencao_pre_conselho,
     periodo_editavel_para_cargo,
+    texto_obrigatorio_preconselho,
+    validar_data_iso_preconselho,
     validar_categoria_motivo_pre_conselho,
     validar_motivos_pos_pre_conselho,
     validar_etapa_pre_conselho,
@@ -1364,6 +1373,7 @@ def criar_periodo_preconselho_api(
     payload: PreConselhoPeriodoCreateIn, usuario=Depends(get_usuario_logado)
 ):
     _exigir_admin(usuario)
+    return criar_periodo_preconselho_admin(payload)
     try:
         etapa = validar_etapa_pre_conselho(payload.etapa)
         status = validar_status_periodo_pre_conselho(
@@ -1395,6 +1405,7 @@ def atualizar_periodo_preconselho_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_admin(usuario)
+    return atualizar_periodo_preconselho_admin(periodo_id, payload)
     try:
         etapa = validar_etapa_pre_conselho(payload.etapa)
     except ValueError as exc:
@@ -1424,6 +1435,7 @@ def atualizar_status_periodo_preconselho_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_admin(usuario)
+    return atualizar_status_periodo_preconselho_admin(periodo_id, payload.status)
     try:
         status = validar_status_periodo_pre_conselho(payload.status)
     except ValueError as exc:
@@ -1440,6 +1452,10 @@ def listar_motivos_preconselho_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_acesso_preconselho(usuario)
+    return listar_motivos_preconselho_visiveis(
+        incluir_inativos=incluir_inativos,
+        usuario_eh_admin=_usuario_eh_admin(usuario),
+    )
     if incluir_inativos and not _usuario_eh_admin(usuario):
         raise HTTPException(403, "Acesso negado.")
     return listar_motivos_pre_conselho(incluir_inativos=incluir_inativos)
@@ -1450,6 +1466,7 @@ def criar_motivo_preconselho_api(
     payload: PreConselhoMotivoCreateIn, usuario=Depends(get_usuario_logado)
 ):
     _exigir_admin(usuario)
+    return criar_motivo_preconselho_admin(payload)
     try:
         categoria = validar_categoria_motivo_pre_conselho(payload.categoria)
     except ValueError as exc:
@@ -1476,6 +1493,7 @@ def atualizar_motivo_preconselho_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_admin(usuario)
+    return atualizar_motivo_preconselho_admin(motivo_id, payload)
     try:
         categoria = validar_categoria_motivo_pre_conselho(payload.categoria)
     except ValueError as exc:
@@ -1498,6 +1516,7 @@ def atualizar_status_motivo_preconselho_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_admin(usuario)
+    return atualizar_status_motivo_preconselho_admin(motivo_id, payload.ativo)
     if not atualizar_status_motivo_pre_conselho(motivo_id, payload.ativo):
         raise HTTPException(404, "Motivo não encontrado.")
     motivo = buscar_motivo_pre_conselho_por_id(motivo_id)

@@ -1,5 +1,20 @@
 from collections import Counter
-from datetime import date
+from datetime import date, datetime
+from sqlite3 import IntegrityError
+
+from fastapi import HTTPException
+
+from repositories.preconselho_repository import (
+    atualizar_motivo_pre_conselho_dados as atualizar_motivo_pre_conselho_dados_repo,
+    atualizar_periodo_pre_conselho_dados as atualizar_periodo_pre_conselho_dados_repo,
+    atualizar_status_motivo_pre_conselho as atualizar_status_motivo_pre_conselho_repo,
+    atualizar_status_periodo_pre_conselho as atualizar_status_periodo_pre_conselho_repo,
+    buscar_motivo_pre_conselho_por_id as buscar_motivo_pre_conselho_por_id_repo,
+    buscar_periodo_pre_conselho_por_id as buscar_periodo_pre_conselho_por_id_repo,
+    criar_motivo_pre_conselho as criar_motivo_pre_conselho_repo,
+    criar_periodo_pre_conselho as criar_periodo_pre_conselho_repo,
+    listar_motivos_pre_conselho as listar_motivos_pre_conselho_repo,
+)
 
 
 STATUS_PERIODO_PRE_CONSELHO_ABERTO = "ABERTO"
@@ -232,6 +247,24 @@ def _texto_limpo(valor) -> str:
     return str(valor or "").strip()
 
 
+def texto_obrigatorio_preconselho(valor: str, campo: str, *, max_len: int = 255) -> str:
+    texto = _texto_limpo(valor)
+    if not texto:
+        raise HTTPException(400, f"{campo} é obrigatório.")
+    if len(texto) > max_len:
+        raise HTTPException(400, f"{campo} excede o limite de {max_len} caracteres.")
+    return texto
+
+
+def validar_data_iso_preconselho(valor: str, campo: str) -> str:
+    texto = texto_obrigatorio_preconselho(valor, campo, max_len=20)
+    try:
+        data = datetime.strptime(texto, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise HTTPException(400, f"{campo} inválida. Use o formato YYYY-MM-DD.") from exc
+    return data.isoformat()
+
+
 def _lista_unica_texto(valores) -> list[str]:
     itens = []
     for valor in valores or []:
@@ -302,6 +335,123 @@ def _texto_relato_complementar_consolidado(
 
 def listar_niveis_atencao_pre_conselho() -> list[dict]:
     return [dict(item) for item in NIVEIS_ATENCAO_PRE_CONSELHO]
+
+
+def criar_periodo_preconselho_admin(payload) -> dict:
+    try:
+        etapa = validar_etapa_pre_conselho(payload.etapa)
+        status = validar_status_periodo_pre_conselho(
+            payload.status or STATUS_PERIODO_PRE_CONSELHO_ABERTO
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    try:
+        periodo_id = criar_periodo_pre_conselho_repo(
+            nome=payload.nome,
+            ano_letivo=int(payload.ano_letivo),
+            etapa=etapa,
+            data_inicio=validar_data_iso_preconselho(payload.data_inicio, "Data inicial"),
+            data_fim=validar_data_iso_preconselho(payload.data_fim, "Data final"),
+            status=status,
+        )
+    except IntegrityError as exc:
+        raise HTTPException(
+            400, "Já existe um período cadastrado para este ano letivo e etapa."
+        ) from exc
+
+    periodo = buscar_periodo_pre_conselho_por_id_repo(periodo_id)
+    return {**periodo, "editavel": True}
+
+
+def atualizar_periodo_preconselho_admin(periodo_id: int, payload) -> dict:
+    try:
+        etapa = validar_etapa_pre_conselho(payload.etapa)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    try:
+        if not atualizar_periodo_pre_conselho_dados_repo(
+            periodo_id,
+            nome=payload.nome,
+            ano_letivo=int(payload.ano_letivo),
+            etapa=etapa,
+            data_inicio=validar_data_iso_preconselho(payload.data_inicio, "Data inicial"),
+            data_fim=validar_data_iso_preconselho(payload.data_fim, "Data final"),
+        ):
+            raise HTTPException(404, "Período não encontrado.")
+    except IntegrityError as exc:
+        raise HTTPException(
+            400, "Já existe um período cadastrado para este ano letivo e etapa."
+        ) from exc
+
+    periodo = buscar_periodo_pre_conselho_por_id_repo(periodo_id)
+    return {**periodo, "editavel": True}
+
+
+def atualizar_status_periodo_preconselho_admin(periodo_id: int, status: str) -> dict:
+    try:
+        status_validado = validar_status_periodo_pre_conselho(status)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    if not atualizar_status_periodo_pre_conselho_repo(periodo_id, status_validado):
+        raise HTTPException(404, "Período não encontrado.")
+
+    periodo = buscar_periodo_pre_conselho_por_id_repo(periodo_id)
+    return {**periodo, "editavel": True}
+
+
+def listar_motivos_preconselho_visiveis(*, incluir_inativos: bool, usuario_eh_admin: bool):
+    if incluir_inativos and not usuario_eh_admin:
+        raise HTTPException(403, "Acesso negado.")
+    return listar_motivos_pre_conselho_repo(incluir_inativos=incluir_inativos)
+
+
+def criar_motivo_preconselho_admin(payload) -> dict:
+    try:
+        categoria = validar_categoria_motivo_pre_conselho(payload.categoria)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    try:
+        motivo_id = criar_motivo_pre_conselho_repo(
+            categoria=categoria,
+            codigo=texto_obrigatorio_preconselho(payload.codigo, "Código", max_len=120)
+            .lower()
+            .replace(" ", "_"),
+            descricao=texto_obrigatorio_preconselho(
+                payload.descricao, "Descrição", max_len=255
+            ),
+            ordem=int(payload.ordem or 0),
+        )
+    except IntegrityError as exc:
+        raise HTTPException(400, "Já existe um motivo cadastrado com este código.") from exc
+
+    return buscar_motivo_pre_conselho_por_id_repo(motivo_id)
+
+
+def atualizar_motivo_preconselho_admin(motivo_id: int, payload) -> dict:
+    try:
+        categoria = validar_categoria_motivo_pre_conselho(payload.categoria)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    if not atualizar_motivo_pre_conselho_dados_repo(
+        motivo_id,
+        categoria=categoria,
+        descricao=texto_obrigatorio_preconselho(payload.descricao, "Descrição", max_len=255),
+        ordem=int(payload.ordem or 0),
+    ):
+        raise HTTPException(404, "Motivo não encontrado.")
+
+    return buscar_motivo_pre_conselho_por_id_repo(motivo_id)
+
+
+def atualizar_status_motivo_preconselho_admin(motivo_id: int, ativo: bool) -> dict:
+    if not atualizar_status_motivo_pre_conselho_repo(motivo_id, ativo):
+        raise HTTPException(404, "Motivo não encontrado.")
+    return buscar_motivo_pre_conselho_por_id_repo(motivo_id)
 
 
 def validar_status_periodo_pre_conselho(status: str) -> str:
