@@ -33,6 +33,9 @@ ACAO_OCORRENCIA_ADVERTENCIA = "advertencia"
 ACAO_OCORRENCIA_CHAMADA_RESPONSAVEL = "chamada_responsavel"
 ACAO_OCORRENCIA_ENCAMINHAMENTO_DIRECAO = "encaminhamento_direcao"
 ACAO_OCORRENCIA_REGISTRO_INFORMATIVO = "registro_informativo"
+ACAO_OCORRENCIA_ORIENTACAO_PROFESSOR = "orientacao_professor"
+ACAO_OCORRENCIA_REUNIAO_ALINHAMENTO = "reuniao_alinhamento"
+ACAO_OCORRENCIA_ORIENTACAO_GERAL_DOCENTES = "orientacao_geral_docentes"
 
 ACOES_OCORRENCIA_DETALHADAS = (
     ACAO_OCORRENCIA_ADVERTENCIA_VERBAL,
@@ -49,7 +52,14 @@ ACOES_OCORRENCIA_LEGADAS = (
     ACAO_OCORRENCIA_ENCAMINHAMENTO_DIRECAO,
     ACAO_OCORRENCIA_REGISTRO_INFORMATIVO,
 )
-ACAO_OCORRENCIA_VALIDAS = ACOES_OCORRENCIA_DETALHADAS + ACOES_OCORRENCIA_LEGADAS
+ACOES_OCORRENCIA_GESTAO = (
+    ACAO_OCORRENCIA_ORIENTACAO_PROFESSOR,
+    ACAO_OCORRENCIA_REUNIAO_ALINHAMENTO,
+    ACAO_OCORRENCIA_ORIENTACAO_GERAL_DOCENTES,
+)
+ACAO_OCORRENCIA_VALIDAS = (
+    ACOES_OCORRENCIA_DETALHADAS + ACOES_OCORRENCIA_LEGADAS + ACOES_OCORRENCIA_GESTAO
+)
 
 ACOES_ROTULOS = {
     ACAO_OCORRENCIA_ADVERTENCIA_VERBAL: "Advertencia verbal",
@@ -67,6 +77,26 @@ ACOES_ROTULOS = {
     ACAO_OCORRENCIA_CHAMADA_RESPONSAVEL: "Chamada de responsavel",
     ACAO_OCORRENCIA_ENCAMINHAMENTO_DIRECAO: "Encaminhamento a direcao",
     ACAO_OCORRENCIA_REGISTRO_INFORMATIVO: "Registro informativo",
+    ACAO_OCORRENCIA_ORIENTACAO_PROFESSOR: "Orientacao individual ao professor",
+    ACAO_OCORRENCIA_REUNIAO_ALINHAMENTO: "Reuniao de alinhamento",
+    ACAO_OCORRENCIA_ORIENTACAO_GERAL_DOCENTES: "Orientacao geral aos professores",
+}
+
+ACOES_TIPOS_REGISTRO = {
+    ACAO_OCORRENCIA_ADVERTENCIA_VERBAL: ("estudante",),
+    ACAO_OCORRENCIA_RETIRADA_SALA_ORIENTACAO: ("estudante",),
+    ACAO_OCORRENCIA_SUSPENSAO_EXTRACURRICULAR: ("estudante",),
+    ACAO_OCORRENCIA_SUSPENSAO_ORIENTADA_2_DIAS: ("estudante",),
+    ACAO_OCORRENCIA_SUSPENSAO_AULAS_3_DIAS: ("estudante",),
+    ACAO_OCORRENCIA_TRANSFERENCIA_COMPULSORIA: ("estudante",),
+    ACAO_OCORRENCIA_ORIENTACAO_VERBAL: ("estudante",),
+    ACAO_OCORRENCIA_ADVERTENCIA: ("estudante",),
+    ACAO_OCORRENCIA_CHAMADA_RESPONSAVEL: ("estudante",),
+    ACAO_OCORRENCIA_ENCAMINHAMENTO_DIRECAO: ("estudante", "professor", "geral"),
+    ACAO_OCORRENCIA_REGISTRO_INFORMATIVO: ("estudante", "professor", "geral"),
+    ACAO_OCORRENCIA_ORIENTACAO_PROFESSOR: ("professor",),
+    ACAO_OCORRENCIA_REUNIAO_ALINHAMENTO: ("professor",),
+    ACAO_OCORRENCIA_ORIENTACAO_GERAL_DOCENTES: ("geral",),
 }
 
 ACOES_POR_GRAVIDADE = {
@@ -161,6 +191,7 @@ def listar_acoes_aplicadas() -> list[dict]:
                     "nome": rotulo_acao_ocorrencia(acao),
                     "gravidade": gravidade,
                     "legado": False,
+                    "tipos_registro": list(ACOES_TIPOS_REGISTRO.get(acao, ("estudante",))),
                     "ordem": ordem,
                 }
             )
@@ -173,6 +204,20 @@ def listar_acoes_aplicadas() -> list[dict]:
                 "nome": f"{rotulo_acao_ocorrencia(acao)} (legado)",
                 "gravidade": None,
                 "legado": True,
+                "tipos_registro": list(ACOES_TIPOS_REGISTRO.get(acao, ("estudante",))),
+                "ordem": ordem,
+            }
+        )
+        ordem += 1
+
+    for acao in ACOES_OCORRENCIA_GESTAO:
+        opcoes.append(
+            {
+                "id": acao,
+                "nome": rotulo_acao_ocorrencia(acao),
+                "gravidade": None,
+                "legado": False,
+                "tipos_registro": list(ACOES_TIPOS_REGISTRO.get(acao, ("professor",))),
                 "ordem": ordem,
             }
         )

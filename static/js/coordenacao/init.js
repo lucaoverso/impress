@@ -100,6 +100,10 @@ function registrarEventosOcorrencias() {
         atualizarSugestoesRegimentoBusca(true);
     });
 
+    el("ocorrenciaTipoRegistro").addEventListener("change", () => {
+        atualizarModoFormularioRegistro({ limparCamposOcultos: true });
+    });
+
     el("ocorrenciaTurmaId").addEventListener("change", () => {
         el("ocorrenciaEstudanteId").value = "";
         atualizarSelectAulasPorTurma(el("ocorrenciaTurmaId").value);

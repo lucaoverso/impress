@@ -31,6 +31,7 @@ let relatorioOcorrenciasCarregado = false;
 let selecaoDescricaoEditor = null;
 let regimentoSelecionadoIds = [];
 let opcoesOcorrencias = {
+    tipos_registro: [],
     turmas: [],
     professores: [],
     disciplinas: [],
@@ -53,6 +54,7 @@ const TURNO_OFFSET_FAIXA = {
 
 const rotulosAcao = new Map();
 const rotulosStatus = new Map();
+const rotulosTipoRegistro = new Map();
 const mapaBuscaEstudantes = new Map();
 const mapaBuscaProfessores = new Map();
 const mapaBuscaDisciplinas = new Map();
@@ -233,6 +235,18 @@ function rotuloStatus(status) {
     return rotulosStatus.get(status) || status || "Nao informado";
 }
 
+function rotuloTipoRegistro(tipo) {
+    return rotulosTipoRegistro.get(tipo) || tipo || "Nao informado";
+}
+
+function obterTipoRegistroFormulario() {
+    return String(el("ocorrenciaTipoRegistro")?.value || "estudante").trim() || "estudante";
+}
+
+function registroExigeBaseLegal(tipo = obterTipoRegistroFormulario()) {
+    return String(tipo || "").trim() === "estudante";
+}
+
 function classeStatus(status) {
     const texto = String(status || "").trim().toLowerCase();
     if (!texto) return "status-registrado";
@@ -241,6 +255,24 @@ function classeStatus(status) {
 
 function classeStatusEstudante(ativo) {
     return ativo ? "status-resolvido" : "status-aguardando_responsavel";
+}
+
+function obterReferenciaRegistro(ocorrencia) {
+    const tipo = String(ocorrencia?.tipo_registro || "").trim();
+    if (tipo === "professor") {
+        return String(ocorrencia?.professor_requerente || ocorrencia?.nome_estudante || "").trim() || "Nao informado";
+    }
+    return String(ocorrencia?.nome_estudante || "").trim() || "Nao informado";
+}
+
+function obterContextoRegistro(ocorrencia) {
+    const tipo = String(ocorrencia?.tipo_registro || "").trim();
+    if (tipo === "professor") return "Professor individual";
+    if (tipo === "geral") return "Orientacao geral";
+    const turmaNome = String(ocorrencia?.turma_nome || "").trim();
+    if (turmaNome) return turmaNome;
+    const turmaId = Number(ocorrencia?.turma_id || 0);
+    return turmaId > 0 ? `ID ${turmaId}` : "Sem turma";
 }
 
 function listarBotoesAbasCoord() {
@@ -281,9 +313,9 @@ function atualizarBotaoNovaOcorrencia() {
 
     const painelAberto = painelFormularioOcorrenciaAberto();
     if (!painelAberto) {
-        botao.innerText = "Registrar ocorrencia";
+        botao.innerText = "Novo registro";
     } else if (ocorrenciaEmEdicaoId) {
-        botao.innerText = "Nova ocorrencia";
+        botao.innerText = "Novo registro";
     } else {
         botao.innerText = "Ocultar formulario";
     }
@@ -513,11 +545,14 @@ function obterIdsRegimentoSelecionadosFormulario() {
 
 function validarBaseLegalSelecionadaAntesSalvar() {
     const idsSelecionados = obterIdsRegimentoSelecionadosFormulario();
+    if (!registroExigeBaseLegal()) {
+        return idsSelecionados;
+    }
     if (idsSelecionados.length > 0) {
         return idsSelecionados;
     }
 
-    setMensagemOcorrencias("Selecione ao menos uma base legal para vincular a ocorrencia.", true);
+    setMensagemOcorrencias("Selecione ao menos uma base legal para vincular o registro de estudante.", true);
     el("ocorrenciaBuscaRegimento")?.focus();
     atualizarSugestoesRegimentoBusca(true);
     return [];
@@ -621,4 +656,3 @@ function renderSelecionadorRegimento(idsSelecionados = null) {
     });
     atualizarPreviewOcorrencia();
 }
-

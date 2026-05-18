@@ -33,6 +33,14 @@ STATUS_OCORRENCIA_VALIDOS = (
     STATUS_OCORRENCIA_AGUARDANDO_RESPONSAVEL,
     STATUS_OCORRENCIA_RESOLVIDO,
 )
+TIPO_REGISTRO_OCORRENCIA_ESTUDANTE = "estudante"
+TIPO_REGISTRO_OCORRENCIA_PROFESSOR = "professor"
+TIPO_REGISTRO_OCORRENCIA_GERAL = "geral"
+TIPOS_REGISTRO_OCORRENCIA = (
+    TIPO_REGISTRO_OCORRENCIA_ESTUDANTE,
+    TIPO_REGISTRO_OCORRENCIA_PROFESSOR,
+    TIPO_REGISTRO_OCORRENCIA_GERAL,
+)
 TIPO_BASE_LEGAL_ARTIGO = "artigo"
 TIPO_BASE_LEGAL_INCISO = "inciso"
 TIPO_BASE_LEGAL_ALINEA = "alinea"
@@ -616,9 +624,10 @@ def criar_tabelas():
     cursor.execute(f"""
         CREATE TABLE IF NOT EXISTS ocorrencias (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo_registro TEXT NOT NULL DEFAULT '{TIPO_REGISTRO_OCORRENCIA_ESTUDANTE}' CHECK (tipo_registro IN {TIPOS_REGISTRO_OCORRENCIA}),
             nome_estudante TEXT NOT NULL,
             estudante_id INTEGER,
-            turma_id INTEGER NOT NULL,
+            turma_id INTEGER,
             professor_requerente TEXT NOT NULL,
             professor_requerente_id INTEGER,
             disciplina TEXT NOT NULL,
@@ -863,6 +872,11 @@ def _criar_indices_schema(cursor):
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_ocorrencias_status
         ON ocorrencias(status)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_ocorrencias_tipo_registro
+        ON ocorrencias(tipo_registro)
     """)
 
     cursor.execute("""
@@ -1901,8 +1915,13 @@ def _garantir_colunas_ocorrencias(cursor):
         return
 
     cursor.execute("PRAGMA table_info(ocorrencias)")
-    colunas = {row["name"] for row in cursor.fetchall()}
+    info_colunas = cursor.fetchall()
+    colunas = {row["name"] for row in info_colunas}
 
+    if "tipo_registro" not in colunas:
+        cursor.execute(
+            "ALTER TABLE ocorrencias ADD COLUMN tipo_registro TEXT NOT NULL DEFAULT 'estudante'"
+        )
     if "nome_estudante" not in colunas:
         cursor.execute("ALTER TABLE ocorrencias ADD COLUMN nome_estudante TEXT NOT NULL DEFAULT ''")
     if "estudante_id" not in colunas:
@@ -1947,6 +1966,15 @@ def _garantir_colunas_ocorrencias(cursor):
     cursor.execute(
         """
         UPDATE ocorrencias
+        SET tipo_registro = ?
+        WHERE TRIM(COALESCE(tipo_registro, '')) = ''
+    """,
+        (TIPO_REGISTRO_OCORRENCIA_ESTUDANTE,),
+    )
+
+    cursor.execute(
+        """
+        UPDATE ocorrencias
         SET status = ?
         WHERE TRIM(COALESCE(status, '')) = ''
     """,
@@ -1974,7 +2002,15 @@ def _recriar_tabela_ocorrencias_se_necessario(cursor):
         return
 
     sql_tabela = str(row["sql"] or "")
-    if sql_tabela and all(acao in sql_tabela for acao in ACAO_OCORRENCIA_VALIDAS):
+    precisa_recriar = not sql_tabela
+    if sql_tabela:
+        sql_tabela_upper = sql_tabela.upper()
+        tem_acoes_atualizadas = all(acao in sql_tabela for acao in ACAO_OCORRENCIA_VALIDAS)
+        tem_tipo_registro = "TIPO_REGISTRO" in sql_tabela_upper
+        turma_aceita_nulo = "TURMA_ID INTEGER NOT NULL" not in sql_tabela_upper
+        precisa_recriar = not (tem_acoes_atualizadas and tem_tipo_registro and turma_aceita_nulo)
+
+    if not precisa_recriar:
         return
 
     cursor.execute("PRAGMA foreign_keys = OFF")
@@ -1982,9 +2018,10 @@ def _recriar_tabela_ocorrencias_se_necessario(cursor):
     cursor.execute(f"""
         CREATE TABLE ocorrencias__tmp (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo_registro TEXT NOT NULL DEFAULT '{TIPO_REGISTRO_OCORRENCIA_ESTUDANTE}' CHECK (tipo_registro IN {TIPOS_REGISTRO_OCORRENCIA}),
             nome_estudante TEXT NOT NULL,
             estudante_id INTEGER,
-            turma_id INTEGER NOT NULL,
+            turma_id INTEGER,
             professor_requerente TEXT NOT NULL,
             professor_requerente_id INTEGER,
             disciplina TEXT NOT NULL,
@@ -2005,6 +2042,7 @@ def _recriar_tabela_ocorrencias_se_necessario(cursor):
         """
         INSERT INTO ocorrencias__tmp (
             id,
+            tipo_registro,
             nome_estudante,
             estudante_id,
             turma_id,
@@ -2022,9 +2060,14 @@ def _recriar_tabela_ocorrencias_se_necessario(cursor):
         )
         SELECT
             id,
+            CASE
+                WHEN TRIM(COALESCE(tipo_registro, '')) IN {TIPOS_REGISTRO_OCORRENCIA}
+                    THEN TRIM(tipo_registro)
+                ELSE '{TIPO_REGISTRO_OCORRENCIA_ESTUDANTE}'
+            END,
             COALESCE(nome_estudante, ''),
             estudante_id,
-            COALESCE(turma_id, 0),
+            turma_id,
             COALESCE(professor_requerente, ''),
             professor_requerente_id,
             COALESCE(disciplina, ''),
@@ -8415,21 +8458,30 @@ def salvar_regimento_itens_ocorrencia(ocorrencia_id: int, regimento_item_ids: li
     return True
 
 
+def _validar_tipo_registro_banco(tipo_registro: str | None) -> str:
+    tipo_norm = _normalizar_nome_catalogo(tipo_registro) or TIPO_REGISTRO_OCORRENCIA_ESTUDANTE
+    if tipo_norm not in TIPOS_REGISTRO_OCORRENCIA:
+        raise ValueError("Tipo de registro invalido.")
+    return tipo_norm
+
+
 def criar_ocorrencia(
+    tipo_registro: str,
     nome_estudante: str,
     estudante_id: int | None,
-    turma_id: int,
+    turma_id: int | None,
     professor_requerente: str,
     professor_requerente_id: int | None,
-    disciplina: str,
+    disciplina: str | None,
     data_ocorrencia: str,
-    aula: str,
+    aula: str | None,
     horario_ocorrencia: str,
     descricao: str,
     acao_aplicada: str,
     status: str = STATUS_OCORRENCIA_REGISTRADO,
     regimento_item_ids: list[int] | None = None,
 ):
+    tipo_registro_limpo = _validar_tipo_registro_banco(tipo_registro)
     nome_estudante_limpo = _normalizar_nome_catalogo(nome_estudante)
     professor_requerente_limpo = _normalizar_nome_catalogo(professor_requerente)
     disciplina_limpa = _normalizar_nome_catalogo(disciplina)
@@ -8439,36 +8491,55 @@ def criar_ocorrencia(
     descricao_limpa = str(descricao or "").strip()
     acao_aplicada_limpa = _normalizar_nome_catalogo(acao_aplicada)
     status_limpo = _normalizar_nome_catalogo(status) or STATUS_OCORRENCIA_REGISTRADO
-    turma_id_valor = int(turma_id or 0)
+    turma_id_valor = int(turma_id) if turma_id not in (None, "") else None
     estudante_id_valor = int(estudante_id) if estudante_id is not None else None
     professor_requerente_id_valor = (
         int(professor_requerente_id) if professor_requerente_id is not None else None
     )
 
-    if turma_id_valor <= 0:
-        raise ValueError("Turma inválida.")
+    if turma_id_valor is not None and turma_id_valor <= 0:
+        raise ValueError("Turma invalida.")
     if estudante_id_valor is not None and estudante_id_valor <= 0:
-        raise ValueError("Estudante inválido.")
+        raise ValueError("Estudante invalido.")
     if professor_requerente_id_valor is not None and professor_requerente_id_valor <= 0:
-        raise ValueError("Professor requerente inválido.")
-    if not nome_estudante_limpo:
-        raise ValueError("Nome do estudante é obrigatório.")
-    if not professor_requerente_limpo:
-        raise ValueError("Professor requerente é obrigatório.")
-    if not disciplina_limpa:
-        raise ValueError("Disciplina é obrigatória.")
+        raise ValueError("Professor invalido.")
+
+    if tipo_registro_limpo == TIPO_REGISTRO_OCORRENCIA_ESTUDANTE:
+        if not nome_estudante_limpo:
+            raise ValueError("Nome do estudante e obrigatorio.")
+        if turma_id_valor is None or turma_id_valor <= 0:
+            raise ValueError("Turma invalida.")
+        if not professor_requerente_limpo:
+            raise ValueError("Professor requerente e obrigatorio.")
+        if not disciplina_limpa:
+            raise ValueError("Disciplina e obrigatoria.")
+    elif tipo_registro_limpo == TIPO_REGISTRO_OCORRENCIA_PROFESSOR:
+        if not professor_requerente_limpo:
+            raise ValueError("Professor e obrigatorio.")
+        if not nome_estudante_limpo:
+            nome_estudante_limpo = professor_requerente_limpo
+        turma_id_valor = None
+        aula_limpa = ""
+    else:
+        if not nome_estudante_limpo:
+            raise ValueError("Titulo do registro geral e obrigatorio.")
+        if not professor_requerente_limpo:
+            professor_requerente_limpo = "Todos os professores"
+        turma_id_valor = None
+        aula_limpa = ""
+
     if not data_ocorrencia_limpa:
-        raise ValueError("Data da ocorrência é obrigatória.")
-    if not aula_limpa:
-        raise ValueError("Aula é obrigatória.")
+        raise ValueError("Data da ocorrencia e obrigatoria.")
+    if tipo_registro_limpo == TIPO_REGISTRO_OCORRENCIA_ESTUDANTE and not aula_limpa:
+        raise ValueError("Aula e obrigatoria.")
     if not horario_ocorrencia_limpo:
-        raise ValueError("Horário da ocorrência é obrigatório.")
+        raise ValueError("Horario da ocorrencia e obrigatorio.")
     if not descricao_limpa:
-        raise ValueError("Descrição é obrigatória.")
+        raise ValueError("Descricao e obrigatoria.")
     if acao_aplicada_limpa not in ACAO_OCORRENCIA_VALIDAS:
-        raise ValueError("Ação aplicada inválida.")
+        raise ValueError("Acao aplicada invalida.")
     if status_limpo not in STATUS_OCORRENCIA_VALIDOS:
-        raise ValueError("Status inválido.")
+        raise ValueError("Status invalido.")
 
     ids_regimento_norm = None
     itens_regimento_snapshot = None
@@ -8486,6 +8557,7 @@ def criar_ocorrencia(
         cursor.execute(
             """
             INSERT INTO ocorrencias (
+                tipo_registro,
                 nome_estudante,
                 estudante_id,
                 turma_id,
@@ -8501,9 +8573,10 @@ def criar_ocorrencia(
                 criado_em,
                 atualizado_em
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
         """,
             (
+                tipo_registro_limpo,
                 nome_estudante_limpo,
                 estudante_id_valor,
                 turma_id_valor,
@@ -8538,6 +8611,7 @@ def criar_ocorrencia(
 
 
 def listar_ocorrencias(
+    tipo_registro: str = None,
     status: str = None,
     turma_id: int = None,
     nome_estudante: str = None,
@@ -8550,6 +8624,7 @@ def listar_ocorrencias(
     query = """
         SELECT
             o.id,
+            o.tipo_registro,
             o.nome_estudante,
             o.estudante_id,
             o.turma_id,
@@ -8570,6 +8645,11 @@ def listar_ocorrencias(
         WHERE 1 = 1
     """
     params = []
+
+    tipo_registro_limpo = _normalizar_nome_catalogo(tipo_registro)
+    if tipo_registro_limpo:
+        query += " AND o.tipo_registro = ?"
+        params.append(tipo_registro_limpo)
 
     status_limpo = _normalizar_nome_catalogo(status)
     if status_limpo:
@@ -8619,6 +8699,7 @@ def buscar_ocorrencia_por_id(ocorrencia_id: int):
         """
         SELECT
             o.id,
+            o.tipo_registro,
             o.nome_estudante,
             o.estudante_id,
             o.turma_id,
@@ -8651,6 +8732,7 @@ def buscar_ocorrencia_por_id(ocorrencia_id: int):
 
 def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
     campos_permitidos = {
+        "tipo_registro",
         "nome_estudante",
         "estudante_id",
         "turma_id",
@@ -8674,10 +8756,15 @@ def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
         if campo not in campos_permitidos:
             continue
 
+        if campo == "tipo_registro":
+            atualizacoes.append("tipo_registro = ?")
+            parametros.append(_validar_tipo_registro_banco(valor))
+            continue
+
         if campo == "turma_id":
-            valor_turma = int(valor or 0)
-            if valor_turma <= 0:
-                raise ValueError("Turma inválida.")
+            valor_turma = int(valor) if valor not in (None, "") else None
+            if valor_turma is not None and valor_turma <= 0:
+                raise ValueError("Turma invalida.")
             atualizacoes.append("turma_id = ?")
             parametros.append(valor_turma)
             continue
@@ -8685,7 +8772,7 @@ def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
         if campo == "estudante_id":
             valor_estudante = int(valor) if valor is not None else None
             if valor_estudante is not None and valor_estudante <= 0:
-                raise ValueError("Estudante inválido.")
+                raise ValueError("Estudante invalido.")
             atualizacoes.append("estudante_id = ?")
             parametros.append(valor_estudante)
             continue
@@ -8693,7 +8780,7 @@ def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
         if campo == "professor_requerente_id":
             valor_professor = int(valor) if valor is not None else None
             if valor_professor is not None and valor_professor <= 0:
-                raise ValueError("Professor requerente inválido.")
+                raise ValueError("Professor invalido.")
             atualizacoes.append("professor_requerente_id = ?")
             parametros.append(valor_professor)
             continue
@@ -8701,7 +8788,7 @@ def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
         if campo == "acao_aplicada":
             valor_acao = _normalizar_nome_catalogo(valor)
             if valor_acao not in ACAO_OCORRENCIA_VALIDAS:
-                raise ValueError("Ação aplicada inválida.")
+                raise ValueError("Acao aplicada invalida.")
             atualizacoes.append("acao_aplicada = ?")
             parametros.append(valor_acao)
             continue
@@ -8709,7 +8796,7 @@ def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
         if campo == "status":
             valor_status = _normalizar_nome_catalogo(valor)
             if valor_status not in STATUS_OCORRENCIA_VALIDOS:
-                raise ValueError("Status inválido.")
+                raise ValueError("Status invalido.")
             atualizacoes.append("status = ?")
             parametros.append(valor_status)
             continue
@@ -8717,14 +8804,19 @@ def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
         if campo == "descricao":
             valor_descricao = str(valor or "").strip()
             if not valor_descricao:
-                raise ValueError("Descrição é obrigatória.")
+                raise ValueError("Descricao e obrigatoria.")
             atualizacoes.append("descricao = ?")
             parametros.append(valor_descricao)
             continue
 
+        if campo in {"disciplina", "aula"}:
+            atualizacoes.append(f"{campo} = ?")
+            parametros.append(_normalizar_nome_catalogo(valor))
+            continue
+
         valor_texto = _normalizar_nome_catalogo(valor)
         if not valor_texto:
-            raise ValueError("Campos obrigatórios não podem ficar vazios.")
+            raise ValueError("Campos obrigatorios nao podem ficar vazios.")
         atualizacoes.append(f"{campo} = ?")
         parametros.append(valor_texto)
 

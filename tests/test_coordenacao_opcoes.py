@@ -45,6 +45,11 @@ class CoordenacaoOpcoesTest(unittest.TestCase):
             self.assertGreater(len(resposta["disciplinas"]), 0)
             nomes = {item["nome"] for item in resposta["disciplinas"]}
             self.assertIn("Portugu\u00eas", nomes)
+            self.assertIn("tipos_registro", resposta)
+            self.assertEqual(
+                {item["id"] for item in resposta["tipos_registro"]},
+                {"estudante", "professor", "geral"},
+            )
             self.assertIn("regimento_itens", resposta)
             self.assertTrue(
                 any(item["lei_nome"] == "Regimento Interno" for item in resposta["regimento_itens"])

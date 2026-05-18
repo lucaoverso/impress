@@ -34,13 +34,15 @@ MARGEM_BASE = 170
 RODAPE_RESERVA = 330
 
 NOME_ESCOLA = "ESCOLA ESTADUAL PADRE JOS\u00c9 DANIEL"
-SUBTITULO_REGISTRO = "COORDENA\u00c7\u00c3O PEDAG\u00d3GICA - ASSESSORAMENTO"
-TITULO_REGISTRO = "REGISTRO DE OCORR\u00caNCIAS DISCIPLINARES"
+SUBTITULO_REGISTRO = "COORDENA\u00c7\u00c3O PEDAG\u00d3GICA - CENTRAL DE REGISTROS"
+TITULO_REGISTRO = "REGISTRO DISCIPLINAR DO ESTUDANTE"
 TITULO_CONTINUACAO = "CONTINUA\u00c7\u00c3O DO REGISTRO"
 SECAO_DESCRICAO = "DESCRI\u00c7\u00c3O DA OCORR\u00caNCIA"
 SECAO_REGIMENTO = "BASE LEGAL"
 ALTURA_AREA_REGIMENTO = 280
-ASSINATURA_RODAPE = "E.E. Padre Jos\u00e9 Daniel\nCoordena\u00e7\u00e3o Pedag\u00f3gica\nAssessoria"
+TIPO_REGISTRO_ESTUDANTE = "estudante"
+TIPO_REGISTRO_PROFESSOR = "professor"
+TIPO_REGISTRO_GERAL = "geral"
 
 ACOES_ROTULOS = {
     "orientacao_verbal": "Orientacao verbal",
@@ -323,8 +325,16 @@ def _formatar_aula(ocorrencia: dict, turma: dict | None) -> str:
     return f"Faixa {faixa}"
 
 
+def _obter_tipo_registro(ocorrencia: dict) -> str:
+    tipo = str(ocorrencia.get("tipo_registro") or "").strip().lower()
+    if tipo in {TIPO_REGISTRO_ESTUDANTE, TIPO_REGISTRO_PROFESSOR, TIPO_REGISTRO_GERAL}:
+        return tipo
+    return TIPO_REGISTRO_ESTUDANTE
+
+
 def _obter_observacao_final(ocorrencia: dict) -> str:
     acao = str(ocorrencia.get("acao_aplicada") or "").strip()
+    tipo_registro = _obter_tipo_registro(ocorrencia)
     observacoes = {
         "advertencia_verbal": (
             "OBS.: Aplicada advertencia verbal com orientacao pedagogica, conforme a base legal selecionada."
@@ -363,7 +373,22 @@ def _obter_observacao_final(ocorrencia: dict) -> str:
         "registro_informativo": (
             "OBS.: Documento emitido para registro informativo e acompanhamento pedagogico interno."
         ),
+        "orientacao_professor": (
+            "OBS.: Registro emitido para documentar a orientacao individual feita ao professor, com ciencia formal das partes."
+        ),
+        "reuniao_alinhamento": (
+            "OBS.: Registro emitido para documentar reuniao de alinhamento e pactuacao institucional com o professor."
+        ),
+        "orientacao_geral_docentes": (
+            "OBS.: Registro emitido para documentar orientacao geral apresentada ao corpo docente, com coleta de assinaturas ao final."
+        ),
     }
+    if acao in observacoes:
+        return observacoes[acao]
+    if tipo_registro == TIPO_REGISTRO_PROFESSOR:
+        return "OBS.: Documento emitido para registro funcional e acompanhamento da orientacao ao professor."
+    if tipo_registro == TIPO_REGISTRO_GERAL:
+        return "OBS.: Documento emitido para registro institucional de orientacao geral ao corpo docente."
     return observacoes.get(
         acao,
         f"OBS.: Documento emitido para registro e acompanhamento da acao aplicada: {_rotulo_acao(acao)}.",
@@ -371,12 +396,19 @@ def _obter_observacao_final(ocorrencia: dict) -> str:
 
 
 def _obter_gravidade_ocorrencia(ocorrencia: dict) -> str | None:
+    if _obter_tipo_registro(ocorrencia) != TIPO_REGISTRO_ESTUDANTE:
+        return None
     return inferir_gravidade_ocorrencia(_obter_itens_regimento_ocorrencia(ocorrencia))
 
 
 def _obter_titulo_documento(ocorrencia: dict) -> str:
     acao = str(ocorrencia.get("acao_aplicada") or "").strip()
     if not acao:
+        tipo_registro = _obter_tipo_registro(ocorrencia)
+        if tipo_registro == TIPO_REGISTRO_PROFESSOR:
+            return "REGISTRO INDIVIDUAL DE PROFESSOR"
+        if tipo_registro == TIPO_REGISTRO_GERAL:
+            return "REGISTRO GERAL AOS PROFESSORES"
         return TITULO_REGISTRO
     return _rotulo_acao(acao).upper()
 
@@ -732,9 +764,17 @@ class _RenderizadorRegistroOcorrencia:
     def centro_x(self) -> int:
         return self.largura // 2
 
+    def _reserva_rodape(self) -> int:
+        tipo_registro = _obter_tipo_registro(self.ocorrencia)
+        if tipo_registro == TIPO_REGISTRO_GERAL:
+            return 780
+        if tipo_registro == TIPO_REGISTRO_PROFESSOR:
+            return 430
+        return RODAPE_RESERVA
+
     @property
     def limite_corpo(self) -> int:
-        return self.altura - MARGEM_BASE - RODAPE_RESERVA
+        return self.altura - MARGEM_BASE - self._reserva_rodape()
 
     def _nova_pagina(self, *, continuacao: bool):
         pagina = Image.new("RGB", A4_RETRATO_PIXELS_300_DPI, COR_FUNDO)
@@ -1151,13 +1191,89 @@ class _RenderizadorRegistroOcorrencia:
 
         self.y += max(0, int(espaco_final))
 
+    def _desenhar_linha_assinatura(
+        self,
+        x_centro: int,
+        y: int,
+        largura: int,
+        titulo: str,
+    ):
+        x_inicio = int(x_centro - (largura / 2))
+        x_fim = int(x_centro + (largura / 2))
+        self.draw.line((x_inicio, y, x_fim, y), fill=COR_BORDA, width=2)
+        largura_titulo, _ = self._medir_texto(titulo, self.fontes.rodape)
+        self.draw.text(
+            (x_centro - (largura_titulo / 2), y + 16),
+            titulo,
+            fill=COR_TEXTO,
+            font=self.fontes.rodape,
+        )
+
+    def _desenhar_emitido_em(self, y: int):
+        emitido_em = f"Emitido em {_formatar_data_hora_br(self.ocorrencia.get('criado_em'))}"
+        largura_emitido, _ = self._medir_texto(emitido_em, self.fontes.rodape_italico)
+        self.draw.text(
+            ((self.largura - largura_emitido) / 2, y),
+            emitido_em,
+            fill=COR_TEXTO_MUTED,
+            font=self.fontes.rodape_italico,
+        )
+
     def _desenhar_rodape(self):
-        altura_bloco = 220
+        tipo_registro = _obter_tipo_registro(self.ocorrencia)
+        if tipo_registro == TIPO_REGISTRO_GERAL:
+            altura_bloco = 650
+        elif tipo_registro == TIPO_REGISTRO_PROFESSOR:
+            altura_bloco = 300
+        else:
+            altura_bloco = 220
+
         if self.y + altura_bloco > self.altura - MARGEM_BASE:
             self._nova_pagina(continuacao=True)
 
-        y_base = self.altura - MARGEM_BASE - 170
+        y_base = self.altura - MARGEM_BASE - altura_bloco + 24
         largura_linha = 560
+
+        if tipo_registro == TIPO_REGISTRO_PROFESSOR:
+            centros = [
+                self.esquerda + ((self.direita - self.esquerda) * 0.18),
+                self.centro_x,
+                self.direita - ((self.direita - self.esquerda) * 0.18),
+            ]
+            titulos = ["Professor(a)", "Coordenacao Pedagogica", "Direcao"]
+            for centro, titulo in zip(centros, titulos):
+                self._desenhar_linha_assinatura(int(centro), y_base + 54, 420, titulo)
+            self._desenhar_emitido_em(y_base + 142)
+            return
+
+        if tipo_registro == TIPO_REGISTRO_GERAL:
+            titulo = "ASSINATURAS DOS PROFESSORES"
+            largura_titulo, _ = self._medir_texto(titulo, self.fontes.pequeno_bold)
+            self.draw.text(
+                ((self.largura - largura_titulo) / 2, y_base),
+                titulo,
+                fill=COR_TEXTO,
+                font=self.fontes.pequeno_bold,
+            )
+
+            topo_linhas = y_base + 48
+            espaco_coluna = 70
+            largura_total = self.direita - self.esquerda
+            largura_coluna = int((largura_total - espaco_coluna) / 2)
+            altura_linha = 58
+            for indice in range(8):
+                y_linha = topo_linhas + indice * altura_linha
+                for coluna in range(2):
+                    x_inicio = self.esquerda + coluna * (largura_coluna + espaco_coluna)
+                    x_fim = x_inicio + largura_coluna
+                    self.draw.line((x_inicio, y_linha, x_fim, y_linha), fill=COR_BORDA, width=2)
+
+            y_gestao = topo_linhas + (8 * altura_linha) + 46
+            self._desenhar_linha_assinatura(self.centro_x - 330, y_gestao, 420, "Coordenacao Pedagogica")
+            self._desenhar_linha_assinatura(self.centro_x + 330, y_gestao, 420, "Direcao")
+            self._desenhar_emitido_em(y_gestao + 94)
+            return
+
         self.draw.line(
             (
                 self.centro_x - (largura_linha // 2),
@@ -1169,7 +1285,11 @@ class _RenderizadorRegistroOcorrencia:
             width=2,
         )
 
-        linhas = ASSINATURA_RODAPE.split("\n")
+        linhas = [
+            "E.E. Padre Jose Daniel",
+            "Coordenacao Pedagogica",
+            "Assessoria",
+        ]
         altura_linha = self._altura_linha(self.fontes.rodape, fator=1.15)
         y = y_base + 18
         for linha in linhas:
@@ -1181,15 +1301,7 @@ class _RenderizadorRegistroOcorrencia:
                 font=self.fontes.rodape,
             )
             y += altura_linha
-
-        emitido_em = f"Emitido em {_formatar_data_hora_br(self.ocorrencia.get('criado_em'))}"
-        largura_emitido, _ = self._medir_texto(emitido_em, self.fontes.rodape_italico)
-        self.draw.text(
-            ((self.largura - largura_emitido) / 2, y + 8),
-            emitido_em,
-            fill=COR_TEXTO_MUTED,
-            font=self.fontes.rodape_italico,
-        )
+        self._desenhar_emitido_em(y + 8)
 
     def _desenhar_numeracao_paginas(self):
         total = len(self.paginas)
@@ -1209,30 +1321,58 @@ class _RenderizadorRegistroOcorrencia:
                 font=self.fontes.rodape,
             )
 
-    def renderizar(self) -> bytes:
-        estudante = _texto_seguro(self.ocorrencia.get("nome_estudante"))
-        turma = _texto_seguro(self.ocorrencia.get("turma_nome"))
+    def _campos_resumo_registro(self) -> list[tuple[str, str]]:
+        tipo_registro = _obter_tipo_registro(self.ocorrencia)
+        referencia = _texto_seguro(self.ocorrencia.get("nome_estudante"))
         professor = _texto_seguro(self.ocorrencia.get("professor_requerente"))
         disciplina = _texto_seguro(self.ocorrencia.get("disciplina"))
         data = _formatar_data_br(self.ocorrencia.get("data_ocorrencia"))
-        aula = _formatar_aula(self.ocorrencia, self.turma)
         horario = _texto_seguro(self.ocorrencia.get("horario_ocorrencia"))
         acao = _rotulo_acao(self.ocorrencia.get("acao_aplicada"))
         status = _rotulo_status(self.ocorrencia.get("status"))
+
+        if tipo_registro == TIPO_REGISTRO_PROFESSOR:
+            return [
+                ("Professor", professor),
+                ("Assunto ou pauta", disciplina),
+                ("Data", data),
+                ("Horario", f"As {horario} h" if horario != "Nao informado" else horario),
+                ("Acao aplicada", acao),
+                ("Status", status),
+            ]
+
+        if tipo_registro == TIPO_REGISTRO_GERAL:
+            return [
+                ("Registro geral", referencia),
+                ("Publico", professor),
+                ("Tema ou pauta", disciplina),
+                ("Data", data),
+                ("Horario", f"As {horario} h" if horario != "Nao informado" else horario),
+                ("Acao aplicada", acao),
+                ("Status", status),
+            ]
+
+        turma = _texto_seguro(self.ocorrencia.get("turma_nome"))
+        aula = _formatar_aula(self.ocorrencia, self.turma)
+        return [
+            ("Estudante(s)", referencia),
+            ("Turma", turma),
+            ("Professor requerente", professor),
+            ("Disciplina ou funcao", disciplina),
+            ("Data", data),
+            ("Aula", aula),
+            ("Horario", f"As {horario} h" if horario != "Nao informado" else horario),
+            ("Acao aplicada", acao),
+            ("Status", status),
+        ]
+
+    def renderizar(self) -> bytes:
+        tipo_registro = _obter_tipo_registro(self.ocorrencia)
         descricao = _texto_seguro(self.ocorrencia.get("descricao"), padrao="")
         regimento_itens = _obter_itens_regimento_ocorrencia(self.ocorrencia)
 
-        self._adicionar_rotulo_valor("Estudante(s)", estudante)
-        self._adicionar_rotulo_valor("Turma", turma)
-        self._adicionar_rotulo_valor("Professor requerente", professor)
-        self._adicionar_rotulo_valor("Disciplina ou funcao", disciplina)
-        self._adicionar_rotulo_valor("Data", data)
-        self._adicionar_rotulo_valor("Aula", aula)
-        self._adicionar_rotulo_valor(
-            "Horario", f"As {horario} h" if horario != "Nao informado" else horario
-        )
-        self._adicionar_rotulo_valor("Acao aplicada", acao)
-        self._adicionar_rotulo_valor("Status", status)
+        for rotulo, valor in self._campos_resumo_registro():
+            self._adicionar_rotulo_valor(rotulo, valor)
 
         self._adicionar_espaco(6)
         self._adicionar_titulo_secao(SECAO_DESCRICAO)
@@ -1240,9 +1380,10 @@ class _RenderizadorRegistroOcorrencia:
         self._desenhar_linha()
         if regimento_itens:
             self._adicionar_secao_regimento(regimento_itens)
-        else:
+        elif tipo_registro == TIPO_REGISTRO_ESTUDANTE:
             self._adicionar_area_regimento_em_branco()
-        self._desenhar_linha()
+        if regimento_itens or tipo_registro == TIPO_REGISTRO_ESTUDANTE:
+            self._desenhar_linha()
 
         self._adicionar_paragrafos(
             _obter_observacao_final(self.ocorrencia), fonte=self.fontes.pequeno_bold

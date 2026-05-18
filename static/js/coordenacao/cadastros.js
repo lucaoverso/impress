@@ -109,6 +109,10 @@ function filtrarSugestoesLocais(itens, termo, { limite = 12, campos = ["nome", "
 }
 
 async function atualizarSugestoesEstudantesBusca(forcar = false) {
+    if (obterTipoRegistroFormulario() !== "estudante") {
+        ocultarSugestoes("listaEstudantesBusca");
+        return;
+    }
     const input = el("ocorrenciaBuscaEstudante");
     const termo = input.value.trim();
     const turmaId = el("ocorrenciaTurmaId").value;
@@ -136,6 +140,10 @@ function agendarBuscaEstudantes() {
 }
 
 function atualizarSugestoesProfessoresBusca(forcar = false) {
+    if (obterTipoRegistroFormulario() === "geral") {
+        ocultarSugestoes("listaProfessoresBusca");
+        return;
+    }
     const termo = el("ocorrenciaBuscaProfessor").value.trim();
     if (!forcar && termo.length < 1) {
         ocultarSugestoes("listaProfessoresBusca");
@@ -171,10 +179,12 @@ function atualizarSugestoesDisciplinasBusca(forcar = false) {
 
 function montarPayloadOcorrencia() {
     sincronizarDescricaoEditor();
+    const tipoRegistro = obterTipoRegistroFormulario();
     const textoEstudante = el("ocorrenciaBuscaEstudante").value.trim();
     const itemEstudante = obterItemSugestaoPorTexto(mapaBuscaEstudantes, textoEstudante);
     const textoProfessor = el("ocorrenciaBuscaProfessor").value.trim();
     const itemProfessor = obterItemSugestaoPorTexto(mapaBuscaProfessores, textoProfessor, opcoesOcorrencias.professores || []);
+    const tituloGeral = String(el("ocorrenciaTituloGeral")?.value || "").trim();
 
     const estudanteIdHidden = Number(el("ocorrenciaEstudanteId").value || 0);
     const professorIdSelecionado = Number(el("ocorrenciaProfessorRequerenteId").value || 0);
@@ -186,14 +196,21 @@ function montarPayloadOcorrencia() {
     const nomeEstudante = itemEstudante ? itemEstudante.nome : textoEstudante;
 
     return {
-        nome_estudante: nomeEstudante || null,
-        estudante_id: estudanteId > 0 ? estudanteId : null,
-        turma_id: Number(el("ocorrenciaTurmaId").value),
-        professor_requerente: professorSelecionado ? professorSelecionado.nome : (textoProfessor || null),
-        professor_requerente_id: professorSelecionado ? Number(professorSelecionado.id) : null,
-        disciplina: el("ocorrenciaDisciplina").value.trim(),
+        tipo_registro: tipoRegistro,
+        nome_estudante: tipoRegistro === "geral"
+            ? (tituloGeral || null)
+            : (tipoRegistro === "estudante" ? (nomeEstudante || null) : null),
+        estudante_id: tipoRegistro === "estudante" && estudanteId > 0 ? estudanteId : null,
+        turma_id: tipoRegistro === "estudante" ? Number(el("ocorrenciaTurmaId").value) : null,
+        professor_requerente: tipoRegistro === "geral"
+            ? null
+            : (professorSelecionado ? professorSelecionado.nome : (textoProfessor || null)),
+        professor_requerente_id: tipoRegistro === "geral"
+            ? null
+            : (professorSelecionado ? Number(professorSelecionado.id) : null),
+        disciplina: el("ocorrenciaDisciplina").value.trim() || null,
         data_ocorrencia: el("ocorrenciaData").value,
-        aula: String(el("ocorrenciaAula").value || "").trim(),
+        aula: tipoRegistro === "estudante" ? String(el("ocorrenciaAula").value || "").trim() : null,
         horario_ocorrencia: el("ocorrenciaHorario").value.trim(),
         descricao: el("ocorrenciaDescricao").value.trim(),
         regimento_item_ids: obterIdsRegimentoSelecionadosFormulario(),
@@ -228,14 +245,14 @@ async function salvarOcorrencia(event) {
                 headers: headersJson,
                 body: JSON.stringify(payload)
             });
-            setMensagemOcorrencias("Ocorrencia atualizada com sucesso.");
+            setMensagemOcorrencias("Registro atualizado com sucesso.");
         } else {
             ocorrencia = await fetchJson("/ocorrencias", {
                 method: "POST",
                 headers: headersJson,
                 body: JSON.stringify(payload)
             });
-            setMensagemOcorrencias("Ocorrencia registrada com sucesso.");
+            setMensagemOcorrencias("Registro salvo com sucesso.");
         }
 
         limparFormularioOcorrencia();
@@ -287,8 +304,8 @@ async function limparFiltrosRelatorioOcorrencias() {
 }
 
 async function excluirOcorrencia(ocorrencia) {
-    const nomeEstudante = String(ocorrencia?.nome_estudante || "este registro").trim();
-    const confirmou = window.confirm(`Excluir a ocorrencia de ${nomeEstudante}? Esta acao nao pode ser desfeita.`);
+    const referencia = obterReferenciaRegistro(ocorrencia);
+    const confirmou = window.confirm(`Excluir o registro "${referencia}"? Esta acao nao pode ser desfeita.`);
     if (!confirmou) return;
 
     try {
@@ -306,7 +323,7 @@ async function excluirOcorrencia(ocorrencia) {
 
         invalidarRelatorioOcorrencias();
         await carregarOcorrencias();
-        setMensagemOcorrencias(resposta?.mensagem || "Ocorrencia excluida com sucesso.");
+        setMensagemOcorrencias(resposta?.mensagem || "Registro excluido com sucesso.");
     } catch (err) {
         setMensagemOcorrencias(err.message, true);
     }
@@ -459,4 +476,3 @@ async function limparFiltrosEstudantes() {
         setMensagemEstudantes(err.message, true);
     }
 }
-

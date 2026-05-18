@@ -4,6 +4,7 @@ ACAO_OCORRENCIA_VALIDAS = get_database_attr("ACAO_OCORRENCIA_VALIDAS")
 LEI_PADRAO_IMPORTACAO = get_database_attr("LEI_PADRAO_IMPORTACAO")
 STATUS_OCORRENCIA_REGISTRADO = get_database_attr("STATUS_OCORRENCIA_REGISTRADO")
 STATUS_OCORRENCIA_VALIDOS = get_database_attr("STATUS_OCORRENCIA_VALIDOS")
+TIPOS_REGISTRO_OCORRENCIA = get_database_attr("TIPOS_REGISTRO_OCORRENCIA")
 atualizar_alinea = proxy("atualizar_alinea")
 atualizar_artigo = proxy("atualizar_artigo")
 atualizar_estudante = proxy("atualizar_estudante")
@@ -54,6 +55,7 @@ __all__ = [
     "LEI_PADRAO_IMPORTACAO",
     "STATUS_OCORRENCIA_REGISTRADO",
     "STATUS_OCORRENCIA_VALIDOS",
+    "TIPOS_REGISTRO_OCORRENCIA",
     "atualizar_alinea",
     "atualizar_artigo",
     "atualizar_estudante",

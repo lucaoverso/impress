@@ -841,6 +841,9 @@ AcaoAplicadaOcorrencia = Literal[
     "chamada_responsavel",
     "encaminhamento_direcao",
     "registro_informativo",
+    "orientacao_professor",
+    "reuniao_alinhamento",
+    "orientacao_geral_docentes",
 ]
 
 StatusOcorrencia = Literal[
@@ -850,16 +853,23 @@ StatusOcorrencia = Literal[
     "resolvido",
 ]
 
+TipoRegistroOcorrencia = Literal[
+    "estudante",
+    "professor",
+    "geral",
+]
+
 
 class OcorrenciaCreateIn(BaseModel):
+    tipo_registro: TipoRegistroOcorrencia = "estudante"
     nome_estudante: str | None = None
     estudante_id: int | None = None
-    turma_id: int
+    turma_id: int | None = None
     professor_requerente: str | None = None
     professor_requerente_id: int | None = None
-    disciplina: str
+    disciplina: str | None = None
     data_ocorrencia: str
-    aula: str
+    aula: str | None = None
     horario_ocorrencia: str
     descricao: str
     descricao_formatada: str | None = None
@@ -869,6 +879,7 @@ class OcorrenciaCreateIn(BaseModel):
 
 
 class OcorrenciaUpdateIn(BaseModel):
+    tipo_registro: TipoRegistroOcorrencia | None = None
     nome_estudante: str | None = None
     estudante_id: int | None = None
     turma_id: int | None = None
@@ -887,9 +898,10 @@ class OcorrenciaUpdateIn(BaseModel):
 
 class OcorrenciaOut(BaseModel):
     id: int
+    tipo_registro: str = "estudante"
     nome_estudante: str
     estudante_id: int | None = None
-    turma_id: int
+    turma_id: int | None = None
     turma_nome: str = ""
     professor_requerente: str
     professor_requerente_id: int | None = None

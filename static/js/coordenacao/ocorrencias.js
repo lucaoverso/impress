@@ -253,6 +253,88 @@ function formatarAulaOcorrencia(ocorrencia) {
     return `${aulaLabel(aulaTurno)} (faixa ${faixa})`;
 }
 
+function definirVisibilidadeCampoRegistro(id, visivel) {
+    const elemento = el(id);
+    if (!elemento) return;
+    elemento.hidden = !visivel;
+}
+
+function obterReferenciaFormularioPorTipo(tipoRegistro = obterTipoRegistroFormulario()) {
+    if (tipoRegistro === "professor") {
+        return String(el("ocorrenciaBuscaProfessor")?.value || "").trim();
+    }
+    if (tipoRegistro === "geral") {
+        return String(el("ocorrenciaTituloGeral")?.value || "").trim();
+    }
+    return String(el("ocorrenciaBuscaEstudante")?.value || "").trim();
+}
+
+function atualizarModoFormularioRegistro({ limparCamposOcultos = false } = {}) {
+    const tipoRegistro = obterTipoRegistroFormulario();
+    const ehEstudante = tipoRegistro === "estudante";
+    const ehProfessor = tipoRegistro === "professor";
+    const ehGeral = tipoRegistro === "geral";
+
+    definirVisibilidadeCampoRegistro("ocorrenciaFieldEstudante", ehEstudante);
+    definirVisibilidadeCampoRegistro("ocorrenciaFieldProfessor", ehEstudante || ehProfessor);
+    definirVisibilidadeCampoRegistro("ocorrenciaFieldGeral", ehGeral);
+    definirVisibilidadeCampoRegistro("ocorrenciaFieldTurma", ehEstudante);
+    definirVisibilidadeCampoRegistro("ocorrenciaFieldAula", ehEstudante);
+
+    const professorLabel = el("ocorrenciaProfessorLabel");
+    if (professorLabel) {
+        professorLabel.innerText = ehProfessor ? "Professor" : "Professor requerente";
+    }
+
+    const disciplinaLabel = el("ocorrenciaDisciplinaLabel");
+    if (disciplinaLabel) {
+        disciplinaLabel.innerText = ehGeral ? "Tema ou pauta" : (ehProfessor ? "Assunto ou pauta" : "Disciplina");
+    }
+
+    const disciplinaInput = el("ocorrenciaDisciplina");
+    if (disciplinaInput) {
+        disciplinaInput.placeholder = ehGeral
+            ? "Digite o tema da orientacao geral"
+            : (ehProfessor ? "Ex: alinhamento pedagogico, acompanhamento, pauta" : "Buscar disciplina cadastrada ou digitar nome");
+    }
+
+    const regimentoHint = el("ocorrenciaRegimentoHint");
+    if (regimentoHint) {
+        regimentoHint.innerText = registroExigeBaseLegal(tipoRegistro)
+            ? "Pesquise, clique para anexar e repita o processo para vincular mais de uma base legal ao documento. Nos registros de estudante, ao menos uma base legal e obrigatoria."
+            : "A base legal fica opcional neste tipo de registro. Use apenas quando fizer sentido como apoio documental.";
+    }
+
+    if (limparCamposOcultos) {
+        if (!ehEstudante) {
+            el("ocorrenciaBuscaEstudante").value = "";
+            el("ocorrenciaEstudanteId").value = "";
+            el("ocorrenciaTurmaId").value = "";
+            el("ocorrenciaAula").value = "";
+        }
+        if (!ehProfessor) {
+            el("ocorrenciaBuscaProfessor").value = "";
+            el("ocorrenciaProfessorRequerenteId").value = "";
+        }
+        if (!ehGeral) {
+            el("ocorrenciaTituloGeral").value = "";
+        }
+    }
+
+    if (ehEstudante) {
+        const turmaSelect = el("ocorrenciaTurmaId");
+        if (turmaSelect && !String(turmaSelect.value || "").trim() && opcoesOcorrencias.turmas.length > 0) {
+            turmaSelect.value = String(opcoesOcorrencias.turmas[0].id);
+        }
+        atualizarSelectAulasPorTurma(el("ocorrenciaTurmaId")?.value);
+    }
+
+    atualizarAcaoAplicadaPorGravidade({
+        gravidade: inferirGravidadeOcorrenciaBaseLegal(obterItensRegimentoSelecionadosPreview())
+    });
+    atualizarPreviewOcorrencia();
+}
+
 function obterOcorrenciaEmEdicaoAtual() {
     if (!ocorrenciaEmEdicaoId) return null;
     return (ocorrenciasCache || []).find((ocorrencia) => Number(ocorrencia.id) === Number(ocorrenciaEmEdicaoId)) || null;
@@ -899,12 +981,18 @@ function inferirGravidadeOcorrenciaBaseLegal(itens) {
     return gravidadeFinal;
 }
 
-function obterAcoesAplicadasDisponiveis(gravidade, acaoAtual = "") {
+function obterAcoesAplicadasDisponiveis(gravidade, acaoAtual = "", tipoRegistro = obterTipoRegistroFormulario()) {
     const acaoAtualLimpa = String(acaoAtual || "").trim();
     const acoes = Array.isArray(opcoesOcorrencias.acoes_aplicadas)
         ? opcoesOcorrencias.acoes_aplicadas
         : [];
-    const detalhadas = acoes.filter((item) => !Boolean(item?.legado));
+    const acoesDoTipo = acoes.filter((item) => {
+        const tiposRegistro = Array.isArray(item?.tipos_registro) ? item.tipos_registro : [];
+        return tiposRegistro.length === 0 || tiposRegistro.includes(tipoRegistro);
+    });
+    const detalhadas = tipoRegistro === "estudante"
+        ? acoesDoTipo.filter((item) => !Boolean(item?.legado))
+        : acoesDoTipo;
     const filtradas = gravidade
         ? detalhadas.filter((item) => String(item?.gravidade || "").trim() === gravidade)
         : detalhadas;
@@ -923,7 +1011,8 @@ function obterAcoesAplicadasDisponiveis(gravidade, acaoAtual = "") {
 function atualizarAcaoAplicadaPorGravidade({
     manterValorAtual = true,
     gravidade = "",
-    acaoAtual = null
+    acaoAtual = null,
+    tipoRegistro = obterTipoRegistroFormulario()
 } = {}) {
     const select = el("ocorrenciaAcaoAplicada");
     if (!select) return "";
@@ -931,7 +1020,7 @@ function atualizarAcaoAplicadaPorGravidade({
     const valorAtual = acaoAtual === null
         ? String(select.value || "").trim()
         : String(acaoAtual || "").trim();
-    const opcoes = obterAcoesAplicadasDisponiveis(gravidade, valorAtual);
+    const opcoes = obterAcoesAplicadasDisponiveis(gravidade, valorAtual, tipoRegistro);
     const placeholder = gravidade
         ? "Selecione a acao permitida"
         : "Selecione a acao aplicada";
@@ -946,15 +1035,20 @@ function atualizarAcaoAplicadaPorGravidade({
 
     const hint = el("ocorrenciaGravidadeInfo");
     if (hint) {
-        hint.innerText = gravidade
+        hint.innerText = (tipoRegistro === "estudante" && gravidade)
             ? `Gravidade automatica: ${GRAVIDADE_ROTULOS[gravidade] || gravidade}.`
-            : "Gravidade automatica ainda nao identificada pela base legal selecionada.";
+            : (tipoRegistro === "estudante"
+                ? "Gravidade automatica ainda nao identificada pela base legal selecionada."
+                : "Selecione a acao que melhor descreve o atendimento, a reuniao ou a orientacao registrada.");
     }
 
     return gravidade;
 }
 
 function obterTurmaPreviewFormulario() {
+    if (obterTipoRegistroFormulario() !== "estudante") {
+        return "Nao se aplica";
+    }
     const turmaId = el("ocorrenciaTurmaId")?.value;
     const turma = obterTurmaOpcaoPorId(turmaId);
     if (turma?.nome) return turma.nome;
@@ -965,6 +1059,9 @@ function obterTurmaPreviewFormulario() {
 }
 
 function obterAulaPreviewFormulario() {
+    if (obterTipoRegistroFormulario() !== "estudante") {
+        return "Nao se aplica";
+    }
     const select = el("ocorrenciaAula");
     const opcao = select?.selectedOptions?.[0];
     const textoOpcao = String(opcao?.textContent || "").trim();
@@ -983,7 +1080,17 @@ function obterHorarioPreviewFormulario() {
 
 function obterObservacaoFinalPreview(acaoAplicada) {
     const acao = String(acaoAplicada || "").trim();
-    return OBSERVACOES_ACAO_PREVIEW[acao] || `OBS.: Documento emitido para registro e acompanhamento da acao aplicada: ${rotuloAcao(acao)}.`;
+    const tipoRegistro = obterTipoRegistroFormulario();
+    if (OBSERVACOES_ACAO_PREVIEW[acao]) {
+        return OBSERVACOES_ACAO_PREVIEW[acao];
+    }
+    if (tipoRegistro === "professor") {
+        return "OBS.: Documento emitido para registro funcional e acompanhamento da orientacao ao professor.";
+    }
+    if (tipoRegistro === "geral") {
+        return "OBS.: Documento emitido para registro institucional de orientacao geral ao corpo docente.";
+    }
+    return `OBS.: Documento emitido para registro e acompanhamento da acao aplicada: ${rotuloAcao(acao)}.`;
 }
 
 function obterItensRegimentoSelecionadosPreview() {
@@ -991,16 +1098,26 @@ function obterItensRegimentoSelecionadosPreview() {
     return (opcoesOcorrencias.regimento_itens || []).filter((item) => idsSelecionados.has(Number(item?.id || 0)));
 }
 
-function atualizarCabecalhoPreviewOcorrencia(acaoAplicada, gravidade) {
+function atualizarCabecalhoPreviewOcorrencia(acaoAplicada, gravidade, tipoRegistro) {
     const titulo = el("previewTituloDocumento");
     if (titulo) {
         const rotulo = String(rotuloAcao(acaoAplicada) || "").trim();
-        titulo.innerText = rotulo ? rotulo.toUpperCase() : "REGISTRO DE OCORRENCIAS DISCIPLINARES";
+        if (rotulo) {
+            titulo.innerText = rotulo.toUpperCase();
+        } else if (tipoRegistro === "professor") {
+            titulo.innerText = "REGISTRO INDIVIDUAL DE PROFESSOR";
+        } else if (tipoRegistro === "geral") {
+            titulo.innerText = "REGISTRO GERAL AOS PROFESSORES";
+        } else {
+            titulo.innerText = "REGISTRO DISCIPLINAR DO ESTUDANTE";
+        }
     }
 
     const previewGravidade = el("previewGravidade");
     if (previewGravidade) {
-        previewGravidade.innerText = `Gravidade: ${GRAVIDADE_ROTULOS[gravidade] || "Nao identificada"}`;
+        previewGravidade.innerText = tipoRegistro === "estudante"
+            ? `Gravidade: ${GRAVIDADE_ROTULOS[gravidade] || "Nao identificada"}`
+            : "Assinatura obrigatoria no documento impresso";
     }
 }
 
@@ -1018,7 +1135,9 @@ function renderizarBaseLegalPreview(itens) {
     if (!Array.isArray(itens) || itens.length === 0) {
         const vazio = document.createElement("p");
         vazio.className = "coordenacao-preview-empty";
-        vazio.innerText = "Nenhuma base legal anexada ainda.";
+        vazio.innerText = registroExigeBaseLegal()
+            ? "Nenhuma base legal anexada ainda."
+            : "Base legal opcional para este tipo de registro.";
         container.appendChild(vazio);
         return;
     }
@@ -1032,7 +1151,9 @@ function renderizarBaseLegalPreview(itens) {
     if (!fragmento) {
         const vazio = document.createElement("p");
         vazio.className = "coordenacao-preview-empty";
-        vazio.innerText = "Nenhuma base legal anexada ainda.";
+        vazio.innerText = registroExigeBaseLegal()
+            ? "Nenhuma base legal anexada ainda."
+            : "Base legal opcional para este tipo de registro.";
         container.appendChild(vazio);
         return;
     }
@@ -1040,13 +1161,70 @@ function renderizarBaseLegalPreview(itens) {
     container.appendChild(fragmento);
 }
 
+function renderizarAssinaturasPreview(tipoRegistro) {
+    const container = el("previewAssinaturas");
+    if (!container) return;
+    container.innerHTML = "";
+
+    const criarItem = (titulo) => {
+        const item = document.createElement("div");
+        item.className = "coordenacao-preview-signature-item";
+        const linha = document.createElement("span");
+        const label = document.createElement("strong");
+        label.innerText = titulo;
+        item.appendChild(linha);
+        item.appendChild(label);
+        return item;
+    };
+
+    if (tipoRegistro === "professor") {
+        const grade = document.createElement("div");
+        grade.className = "coordenacao-preview-signature-grid";
+        ["Professor(a)", "Coordenacao Pedagogica", "Direcao"].forEach((titulo) => {
+            grade.appendChild(criarItem(titulo));
+        });
+        container.appendChild(grade);
+        return;
+    }
+
+    if (tipoRegistro === "geral") {
+        const titulo = document.createElement("p");
+        titulo.className = "coordenacao-preview-signature-title";
+        titulo.innerText = "Assinaturas dos professores";
+        container.appendChild(titulo);
+
+        const corrido = document.createElement("div");
+        corrido.className = "coordenacao-preview-signature-running";
+        Array.from({ length: 12 }).forEach(() => {
+            corrido.appendChild(criarItem("Assinatura"));
+        });
+        container.appendChild(corrido);
+
+        const gestao = document.createElement("div");
+        gestao.className = "coordenacao-preview-signature-running-footer";
+        ["Coordenacao Pedagogica", "Direcao"].forEach((tituloItem) => {
+            gestao.appendChild(criarItem(tituloItem));
+        });
+        container.appendChild(gestao);
+        return;
+    }
+
+    const simples = document.createElement("div");
+    simples.className = "coordenacao-preview-signature-single";
+    simples.appendChild(criarItem("Coordenacao Pedagogica"));
+    container.appendChild(simples);
+}
+
 function atualizarPreviewOcorrencia() {
     if (!el("ocorrenciaPreviewPdf")) return;
     sincronizarDescricaoEditor();
 
+    const tipoRegistro = obterTipoRegistroFormulario();
     const ocorrenciaAtual = obterOcorrenciaEmEdicaoAtual();
-    const estudante = el("ocorrenciaBuscaEstudante")?.value;
-    const professor = el("ocorrenciaBuscaProfessor")?.value;
+    const referencia = obterReferenciaFormularioPorTipo(tipoRegistro);
+    const professor = tipoRegistro === "geral"
+        ? "Todos os professores"
+        : String(el("ocorrenciaBuscaProfessor")?.value || "").trim();
     const disciplina = el("ocorrenciaDisciplina")?.value;
     const descricao = el("ocorrenciaDescricao")?.value;
     const descricaoFormatada = el("ocorrenciaDescricaoFormatada")?.value;
@@ -1054,9 +1232,33 @@ function atualizarPreviewOcorrencia() {
     const acaoAplicada = el("ocorrenciaAcaoAplicada")?.value;
     const status = el("ocorrenciaStatus")?.value;
     const itensRegimentoSelecionados = obterItensRegimentoSelecionadosPreview();
-    const gravidade = inferirGravidadeOcorrenciaBaseLegal(itensRegimentoSelecionados);
+    const gravidade = tipoRegistro === "estudante"
+        ? inferirGravidadeOcorrenciaBaseLegal(itensRegimentoSelecionados)
+        : "";
 
-    definirTextoPreview("previewNomeEstudante", estudante);
+    const referenciaLabel = el("previewReferenciaLabel");
+    if (referenciaLabel) {
+        referenciaLabel.innerText = tipoRegistro === "professor"
+            ? "Professor:"
+            : (tipoRegistro === "geral" ? "Registro geral:" : "Estudante(s):");
+    }
+    const professorLabel = el("previewProfessorLabel");
+    if (professorLabel) {
+        professorLabel.innerText = tipoRegistro === "professor"
+            ? "Professor:"
+            : (tipoRegistro === "geral" ? "Publico:" : "Professor requerente:");
+    }
+    const disciplinaLabel = el("previewDisciplinaLabel");
+    if (disciplinaLabel) {
+        disciplinaLabel.innerText = tipoRegistro === "geral"
+            ? "Tema ou pauta:"
+            : (tipoRegistro === "professor" ? "Assunto ou pauta:" : "Disciplina ou funcao:");
+    }
+
+    definirVisibilidadeCampoRegistro("previewTurmaLinha", tipoRegistro === "estudante");
+    definirVisibilidadeCampoRegistro("previewAulaLinha", tipoRegistro === "estudante");
+
+    definirTextoPreview("previewNomeEstudante", referencia);
     definirTextoPreview("previewTurma", obterTurmaPreviewFormulario(), "Nao informada");
     definirTextoPreview("previewProfessor", professor);
     definirTextoPreview("previewDisciplina", disciplina, "Nao informada");
@@ -1065,7 +1267,7 @@ function atualizarPreviewOcorrencia() {
     definirTextoPreview("previewHorario", obterHorarioPreviewFormulario(), "Nao informado");
     definirTextoPreview("previewAcao", rotuloAcao(acaoAplicada), "Nao informada");
     definirTextoPreview("previewStatus", rotuloStatus(status), "Nao informado");
-    atualizarCabecalhoPreviewOcorrencia(acaoAplicada, gravidade);
+    atualizarCabecalhoPreviewOcorrencia(acaoAplicada, gravidade, tipoRegistro);
 
     const descricaoPreview = el("previewDescricao");
     if (descricaoPreview) {
@@ -1083,6 +1285,7 @@ function atualizarPreviewOcorrencia() {
     if (observacaoPreview) {
         observacaoPreview.innerText = obterObservacaoFinalPreview(acaoAplicada);
     }
+    renderizarAssinaturasPreview(tipoRegistro);
 
     const emitidoEm = ocorrenciaAtual?.criado_em
         ? `Emitido em ${formatarDataHora(ocorrenciaAtual.criado_em)}`
@@ -1152,7 +1355,12 @@ function limparFormularioOcorrencia({ manterAberto = false } = {}) {
     ocorrenciaEmEdicaoId = null;
     el("ocorrenciaEstudanteId").value = "";
     el("ocorrenciaProfessorRequerenteId").value = "";
+    el("ocorrenciaTituloGeral").value = "";
     ocultarTodasSugestoes();
+
+    if (el("ocorrenciaTipoRegistro")) {
+        el("ocorrenciaTipoRegistro").value = "estudante";
+    }
 
     const turmaSelect = el("ocorrenciaTurmaId");
     if (opcoesOcorrencias.turmas.length > 0) {
@@ -1166,7 +1374,8 @@ function limparFormularioOcorrencia({ manterAberto = false } = {}) {
         el("ocorrenciaStatus").value = opcoesOcorrencias.status_padrao;
     }
     renderSelecionadorRegimento([]);
-    el("tituloFormOcorrencia").innerText = "Nova ocorrencia";
+    atualizarModoFormularioRegistro();
+    el("tituloFormOcorrencia").innerText = "Novo registro";
     el("btnCancelarEdicaoOcorrencia").style.display = "none";
     if (manterAberto) {
         mostrarPainelFormularioOcorrencia();
@@ -1178,9 +1387,13 @@ function limparFormularioOcorrencia({ manterAberto = false } = {}) {
 
 function preencherFormularioOcorrencia(ocorrencia) {
     ocorrenciaEmEdicaoId = Number(ocorrencia.id);
-    el("ocorrenciaBuscaEstudante").value = ocorrencia.nome_estudante || "";
-    el("ocorrenciaEstudanteId").value = ocorrencia.estudante_id || "";
+    const tipoRegistro = String(ocorrencia.tipo_registro || "estudante").trim() || "estudante";
+    el("ocorrenciaTipoRegistro").value = tipoRegistro;
+    el("ocorrenciaBuscaEstudante").value = tipoRegistro === "estudante" ? (ocorrencia.nome_estudante || "") : "";
+    el("ocorrenciaTituloGeral").value = tipoRegistro === "geral" ? (ocorrencia.nome_estudante || "") : "";
+    el("ocorrenciaEstudanteId").value = tipoRegistro === "estudante" ? (ocorrencia.estudante_id || "") : "";
     el("ocorrenciaBuscaRegimento").value = "";
+    atualizarModoFormularioRegistro();
 
     const turmaId = String(ocorrencia.turma_id || "");
     el("ocorrenciaTurmaId").value = turmaId;
@@ -1189,18 +1402,23 @@ function preencherFormularioOcorrencia(ocorrencia) {
     const faixaAula = resolverFaixaOcorrenciaParaTurma(turmaAtual, ocorrencia.aula);
     atualizarSelectAulasPorTurma(turmaId, faixaAula);
 
-    const professorPorId = obterProfessorOpcaoPorId(ocorrencia.professor_requerente_id);
-    if (professorPorId) {
-        el("ocorrenciaBuscaProfessor").value = professorPorId.label || professorPorId.nome || "";
-        el("ocorrenciaProfessorRequerenteId").value = String(professorPorId.id);
+    if (tipoRegistro === "geral") {
+        el("ocorrenciaBuscaProfessor").value = "";
+        el("ocorrenciaProfessorRequerenteId").value = "";
     } else {
-        const professorPorNome = (opcoesOcorrencias.professores || []).find(
-            (professor) => String(professor.nome || "").trim().toLowerCase() === String(ocorrencia.professor_requerente || "").trim().toLowerCase()
-        );
-        el("ocorrenciaBuscaProfessor").value = professorPorNome
-            ? (professorPorNome.label || professorPorNome.nome || "")
-            : (ocorrencia.professor_requerente || "");
-        el("ocorrenciaProfessorRequerenteId").value = professorPorNome ? String(professorPorNome.id) : "";
+        const professorPorId = obterProfessorOpcaoPorId(ocorrencia.professor_requerente_id);
+        if (professorPorId) {
+            el("ocorrenciaBuscaProfessor").value = professorPorId.label || professorPorId.nome || "";
+            el("ocorrenciaProfessorRequerenteId").value = String(professorPorId.id);
+        } else {
+            const professorPorNome = (opcoesOcorrencias.professores || []).find(
+                (professor) => String(professor.nome || "").trim().toLowerCase() === String(ocorrencia.professor_requerente || "").trim().toLowerCase()
+            );
+            el("ocorrenciaBuscaProfessor").value = professorPorNome
+                ? (professorPorNome.label || professorPorNome.nome || "")
+                : (ocorrencia.professor_requerente || "");
+            el("ocorrenciaProfessorRequerenteId").value = professorPorNome ? String(professorPorNome.id) : "";
+        }
     }
 
     el("ocorrenciaDisciplina").value = ocorrencia.disciplina || "";
@@ -1212,11 +1430,14 @@ function preencherFormularioOcorrencia(ocorrencia) {
     });
     renderSelecionadorRegimento(obterIdsRegimentoSelecionadosOcorrencia(ocorrencia));
     atualizarAcaoAplicadaPorGravidade({
-        gravidade: inferirGravidadeOcorrenciaBaseLegal(obterItensRegimentoSelecionadosPreview()),
-        acaoAtual: ocorrencia.acao_aplicada || ""
+        gravidade: tipoRegistro === "estudante"
+            ? inferirGravidadeOcorrenciaBaseLegal(obterItensRegimentoSelecionadosPreview())
+            : "",
+        acaoAtual: ocorrencia.acao_aplicada || "",
+        tipoRegistro
     });
     el("ocorrenciaStatus").value = ocorrencia.status || opcoesOcorrencias.status_padrao || "registrado";
-    el("tituloFormOcorrencia").innerText = "Editar ocorrencia";
+    el("tituloFormOcorrencia").innerText = "Editar registro";
     el("btnCancelarEdicaoOcorrencia").style.display = "inline-block";
     ativarAbaCoordenacao("ocorrencias");
     mostrarPainelFormularioOcorrencia({ scroll: true });
@@ -1246,12 +1467,12 @@ function obterNomeArquivoContentDisposition(contentDisposition, ocorrencia) {
 
 async function abrirPdfOcorrencia(ocorrencia) {
     if (!ocorrencia?.id) {
-        setMensagemOcorrencias("Selecione uma ocorrencia valida para gerar o PDF.", true);
+        setMensagemOcorrencias("Selecione um registro valido para gerar o PDF.", true);
         return;
     }
 
     let blobUrl = "";
-    setMensagemOcorrencias("Gerando PDF da ocorrencia...");
+    setMensagemOcorrencias("Gerando PDF do registro...");
 
     try {
         const resposta = await fetchResposta(`/ocorrencias/${ocorrencia.id}/pdf`, { headers });
@@ -1285,7 +1506,7 @@ async function abrirPdfOcorrencia(ocorrencia) {
             URL.revokeObjectURL(blobUrl);
         }
         setMensagemOcorrencias(
-            err?.message || "Nao foi possivel gerar o PDF da ocorrencia.",
+            err?.message || "Nao foi possivel gerar o PDF do registro.",
             true
         );
     }
@@ -1328,7 +1549,7 @@ function renderDetalhesOcorrencia(ocorrencia) {
     const container = el("detalhesOcorrencia");
     if (!container) return;
     if (!ocorrencia) {
-        container.innerText = "Selecione uma ocorrencia para visualizar os detalhes.";
+        container.innerText = "Selecione um registro para visualizar os detalhes.";
         return;
     }
 
@@ -1348,16 +1569,17 @@ function renderDetalhesOcorrencia(ocorrencia) {
 
     const hint = document.createElement("p");
     hint.className = "coordenacao-detail-hint";
-    hint.innerText = "Use este documento para impressao e anexo fisico no livro de registro.";
+    hint.innerText = "Use este documento para impressao, assinatura e arquivamento fisico.";
     container.appendChild(hint);
 
+    const tipoRegistro = String(ocorrencia.tipo_registro || "estudante").trim() || "estudante";
     const campos = [
-        ["Estudante", ocorrencia.nome_estudante],
-        ["Turma", ocorrencia.turma_nome || `ID ${ocorrencia.turma_id}`],
-        ["Professor requerente", ocorrencia.professor_requerente],
-        ["Disciplina", ocorrencia.disciplina],
+        ["Tipo", rotuloTipoRegistro(tipoRegistro)],
+        ["Referencia", obterReferenciaRegistro(ocorrencia)],
+        ["Contexto", obterContextoRegistro(ocorrencia)],
+        [tipoRegistro === "geral" ? "Publico" : "Professor", ocorrencia.professor_requerente],
+        [tipoRegistro === "geral" ? "Tema ou pauta" : "Disciplina ou assunto", ocorrencia.disciplina],
         ["Data", formatarDataBr(ocorrencia.data_ocorrencia)],
-        ["Aula", formatarAulaOcorrencia(ocorrencia)],
         ["Horario", ocorrencia.horario_ocorrencia],
         ["Acao aplicada", rotuloAcao(ocorrencia.acao_aplicada)],
         ["Status", rotuloStatus(ocorrencia.status)],
@@ -1365,6 +1587,13 @@ function renderDetalhesOcorrencia(ocorrencia) {
         ["Criado em", formatarDataHora(ocorrencia.criado_em)],
         ["Atualizado em", formatarDataHora(ocorrencia.atualizado_em)]
     ];
+
+    if (tipoRegistro === "estudante") {
+        campos.splice(3, 0, ["Turma", ocorrencia.turma_nome || `ID ${ocorrencia.turma_id}`]);
+        campos.splice(7, 0, ["Aula", formatarAulaOcorrencia(ocorrencia)]);
+        campos[4] = ["Professor requerente", ocorrencia.professor_requerente];
+        campos[5] = ["Disciplina", ocorrencia.disciplina];
+    }
 
     campos.forEach(([rotulo, valor]) => {
         const linha = document.createElement(rotulo === "Descricao" ? "div" : "p");
@@ -1389,4 +1618,3 @@ function renderDetalhesOcorrencia(ocorrencia) {
 
     container.appendChild(criarBlocoDetalhesRegimento(ocorrencia));
 }
-

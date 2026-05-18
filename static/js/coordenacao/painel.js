@@ -4,6 +4,7 @@ function valorCampo(id) {
 
 function montarQueryOcorrencias({
     nomeEstudanteId,
+    tipoRegistroId,
     turmaIdId,
     statusId,
     dataInicialId,
@@ -11,12 +12,14 @@ function montarQueryOcorrencias({
 }) {
     const params = new URLSearchParams();
     const nomeEstudante = valorCampo(nomeEstudanteId);
+    const tipoRegistro = valorCampo(tipoRegistroId);
     const turmaId = valorCampo(turmaIdId);
     const status = valorCampo(statusId);
     const dataInicial = valorCampo(dataInicialId);
     const dataFinal = valorCampo(dataFinalId);
 
     if (nomeEstudante) params.set("nome_estudante", nomeEstudante);
+    if (tipoRegistro) params.set("tipo_registro", tipoRegistro);
     if (turmaId) params.set("turma_id", turmaId);
     if (status) params.set("status", status);
     if (dataInicial) params.set("data_inicial", dataInicial);
@@ -28,13 +31,17 @@ function montarQueryOcorrencias({
 function descreverFiltrosOcorrencias(configuracao) {
     const partes = [];
     const nomeEstudante = valorCampo(configuracao.nomeEstudanteId);
+    const tipoRegistro = valorCampo(configuracao.tipoRegistroId);
     const turmaId = valorCampo(configuracao.turmaIdId);
     const status = valorCampo(configuracao.statusId);
     const dataInicial = valorCampo(configuracao.dataInicialId);
     const dataFinal = valorCampo(configuracao.dataFinalId);
 
     if (nomeEstudante) {
-        partes.push(`Estudante: ${nomeEstudante}`);
+        partes.push(`Referencia: ${nomeEstudante}`);
+    }
+    if (tipoRegistro) {
+        partes.push(`Tipo: ${rotuloTipoRegistro(tipoRegistro)}`);
     }
     if (turmaId) {
         const turma = obterTurmaOpcaoPorId(turmaId);
@@ -79,6 +86,7 @@ function atualizarResumoOcorrencias() {
     if (el("resumoOcorrenciasPeriodo")) {
         el("resumoOcorrenciasPeriodo").innerText = descreverFiltrosOcorrencias({
             nomeEstudanteId: "filtroNomeEstudante",
+            tipoRegistroId: "filtroTipoRegistro",
             turmaIdId: "filtroTurmaId",
             statusId: "filtroStatus",
             dataInicialId: "filtroDataInicial",
@@ -173,6 +181,7 @@ function atualizarResumoRelatorioOcorrencias() {
 
     const descricaoFiltros = descreverFiltrosOcorrencias({
         nomeEstudanteId: "relatorioNomeEstudante",
+        tipoRegistroId: "relatorioTipoRegistro",
         turmaIdId: "relatorioTurmaId",
         statusId: "relatorioStatus",
         dataInicialId: "relatorioDataInicial",
@@ -226,7 +235,7 @@ function renderTabelaRelatorioOcorrencias() {
         const td = document.createElement("td");
         td.colSpan = 6;
         td.className = "booking-empty";
-        td.innerText = "Nenhuma ocorrencia encontrada para o relatorio.";
+        td.innerText = "Nenhum registro encontrado para o relatorio.";
         tr.appendChild(td);
         tbody.appendChild(tr);
         return;
@@ -235,9 +244,9 @@ function renderTabelaRelatorioOcorrencias() {
     relatorioOcorrenciasCache.forEach((ocorrencia) => {
         const tr = document.createElement("tr");
         tr.appendChild(criarCelulaTabela("Data", formatarDataBr(ocorrencia.data_ocorrencia)));
-        tr.appendChild(criarCelulaTabela("Estudante", ocorrencia.nome_estudante || ""));
-        tr.appendChild(criarCelulaTabela("Turma", ocorrencia.turma_nome || ""));
-        tr.appendChild(criarCelulaTabela("Professor requerente", ocorrencia.professor_requerente || ""));
+        tr.appendChild(criarCelulaTabela("Tipo", rotuloTipoRegistro(ocorrencia.tipo_registro)));
+        tr.appendChild(criarCelulaTabela("Referencia", obterReferenciaRegistro(ocorrencia)));
+        tr.appendChild(criarCelulaTabela("Contexto", obterContextoRegistro(ocorrencia)));
         tr.appendChild(criarCelulaTabela("Acao aplicada", rotuloAcao(ocorrencia.acao_aplicada)));
         tr.appendChild(criarCelulaTabela("Status", rotuloStatus(ocorrencia.status)));
         tbody.appendChild(tr);
@@ -260,6 +269,7 @@ async function carregarOpcoesOcorrencias() {
     const acaoAplicadaAtual = String(el("ocorrenciaAcaoAplicada")?.value || "").trim();
     const opcoesApi = await fetchJson("/ocorrencias/opcoes", { headers });
     opcoesOcorrencias = {
+        tipos_registro: Array.isArray(opcoesApi.tipos_registro) ? opcoesApi.tipos_registro : [],
         turmas: Array.isArray(opcoesApi.turmas) ? opcoesApi.turmas : [],
         professores: Array.isArray(opcoesApi.professores) ? opcoesApi.professores : [],
         disciplinas: Array.isArray(opcoesApi.disciplinas) ? opcoesApi.disciplinas : [],
@@ -288,13 +298,23 @@ async function carregarOpcoesOcorrencias() {
 
     rotulosAcao.clear();
     rotulosStatus.clear();
+    rotulosTipoRegistro.clear();
     (opcoesOcorrencias.acoes_aplicadas || []).forEach((item) => {
         rotulosAcao.set(String(item.id), item.nome || item.id);
     });
     (opcoesOcorrencias.status || []).forEach((item) => {
         rotulosStatus.set(String(item.id), item.nome || item.id);
     });
+    (opcoesOcorrencias.tipos_registro || []).forEach((item) => {
+        rotulosTipoRegistro.set(String(item.id), item.nome || item.id);
+    });
 
+    preencherSelect("ocorrenciaTipoRegistro", opcoesOcorrencias.tipos_registro, {
+        placeholder: "Selecione o tipo",
+        valorPadrao: "estudante"
+    });
+    preencherSelect("filtroTipoRegistro", opcoesOcorrencias.tipos_registro, { incluirTodos: true });
+    preencherSelect("relatorioTipoRegistro", opcoesOcorrencias.tipos_registro, { incluirTodos: true });
     preencherSelect("ocorrenciaTurmaId", opcoesOcorrencias.turmas, { placeholder: "Selecione a turma" });
     preencherSelect("filtroTurmaId", opcoesOcorrencias.turmas, { incluirTodos: true });
     preencherSelect("relatorioTurmaId", opcoesOcorrencias.turmas, { incluirTodos: true });
@@ -323,12 +343,14 @@ async function carregarOpcoesOcorrencias() {
     const turmaInicial = opcoesOcorrencias.turmas[0];
     atualizarSelectAulasPorTurma(turmaInicial ? turmaInicial.id : "");
     renderSelecionadorRegimento(idsRegimentoSelecionados);
+    atualizarModoFormularioRegistro();
     atualizarPreviewOcorrencia();
 }
 
 function queryFiltrosOcorrencias() {
     return montarQueryOcorrencias({
         nomeEstudanteId: "filtroNomeEstudante",
+        tipoRegistroId: "filtroTipoRegistro",
         turmaIdId: "filtroTurmaId",
         statusId: "filtroStatus",
         dataInicialId: "filtroDataInicial",
@@ -339,6 +361,7 @@ function queryFiltrosOcorrencias() {
 function queryFiltrosRelatorioOcorrencias() {
     return montarQueryOcorrencias({
         nomeEstudanteId: "relatorioNomeEstudante",
+        tipoRegistroId: "relatorioTipoRegistro",
         turmaIdId: "relatorioTurmaId",
         statusId: "relatorioStatus",
         dataInicialId: "relatorioDataInicial",
@@ -377,7 +400,7 @@ function renderTabelaOcorrencias() {
         const td = document.createElement("td");
         td.colSpan = 7;
         td.className = "booking-empty";
-        td.innerText = "Nenhuma ocorrencia encontrada.";
+        td.innerText = "Nenhum registro encontrado.";
         tr.appendChild(td);
         tbody.appendChild(tr);
         return;
@@ -392,9 +415,9 @@ function renderTabelaOcorrencias() {
         });
 
         tr.appendChild(criarCelulaTabela("Data", formatarDataBr(ocorrencia.data_ocorrencia)));
-        tr.appendChild(criarCelulaTabela("Estudante", ocorrencia.nome_estudante || ""));
-        tr.appendChild(criarCelulaTabela("Turma", ocorrencia.turma_nome || ""));
-        tr.appendChild(criarCelulaTabela("Professor requerente", ocorrencia.professor_requerente || ""));
+        tr.appendChild(criarCelulaTabela("Tipo", rotuloTipoRegistro(ocorrencia.tipo_registro)));
+        tr.appendChild(criarCelulaTabela("Referencia", obterReferenciaRegistro(ocorrencia)));
+        tr.appendChild(criarCelulaTabela("Contexto", obterContextoRegistro(ocorrencia)));
         tr.appendChild(criarCelulaTabela("Acao aplicada", rotuloAcao(ocorrencia.acao_aplicada)));
 
         const statusBadge = document.createElement("span");
@@ -542,4 +565,3 @@ async function carregarEstudantes() {
     estudantesCache = await fetchJson(`/estudantes${queryFiltrosEstudantes()}`, { headers });
     renderTabelaEstudantes();
 }
-

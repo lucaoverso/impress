@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coordenacao - Registro de Ocorrencias</title>
+    <title>Coordenacao - Central de Registros</title>
     {% include "includes/style_bundle.html" %}
 </head>
 
@@ -25,15 +25,15 @@
     <main class="coordenacao-page">
         <header class="admin-header admin-header-shell">
             <div class="admin-header-main">
-                <h1>Registro de Ocorrencias da Coordenacao</h1>
-                <p>Módulo para registrar ocorrências e manter o cadastro de estudantes com busca rápida.</p>
+                <h1>Central de Registros da Coordenacao</h1>
+                <p>Consolide registros de estudantes, atendimentos individuais com professores e orientacoes gerais do corpo docente em um unico fluxo documental.</p>
             </div>
         </header>
 
         <nav class="admin-tabs coordenacao-tabs" aria-label="Abas do módulo de coordenação">
             <button class="admin-tab-btn is-active" data-coord-tab-trigger="ocorrencias"
                 aria-controls="coord-tab-ocorrencias" aria-selected="true" type="button">
-                Ocorrências
+                Registros
             </button>
             <button class="admin-tab-btn" data-coord-tab-trigger="relatorios" aria-controls="coord-tab-relatorios"
                 aria-selected="false" type="button">
@@ -57,15 +57,14 @@
                         <div class="coordenacao-ocorrencias-hub-main">
                             <div class="coordenacao-ocorrencias-copy">
                                 <p class="coordenacao-eyebrow">Operação diária</p>
-                                <h2>Registre, consulte e acompanhe ocorrências</h2>
-                                <p>Esta area foi reorganizada para separar melhor a consulta dos registros, o
-                                    acompanhamento do caso e o cadastro da ocorrencia com seu documento de impressao.
+                                <h2>Registre, consulte e acompanhe a central da coordenacao</h2>
+                                <p>Esta area agora concentra registros de estudantes, atendimentos individuais com professores e orientacoes gerais, com consulta rapida e documento pronto para impressao.
                                 </p>
                             </div>
                             <div class="coordenacao-ocorrencias-hub-side">
                                 <button id="btnNovaOcorrencia" class="btn-destaque" type="button"
                                     aria-controls="painelFormOcorrencia" aria-expanded="false">
-                                    Registrar ocorrencia
+                                    Novo registro
                                 </button>
                                 <p id="msgOcorrencias" class="coordenacao-status-copy"></p>
                             </div>
@@ -106,15 +105,18 @@
                                 <div>
                                     <span class="coordenacao-panel-tag">Consulta</span>
                                     <h2>Buscar registros</h2>
-                                    <p>Filtre por estudante, turma, status ou periodo para localizar rapidamente as
-                                        ocorrencias cadastradas.</p>
+                                    <p>Filtre por tipo, referencia, turma, status ou periodo para localizar rapidamente o historico documentado.</p>
                                 </div>
                             </div>
 
                             <form id="formFiltrosOcorrencias" class="coordenacao-filter-grid">
                                 <label class="coordenacao-field" for="filtroNomeEstudante">
-                                    <span>Estudante</span>
-                                    <input id="filtroNomeEstudante" type="text" placeholder="Nome do estudante">
+                                    <span>Referencia</span>
+                                    <input id="filtroNomeEstudante" type="text" placeholder="Estudante, professor ou titulo">
+                                </label>
+                                <label class="coordenacao-field" for="filtroTipoRegistro">
+                                    <span>Tipo</span>
+                                    <select id="filtroTipoRegistro"></select>
                                 </label>
                                 <label class="coordenacao-field" for="filtroTurmaId">
                                     <span>Turma</span>
@@ -143,9 +145,9 @@
                                     <thead>
                                         <tr>
                                             <th>Data</th>
-                                            <th>Estudante</th>
-                                            <th>Turma</th>
-                                            <th>Professor requerente</th>
+                                            <th>Tipo</th>
+                                            <th>Referencia</th>
+                                            <th>Contexto</th>
                                             <th>Acao aplicada</th>
                                             <th>Status</th>
                                             <th>Acoes</th>
@@ -160,13 +162,12 @@
                             <div class="coordenacao-panel-header">
                                 <div>
                                     <span class="coordenacao-panel-tag">Acompanhamento</span>
-                                    <h2>Ficha da ocorrencia</h2>
-                                    <p>Selecione um item da tabela para ver os dados completos, a base legal vinculada e
-                                        o atalho para o PDF.</p>
+                                    <h2>Ficha do registro</h2>
+                                    <p>Selecione um item da tabela para ver os dados completos, a base legal vinculada e o atalho para o PDF.</p>
                                 </div>
                             </div>
                             <div id="detalhesOcorrencia" class="coordenacao-details">
-                                Selecione uma ocorrencia para visualizar os detalhes.
+                                Selecione um registro para visualizar os detalhes.
                             </div>
                         </article>
                     </section>
@@ -176,9 +177,8 @@
                         <div class="coordenacao-section-header coordenacao-editor-header">
                             <div>
                                 <p class="coordenacao-panel-tag">Cadastro e impressao</p>
-                                <h2 id="tituloFormOcorrencia">Nova ocorrencia</h2>
-                                <p>Preencha a ocorrencia sem sair da consulta principal. O preview ao lado acompanha o
-                                    documento que sera gerado para impressao.</p>
+                                <h2 id="tituloFormOcorrencia">Novo registro</h2>
+                                <p>Escolha o tipo de registro e preencha o documento sem sair da consulta principal. O preview ao lado acompanha a impressao em tempo real.</p>
                             </div>
                             <button id="btnFecharPainelOcorrencia" type="button">Fechar formulario</button>
                         </div>
@@ -186,39 +186,54 @@
                         <div class="coordenacao-ocorrencia-workspace">
                             <div class="coordenacao-ocorrencia-form-panel">
                                 <form id="formOcorrencia" class="coordenacao-form coordenacao-form-grid">
-                                    <label class="coordenacao-field coordenacao-field-wide"
-                                        for="ocorrenciaBuscaEstudante">
-                                        <span>Estudante</span>
-                                        <div class="coordenacao-autocomplete-shell">
-                                            <input id="ocorrenciaBuscaEstudante" type="text" autocomplete="off"
-                                                placeholder="Buscar estudante cadastrado ou digitar nome" required>
-                                            <div id="listaEstudantesBusca" class="coordenacao-autocomplete-list" hidden>
-                                            </div>
-                                        </div>
+                                    <label class="coordenacao-field" for="ocorrenciaTipoRegistro">
+                                        <span>Tipo de registro</span>
+                                        <select id="ocorrenciaTipoRegistro" required></select>
                                     </label>
+
+                                    <div id="ocorrenciaFieldEstudante" class="coordenacao-field coordenacao-field-wide">
+                                        <label class="coordenacao-field" for="ocorrenciaBuscaEstudante">
+                                            <span>Estudante</span>
+                                            <div class="coordenacao-autocomplete-shell">
+                                                <input id="ocorrenciaBuscaEstudante" type="text" autocomplete="off"
+                                                    placeholder="Buscar estudante cadastrado ou digitar nome">
+                                                <div id="listaEstudantesBusca" class="coordenacao-autocomplete-list" hidden>
+                                                </div>
+                                            </div>
+                                        </label>
+                                    </div>
                                     <input id="ocorrenciaEstudanteId" type="hidden">
 
-                                    <label class="coordenacao-field" for="ocorrenciaTurmaId">
-                                        <span>Turma</span>
-                                        <select id="ocorrenciaTurmaId" required></select>
-                                    </label>
-
-                                    <label class="coordenacao-field" for="ocorrenciaBuscaProfessor">
-                                        <span>Professor requerente</span>
-                                        <div class="coordenacao-autocomplete-shell">
-                                            <input id="ocorrenciaBuscaProfessor" type="text" autocomplete="off"
-                                                placeholder="Buscar professor cadastrado ou digitar nome" required>
-                                            <div id="listaProfessoresBusca" class="coordenacao-autocomplete-list"
-                                                hidden></div>
-                                        </div>
-                                    </label>
+                                    <div id="ocorrenciaFieldProfessor" class="coordenacao-field coordenacao-field-wide">
+                                        <label class="coordenacao-field" for="ocorrenciaBuscaProfessor">
+                                            <span id="ocorrenciaProfessorLabel">Professor requerente</span>
+                                            <div class="coordenacao-autocomplete-shell">
+                                                <input id="ocorrenciaBuscaProfessor" type="text" autocomplete="off"
+                                                    placeholder="Buscar professor cadastrado ou digitar nome">
+                                                <div id="listaProfessoresBusca" class="coordenacao-autocomplete-list"
+                                                    hidden></div>
+                                            </div>
+                                        </label>
+                                    </div>
                                     <input id="ocorrenciaProfessorRequerenteId" type="hidden">
 
+                                    <label id="ocorrenciaFieldGeral" class="coordenacao-field coordenacao-field-wide"
+                                        for="ocorrenciaTituloGeral" hidden>
+                                        <span>Titulo ou referencia</span>
+                                        <input id="ocorrenciaTituloGeral" type="text"
+                                            placeholder="Ex: Orientacoes gerais para o 2o bimestre" maxlength="255">
+                                    </label>
+
+                                    <label id="ocorrenciaFieldTurma" class="coordenacao-field" for="ocorrenciaTurmaId">
+                                        <span>Turma</span>
+                                        <select id="ocorrenciaTurmaId"></select>
+                                    </label>
+
                                     <label class="coordenacao-field" for="ocorrenciaDisciplina">
-                                        <span>Disciplina</span>
+                                        <span id="ocorrenciaDisciplinaLabel">Disciplina</span>
                                         <div class="coordenacao-autocomplete-shell">
                                             <input id="ocorrenciaDisciplina" type="text" autocomplete="off"
-                                                placeholder="Buscar disciplina cadastrada ou digitar nome" required>
+                                                placeholder="Buscar disciplina cadastrada ou digitar nome">
                                             <div id="listaDisciplinasBusca" class="coordenacao-autocomplete-list"
                                                 hidden></div>
                                         </div>
@@ -229,9 +244,9 @@
                                         <input id="ocorrenciaData" type="date" required>
                                     </label>
 
-                                    <label class="coordenacao-field" for="ocorrenciaAula">
+                                    <label id="ocorrenciaFieldAula" class="coordenacao-field" for="ocorrenciaAula">
                                         <span>Aula</span>
-                                        <select id="ocorrenciaAula" required></select>
+                                        <select id="ocorrenciaAula"></select>
                                     </label>
 
                                     <label class="coordenacao-field" for="ocorrenciaHorario">
@@ -285,9 +300,9 @@
                                                     anexa-los na ocorrencia.</p>
                                             </div>
                                         </div>
-                                        <p class="coordenacao-field-hint">
+                                        <p id="ocorrenciaRegimentoHint" class="coordenacao-field-hint">
                                             Pesquise, clique para anexar e repita o processo para vincular mais de uma
-                                            base legal ao documento. Ao menos uma base legal e obrigatoria.
+                                            base legal ao documento. Nos registros de estudante, ao menos uma base legal e obrigatoria.
                                         </p>
                                     </div>
 
@@ -298,14 +313,14 @@
                                             Selecione a base legal para identificar a gravidade automatica.
                                         </small>
                                     </label>
-                                        <br>
+
                                     <label class="coordenacao-field" for="ocorrenciaStatus">
                                         <span>Status</span>
                                         <select id="ocorrenciaStatus" required></select>
                                     </label>
 
                                     <div class="coordenacao-inline coordenacao-form-actions coordenacao-field-wide">
-                                        <button class="btn-destaque" type="submit">Salvar ocorrencia</button>
+                                        <button class="btn-destaque" type="submit">Salvar registro</button>
                                         <button id="btnCancelarEdicaoOcorrencia" type="button"
                                             style="display: none;">Cancelar edicao</button>
                                     </div>
@@ -342,20 +357,22 @@
                                             </header>
 
                                             <section class="coordenacao-preview-meta">
-                                                <p class="coordenacao-preview-line"><strong>Estudante(s):</strong> <span
+                                                <p id="previewReferenciaLinha" class="coordenacao-preview-line"><strong
+                                                        id="previewReferenciaLabel">Estudante(s):</strong> <span
                                                         id="previewNomeEstudante">Não informado</span></p>
                                                 <div class="coordenacao-preview-grid">
-                                                    <p class="coordenacao-preview-line"><strong>Turma:</strong> <span
+                                                    <p id="previewTurmaLinha" class="coordenacao-preview-line"><strong
+                                                            id="previewTurmaLabel">Turma:</strong> <span
                                                             id="previewTurma">Não informada</span></p>
-                                                    <p class="coordenacao-preview-line"><strong>Professor
-                                                            requerente:</strong> <span id="previewProfessor">Não 
-                                                            informado</span></p>
-                                                    <p class="coordenacao-preview-line"><strong>Disciplina ou
+                                                    <p id="previewProfessorLinha" class="coordenacao-preview-line"><strong
+                                                            id="previewProfessorLabel">Professor requerente:</strong>
+                                                        <span id="previewProfessor">Não informado</span></p>
+                                                    <p class="coordenacao-preview-line"><strong id="previewDisciplinaLabel">Disciplina ou
                                                             função:</strong> <span id="previewDisciplina">Não
                                                             informada</span></p>
                                                     <p class="coordenacao-preview-line"><strong>Data:</strong> <span
                                                             id="previewData">Não informada</span></p>
-                                                    <p class="coordenacao-preview-line"><strong>Aula:</strong> <span
+                                                    <p id="previewAulaLinha" class="coordenacao-preview-line"><strong>Aula:</strong> <span
                                                             id="previewAula">Não informada</span></p>
                                                     <p class="coordenacao-preview-line"><strong>Horário:</strong> <span
                                                             id="previewHorario">Não informado</span></p>
@@ -390,9 +407,7 @@
                                             </section>
 
                                             <footer class="coordenacao-preview-footer">
-                                                <div class="coordenacao-preview-signature-line"></div>
-                                                <p>E.E. Padre Jose Daniel</p>
-                                                <p>Coordenacao Pedagogica</p>
+                                                <div id="previewAssinaturas" class="coordenacao-preview-signatures"></div>
                                                 <small id="previewEmitidoEm">Emitido automaticamente no momento do
                                                     registro.</small>
                                             </footer>
@@ -420,8 +435,12 @@
 
                         <form id="formRelatorioOcorrencias" class="coordenacao-filter-grid">
                             <label class="coordenacao-field" for="relatorioNomeEstudante">
-                                <span>Estudante</span>
-                                <input id="relatorioNomeEstudante" type="text" placeholder="Nome do estudante">
+                                <span>Referencia</span>
+                                <input id="relatorioNomeEstudante" type="text" placeholder="Estudante, professor ou titulo">
+                            </label>
+                            <label class="coordenacao-field" for="relatorioTipoRegistro">
+                                <span>Tipo</span>
+                                <select id="relatorioTipoRegistro"></select>
                             </label>
                             <label class="coordenacao-field" for="relatorioTurmaId">
                                 <span>Turma</span>
@@ -520,9 +539,9 @@
                                 <thead>
                                     <tr>
                                         <th>Data</th>
-                                        <th>Estudante</th>
-                                        <th>Turma</th>
-                                        <th>Professor requerente</th>
+                                        <th>Tipo</th>
+                                        <th>Referencia</th>
+                                        <th>Contexto</th>
                                         <th>Ação aplicada</th>
                                         <th>Status</th>
                                     </tr>

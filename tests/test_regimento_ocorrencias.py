@@ -46,6 +46,7 @@ class RegimentoOcorrenciasTest(unittest.TestCase):
             )
 
             ocorrencia_id = database.criar_ocorrencia(
+                tipo_registro="estudante",
                 nome_estudante="Estudante Teste",
                 estudante_id=None,
                 turma_id=turma_id,
@@ -109,6 +110,7 @@ class RegimentoOcorrenciasTest(unittest.TestCase):
                 artigo_descricao="Zelar pelo patrimonio e materiais da unidade escolar.",
             )
             ocorrencia_id = database.criar_ocorrencia(
+                tipo_registro="estudante",
                 nome_estudante="Outro Estudante",
                 estudante_id=None,
                 turma_id=turma_id,
@@ -142,6 +144,7 @@ class RegimentoOcorrenciasTest(unittest.TestCase):
                 artigo_descricao="Registro protegido por vinculo de ocorrencia.",
             )
             ocorrencia_id = database.criar_ocorrencia(
+                tipo_registro="estudante",
                 nome_estudante="Estudante Protegido",
                 estudante_id=None,
                 turma_id=turma_id,
@@ -207,6 +210,7 @@ class RegimentoOcorrenciasTest(unittest.TestCase):
                 inciso_descricao="Descricao do inciso migrado.",
             )
             ocorrencia_id = database.criar_ocorrencia(
+                tipo_registro="estudante",
                 nome_estudante="Estudante Migracao",
                 estudante_id=None,
                 turma_id=turma_id,

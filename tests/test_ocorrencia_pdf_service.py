@@ -41,6 +41,32 @@ class OcorrenciaPdfServiceTest(unittest.TestCase):
             "SUSPENSAO ORIENTADA DAS AULAS (ATE 2 DIAS LETIVOS)",
         )
 
+    def test_obtem_titulo_padrao_para_registro_individual_de_professor(self):
+        ocorrencia = _ocorrencia_base("Descricao qualquer.")
+        ocorrencia["tipo_registro"] = "professor"
+        ocorrencia["acao_aplicada"] = ""
+        self.assertEqual(
+            _obter_titulo_documento(ocorrencia),
+            "REGISTRO INDIVIDUAL DE PROFESSOR",
+        )
+
+    def test_gravidade_fica_nula_para_registro_de_professor(self):
+        ocorrencia = _ocorrencia_base("Descricao qualquer.")
+        ocorrencia["tipo_registro"] = "professor"
+        ocorrencia["acao_aplicada"] = "orientacao_professor"
+        ocorrencia["regimento_itens"] = [
+            {
+                "regimento_item_id": 1,
+                "artigo_numero": "77",
+                "inciso_numero": "XII",
+                "artigo": "Regimento Escolar - Art. 77, inciso XII",
+                "descricao": "Descricao qualquer.",
+                "ordem": 1,
+                "tipo": "inciso",
+            }
+        ]
+        self.assertIsNone(_obter_gravidade_ocorrencia(ocorrencia))
+
     def test_obtem_runs_de_descricao_formatada_para_pdf(self):
         runs = _obter_runs_descricao_formatada(
             "<p><strong>Aluno</strong> <em>orientado</em> "
