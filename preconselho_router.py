@@ -17,7 +17,7 @@ from db.docencia import (
     listar_turmas_disciplinas_admin,
 )
 from db.ocorrencias import buscar_estudante_por_id, listar_estudantes
-from db.preconselho import (
+from repositories.preconselho_repository import (
     atualizar_motivo_pre_conselho_dados,
     atualizar_periodo_pre_conselho_dados,
     atualizar_status_motivo_pre_conselho,
@@ -41,7 +41,7 @@ from db.usuarios import (
     listar_cargas_professores_por_usuario_ids,
     listar_professores_agendamento,
 )
-from models import (
+from schemas.preconselho_schemas import (
     PreConselhoConsolidadoOut,
     PreConselhoContextoOut,
     PreConselhoDisciplinaOut,
