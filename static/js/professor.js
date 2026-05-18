@@ -925,7 +925,7 @@ function calcularConsumo() {
         return 0;
     }
 
-    el("consumo").innerText = `Consumo estimado: ${resumo.consumo} folha(s) | ${resumo.paginasImpressas} pagina(s) na impressao`;
+    el("consumo").innerText = `Consumo estimado: ${resumo.consumo} folhas | ${resumo.paginasImpressas} páginas na impressão`;
     return resumo.consumo;
 }
 
@@ -957,24 +957,36 @@ function abrirModalAlertaConsumo({ consumo, paginasPorFolha, orientacao, copias,
 
     if (!modal || !painel || !texto || !sugestao) {
         return Promise.resolve(window.confirm(
-            `Esta impressao deve gerar ${paginasImpressas} pagina(s) e consumir cerca de ${consumo} folha(s). Deseja imprimir mesmo assim?`
+            `Essa impressão deve gerar ${paginasImpressas} páginas e consumir cerca de ${consumo} folhas. Deseja imprimir mesmo assim?`
         ));
     }
 
     const ajustes = [];
     if (paginasPorFolha < 2) {
-        ajustes.push("alterar para 2 paginas por folha");
+        ajustes.push("alterar para 2 páginas por folha");
     }
     if (orientacao !== "paisagem") {
-        ajustes.push("mudar a orientacao para paisagem");
+        ajustes.push("mudar a orientação para paisagem");
     }
 
-    texto.innerText = copias > 1
-        ? `Esta impressao vai gerar ${paginasImpressas} pagina(s) ao todo (${paginasSelecionadas} pagina(s) por copia em ${copias} copia(s)) e consumir cerca de ${consumo} folha(s).`
-        : `Esta impressao vai gerar ${paginasImpressas} pagina(s) e consumir cerca de ${consumo} folha(s).`;
+    const facesPorCopiaComDuasPorFolha = Math.ceil(paginasSelecionadas / 2);
+    const folhasPorCopiaComDuasPorFolha = el("duplex").checked
+        ? Math.ceil(facesPorCopiaComDuasPorFolha / 2)
+        : facesPorCopiaComDuasPorFolha;
+    const consumoComDuasPorFolha = folhasPorCopiaComDuasPorFolha * copias;
+    const economiaComDuasPorFolha = Math.max(consumo - consumoComDuasPorFolha, 0);
+
+    if (paginasPorFolha < 2 && economiaComDuasPorFolha > 0) {
+        texto.innerText = `Essa impressão vai gastar ao todo ${consumo} páginas. Você pode economizar ${economiaComDuasPorFolha} páginas se mudar para 2 páginas por folha.`;
+    } else {
+        texto.innerText = copias > 1
+            ? `Essa impressão vai gastar ${consumo} páginas ao todo (${paginasSelecionadas} páginas por copia em ${copias} copia(s)).`
+            : `Essa impressão vai gastar ${consumo} páginas.`;
+    }
+
     sugestao.innerText = ajustes.length > 0
-        ? `Sugestao: ${ajustes.join(" e ")} antes de enviar para economizar papel.`
-        : "Esta configuracao ja esta otimizada, mas o consumo continua alto. Revise o intervalo e a quantidade de copias se desejar.";
+        ? `Sugestão: ${ajustes.join(" e ")} antes de enviar para economizar papel.`
+        : "Esta configuracao já está otimizada, mas o consumo continua alto. Revise o intervalo e a quantidade de cópias se desejar.";
 
     modal.hidden = false;
     document.body.classList.add("print-alert-modal-open");
@@ -1070,6 +1082,7 @@ function atualizarEstadoEnvio(ativo, mensagem = "") {
 }
 
 async function enviarImpressao(confirmadoAlertaConsumo = false) {
+    const envioConfirmado = confirmadoAlertaConsumo === true;
     if (envioEmAndamento) {
         return;
     }
@@ -1120,7 +1133,7 @@ async function enviarImpressao(confirmadoAlertaConsumo = false) {
     }
 
     const resumoImpressao = calcularResumoImpressao();
-    if (!confirmadoAlertaConsumo && resumoImpressao && resumoImpressao.paginasImpressas > LIMITE_ALERTA_IMPRESSAO_PAGINAS) {
+    if (!envioConfirmado && resumoImpressao && resumoImpressao.paginasImpressas > LIMITE_ALERTA_IMPRESSAO_PAGINAS) {
         const confirmar = await abrirModalAlertaConsumo({
             consumo: resumoImpressao.consumo,
             paginasPorFolha,
@@ -2093,7 +2106,9 @@ function registrarEventos() {
     el("btnVoltarAjustarAlertaConsumoImpressao")?.addEventListener("click", () => {
         fecharModalAlertaConsumo(false);
     });
-    el("btnEnviar").addEventListener("click", enviarImpressao);
+    el("btnEnviar").addEventListener("click", () => {
+        enviarImpressao(false);
+    });
     el("btnAnterior").addEventListener("click", folhaAnterior);
     el("btnProxima").addEventListener("click", proximaFolha);
     window.addEventListener("resize", reagendarRenderAposResize);
