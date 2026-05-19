@@ -396,11 +396,9 @@ def _resolver_estudantes_vinculados(
     estudantes_vinculados: list[OcorrenciaEstudanteVinculadoIn] | list[dict] | None,
     nome_estudante: str | None,
     estudante_id: int | None,
-    turma_id: int,
+    turma_id: int | None,
 ) -> list[dict]:
-    turma_id_valor = _validar_turma_id(turma_id)
-    turma = buscar_turma_por_id(turma_id_valor)
-    turma_nome = str((turma or {}).get("nome") or "").strip()
+    turma_id_padrao = _validar_turma_id(turma_id) if turma_id not in (None, "") else None
 
     candidatos = []
     for item in estudantes_vinculados or []:
@@ -428,17 +426,13 @@ def _resolver_estudantes_vinculados(
             {
                 "estudante_id": estudante_id,
                 "nome": nome_estudante,
-                "turma_id": turma_id_valor,
+                "turma_id": turma_id_padrao,
             }
         )
 
     itens_resolvidos = []
     vistos = set()
     for item in candidatos:
-        turma_item = item.get("turma_id")
-        if turma_item not in (None, "") and int(turma_item) != turma_id_valor:
-            raise HTTPException(400, "Todos os estudantes do registro devem pertencer a mesma turma.")
-
         estudante_id_valor = _validar_estudante_id(item.get("estudante_id"))
         if estudante_id_valor is not None:
             estudante = buscar_estudante_por_id(estudante_id_valor)
@@ -446,14 +440,25 @@ def _resolver_estudantes_vinculados(
                 raise HTTPException(400, "Estudante selecionado nao encontrado.")
             if int(estudante.get("ativo") or 0) != 1:
                 raise HTTPException(400, "Estudante selecionado esta inativo.")
-            if int(estudante.get("turma_id") or 0) != turma_id_valor:
-                raise HTTPException(
-                    400,
-                    "Todos os estudantes do registro devem pertencer a turma selecionada.",
-                )
             nome_resolvido = str(estudante.get("nome") or "").strip()
+            turma_resolvida_id = int(estudante.get("turma_id") or 0)
+            if turma_resolvida_id <= 0:
+                raise HTTPException(400, "Turma do estudante nao identificada.")
+            turma_item = item.get("turma_id")
+            if turma_item not in (None, "") and int(turma_item) != turma_resolvida_id:
+                raise HTTPException(400, "Turma do estudante divergente dos dados cadastrados.")
         else:
             nome_resolvido = _texto_obrigatorio(item.get("nome"), "Nome do estudante", max_len=255)
+            turma_resolvida_id = (
+                _validar_turma_id(item.get("turma_id"))
+                if item.get("turma_id") not in (None, "")
+                else turma_id_padrao
+            )
+            if turma_resolvida_id is None:
+                raise HTTPException(400, "Turma do estudante nao identificada.")
+
+        turma = buscar_turma_por_id(turma_resolvida_id)
+        turma_nome = str((turma or {}).get("nome") or "").strip()
 
         chave = f"id:{estudante_id_valor}" if estudante_id_valor else f"nome:{nome_resolvido.casefold()}"
         if chave in vistos:
@@ -463,7 +468,7 @@ def _resolver_estudantes_vinculados(
             {
                 "estudante_id": estudante_id_valor,
                 "nome": nome_resolvido,
-                "turma_id": turma_id_valor,
+                "turma_id": turma_resolvida_id,
                 "turma_nome": turma_nome,
             }
         )
@@ -556,13 +561,18 @@ def _resolver_contexto_registro(
     professores_vinculados: list[OcorrenciaProfessorVinculadoIn] | list[dict] | None,
 ) -> dict:
     if tipo_registro == TIPO_REGISTRO_ESTUDANTE:
-        turma_id_valor = _validar_turma_id(turma_id)
         estudantes_resolvidos = _resolver_estudantes_vinculados(
             estudantes_vinculados=estudantes_vinculados,
             nome_estudante=nome_estudante,
             estudante_id=estudante_id,
-            turma_id=turma_id_valor,
+            turma_id=turma_id,
         )
+        turmas_vinculadas = {
+            int(item["turma_id"])
+            for item in estudantes_resolvidos
+            if item.get("turma_id") is not None and int(item["turma_id"]) > 0
+        }
+        turma_id_valor = next(iter(turmas_vinculadas)) if len(turmas_vinculadas) == 1 else None
         professor_nome, professor_id_valor = _resolver_dados_professor(
             professor_requerente=professor_requerente,
             professor_requerente_id=professor_requerente_id,
@@ -885,18 +895,12 @@ def buscar_professores_ocorrencia_api(
 @router.get("/ocorrencias/busca/estudantes")
 def buscar_estudantes_ocorrencia_api(
     q: str = Query(default=""),
-    turma_id: int | None = Query(default=None),
     limite: int = Query(default=20),
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    turma_id_filtro = None
-    if turma_id is not None:
-        turma_id_filtro = _validar_turma_id(turma_id)
-
     estudantes = buscar_estudantes_ocorrencia(
         termo=q,
-        turma_id=turma_id_filtro,
         limite=limite,
     )
     return [
@@ -942,7 +946,7 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
     turma_id = contexto["turma_id"]
     faixa_aula = (
         _validar_faixa_aula_por_turma(payload.aula, turma_id)
-        if _registro_exige_aula(tipo_registro)
+        if _registro_exige_aula(tipo_registro) and turma_id
         else ""
     )
     disciplina = (
@@ -1160,14 +1164,23 @@ def atualizar_ocorrencia_parcial_api(
             "Data da ocorrencia",
         )
     if "aula" in dados_brutos and _registro_exige_aula(tipo_registro_merge):
-        turma_id_para_aula = int(dados_validados.get("turma_id", atual["turma_id"]))
-        dados_validados["aula"] = _validar_faixa_aula_por_turma(dados_brutos["aula"], turma_id_para_aula)
+        turma_id_para_aula = dados_validados.get("turma_id", atual.get("turma_id"))
+        if turma_id_para_aula:
+            dados_validados["aula"] = _validar_faixa_aula_por_turma(
+                dados_brutos["aula"],
+                int(turma_id_para_aula),
+            )
+        else:
+            dados_validados["aula"] = ""
     elif "turma_id" in dados_validados and _registro_exige_aula(tipo_registro_merge):
         # Ao trocar turma, garante que a aula atual também pertença à faixa válida do novo turno.
-        dados_validados["aula"] = _validar_faixa_aula_por_turma(
-            atual.get("aula"),
-            int(dados_validados["turma_id"]),
-        )
+        if dados_validados.get("turma_id"):
+            dados_validados["aula"] = _validar_faixa_aula_por_turma(
+                atual.get("aula"),
+                int(dados_validados["turma_id"]),
+            )
+        else:
+            dados_validados["aula"] = ""
     elif "tipo_registro" in dados_brutos and not _registro_exige_aula(tipo_registro_merge):
         dados_validados["aula"] = ""
     if "horario_ocorrencia" in dados_brutos:

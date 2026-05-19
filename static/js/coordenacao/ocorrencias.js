@@ -295,22 +295,11 @@ function obterContextoTurmaEstudantesFormulario() {
 
 function sincronizarTurmaOcorrenciaComEstudantes({ manterAulaAtual = true, faixaSelecionada = null } = {}) {
     const contexto = obterContextoTurmaEstudantesFormulario();
-    const resumo = el("ocorrenciaTurmaResumo");
     const selectTurma = el("ocorrenciaTurmaId");
     const selectAula = el("ocorrenciaAula");
     const faixaAtual = faixaSelecionada !== null
         ? faixaSelecionada
         : (manterAulaAtual ? Number(selectAula?.value || 0) || null : null);
-
-    if (resumo) {
-        if (contexto.possui_multiplas_turmas) {
-            resumo.innerText = "Ha estudantes de turmas diferentes neste registro.";
-        } else if (contexto.turma_id) {
-            resumo.innerText = contexto.turma_nome || `Turma ID ${contexto.turma_id}`;
-        } else {
-            resumo.innerText = "Selecione um estudante para identificar a turma.";
-        }
-    }
 
     if (selectTurma) {
         selectTurma.value = contexto.turma_id ? String(contexto.turma_id) : "";
@@ -376,7 +365,6 @@ function atualizarModoFormularioRegistro({ limparCamposOcultos = false } = {}) {
     definirVisibilidadeCampoRegistro("ocorrenciaFieldEstudante", ehEstudante);
     definirVisibilidadeCampoRegistro("ocorrenciaFieldProfessor", ehEstudante || ehProfessor);
     definirVisibilidadeCampoRegistro("ocorrenciaFieldGeral", ehGeral);
-    definirVisibilidadeCampoRegistro("ocorrenciaFieldTurma", ehEstudante);
     definirVisibilidadeCampoRegistro("ocorrenciaFieldAula", ehEstudante);
     definirVisibilidadeCampoRegistro("ocorrenciaFieldRegimento", ehEstudante);
     definirVisibilidadeCampoRegistro("ocorrenciaProfessoresSelecionados", ehProfessor);
@@ -1165,7 +1153,9 @@ function obterTurmaPreviewFormulario() {
     }
     const contexto = obterContextoTurmaEstudantesFormulario();
     if (contexto.possui_multiplas_turmas) {
-        return "Multiplas turmas";
+        return contexto.turmas
+            .map((item) => item.turma_nome || `ID ${item.turma_id}`)
+            .join(", ");
     }
     if (contexto.turma_nome) return contexto.turma_nome;
     const turma = obterTurmaOpcaoPorId(contexto.turma_id);
@@ -1463,14 +1453,17 @@ function atualizarPreviewOcorrencia() {
 function atualizarSelectAulasPorTurma(turmaId, faixaSelecionada = null) {
     const select = el("ocorrenciaAula");
     const turma = obterTurmaOpcaoPorId(turmaId);
+    const contextoTurma = obterContextoTurmaEstudantesFormulario();
 
     select.innerHTML = "";
     if (!turma || !turma.turno_valido || Number(turma.aulas || 0) <= 0) {
         const option = document.createElement("option");
         option.value = "";
-        option.innerText = turmaId
-            ? "Configure o turno da turma no painel admin"
-            : "Selecione um estudante para carregar as aulas";
+        option.innerText = contextoTurma.possui_multiplas_turmas
+            ? "Aula unica indisponivel para ocorrencia com turmas diferentes"
+            : (turmaId
+                ? "Configure o turno da turma no painel admin"
+                : "Selecione um estudante para carregar as aulas");
         option.disabled = true;
         option.selected = true;
         select.appendChild(option);
@@ -1774,7 +1767,7 @@ function renderDetalhesOcorrencia(ocorrencia) {
     ];
 
     if (tipoRegistro === "estudante") {
-        campos.splice(3, 0, ["Turma", ocorrencia.turma_nome || `ID ${ocorrencia.turma_id}`]);
+        campos.splice(3, 0, ["Turma", obterContextoRegistro(ocorrencia)]);
         campos.splice(7, 0, ["Aula", formatarAulaOcorrencia(ocorrencia)]);
         campos.splice(2, 0, ["Estudantes vinculados", resumoNomesVinculados(estudantesVinculados)]);
         campos[4] = ["Professor requerente", ocorrencia.professor_requerente];

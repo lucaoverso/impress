@@ -9028,11 +9028,11 @@ def criar_ocorrencia(
                 if item.get("turma_id") is not None and int(item["turma_id"]) > 0
             }
         )
-        if turma_id_valor is None and len(turma_ids_vinculados) == 1:
+        if len(turma_ids_vinculados) == 1:
             turma_id_valor = turma_ids_vinculados[0]
-        if len(turma_ids_vinculados) > 1:
-            raise ValueError("Selecione estudantes da mesma turma para registrar a ocorrencia.")
-        if turma_id_valor is None or turma_id_valor <= 0:
+        elif len(turma_ids_vinculados) > 1:
+            turma_id_valor = None
+        if not turma_ids_vinculados and (turma_id_valor is None or turma_id_valor <= 0):
             raise ValueError("Turma invalida.")
         if not professor_requerente_limpo:
             raise ValueError("Professor requerente e obrigatorio.")
@@ -9066,7 +9066,11 @@ def criar_ocorrencia(
 
     if not data_ocorrencia_limpa:
         raise ValueError("Data da ocorrencia e obrigatoria.")
-    if tipo_registro_limpo == TIPO_REGISTRO_OCORRENCIA_ESTUDANTE and not aula_limpa:
+    if (
+        tipo_registro_limpo == TIPO_REGISTRO_OCORRENCIA_ESTUDANTE
+        and turma_id_valor is not None
+        and not aula_limpa
+    ):
         raise ValueError("Aula e obrigatoria.")
     if not horario_ocorrencia_limpo:
         raise ValueError("Horario da ocorrencia e obrigatorio.")

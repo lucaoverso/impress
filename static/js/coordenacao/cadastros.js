@@ -299,15 +299,6 @@ async function salvarOcorrencia(event) {
     if (idsRegimentoSelecionados.length === 0) {
         return;
     }
-    if (obterTipoRegistroFormulario() === "estudante") {
-        const contextoTurma = obterContextoTurmaEstudantesFormulario();
-        if (contextoTurma.possui_multiplas_turmas) {
-            setMensagemOcorrencias("Selecione estudantes da mesma turma para salvar a ocorrencia.", true);
-            el("ocorrenciaBuscaEstudante")?.focus();
-            return;
-        }
-    }
-
     const payload = montarPayloadOcorrencia();
     payload.regimento_item_ids = idsRegimentoSelecionados;
     if (!payload.descricao) {

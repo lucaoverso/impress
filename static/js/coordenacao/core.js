@@ -286,6 +286,18 @@ function obterContextoRegistro(ocorrencia) {
         return totalProfessores > 1 ? `${totalProfessores} professores vinculados` : "Professor individual";
     }
     if (tipo === "geral") return "Orientacao geral";
+    const estudantes = normalizarEstudantesVinculados(ocorrencia?.estudantes_vinculados);
+    const turmasVinculadas = Array.from(new Set(
+        estudantes
+            .map((item) => String(item?.turma_nome || "").trim() || (item?.turma_id ? `ID ${item.turma_id}` : ""))
+            .filter(Boolean)
+    ));
+    if (turmasVinculadas.length > 1) {
+        return `${turmasVinculadas.length} turmas vinculadas`;
+    }
+    if (turmasVinculadas.length === 1) {
+        return turmasVinculadas[0];
+    }
     const turmaNome = String(ocorrencia?.turma_nome || "").trim();
     if (turmaNome) return turmaNome;
     const turmaId = Number(ocorrencia?.turma_id || 0);
