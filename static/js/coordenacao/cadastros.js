@@ -25,23 +25,18 @@ function aplicarSelecaoEstudantePorTexto() {
     }
 
     const item = obterItemSugestaoPorTexto(mapaBuscaEstudantes, texto);
-    const turma = obterTurmaOpcaoPorId(el("ocorrenciaTurmaId").value);
     if (item) {
         adicionarEstudanteVinculado({
             estudante_id: Number(item.id || 0) || null,
             nome: String(item.nome || item.label || texto).trim(),
             turma_id: Number(item.turma_id || 0) || null,
-            turma_nome: String(item.turma_nome || turma?.nome || "").trim()
+            turma_nome: String(item.turma_nome || "").trim()
         });
-        el("ocorrenciaTurmaId").value = String(item.turma_id);
-        atualizarSelectAulasPorTurma(item.turma_id);
     } else {
-        adicionarEstudanteVinculado({
-            estudante_id: null,
-            nome: texto,
-            turma_id: Number(el("ocorrenciaTurmaId").value || 0) || null,
-            turma_nome: String(turma?.nome || "").trim()
-        });
+        setMensagemOcorrencias("Selecione um estudante cadastrado na lista para carregar a turma automaticamente.", true);
+        atualizarSugestoesEstudantesBusca(true).catch((err) => setMensagemOcorrencias(err.message, true));
+        input.focus();
+        return;
     }
     input.value = "";
     hidden.value = "";
@@ -105,10 +100,6 @@ function selecionarSugestaoEstudante(item) {
     });
     el("ocorrenciaBuscaEstudante").value = "";
     el("ocorrenciaEstudanteId").value = "";
-    if (item.turma_id) {
-        el("ocorrenciaTurmaId").value = String(item.turma_id);
-        atualizarSelectAulasPorTurma(item.turma_id);
-    }
     atualizarPreviewOcorrencia();
 }
 
@@ -156,7 +147,6 @@ async function atualizarSugestoesEstudantesBusca(forcar = false) {
     }
     const input = el("ocorrenciaBuscaEstudante");
     const termo = input.value.trim();
-    const turmaId = el("ocorrenciaTurmaId").value;
     if (!forcar && termo.length < 1) {
         ocultarSugestoes("listaEstudantesBusca");
         return;
@@ -164,7 +154,6 @@ async function atualizarSugestoesEstudantesBusca(forcar = false) {
 
     const params = new URLSearchParams();
     params.set("q", termo);
-    if (turmaId) params.set("turma_id", turmaId);
     params.set("limite", "20");
     const idsSelecionados = new Set(
         obterEstudantesVinculadosFormulario()
@@ -271,7 +260,9 @@ function montarPayloadOcorrencia() {
             ? Number(primeiroEstudante.estudante_id)
             : null,
         estudantes_vinculados: tipoRegistro === "estudante" ? estudantesVinculados : [],
-        turma_id: tipoRegistro === "estudante" ? Number(el("ocorrenciaTurmaId").value) : null,
+        turma_id: tipoRegistro === "estudante"
+            ? (obterContextoTurmaEstudantesFormulario().turma_id || null)
+            : null,
         professor_requerente: tipoRegistro === "geral"
             ? null
             : (
@@ -307,6 +298,14 @@ async function salvarOcorrencia(event) {
     const idsRegimentoSelecionados = validarBaseLegalSelecionadaAntesSalvar();
     if (idsRegimentoSelecionados.length === 0) {
         return;
+    }
+    if (obterTipoRegistroFormulario() === "estudante") {
+        const contextoTurma = obterContextoTurmaEstudantesFormulario();
+        if (contextoTurma.possui_multiplas_turmas) {
+            setMensagemOcorrencias("Selecione estudantes da mesma turma para salvar a ocorrencia.", true);
+            el("ocorrenciaBuscaEstudante")?.focus();
+            return;
+        }
     }
 
     const payload = montarPayloadOcorrencia();

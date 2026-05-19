@@ -92,10 +92,8 @@ from models import (
 from services.csv_import_service import importar_base_legal_arquivo, importar_estudantes_arquivo
 from services.ocorrencia_disciplina_service import (
     acao_permitida_para_tipo_registro,
-    acao_compativel_com_gravidade,
     inferir_gravidade_ocorrencia,
     listar_acoes_aplicadas,
-    rotulo_gravidade_ocorrencia,
 )
 from services.ocorrencia_pdf_service import gerar_pdf_ocorrencia_registro
 from routers.common import normalizar_cargo_usuario, usuario_tem_acesso_coordenacao
@@ -253,16 +251,7 @@ def _resumir_nomes_vinculados(itens: list[dict], *, campo_nome: str = "nome") ->
 def _validar_acao_compativel_com_base_legal(
     acao_aplicada: str, itens_regimento: list[dict]
 ) -> str | None:
-    gravidade = inferir_gravidade_ocorrencia(itens_regimento)
-    if gravidade and not acao_compativel_com_gravidade(acao_aplicada, gravidade):
-        raise HTTPException(
-            400,
-            (
-                "A acao aplicada nao e compativel com a gravidade automatica da ocorrencia "
-                f"({rotulo_gravidade_ocorrencia(gravidade)})."
-            ),
-        )
-    return gravidade
+    return inferir_gravidade_ocorrencia(itens_regimento)
 
 
 def _validar_turma_id(turma_id: int) -> int:

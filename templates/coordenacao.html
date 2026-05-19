@@ -235,10 +235,14 @@
                                             placeholder="Ex: Orientacoes gerais para o 2o bimestre" maxlength="255">
                                     </label>
 
-                                    <label id="ocorrenciaFieldTurma" class="coordenacao-field" for="ocorrenciaTurmaId">
-                                        <span>Turma</span>
-                                        <select id="ocorrenciaTurmaId"></select>
-                                    </label>
+                                    <div id="ocorrenciaFieldTurma" class="coordenacao-field">
+                                        <span>Turma vinculada</span>
+                                        <strong id="ocorrenciaTurmaResumo">Selecione um estudante para identificar a turma.</strong>
+                                        <p class="coordenacao-field-hint">
+                                            A turma e preenchida automaticamente a partir do cadastro do estudante selecionado.
+                                        </p>
+                                        <select id="ocorrenciaTurmaId" hidden></select>
+                                    </div>
 
                                     <label class="coordenacao-field" for="ocorrenciaDisciplina">
                                         <span id="ocorrenciaDisciplinaLabel">Disciplina</span>

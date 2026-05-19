@@ -271,6 +271,54 @@ function obterReferenciaFormularioPorTipo(tipoRegistro = obterTipoRegistroFormul
         || String(el("ocorrenciaBuscaEstudante")?.value || "").trim();
 }
 
+function obterContextoTurmaEstudantesFormulario() {
+    const estudantes = obterEstudantesVinculadosFormulario();
+    const turmas = [];
+    const vistos = new Set();
+    estudantes.forEach((item) => {
+        const turmaId = Number(item?.turma_id || 0);
+        if (turmaId <= 0 || vistos.has(turmaId)) return;
+        vistos.add(turmaId);
+        const turma = obterTurmaOpcaoPorId(turmaId);
+        turmas.push({
+            turma_id: turmaId,
+            turma_nome: String(item?.turma_nome || turma?.nome || "").trim()
+        });
+    });
+    return {
+        turmas,
+        turma_id: turmas.length === 1 ? turmas[0].turma_id : null,
+        turma_nome: turmas.length === 1 ? turmas[0].turma_nome : "",
+        possui_multiplas_turmas: turmas.length > 1
+    };
+}
+
+function sincronizarTurmaOcorrenciaComEstudantes({ manterAulaAtual = true, faixaSelecionada = null } = {}) {
+    const contexto = obterContextoTurmaEstudantesFormulario();
+    const resumo = el("ocorrenciaTurmaResumo");
+    const selectTurma = el("ocorrenciaTurmaId");
+    const selectAula = el("ocorrenciaAula");
+    const faixaAtual = faixaSelecionada !== null
+        ? faixaSelecionada
+        : (manterAulaAtual ? Number(selectAula?.value || 0) || null : null);
+
+    if (resumo) {
+        if (contexto.possui_multiplas_turmas) {
+            resumo.innerText = "Ha estudantes de turmas diferentes neste registro.";
+        } else if (contexto.turma_id) {
+            resumo.innerText = contexto.turma_nome || `Turma ID ${contexto.turma_id}`;
+        } else {
+            resumo.innerText = "Selecione um estudante para identificar a turma.";
+        }
+    }
+
+    if (selectTurma) {
+        selectTurma.value = contexto.turma_id ? String(contexto.turma_id) : "";
+    }
+    atualizarSelectAulasPorTurma(contexto.turma_id, faixaAtual);
+    return contexto;
+}
+
 function renderSelecionadorEstudantesVinculados(itens = null) {
     estudantesVinculadosSelecionados = normalizarEstudantesVinculados(
         itens === null ? obterEstudantesVinculadosFormulario() : itens
@@ -281,6 +329,7 @@ function renderSelecionadorEstudantesVinculados(itens = null) {
         onRemove: (_, indice) => {
             const proximos = obterEstudantesVinculadosFormulario().filter((__, posicao) => posicao !== indice);
             renderSelecionadorEstudantesVinculados(proximos);
+            sincronizarTurmaOcorrenciaComEstudantes();
             atualizarPreviewOcorrencia();
         }
     });
@@ -307,6 +356,7 @@ function adicionarEstudanteVinculado(item) {
         item
     ]);
     renderSelecionadorEstudantesVinculados(estudantesVinculadosSelecionados);
+    sincronizarTurmaOcorrenciaComEstudantes();
 }
 
 function adicionarProfessorVinculado(item) {
@@ -393,11 +443,7 @@ function atualizarModoFormularioRegistro({ limparCamposOcultos = false } = {}) {
     }
 
     if (ehEstudante) {
-        const turmaSelect = el("ocorrenciaTurmaId");
-        if (turmaSelect && !String(turmaSelect.value || "").trim() && opcoesOcorrencias.turmas.length > 0) {
-            turmaSelect.value = String(opcoesOcorrencias.turmas[0].id);
-        }
-        atualizarSelectAulasPorTurma(el("ocorrenciaTurmaId")?.value);
+        sincronizarTurmaOcorrenciaComEstudantes();
     }
 
     atualizarAcaoAplicadaPorGravidade({
@@ -1117,13 +1163,14 @@ function obterTurmaPreviewFormulario() {
     if (obterTipoRegistroFormulario() !== "estudante") {
         return "Nao se aplica";
     }
-    const turmaId = el("ocorrenciaTurmaId")?.value;
-    const turma = obterTurmaOpcaoPorId(turmaId);
+    const contexto = obterContextoTurmaEstudantesFormulario();
+    if (contexto.possui_multiplas_turmas) {
+        return "Multiplas turmas";
+    }
+    if (contexto.turma_nome) return contexto.turma_nome;
+    const turma = obterTurmaOpcaoPorId(contexto.turma_id);
     if (turma?.nome) return turma.nome;
-
-    const select = el("ocorrenciaTurmaId");
-    const opcao = select?.selectedOptions?.[0];
-    return obterTextoOuPadrao(opcao?.textContent, "Nao informada");
+    return "Nao informada";
 }
 
 function obterAulaPreviewFormulario() {
@@ -1421,7 +1468,9 @@ function atualizarSelectAulasPorTurma(turmaId, faixaSelecionada = null) {
     if (!turma || !turma.turno_valido || Number(turma.aulas || 0) <= 0) {
         const option = document.createElement("option");
         option.value = "";
-        option.innerText = "Configure o turno da turma no painel admin";
+        option.innerText = turmaId
+            ? "Configure o turno da turma no painel admin"
+            : "Selecione um estudante para carregar as aulas";
         option.disabled = true;
         option.selected = true;
         select.appendChild(option);
@@ -1484,11 +1533,8 @@ function limparFormularioOcorrencia({ manterAberto = false } = {}) {
         el("ocorrenciaTipoRegistro").value = "estudante";
     }
 
-    const turmaSelect = el("ocorrenciaTurmaId");
-    if (opcoesOcorrencias.turmas.length > 0) {
-        turmaSelect.value = String(opcoesOcorrencias.turmas[0].id);
-    }
-    atualizarSelectAulasPorTurma(turmaSelect.value);
+    el("ocorrenciaTurmaId").value = "";
+    atualizarSelectAulasPorTurma("");
 
     const hoje = new Date();
     el("ocorrenciaData").value = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, "0")}-${String(hoje.getDate()).padStart(2, "0")}`;
@@ -1499,6 +1545,7 @@ function limparFormularioOcorrencia({ manterAberto = false } = {}) {
     renderSelecionadorProfessoresVinculados([]);
     renderSelecionadorRegimento([]);
     atualizarModoFormularioRegistro();
+    sincronizarTurmaOcorrenciaComEstudantes({ manterAulaAtual: false });
     el("tituloFormOcorrencia").innerText = "Novo registro";
     el("btnCancelarEdicaoOcorrencia").style.display = "none";
     if (manterAberto) {
@@ -1527,6 +1574,7 @@ function preencherFormularioOcorrencia(ocorrencia) {
     const turmaAtual = obterTurmaOpcaoPorId(turmaId);
     const faixaAula = resolverFaixaOcorrenciaParaTurma(turmaAtual, ocorrencia.aula);
     atualizarSelectAulasPorTurma(turmaId, faixaAula);
+    sincronizarTurmaOcorrenciaComEstudantes({ manterAulaAtual: true, faixaSelecionada: faixaAula });
 
     if (tipoRegistro === "geral") {
         el("ocorrenciaBuscaProfessor").value = "";

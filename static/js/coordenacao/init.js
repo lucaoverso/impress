@@ -116,15 +116,6 @@ function registrarEventosOcorrencias() {
         atualizarModoFormularioRegistro({ limparCamposOcultos: true });
     });
 
-    el("ocorrenciaTurmaId").addEventListener("change", () => {
-        el("ocorrenciaEstudanteId").value = "";
-        estudantesVinculadosSelecionados = [];
-        renderSelecionadorEstudantesVinculados([]);
-        atualizarSelectAulasPorTurma(el("ocorrenciaTurmaId").value);
-        agendarBuscaEstudantes();
-        ocultarSugestoes("listaEstudantesBusca");
-        atualizarPreviewOcorrencia();
-    });
 }
 
 function registrarEventosRelatorios() {

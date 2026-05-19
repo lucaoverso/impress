@@ -340,8 +340,7 @@ async function carregarOpcoesOcorrencias() {
         acaoAtual: acaoAplicadaAtual
     });
 
-    const turmaInicial = opcoesOcorrencias.turmas[0];
-    atualizarSelectAulasPorTurma(turmaInicial ? turmaInicial.id : "");
+    atualizarSelectAulasPorTurma("");
     renderSelecionadorRegimento(idsRegimentoSelecionados);
     atualizarModoFormularioRegistro();
     atualizarPreviewOcorrencia();

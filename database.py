@@ -9021,6 +9021,17 @@ def criar_ocorrencia(
         nome_estudante_limpo = ", ".join(item["nome"] for item in estudantes_vinculados_norm)
         if estudante_id_valor is None:
             estudante_id_valor = estudantes_vinculados_norm[0].get("estudante_id")
+        turma_ids_vinculados = sorted(
+            {
+                int(item["turma_id"])
+                for item in estudantes_vinculados_norm
+                if item.get("turma_id") is not None and int(item["turma_id"]) > 0
+            }
+        )
+        if turma_id_valor is None and len(turma_ids_vinculados) == 1:
+            turma_id_valor = turma_ids_vinculados[0]
+        if len(turma_ids_vinculados) > 1:
+            raise ValueError("Selecione estudantes da mesma turma para registrar a ocorrencia.")
         if turma_id_valor is None or turma_id_valor <= 0:
             raise ValueError("Turma invalida.")
         if not professor_requerente_limpo:
