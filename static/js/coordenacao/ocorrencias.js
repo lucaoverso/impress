@@ -1065,11 +1065,7 @@ function obterAcoesAplicadasDisponiveis(gravidade, acaoAtual = "", tipoRegistro 
     const detalhadas = tipoRegistro === "estudante"
         ? acoesDoTipo.filter((item) => !Boolean(item?.legado))
         : acoesDoTipo;
-    const filtradas = gravidade
-        ? detalhadas.filter((item) => String(item?.gravidade || "").trim() === gravidade)
-        : detalhadas;
-
-    const opcoes = filtradas.length > 0 ? filtradas : detalhadas;
+    const opcoes = detalhadas;
     if (!acaoAtualLimpa) return opcoes;
 
     const atual = acoes.find((item) => String(item?.id || "").trim() === acaoAtualLimpa);
@@ -1094,7 +1090,7 @@ function atualizarAcaoAplicadaPorGravidade({
         : String(acaoAtual || "").trim();
     const opcoes = obterAcoesAplicadasDisponiveis(gravidade, valorAtual, tipoRegistro);
     const placeholder = gravidade
-        ? "Selecione a acao permitida"
+        ? "Selecione a acao aplicada"
         : "Selecione a acao aplicada";
 
     preencherSelect("ocorrenciaAcaoAplicada", opcoes, {
@@ -1108,9 +1104,9 @@ function atualizarAcaoAplicadaPorGravidade({
     const hint = el("ocorrenciaGravidadeInfo");
     if (hint) {
         hint.innerText = (tipoRegistro === "estudante" && gravidade)
-            ? `Gravidade automatica: ${GRAVIDADE_ROTULOS[gravidade] || gravidade}.`
+            ? `Gravidade automatica: ${GRAVIDADE_ROTULOS[gravidade] || gravidade}. Voce pode registrar a acao que considerar mais adequada.`
             : (tipoRegistro === "estudante"
-                ? "Gravidade automatica ainda nao identificada pela base legal selecionada."
+                ? "Gravidade automatica ainda nao identificada pela base legal selecionada. Escolha a acao que melhor representa a orientacao adotada."
                 : "Selecione a acao que melhor descreve o atendimento, a reuniao ou a orientacao registrada.");
     }
 
