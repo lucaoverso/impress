@@ -44,6 +44,19 @@ _INFO_VIDEO_CACHE_TTL_SEGUNDOS = _resolver_env_int("YOUTUBE_INFO_CACHE_TTL_SECON
 _YTDLP_FRAGMENTOS_CONCORRENTES = _resolver_env_int("YTDLP_CONCURRENT_FRAGMENTS", 4, 1)
 
 
+def _resolver_player_clients_youtube() -> list[str]:
+    valor_bruto = str(os.getenv("YTDLP_YOUTUBE_PLAYER_CLIENTS", "") or "").strip()
+    if not valor_bruto:
+        return []
+
+    clientes = []
+    for item in valor_bruto.split(","):
+        cliente = item.strip()
+        if cliente:
+            clientes.append(cliente)
+    return clientes
+
+
 def remover_arquivo_se_existir(caminho: Path):
     try:
         caminho.unlink()
@@ -199,7 +212,7 @@ def _traduzir_erro_ytdlp(exc: Exception) -> YoutubeDownloadError:
 
 
 def _opcoes_ytdlp_base() -> dict:
-    return {
+    opcoes = {
         "quiet": True,
         "no_warnings": True,
         "noprogress": True,
@@ -210,8 +223,11 @@ def _opcoes_ytdlp_base() -> dict:
         "fragment_retries": 3,
         "socket_timeout": 15,
         "concurrent_fragment_downloads": _YTDLP_FRAGMENTOS_CONCORRENTES,
-        "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
     }
+    player_clients = _resolver_player_clients_youtube()
+    if player_clients:
+        opcoes["extractor_args"] = {"youtube": {"player_client": player_clients}}
+    return opcoes
 
 
 def _normalizar_info_extraida(info):
@@ -308,6 +324,10 @@ def _eh_formato_audio(formato: dict) -> bool:
     return acodec not in {"", "none"} and vcodec in {"", "none"}
 
 
+def _tem_audio_disponivel(formato: dict) -> bool:
+    return _normalizar_codec(formato.get("acodec")) not in {"", "none"}
+
+
 def _eh_formato_video(formato: dict) -> bool:
     return _normalizar_codec(formato.get("vcodec")) not in {"", "none"} and _extrair_altura(formato) > 0
 
@@ -351,7 +371,7 @@ def _audio_bitrate_melhor(formatos: list[dict]) -> str:
 def _mapear_qualidades_mp4(formatos: list[dict]) -> tuple[set[str], set[str], bool]:
     qualidades_progressivas = set()
     qualidades_adaptativas = set()
-    audio_disponivel = any(_eh_formato_audio(formato) for formato in formatos)
+    audio_disponivel = any(_tem_audio_disponivel(formato) for formato in formatos)
 
     for formato in formatos:
         altura = _extrair_altura(formato)
@@ -391,6 +411,7 @@ def obter_info_video(url: str) -> dict:
         "autor": str(info_bruta.get("channel") or info_bruta.get("uploader") or "").strip(),
         "resolucao_maxima_video": _rotulo_resolucao_video_maxima(formatos),
         "audio_bitrate": _audio_bitrate_melhor(formatos),
+        "ffmpeg_disponivel": ffmpeg_ativo,
         "mp3_disponivel": ffmpeg_ativo and audio_disponivel,
         "qualidades_mp4": montar_opcoes_qualidade_mp4(
             qualidades_progressivas,

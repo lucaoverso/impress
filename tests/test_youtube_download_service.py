@@ -11,6 +11,7 @@ from services.youtube_download_service import (
     QUALIDADES_MP4_FIXAS,
     YoutubeDownloadError,
     _traduzir_erro_rede,
+    _opcoes_ytdlp_base,
     baixar_arquivo,
     formatar_duracao,
     montar_opcoes_qualidade_mp4,
@@ -70,6 +71,18 @@ class YoutubeDownloadServiceTest(unittest.TestCase):
         self.assertIsInstance(mensagem, YoutubeDownloadError)
         self.assertIn("SSL", str(mensagem))
 
+    def test_opcoes_ytdlp_nao_forca_player_client_por_padrao(self):
+        with patch.dict("os.environ", {}, clear=False):
+            opcoes = _opcoes_ytdlp_base()
+
+        self.assertNotIn("extractor_args", opcoes)
+
+    def test_opcoes_ytdlp_aceita_player_client_por_variavel_de_ambiente(self):
+        with patch.dict("os.environ", {"YTDLP_YOUTUBE_PLAYER_CLIENTS": "android,web"}, clear=False):
+            opcoes = _opcoes_ytdlp_base()
+
+        self.assertEqual(opcoes["extractor_args"], {"youtube": {"player_client": ["android", "web"]}})
+
     def test_obter_info_video_reaproveita_cache_curto(self):
         info_bruta = {
             "title": "Aula Teste",
@@ -110,6 +123,31 @@ class YoutubeDownloadServiceTest(unittest.TestCase):
         self.assertEqual(info2["resolucao_maxima_video"], "1080p")
         self.assertEqual(info2["audio_bitrate"], "128kbps")
         self.assertTrue(info2["mp3_disponivel"])
+
+    def test_obter_info_video_mantem_mp3_quando_video_tem_audio_embutido(self):
+        info_bruta = {
+            "title": "Aula Curta",
+            "duration": 45,
+            "thumbnail": "https://img.example/thumb.jpg",
+            "channel": "Canal Teste",
+            "formats": [
+                {
+                    "ext": "mp4",
+                    "height": 360,
+                    "vcodec": "avc1",
+                    "acodec": "mp4a",
+                    "abr": 96,
+                },
+            ],
+        }
+
+        with patch("services.youtube_download_service._extrair_info_bruta", return_value=info_bruta):
+            with patch("services.youtube_download_service.ffmpeg_disponivel", return_value=True):
+                info = obter_info_video("https://www.youtube.com/watch?v=abc")
+
+        self.assertEqual(info["resolucao_maxima_video"], "360p")
+        self.assertTrue(info["mp3_disponivel"])
+        self.assertTrue(info["ffmpeg_disponivel"])
 
     def test_baixar_arquivo_mp4_retorna_arquivo_final(self):
         info = {

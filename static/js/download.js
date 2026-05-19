@@ -220,10 +220,10 @@ function preencherDetalhes(info) {
     elementos.btnBaixarMp3.disabled = !info.mp3_disponivel;
     const existeMp4Habilitado = (info.qualidades_mp4 || []).some((item) => item.habilitado);
     if (!existeMp4Habilitado && !info.mp3_disponivel) {
-        exibirMensagem(
-            elementos.mensagemDetalhes,
-            "Este vídeo precisa de ffmpeg no servidor para liberar os downloads em MP4/MP3.",
-        );
+        const mensagem = info.ffmpeg_disponivel
+            ? "Este vídeo não oferece formatos compatíveis com MP4 720p+ nesta tela. Tente outro vídeo ou use um link com maior qualidade."
+            : "Este vídeo precisa de ffmpeg no servidor para liberar os downloads em MP4/MP3.";
+        exibirMensagem(elementos.mensagemDetalhes, mensagem);
         return;
     }
     if (!existeMp4Habilitado) {
