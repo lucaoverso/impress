@@ -190,9 +190,12 @@ function registrarEventosGerais() {
     el("btnVoltarServicos").addEventListener("click", () => {
         window.location.href = "/servicos";
     });
-    el("btnIrAdmin").addEventListener("click", () => {
-        window.location.href = "/admin";
-    });
+    const btnIrAdmin = el("btnIrAdmin");
+    if (btnIrAdmin) {
+        btnIrAdmin.addEventListener("click", () => {
+            window.location.href = "/admin";
+        });
+    }
     el("btnSair").addEventListener("click", () => {
         localStorage.removeItem("token");
         localStorage.removeItem("token_expira_em");
