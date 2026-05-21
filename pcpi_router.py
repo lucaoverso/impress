@@ -4,13 +4,14 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from auth import get_usuario_logado
 from db.agendamento import listar_agendamentos
-from db.pcpi import (
+from db.usuarios import listar_cargas_professores_por_usuario_ids
+from repositories.pcpi_repository import (
     buscar_registro_pcpi_manual_por_id,
     criar_registro_pcpi_manual,
     listar_registros_pcpi_manuais,
 )
-from db.usuarios import listar_cargas_professores_por_usuario_ids
-from models import (
+from routers.common import normalizar_cargo_usuario, usuario_tem_acesso_coordenacao
+from schemas.pcpi_schemas import (
     PcpiRegistroManualIn,
     PcpiRegistroManualOut,
     PcpiRegistrosManuaisOut,
@@ -26,7 +27,6 @@ from services.pcpi_service import (
     nome_turno_pcpi,
     turno_agendamento_pertence_ao_turno_pcpi,
 )
-from routers.common import normalizar_cargo_usuario, usuario_tem_acesso_coordenacao
 
 
 router = APIRouter()
