@@ -57,6 +57,30 @@ def _resolver_player_clients_youtube() -> list[str]:
     return clientes
 
 
+def _resolver_js_runtimes_youtube() -> dict[str, dict]:
+    valor_bruto = str(os.getenv("YTDLP_JS_RUNTIMES", "") or "").strip()
+    if valor_bruto:
+        runtimes = {}
+        for item in valor_bruto.split(","):
+            runtime_bruto = item.strip()
+            if not runtime_bruto:
+                continue
+            nome, separador, caminho = runtime_bruto.partition(":")
+            nome_limpo = nome.strip().lower()
+            if not nome_limpo:
+                continue
+            config = {}
+            if separador and caminho.strip():
+                config["path"] = caminho.strip()
+            runtimes[nome_limpo] = config
+        return runtimes
+
+    if shutil.which("node"):
+        return {"node": {}}
+
+    return {}
+
+
 def remover_arquivo_se_existir(caminho: Path):
     try:
         caminho.unlink()
@@ -224,6 +248,9 @@ def _opcoes_ytdlp_base() -> dict:
         "socket_timeout": 15,
         "concurrent_fragment_downloads": _YTDLP_FRAGMENTOS_CONCORRENTES,
     }
+    js_runtimes = _resolver_js_runtimes_youtube()
+    if js_runtimes:
+        opcoes["js_runtimes"] = js_runtimes
     player_clients = _resolver_player_clients_youtube()
     if player_clients:
         opcoes["extractor_args"] = {"youtube": {"player_client": player_clients}}

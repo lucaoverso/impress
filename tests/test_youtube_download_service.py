@@ -73,15 +73,38 @@ class YoutubeDownloadServiceTest(unittest.TestCase):
 
     def test_opcoes_ytdlp_nao_forca_player_client_por_padrao(self):
         with patch.dict("os.environ", {}, clear=False):
-            opcoes = _opcoes_ytdlp_base()
+            with patch("services.youtube_download_service.shutil.which", return_value=None):
+                opcoes = _opcoes_ytdlp_base()
 
         self.assertNotIn("extractor_args", opcoes)
+        self.assertNotIn("js_runtimes", opcoes)
+
+    def test_opcoes_ytdlp_habilita_node_quando_disponivel_no_path(self):
+        with patch.dict("os.environ", {}, clear=False):
+            with patch("services.youtube_download_service.shutil.which", return_value="/usr/bin/node"):
+                opcoes = _opcoes_ytdlp_base()
+
+        self.assertEqual(opcoes["js_runtimes"], {"node": {}})
 
     def test_opcoes_ytdlp_aceita_player_client_por_variavel_de_ambiente(self):
         with patch.dict("os.environ", {"YTDLP_YOUTUBE_PLAYER_CLIENTS": "android,web"}, clear=False):
-            opcoes = _opcoes_ytdlp_base()
+            with patch("services.youtube_download_service.shutil.which", return_value=None):
+                opcoes = _opcoes_ytdlp_base()
 
         self.assertEqual(opcoes["extractor_args"], {"youtube": {"player_client": ["android", "web"]}})
+
+    def test_opcoes_ytdlp_aceita_js_runtimes_por_variavel_de_ambiente(self):
+        with patch.dict("os.environ", {"YTDLP_JS_RUNTIMES": "node:/usr/bin/node,bun"}, clear=False):
+            with patch("services.youtube_download_service.shutil.which", return_value=None):
+                opcoes = _opcoes_ytdlp_base()
+
+        self.assertEqual(
+            opcoes["js_runtimes"],
+            {
+                "node": {"path": "/usr/bin/node"},
+                "bun": {},
+            },
+        )
 
     def test_obter_info_video_reaproveita_cache_curto(self):
         info_bruta = {

@@ -10,7 +10,7 @@ Este guia prepara:
 
 ```bash
 sudo apt update
-sudo apt install -y python3 python3-venv python3-pip cups cups-client nginx libreoffice
+sudo apt install -y python3 python3-venv python3-pip cups cups-client nginx libreoffice nodejs
 ```
 
 ## 2) Criar usuário de serviço
@@ -88,6 +88,10 @@ Ajuste obrigatório em `.env`:
 Ajuste recomendado em `.env` para o banco fora da pasta do código:
 - `DB_PATH=/opt/sistema-impress-data/impressao.db`
 - `LOG_LEVEL=INFO`
+
+Ajuste recomendado para o módulo de downloads do YouTube:
+- confirme que `node` está instalado com `node --version`
+- deixe `YTDLP_JS_RUNTIMES=node` no `.env` se quiser forçar esse runtime explicitamente
 
 Ajuste opcional para diagnostico controlado no spool:
 - `KEEP_SPOOL_FILES=true`
