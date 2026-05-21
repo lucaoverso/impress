@@ -257,6 +257,14 @@ Para entender a organizacao atual do repositorio e o padrao esperado para novas 
 - [docs/estrutura-projeto.md](/Users/lucassbaraini/sistema-impress/docs/estrutura-projeto.md)
 - [docs/guia-novos-modulos.md](/Users/lucassbaraini/sistema-impress/docs/guia-novos-modulos.md)
 
+Para a trilha de refatoracao incremental, consulte tambem:
+
+- [docs/arquitetura.md](/C:/Users/lucas/impress/docs/arquitetura.md)
+- [docs/plano_refatoracao.md](/C:/Users/lucas/impress/docs/plano_refatoracao.md)
+- [docs/mapa-modulos.md](/C:/Users/lucas/impress/docs/mapa-modulos.md)
+- [docs/checklist_pr_refatoracao.md](/C:/Users/lucas/impress/docs/checklist_pr_refatoracao.md)
+- [docs/roadmap_prs_refatoracao.md](/C:/Users/lucas/impress/docs/roadmap_prs_refatoracao.md)
+
 ## CI
 
 O repositório agora possui uma workflow de `CI` dedicada. O deploy no servidor deve acontecer apenas depois de uma execução bem-sucedida dessa validação na branch `main`.
