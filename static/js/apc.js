@@ -25,6 +25,7 @@ let dataSelecionadaApc = paraIso(new Date());
 let dataSelecionadaManualmenteApc = false;
 let calendarioApc = { periodos: [] };
 let periodoSelecionadoApcId = null;
+let periodoEmEdicaoApcId = null;
 let abaGestaoApc = "professores";
 let modoApc = "docente";
 let opcoesDestinatariosApc = [];
@@ -78,6 +79,10 @@ function modoGestaoAtivoApc() {
 
 function gestaoComDataSelecionadaApc() {
     return modoGestaoAtivoApc() && dataSelecionadaManualmenteApc;
+}
+
+function modalApcAberto() {
+    return !el("apcModalBackdrop")?.hidden;
 }
 
 function modoInicialApc() {
@@ -236,11 +241,18 @@ function aplicarVisibilidadeApc() {
     const podeGerir = usuarioPodeVerGestaoApc();
     const layoutProfessor = modoDocenteAtivoApc();
     const pagina = obterPaginaApc();
+    const acoesGestao = el("apcGestaoActions");
+    const podeAbrirAcoesGestao = podeGerir && gestaoComDataSelecionadaApc();
 
     renderizarAbasModoApc();
-    el("apcGestaoCard").hidden = !(podeGerir && gestaoComDataSelecionadaApc());
     el("apcResumoPainel").hidden = false;
     el("apcGestaoTabs").hidden = !(podeGerir && modoGestaoAtivoApc());
+    if (acoesGestao) {
+        acoesGestao.hidden = !podeAbrirAcoesGestao;
+    }
+    if (el("btnAbrirEditarApc")) {
+        el("btnAbrirEditarApc").hidden = !(podeAbrirAcoesGestao && Boolean(periodoSelecionadoApcId));
+    }
     if (!(podeGerir && modoGestaoAtivoApc())) {
         document.querySelectorAll("[data-apc-gestao-tab-panel]").forEach((painel) => {
             painel.hidden = true;
@@ -272,6 +284,42 @@ function preencherFormularioPeriodo(periodo) {
         selecoesDestinatariosApc = new Set();
         opcoesDestinatariosApc = [];
         void sincronizarVisibilidadeDestinatariosApc({ recarregar: true });
+    }
+}
+
+function atualizarCabecalhoModalApc(periodo = null) {
+    const editando = Boolean(periodoEmEdicaoApcId && periodo);
+    el("apcModalTitulo").innerText = editando
+        ? "Editar solicitacao de entrega"
+        : "Nova solicitacao de entrega";
+    el("apcModalDescricao").innerText = editando
+        ? "Ajuste o documento solicitado, o prazo e os destinatarios desta solicitacao."
+        : "Defina o documento solicitado, o prazo e quem deve visualizar essa entrega.";
+}
+
+function abrirModalFormularioApc(periodo = null) {
+    periodoEmEdicaoApcId = Number(periodo?.id || 0) || null;
+    preencherFormularioPeriodo(periodo);
+    atualizarCabecalhoModalApc(periodo);
+    const backdrop = el("apcModalBackdrop");
+    if (!backdrop) return;
+    backdrop.hidden = false;
+    document.body.classList.add("apc-modal-open");
+    window.setTimeout(() => {
+        el("apcTitulo")?.focus();
+    }, 0);
+}
+
+function fecharModalFormularioApc({ limpar = false } = {}) {
+    const backdrop = el("apcModalBackdrop");
+    if (backdrop) {
+        backdrop.hidden = true;
+    }
+    document.body.classList.remove("apc-modal-open");
+    if (limpar) {
+        periodoEmEdicaoApcId = null;
+        preencherFormularioPeriodo(null);
+        atualizarCabecalhoModalApc(null);
     }
 }
 
@@ -1166,7 +1214,7 @@ function renderPainelSelecionadoVazio() {
         ? `Solicitacoes de ${paraDataBr(dataSelecionadaApc)}`
         : `Pendencias de ${paraDataBr(dataSelecionadaApc)}`;
     el("apcSubtituloPainel").innerText = modoGestao
-        ? "Cadastre uma nova solicitacao ao lado ou selecione outra data no calendario."
+        ? "Abra o modal de nova solicitacao ou selecione outra data no calendario."
         : "Selecione outra data no calendario para localizar suas entregas.";
     renderSolicitacoesData([]);
     el("apcResumoPainel").innerHTML = "";
@@ -1175,18 +1223,19 @@ function renderPainelSelecionadoVazio() {
         ativarAbaGestaoApc("professores");
     }
     el("apcListaPainel").innerHTML = modoGestao
-        ? '<div class="booking-empty">Cadastre uma solicitacao ao lado para comecar a receber anexos dos professores.</div>'
+        ? '<div class="booking-empty">Abra o modal de nova solicitacao para comecar a receber anexos dos professores.</div>'
         : "";
     if (el("apcArquivosLista")) {
         el("apcArquivosLista").innerHTML = '<div class="booking-empty">Nenhum arquivo enviado ainda.</div>';
     }
     preencherFormularioPeriodo(null);
+    aplicarVisibilidadeApc();
 }
 
 function renderPainelAguardandoDataGestao() {
     el("apcTituloPainel").innerText = "Escolha uma data no calendario";
     el("apcSubtituloPainel").innerText =
-        "Clique em um dia para abrir as solicitacoes, acompanhar os envios e cadastrar um novo prazo.";
+        "Clique em um dia para abrir as solicitacoes, acompanhar os envios e usar o modal de cadastro.";
     el("apcResumoPainel").innerHTML = "";
     renderSolicitacoesData([]);
     el("apcGestaoTabs").hidden = true;
@@ -1197,6 +1246,7 @@ function renderPainelAguardandoDataGestao() {
         el("apcArquivosLista").innerHTML =
             '<div class="booking-empty">Selecione uma data no calendario para listar os arquivos enviados.</div>';
     }
+    aplicarVisibilidadeApc();
 }
 
 function renderPainelSemSelecaoGestao() {
@@ -1204,7 +1254,7 @@ function renderPainelSemSelecaoGestao() {
         ? `Solicitacoes de ${paraDataBr(dataSelecionadaApc)}`
         : `Pendencias de ${paraDataBr(dataSelecionadaApc)}`;
     el("apcSubtituloPainel").innerText = modoGestaoAtivoApc()
-        ? "Selecione uma solicitacao existente ou cadastre uma nova ao lado."
+        ? "Selecione uma solicitacao existente ou abra o modal para cadastrar uma nova."
         : "Escolha uma solicitacao abaixo para abrir os cards de envio.";
     el("apcResumoPainel").innerHTML = "";
     el("apcGestaoTabs").hidden = true;
@@ -1214,6 +1264,7 @@ function renderPainelSemSelecaoGestao() {
         el("apcArquivosLista").innerHTML = '<div class="booking-empty">Nenhum arquivo enviado ainda.</div>';
     }
     renderSolicitacoesData(periodosResumoPorData(dataSelecionadaApc));
+    aplicarVisibilidadeApc();
 }
 
 async function carregarDetalheSelecionadoApc() {
@@ -1237,6 +1288,7 @@ async function carregarDetalheSelecionadoApc() {
         renderPainelSelecionadoVazio();
         return;
     }
+    aplicarVisibilidadeApc();
 
     const detalhe = await fetchJson(`/apc/periodos/${periodoSelecionadoApcId}?visao=${visaoAtivaApc()}`, {
         headers: headersApc,
@@ -1404,8 +1456,8 @@ async function salvarPeriodoApc(event) {
 
     try {
         let salvo;
-        if (periodoSelecionadoApcId) {
-            salvo = await fetchJson(`/apc/periodos/${periodoSelecionadoApcId}`, {
+        if (periodoEmEdicaoApcId) {
+            salvo = await fetchJson(`/apc/periodos/${periodoEmEdicaoApcId}`, {
                 method: "PUT",
                 headers: headersJsonApc,
                 body: JSON.stringify(payload),
@@ -1421,6 +1473,8 @@ async function salvarPeriodoApc(event) {
         }
         dataSelecionadaApc = payload.data_referencia;
         periodoSelecionadoApcId = Number(salvo?.id || 0) || null;
+        periodoEmEdicaoApcId = Number(salvo?.id || 0) || null;
+        fecharModalFormularioApc();
         await carregarCalendarioApc();
     } catch (err) {
         setMensagemApc(err.message || "Nao foi possivel salvar a solicitacao.", true);
@@ -1428,16 +1482,18 @@ async function salvarPeriodoApc(event) {
 }
 
 async function excluirPeriodoApc() {
-    if (!periodoSelecionadoApcId) return;
+    if (!periodoEmEdicaoApcId) return;
     if (!window.confirm("Deseja realmente excluir esta solicitacao de entrega?")) return;
 
     try {
-        await fetchJson(`/apc/periodos/${periodoSelecionadoApcId}`, {
+        await fetchJson(`/apc/periodos/${periodoEmEdicaoApcId}`, {
             method: "DELETE",
             headers: headersApc,
         });
         setMensagemApc("Solicitacao removida com sucesso.");
         periodoSelecionadoApcId = null;
+        periodoEmEdicaoApcId = null;
+        fecharModalFormularioApc({ limpar: true });
         await carregarCalendarioApc();
     } catch (err) {
         setMensagemApc(err.message || "Nao foi possivel excluir a solicitacao.", true);
@@ -1538,11 +1594,34 @@ function registrarEventosApc() {
     });
 
     el("formApcPeriodo")?.addEventListener("submit", salvarPeriodoApc);
-    el("btnNovaApc")?.addEventListener("click", () => {
-        periodoSelecionadoApcId = null;
-        preencherFormularioPeriodo(null);
+    el("btnAbrirNovaApc")?.addEventListener("click", () => {
         setMensagemApc("");
-        renderPainelSemSelecaoGestao();
+        abrirModalFormularioApc(null);
+    });
+    el("btnAbrirEditarApc")?.addEventListener("click", async () => {
+        if (!periodoSelecionadoApcId) return;
+        try {
+            const detalhe = await fetchJson(`/apc/periodos/${periodoSelecionadoApcId}?visao=gestao`, {
+                headers: headersApc,
+            });
+            const periodo = detalhe?.periodo || null;
+            aplicarSelecoesDestinatariosApc(detalhe?.destinatarios_configurados || []);
+            abrirModalFormularioApc(periodo);
+            void sincronizarVisibilidadeDestinatariosApc({ recarregar: true });
+        } catch (err) {
+            setMensagemApc(err.message || "Nao foi possivel abrir a solicitacao selecionada.", true);
+        }
+    });
+    el("btnCancelarApc")?.addEventListener("click", () => {
+        fecharModalFormularioApc({ limpar: true });
+    });
+    el("btnFecharModalApc")?.addEventListener("click", () => {
+        fecharModalFormularioApc({ limpar: true });
+    });
+    el("apcModalBackdrop")?.addEventListener("click", (event) => {
+        if (event.target === el("apcModalBackdrop")) {
+            fecharModalFormularioApc({ limpar: true });
+        }
     });
     el("btnExcluirApc")?.addEventListener("click", excluirPeriodoApc);
     el("btnApcDestinatariosTodos")?.addEventListener("click", () => {
@@ -1556,6 +1635,11 @@ function registrarEventosApc() {
     el("btnApcDestinatariosLimpar")?.addEventListener("click", () => {
         selecoesDestinatariosApc = new Set();
         renderDestinatariosApc();
+    });
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && modalApcAberto()) {
+            fecharModalFormularioApc({ limpar: true });
+        }
     });
 }
 

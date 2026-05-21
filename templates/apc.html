@@ -71,58 +71,18 @@
                 <div id="apcCalendarioGrid" class="calendar-grid"></div>
             </article>
 
-            <article id="apcGestaoCard" class="calendar-card apc-side-card" hidden>
-                <header class="booking-card-header">
-                    <h3>Nova solicitacao de entrega</h3>
-                    <p>Defina o documento solicitado, o prazo e quem deve visualizar essa entrega.</p>
-                </header>
-
-                <form id="formApcPeriodo" class="apc-form">
-                    <label for="apcDataReferencia">Data de referencia</label>
-                    <input id="apcDataReferencia" type="date" required>
-
-                    <label for="apcPrazoEnvio">Prazo de envio</label>
-                    <input id="apcPrazoEnvio" type="datetime-local" required>
-
-                    <label for="apcTitulo">Documento solicitado</label>
-                    <input id="apcTitulo" type="text" maxlength="80" value="Documento">
-
-                    <label for="apcPublicoAlvo">Quem deve enviar</label>
-                    <select id="apcPublicoAlvo"></select>
-
-                    <label for="apcTipoEntrega">Tipo da solicitacao</label>
-                    <select id="apcTipoEntrega"></select>
-
-                    <section id="apcDestinatariosWrap" class="apc-destinatarios-wrap" hidden>
-                        <div class="apc-destinatarios-header">
-                            <div>
-                                <h4>Professores selecionados</h4>
-                                <p>Marque as combinacoes de turma e disciplina que devem enviar este anexo.</p>
-                            </div>
-                            <div class="apc-inline-actions">
-                                <button id="btnApcDestinatariosTodos" type="button">Marcar tudo</button>
-                                <button id="btnApcDestinatariosLimpar" type="button">Limpar</button>
-                            </div>
-                        </div>
-                        <p id="apcDestinatariosResumo" class="apc-inline-hint"></p>
-                        <div id="apcDestinatariosLista" class="apc-destinatarios-lista">
-                            <div class="booking-empty">Selecione um ano letivo para carregar os professores.</div>
-                        </div>
-                    </section>
-
-                    <label for="apcObservacao">Observacao</label>
-                    <textarea id="apcObservacao" rows="3"
-                        placeholder="Ex.: atividade pedagogica, prova bimestral, roteiro, plano ou outro material."></textarea>
-
-                    <div class="apc-inline-actions">
-                        <button class="btn-destaque" type="submit">Salvar solicitacao</button>
-                        <button id="btnNovaApc" type="button">Nova</button>
-                        <button id="btnExcluirApc" type="button" hidden>Excluir</button>
-                    </div>
-                </form>
-            </article>
-
             <article class="calendar-card apc-detail-card">
+                <div id="apcGestaoActions" class="apc-gestao-actions" hidden>
+                    <div class="apc-gestao-actions-copy">
+                        <h3>Solicitacoes da data</h3>
+                        <p>Abra o modal para cadastrar uma nova solicitacao ou editar a selecionada.</p>
+                    </div>
+                    <div class="apc-inline-actions">
+                        <button id="btnAbrirNovaApc" class="btn-destaque" type="button">Nova solicitacao</button>
+                        <button id="btnAbrirEditarApc" type="button" hidden>Editar selecionada</button>
+                    </div>
+                </div>
+
                 <div id="apcSolicitacoesData" class="apc-solicitacoes-data">
                     <div class="booking-empty">Nenhuma solicitacao nesta data.</div>
                 </div>
@@ -155,6 +115,67 @@
             </article>
         </section>
     </main>
+
+    <div id="apcModalBackdrop" class="apc-modal-backdrop" hidden>
+        <section class="apc-modal" role="dialog" aria-modal="true" aria-labelledby="apcModalTitulo">
+            <header class="apc-modal-header">
+                <div>
+                    <p class="apc-eyebrow">Central de Anexos</p>
+                    <h3 id="apcModalTitulo">Nova solicitacao de entrega</h3>
+                    <p id="apcModalDescricao">Defina o documento solicitado, o prazo e quem deve visualizar essa entrega.</p>
+                </div>
+                <button id="btnFecharModalApc" class="apc-modal-close" type="button" aria-label="Fechar modal">
+                    x
+                </button>
+            </header>
+
+            <form id="formApcPeriodo" class="apc-form apc-modal-form">
+                <label for="apcDataReferencia">Data de referencia</label>
+                <input id="apcDataReferencia" type="date" required>
+
+                <label for="apcPrazoEnvio">Prazo de envio</label>
+                <input id="apcPrazoEnvio" type="datetime-local" required>
+
+                <label for="apcTitulo">Documento solicitado</label>
+                <input id="apcTitulo" type="text" maxlength="80" value="Documento">
+
+                <label for="apcPublicoAlvo">Quem deve enviar</label>
+                <select id="apcPublicoAlvo"></select>
+
+                <label for="apcTipoEntrega">Tipo da solicitacao</label>
+                <select id="apcTipoEntrega"></select>
+
+                <section id="apcDestinatariosWrap" class="apc-destinatarios-wrap" hidden>
+                    <div class="apc-destinatarios-header">
+                        <div>
+                            <h4>Professores selecionados</h4>
+                            <p>Marque as combinacoes de turma e disciplina que devem enviar este anexo.</p>
+                        </div>
+                        <div class="apc-inline-actions">
+                            <button id="btnApcDestinatariosTodos" type="button">Marcar tudo</button>
+                            <button id="btnApcDestinatariosLimpar" type="button">Limpar</button>
+                        </div>
+                    </div>
+                    <p id="apcDestinatariosResumo" class="apc-inline-hint"></p>
+                    <div id="apcDestinatariosLista" class="apc-destinatarios-lista">
+                        <div class="booking-empty">Selecione um ano letivo para carregar os professores.</div>
+                    </div>
+                </section>
+
+                <label for="apcObservacao">Observacao</label>
+                <textarea id="apcObservacao" rows="3"
+                    placeholder="Ex.: atividade pedagogica, prova bimestral, roteiro, plano ou outro material."></textarea>
+
+                <div class="apc-modal-footer">
+                    <div class="apc-inline-actions">
+                        <button class="btn-destaque" type="submit">Salvar solicitacao</button>
+                        <button id="btnCancelarApc" type="button">Cancelar</button>
+                        <button id="btnExcluirApc" class="btn-perigo" type="button" hidden>Excluir</button>
+                    </div>
+                </div>
+            </form>
+        </section>
+    </div>
 
     <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>

@@ -142,16 +142,8 @@
 }
 
 .apc-detail-card {
-    grid-column: 1;
+    grid-column: 1 / span 2;
     grid-row: 2;
-}
-
-.apc-side-card {
-    grid-column: 2;
-    grid-row: 2;
-    align-self: start;
-    position: sticky;
-    top: 12px;
 }
 
 .apc-page.is-professor .apc-content {
@@ -160,8 +152,7 @@
 
 .apc-page.is-professor .apc-calendar-card,
 .apc-page.is-professor .apc-overview-card,
-.apc-page.is-professor .apc-detail-card,
-.apc-page.is-professor .apc-side-card {
+.apc-page.is-professor .apc-detail-card {
     position: static;
 }
 
@@ -178,12 +169,6 @@
 .apc-page.is-professor .apc-detail-card {
     grid-column: 1 / span 2;
     grid-row: 2;
-}
-
-.apc-page.is-professor .apc-side-card {
-    grid-column: 1;
-    grid-row: auto;
-    position: static;
 }
 
 .apc-calendar-card .calendar-day {
@@ -286,9 +271,90 @@
     margin-top: 6px;
 }
 
+.apc-gestao-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px 18px;
+    border: 1px solid rgba(19, 53, 88, 0.08);
+    border-radius: 18px;
+    background: linear-gradient(180deg, #ffffff, #f6faff);
+}
+
+.apc-gestao-actions-copy {
+    display: grid;
+    gap: 4px;
+}
+
+.apc-gestao-actions-copy h3,
+.apc-gestao-actions-copy p {
+    margin: 0;
+}
+
 .apc-detail-card {
     display: grid;
     gap: 14px;
+}
+
+body.apc-modal-open {
+    overflow: hidden;
+}
+
+.apc-modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 1200;
+    background: rgba(7, 16, 28, 0.58);
+    backdrop-filter: blur(6px);
+    display: grid;
+    place-items: center;
+    padding: 24px;
+}
+
+.apc-modal {
+    width: min(980px, 100%);
+    max-height: min(88vh, 920px);
+    overflow: auto;
+    border-radius: 24px;
+    background: linear-gradient(180deg, #ffffff, #f7fbff);
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.28);
+    padding: 24px;
+    display: grid;
+    gap: 18px;
+}
+
+.apc-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.apc-modal-header h3,
+.apc-modal-header p {
+    margin: 0;
+}
+
+.apc-modal-close {
+    width: 42px;
+    min-width: 42px;
+    height: 42px;
+    border-radius: 999px;
+    padding: 0;
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
+.apc-modal-form {
+    gap: 12px;
+}
+
+.apc-modal-footer {
+    position: sticky;
+    bottom: 0;
+    padding-top: 8px;
+    background: linear-gradient(180deg, rgba(247, 251, 255, 0), rgba(247, 251, 255, 0.96) 28%);
 }
 
 .apc-solicitacoes-data {
@@ -840,8 +906,7 @@
 
     .apc-overview-card,
     .apc-calendar-card,
-    .apc-detail-card,
-    .apc-side-card {
+    .apc-detail-card {
         grid-column: 1;
         grid-row: auto;
         position: static;
@@ -873,6 +938,21 @@
 
     .apc-topbar-grid {
         grid-template-columns: 1fr;
+    }
+
+    .apc-gestao-actions,
+    .apc-modal-header {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .apc-modal-backdrop {
+        padding: 12px;
+    }
+
+    .apc-modal {
+        padding: 18px;
+        border-radius: 20px;
     }
 
     .apc-solicitacao-summary {
