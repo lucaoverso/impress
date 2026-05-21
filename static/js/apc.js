@@ -154,6 +154,7 @@ function ativarModoApc(modo, { recarregar = false } = {}) {
 
     if (recarregar && modoGestaoAtivoApc()) {
         limparSelecaoDataGestaoApc();
+        fecharModalFormularioApc({ limpar: true });
     }
 
     renderizarAbasModoApc();
@@ -1661,6 +1662,11 @@ async function initApc() {
         contextoApc = await fetchJson("/apc/contexto", { headers: headersApc });
         usuarioApc = Object.assign({}, usuarioMe || {}, contextoApc?.usuario || {});
         modoApc = modoInicialApc();
+        if (modoGestaoAtivoApc()) {
+            limparSelecaoDataGestaoApc();
+        } else {
+            dataSelecionadaApc = hojeIsoApc();
+        }
         preencherSelectAnosApc();
         preencherSelectPublicoApc();
         preencherSelectTiposEntregaApc();

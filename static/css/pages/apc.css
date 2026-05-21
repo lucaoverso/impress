@@ -6,6 +6,12 @@
     gap: 16px;
 }
 
+.apc-page [hidden],
+.apc-modal-backdrop[hidden],
+.apc-gestao-actions[hidden] {
+    display: none !important;
+}
+
 .apc-topbar {
     background:
         linear-gradient(135deg, rgba(19, 53, 88, 0.98), rgba(25, 84, 126, 0.94)),
