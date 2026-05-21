@@ -31,6 +31,10 @@ let modoApc = "docente";
 let opcoesDestinatariosApc = [];
 let selecoesDestinatariosApc = new Set();
 
+function hojeIsoApc() {
+    return paraIso(new Date());
+}
+
 function setMensagemApc(texto, erro = false) {
     const msg = el("msgApc");
     if (!msg) return;
@@ -79,6 +83,13 @@ function modoGestaoAtivoApc() {
 
 function gestaoComDataSelecionadaApc() {
     return modoGestaoAtivoApc() && dataSelecionadaManualmenteApc;
+}
+
+function limparSelecaoDataGestaoApc() {
+    if (!modoGestaoAtivoApc()) return;
+    dataSelecionadaApc = "";
+    dataSelecionadaManualmenteApc = false;
+    periodoSelecionadoApcId = null;
 }
 
 function modalApcAberto() {
@@ -142,7 +153,7 @@ function ativarModoApc(modo, { recarregar = false } = {}) {
     }
 
     if (recarregar && modoGestaoAtivoApc()) {
-        dataSelecionadaManualmenteApc = false;
+        limparSelecaoDataGestaoApc();
     }
 
     renderizarAbasModoApc();
@@ -273,8 +284,9 @@ function aplicarVisibilidadeApc() {
 }
 
 function preencherFormularioPeriodo(periodo) {
-    el("apcDataReferencia").value = periodo?.data_referencia || dataSelecionadaApc;
-    el("apcPrazoEnvio").value = periodo?.prazo_envio_input || `${dataSelecionadaApc}T23:59`;
+    const dataBase = periodo?.data_referencia || dataSelecionadaApc || hojeIsoApc();
+    el("apcDataReferencia").value = dataBase;
+    el("apcPrazoEnvio").value = periodo?.prazo_envio_input || `${dataBase}T23:59`;
     el("apcTitulo").value = periodo?.titulo || "Documento";
     el("apcObservacao").value = periodo?.observacao || "";
     el("apcPublicoAlvo").value = periodo?.publico_alvo || "TODOS_PROFESSORES";
@@ -1210,9 +1222,10 @@ function renderArquivosGestaoApc(detalhe) {
 
 function renderPainelSelecionadoVazio() {
     const modoGestao = modoGestaoAtivoApc();
+    const dataBase = dataSelecionadaApc || hojeIsoApc();
     el("apcTituloPainel").innerText = modoGestao
-        ? `Solicitacoes de ${paraDataBr(dataSelecionadaApc)}`
-        : `Pendencias de ${paraDataBr(dataSelecionadaApc)}`;
+        ? `Solicitacoes de ${paraDataBr(dataBase)}`
+        : `Pendencias de ${paraDataBr(dataBase)}`;
     el("apcSubtituloPainel").innerText = modoGestao
         ? "Abra o modal de nova solicitacao ou selecione outra data no calendario."
         : "Selecione outra data no calendario para localizar suas entregas.";
@@ -1250,9 +1263,10 @@ function renderPainelAguardandoDataGestao() {
 }
 
 function renderPainelSemSelecaoGestao() {
+    const dataBase = dataSelecionadaApc || hojeIsoApc();
     el("apcTituloPainel").innerText = modoGestaoAtivoApc()
-        ? `Solicitacoes de ${paraDataBr(dataSelecionadaApc)}`
-        : `Pendencias de ${paraDataBr(dataSelecionadaApc)}`;
+        ? `Solicitacoes de ${paraDataBr(dataBase)}`
+        : `Pendencias de ${paraDataBr(dataBase)}`;
     el("apcSubtituloPainel").innerText = modoGestaoAtivoApc()
         ? "Selecione uma solicitacao existente ou abra o modal para cadastrar uma nova."
         : "Escolha uma solicitacao abaixo para abrir os cards de envio.";
@@ -1263,7 +1277,7 @@ function renderPainelSemSelecaoGestao() {
     if (el("apcArquivosLista")) {
         el("apcArquivosLista").innerHTML = '<div class="booking-empty">Nenhum arquivo enviado ainda.</div>';
     }
-    renderSolicitacoesData(periodosResumoPorData(dataSelecionadaApc));
+    renderSolicitacoesData(periodosResumoPorData(dataSelecionadaApc || hojeIsoApc()));
     aplicarVisibilidadeApc();
 }
 
@@ -1553,8 +1567,7 @@ function registrarEventosApc() {
     });
 
     el("apcAnoLetivo").addEventListener("change", async () => {
-        periodoSelecionadoApcId = null;
-        dataSelecionadaManualmenteApc = false;
+        limparSelecaoDataGestaoApc();
         opcoesDestinatariosApc = [];
         selecoesDestinatariosApc = new Set();
         aplicarVisibilidadeApc();
@@ -1571,24 +1584,23 @@ function registrarEventosApc() {
 
     el("btnApcMesAnterior").addEventListener("click", async () => {
         mesAtualApc = new Date(mesAtualApc.getFullYear(), mesAtualApc.getMonth() - 1, 1);
-        periodoSelecionadoApcId = null;
-        dataSelecionadaManualmenteApc = false;
+        limparSelecaoDataGestaoApc();
         aplicarVisibilidadeApc();
         await carregarCalendarioApc();
     });
     el("btnApcMesProximo").addEventListener("click", async () => {
         mesAtualApc = new Date(mesAtualApc.getFullYear(), mesAtualApc.getMonth() + 1, 1);
-        periodoSelecionadoApcId = null;
-        dataSelecionadaManualmenteApc = false;
+        limparSelecaoDataGestaoApc();
         aplicarVisibilidadeApc();
         await carregarCalendarioApc();
     });
     el("btnApcMesHoje").addEventListener("click", async () => {
         const hoje = new Date();
         mesAtualApc = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-        dataSelecionadaApc = paraIso(hoje);
-        periodoSelecionadoApcId = null;
-        dataSelecionadaManualmenteApc = false;
+        limparSelecaoDataGestaoApc();
+        if (!modoGestaoAtivoApc()) {
+            dataSelecionadaApc = paraIso(hoje);
+        }
         aplicarVisibilidadeApc();
         await carregarCalendarioApc();
     });
