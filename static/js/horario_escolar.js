@@ -210,6 +210,37 @@ function descricaoCelulaHorarioProfessor(item) {
     return disciplina || professor || "";
 }
 
+function atualizarTitulosConsultaHorario() {
+    const turmasEyebrow = el("horarioTurmasEyebrow");
+    const turmasTitulo = el("horarioTurmasTitulo");
+    const turmasDescricao = el("horarioTurmasDescricao");
+
+    if (!turmasEyebrow || !turmasTitulo || !turmasDescricao) {
+        return;
+    }
+
+    if (interfaceProfessorAtiva() && escopoProfessorHorario === "minhas") {
+        turmasEyebrow.innerText = "Minha agenda";
+        turmasTitulo.innerText = "Meu horario";
+        turmasDescricao.innerText =
+            "Grade semanal consolidada com os dias, as disciplinas e as turmas do professor logado.";
+        return;
+    }
+
+    if (interfaceProfessorAtiva()) {
+        turmasEyebrow.innerText = "Visao do professor";
+        turmasTitulo.innerText = "Horario por turma";
+        turmasDescricao.innerText =
+            "Leitura organizada por turma com destaque visual para as aulas do professor logado.";
+        return;
+    }
+
+    turmasEyebrow.innerText = "Visao principal";
+    turmasTitulo.innerText = "Grade por turma";
+    turmasDescricao.innerText =
+        "Resumo textual da grade organizada por turma para conferencia rapida.";
+}
+
 function aplicarModoPaginaHorario() {
     document.body.classList.toggle("horario-professor-mode", interfaceProfessorAtiva());
 
@@ -232,22 +263,7 @@ function aplicarModoPaginaHorario() {
             : "Aplique filtros para revisar a grade por turma e a leitura espelhada por professor.";
     }
 
-    const turmasEyebrow = el("horarioTurmasEyebrow");
-    if (turmasEyebrow) {
-        turmasEyebrow.innerText = interfaceProfessorAtiva() ? "Visao do professor" : "Visao principal";
-    }
-
-    const turmasTitulo = el("horarioTurmasTitulo");
-    if (turmasTitulo) {
-        turmasTitulo.innerText = interfaceProfessorAtiva() ? "Horario por turma" : "Grade por turma";
-    }
-
-    const turmasDescricao = el("horarioTurmasDescricao");
-    if (turmasDescricao) {
-        turmasDescricao.innerText = interfaceProfessorAtiva()
-            ? "Leitura organizada por turma com destaque visual para as aulas do professor logado."
-            : "Resumo textual da grade organizada por turma para conferencia rapida.";
-    }
+    atualizarTitulosConsultaHorario();
 
     const builderGrid = el("horarioBuilderGrid");
     if (builderGrid) {
@@ -339,7 +355,7 @@ function atualizarResumoHorario() {
         const legendaEscopo = {
             geral: "Horario geral",
             colegas: "Somente colegas",
-            minhas: "Somente minhas aulas",
+            minhas: "Ver meu horario",
         };
         partes.push(legendaEscopo[escopoProfessorHorario] || "Horario geral");
     }
@@ -699,6 +715,159 @@ function renderizarGradeTurmaSemanal(grupo) {
     return card;
 }
 
+function obterDiasGradeProfessor() {
+    const diaSelecionado = String(el("filtroHorarioDiaSemana")?.value || "").trim().toUpperCase();
+    if (diaSelecionado) {
+        const diaInfo = obterDiaInfo(diaSelecionado);
+        return diaInfo ? [diaInfo] : [];
+    }
+    return Array.isArray(contextoHorario.dias_semana) ? contextoHorario.dias_semana : [];
+}
+
+function obterFaixasMeuHorario(itens) {
+    const faixas = new Map();
+    (itens || []).forEach((item) => {
+        const faixaGlobal = Number(item.faixa_global || item.aula_numero || 0);
+        if (faixaGlobal <= 0) return;
+        if (!faixas.has(faixaGlobal)) {
+            faixas.set(faixaGlobal, {
+                faixa_global: faixaGlobal,
+                aula_numero: Number(item.aula_numero || 0),
+                label: String(item.aula_label || labelAulaHorario(item) || "").trim() || `${item.aula_numero}a aula`,
+            });
+        }
+    });
+    return Array.from(faixas.values()).sort((atual, proxima) => {
+        if (atual.faixa_global !== proxima.faixa_global) {
+            return atual.faixa_global - proxima.faixa_global;
+        }
+        return atual.aula_numero - proxima.aula_numero;
+    });
+}
+
+function criarConteudoCelulaMeuHorario(item) {
+    const conteudo = document.createElement("div");
+    conteudo.className = "horario-professor-cell";
+
+    const disciplina = document.createElement("strong");
+    disciplina.className = "horario-professor-cell-disciplina";
+    disciplina.innerText = String(item?.disciplina_nome || "Disciplina nao informada");
+    conteudo.appendChild(disciplina);
+
+    const turma = document.createElement("span");
+    turma.className = "horario-professor-cell-turma";
+    turma.innerText = String(item?.turma_nome || "").trim()
+        ? `Turma ${item.turma_nome}`
+        : "Turma nao informada";
+    conteudo.appendChild(turma);
+
+    return conteudo;
+}
+
+function renderizarMeuHorarioProfessor(itens) {
+    const card = document.createElement("article");
+    card.className = "horario-group-card horario-professor-grid-card";
+
+    const header = document.createElement("div");
+    header.className = "horario-group-header";
+
+    const info = document.createElement("div");
+    const titulo = document.createElement("h3");
+    titulo.innerText = "Meu horario semanal";
+    info.appendChild(titulo);
+
+    const anos = Array.from(
+        new Set(
+            (itens || [])
+                .map((item) => Number(item.ano_letivo || 0))
+                .filter((ano) => ano > 0)
+        )
+    ).sort((atual, proximo) => atual - proximo);
+
+    const subtitulo = document.createElement("p");
+    subtitulo.innerText = anos.length === 1
+        ? `Ano ${anos[0]} - grade consolidada por dia, disciplina e turma.`
+        : "Grade consolidada por dia, disciplina e turma.";
+    info.appendChild(subtitulo);
+    header.appendChild(info);
+
+    const count = document.createElement("span");
+    count.className = "horario-group-count";
+    count.innerText = `${(itens || []).length} aula(s)`;
+    header.appendChild(count);
+    card.appendChild(header);
+
+    const dias = obterDiasGradeProfessor();
+    const faixas = obterFaixasMeuHorario(itens);
+    if (dias.length === 0 || faixas.length === 0) {
+        const vazio = document.createElement("p");
+        vazio.className = "horario-empty-state";
+        vazio.innerText = "Nenhuma aula encontrada para montar o seu horario.";
+        card.appendChild(vazio);
+        return card;
+    }
+
+    const mapa = new Map();
+    (itens || []).forEach((item) => {
+        mapa.set(
+            `${String(item.dia_semana || "").toUpperCase()}:${Number(item.faixa_global || item.aula_numero || 0)}`,
+            item
+        );
+    });
+
+    const wrap = document.createElement("div");
+    wrap.className = "horario-professor-grid-wrap";
+
+    const table = document.createElement("table");
+    table.className = "horario-professor-grid";
+
+    const thead = document.createElement("thead");
+    const headRow = document.createElement("tr");
+
+    const thHorario = document.createElement("th");
+    thHorario.innerText = "Horario";
+    headRow.appendChild(thHorario);
+
+    dias.forEach((dia) => {
+        const th = document.createElement("th");
+        th.innerText = dia.label || dia.valor || "";
+        headRow.appendChild(th);
+    });
+    thead.appendChild(headRow);
+    table.appendChild(thead);
+
+    const tbody = document.createElement("tbody");
+    faixas.forEach((faixa) => {
+        const tr = document.createElement("tr");
+
+        const thLinha = document.createElement("th");
+        thLinha.innerText = faixa.label || `${faixa.aula_numero}a aula`;
+        tr.appendChild(thLinha);
+
+        dias.forEach((dia) => {
+            const td = document.createElement("td");
+            const item = mapa.get(`${dia.valor}:${faixa.faixa_global}`) || null;
+
+            if (!item) {
+                td.className = "is-empty";
+                td.innerHTML = "<span>&nbsp;</span>";
+            } else {
+                td.classList.add("is-own");
+                td.appendChild(criarConteudoCelulaMeuHorario(item));
+            }
+
+            tr.appendChild(td);
+        });
+
+        tbody.appendChild(tr);
+    });
+
+    table.appendChild(tbody);
+    wrap.appendChild(table);
+    card.appendChild(wrap);
+    return card;
+}
+
 function renderizarAgrupamentosHorario() {
     const listaTurmas = el("horarioListaTurmas");
     const listaProfessores = el("horarioListaProfessores");
@@ -706,6 +875,19 @@ function renderizarAgrupamentosHorario() {
     listaTurmas.innerHTML = "";
     if (listaProfessores) {
         listaProfessores.innerHTML = "";
+    }
+    atualizarTitulosConsultaHorario();
+
+    if (interfaceProfessorAtiva() && escopoProfessorHorario === "minhas") {
+        if (resultadoFiltrado.itens.length === 0) {
+            const vazio = document.createElement("p");
+            vazio.className = "horario-empty-state";
+            vazio.innerText = "Nenhuma aula encontrada para os filtros selecionados.";
+            listaTurmas.appendChild(vazio);
+        } else {
+            listaTurmas.appendChild(renderizarMeuHorarioProfessor(resultadoFiltrado.itens));
+        }
+        return;
     }
 
     if (resultadoFiltrado.grupos_turma.length === 0) {

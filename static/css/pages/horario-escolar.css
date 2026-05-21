@@ -461,6 +461,24 @@
     background: linear-gradient(180deg, rgba(245, 248, 252, 0.96) 0%, rgba(237, 244, 251, 0.92) 100%);
 }
 
+.horario-professor-cell {
+    display: grid;
+    gap: 0.3rem;
+}
+
+.horario-professor-cell-disciplina {
+    display: block;
+    color: #17324d;
+    font-size: 0.94rem;
+}
+
+.horario-professor-cell-turma {
+    display: block;
+    color: #35597f;
+    font-size: 0.84rem;
+    font-weight: 600;
+}
+
 .horario-inline-actions {
     display: inline-flex;
     gap: 0.5rem;
