@@ -55,6 +55,57 @@ def nome_turno_pcpi(turno: str) -> str:
     return str(config["nome"])
 
 
+def validar_data_pcpi(valor: str, campo: str = "Data") -> str:
+    texto = _texto_limpo(valor)
+    if not texto:
+        raise ValueError(f"{campo} invalida. Use o formato YYYY-MM-DD.")
+
+    try:
+        data = datetime.strptime(texto, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise ValueError(f"{campo} invalida. Use o formato YYYY-MM-DD.") from exc
+    return data.isoformat()
+
+
+def validar_turno_pcpi(valor: str) -> str:
+    turno = _texto_limpo(valor).upper()
+    if turno not in TURNOS_PCPI_CONFIG:
+        turnos_validos = ", ".join(TURNOS_PCPI_CONFIG.keys())
+        raise ValueError(f"Turno invalido. Use um dos valores: {turnos_validos}.")
+    return turno
+
+
+def validar_texto_obrigatorio_pcpi(valor: str, campo: str, *, max_len: int = 255) -> str:
+    texto = _texto_limpo(valor)
+    if not texto:
+        raise ValueError(f"{campo} e obrigatorio.")
+    if len(texto) > max_len:
+        raise ValueError(f"{campo} excede o limite de {max_len} caracteres.")
+    return texto
+
+
+def validar_texto_opcional_pcpi(
+    valor: str | None,
+    campo: str = "Texto",
+    *,
+    max_len: int = 255,
+) -> str:
+    texto = _texto_limpo(valor)
+    if not texto:
+        return ""
+    if len(texto) > max_len:
+        raise ValueError(f"{campo} excede o limite de {max_len} caracteres.")
+    return texto
+
+
+def obter_usuario_id_pcpi(usuario: dict) -> int | None:
+    try:
+        valor = int((usuario or {}).get("id"))
+    except (TypeError, ValueError):
+        return None
+    return valor if valor > 0 else None
+
+
 def turno_agendamento_pertence_ao_turno_pcpi(turno_agendamento: str, turno_pcpi: str) -> bool:
     turno_pcpi_norm = _texto_limpo(turno_pcpi).upper()
     turno_agendamento_norm = _texto_limpo(turno_agendamento).upper()
@@ -697,3 +748,68 @@ def montar_sugestoes_pcpi(
         "itens": itens,
         "texto_base": gerar_texto_base_pcpi(data, turno, itens),
     }
+
+
+def normalizar_registros_manuais_pcpi(registros: list[dict], turno: str) -> list[dict]:
+    turno_norm = validar_turno_pcpi(turno)
+    registros_turno = [
+        dict(item)
+        for item in (registros or [])
+        if turno_agendamento_pertence_ao_turno_pcpi(item.get("turno"), turno_norm)
+    ]
+    for registro in registros_turno:
+        registro["turno"] = turno_norm
+    return registros_turno
+
+
+def montar_listagem_registros_manuais_pcpi(data: str, turno: str, registros: list[dict]) -> dict:
+    data_norm = validar_data_pcpi(data)
+    turno_norm = validar_turno_pcpi(turno)
+    registros_norm = normalizar_registros_manuais_pcpi(registros, turno_norm)
+    return {
+        "data": data_norm,
+        "turno": turno_norm,
+        "turno_nome": nome_turno_pcpi(turno_norm),
+        "total_registros": len(registros_norm),
+        "itens": registros_norm,
+    }
+
+
+def montar_contexto_pcpi(
+    data: str,
+    turno: str,
+    agendamentos_dia: list[dict],
+    cargas_professores: dict[int, dict] | None,
+    registros_manuais: list[dict],
+) -> tuple[dict, list[dict]]:
+    data_norm = validar_data_pcpi(data)
+    turno_norm = validar_turno_pcpi(turno)
+    agendamentos_turno = [
+        item
+        for item in (agendamentos_dia or [])
+        if agendamento_pertence_ao_turno_pcpi(item, turno_norm)
+    ]
+    sugestoes = montar_sugestoes_pcpi(
+        data_norm,
+        turno_norm,
+        agendamentos_turno,
+        cargas_professores or {},
+    )
+    registros_norm = normalizar_registros_manuais_pcpi(registros_manuais, turno_norm)
+    return sugestoes, registros_norm
+
+
+def filtrar_itens_automaticos_pcpi(
+    itens: list[dict],
+    agendamento_ids: list[int] | None,
+) -> list[dict]:
+    if agendamento_ids is None:
+        return list(itens or [])
+
+    ids_validos = {
+        int(valor) for valor in agendamento_ids if isinstance(valor, int) and int(valor) > 0
+    }
+    if not ids_validos:
+        return []
+
+    return [item for item in (itens or []) if int(item.get("agendamento_id") or 0) in ids_validos]

@@ -3,8 +3,15 @@ from services.pcpi_service import (
     GRUPO_AUTOMATICO_AUDIOVISUAL,
     GRUPO_AUTOMATICO_STE,
     agendamento_pertence_ao_turno_pcpi,
+    filtrar_itens_automaticos_pcpi,
     gerar_texto_pcpi,
+    montar_listagem_registros_manuais_pcpi,
+    obter_usuario_id_pcpi,
     turno_agendamento_pertence_ao_turno_pcpi,
+    validar_data_pcpi,
+    validar_texto_obrigatorio_pcpi,
+    validar_texto_opcional_pcpi,
+    validar_turno_pcpi,
 )
 
 SIMBOLO_ORDINAL_FEMININO = "\u00AA"
@@ -206,6 +213,43 @@ class PcpiServiceTest(unittest.TestCase):
         self.assertFalse(agendamento_pertence_ao_turno_pcpi(agendamento_matutino_ordinal, "VESPERTINO"))
         self.assertFalse(agendamento_pertence_ao_turno_pcpi(agendamento_vespertino_ordinal, "MATUTINO"))
         self.assertTrue(agendamento_pertence_ao_turno_pcpi(agendamento_vespertino_ordinal, "VESPERTINO"))
+
+    def test_validadores_do_pcpi_normalizam_entradas(self):
+        self.assertEqual(validar_data_pcpi("2026-04-03"), "2026-04-03")
+        self.assertEqual(validar_turno_pcpi("matutino"), "MATUTINO")
+        self.assertEqual(validar_texto_opcional_pcpi("  apoio  "), "apoio")
+        self.assertEqual(
+            validar_texto_obrigatorio_pcpi("  Planejamento  ", "Descricao curta"),
+            "Planejamento",
+        )
+
+    def test_filtra_itens_automaticos_por_ids(self):
+        itens = [
+            {"agendamento_id": 1, "professor_nome": "Ana"},
+            {"agendamento_id": 2, "professor_nome": "Bruno"},
+        ]
+
+        filtrados = filtrar_itens_automaticos_pcpi(itens, [2])
+        self.assertEqual(len(filtrados), 1)
+        self.assertEqual(filtrados[0]["professor_nome"], "Bruno")
+        self.assertEqual(filtrar_itens_automaticos_pcpi(itens, []), [])
+
+    def test_monta_listagem_de_registros_manuais_normalizando_turno(self):
+        registros = [
+            {"id": 1, "turno": "INTEGRAL", "descricao_curta": "Registro 1"},
+            {"id": 2, "turno": "VESPERTINO", "descricao_curta": "Registro 2"},
+        ]
+
+        resposta = montar_listagem_registros_manuais_pcpi("2026-04-03", "VESPERTINO", registros)
+        self.assertEqual(resposta["turno"], "VESPERTINO")
+        self.assertEqual(resposta["turno_nome"], "Vespertino")
+        self.assertEqual(resposta["total_registros"], 2)
+        self.assertTrue(all(item["turno"] == "VESPERTINO" for item in resposta["itens"]))
+
+    def test_obtem_usuario_id_positivo_ou_none(self):
+        self.assertEqual(obter_usuario_id_pcpi({"id": "7"}), 7)
+        self.assertIsNone(obter_usuario_id_pcpi({"id": 0}))
+        self.assertIsNone(obter_usuario_id_pcpi({}))
 
 
 if __name__ == "__main__":

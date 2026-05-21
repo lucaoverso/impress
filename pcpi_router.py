@@ -1,5 +1,3 @@
-from datetime import datetime
-
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from auth import get_usuario_logado
@@ -20,12 +18,16 @@ from schemas.pcpi_schemas import (
     PcpiTextoPreviewIn,
 )
 from services.pcpi_service import (
-    TURNOS_PCPI_CONFIG,
     agendamento_pertence_ao_turno_pcpi,
+    filtrar_itens_automaticos_pcpi,
     gerar_texto_pcpi,
-    montar_sugestoes_pcpi,
-    nome_turno_pcpi,
-    turno_agendamento_pertence_ao_turno_pcpi,
+    montar_contexto_pcpi,
+    montar_listagem_registros_manuais_pcpi,
+    obter_usuario_id_pcpi,
+    validar_data_pcpi,
+    validar_texto_obrigatorio_pcpi,
+    validar_texto_opcional_pcpi,
+    validar_turno_pcpi,
 )
 
 
@@ -42,97 +44,51 @@ def _exigir_gestor(usuario: dict):
     return usuario
 
 
-def _validar_data_iso(valor: str, campo: str = "Data") -> str:
-    texto = str(valor or "").strip()
-    if not texto:
-        raise HTTPException(400, f"{campo} inválida. Use o formato YYYY-MM-DD.")
-
+def _validar_data_iso_http(valor: str, campo: str = "Data") -> str:
     try:
-        data = datetime.strptime(texto, "%Y-%m-%d").date()
+        return validar_data_pcpi(valor, campo)
     except ValueError as exc:
-        raise HTTPException(400, f"{campo} inválida. Use o formato YYYY-MM-DD.") from exc
-    return data.isoformat()
+        raise HTTPException(400, str(exc)) from exc
 
 
-def _validar_turno(valor: str) -> str:
-    turno = str(valor or "").strip().upper()
-    if turno not in TURNOS_PCPI_CONFIG:
-        turnos_validos = ", ".join(TURNOS_PCPI_CONFIG.keys())
-        raise HTTPException(400, f"Turno inválido. Use um dos valores: {turnos_validos}.")
-    return turno
-
-
-def _texto_obrigatorio(valor: str, campo: str, *, max_len: int = 255) -> str:
-    texto = str(valor or "").strip()
-    if not texto:
-        raise HTTPException(400, f"{campo} é obrigatório.")
-    if len(texto) > max_len:
-        raise HTTPException(400, f"{campo} excede o limite de {max_len} caracteres.")
-    return texto
-
-
-def _texto_opcional(valor: str | None, campo: str = "Texto", *, max_len: int = 255) -> str:
-    texto = str(valor or "").strip()
-    if not texto:
-        return ""
-    if len(texto) > max_len:
-        raise HTTPException(400, f"{campo} excede o limite de {max_len} caracteres.")
-    return texto
-
-
-def _obter_usuario_id(usuario: dict) -> int | None:
+def _validar_turno_http(valor: str) -> str:
     try:
-        valor = int(usuario.get("id"))
-    except (TypeError, ValueError):
-        return None
-    return valor if valor > 0 else None
+        return validar_turno_pcpi(valor)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
-def _carregar_contexto_pcpi(data: str, turno: str) -> tuple[dict, list[dict]]:
+def _texto_obrigatorio_http(valor: str, campo: str, *, max_len: int = 255) -> str:
+    try:
+        return validar_texto_obrigatorio_pcpi(valor, campo, max_len=max_len)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+def _texto_opcional_http(valor: str | None, campo: str = "Texto", *, max_len: int = 255) -> str:
+    try:
+        return validar_texto_opcional_pcpi(valor, campo, max_len=max_len)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+def _carregar_contexto_pcpi_http(data: str, turno: str) -> tuple[dict, list[dict]]:
     agendamentos_dia = listar_agendamentos(
         data_inicio=data,
         data_fim=data,
     )
-    agendamentos_turno = [
-        item
-        for item in agendamentos_dia
-        if agendamento_pertence_ao_turno_pcpi(item, turno)
-    ]
-
     cargas = listar_cargas_professores_por_usuario_ids(
-        [int(item.get("usuario_id") or 0) for item in agendamentos_turno]
+        [
+            int(item.get("usuario_id") or 0)
+            for item in agendamentos_dia
+            if agendamento_pertence_ao_turno_pcpi(item, turno)
+        ]
     )
-    sugestoes = montar_sugestoes_pcpi(data, turno, agendamentos_turno, cargas)
-    registros = _listar_registros_manuais_normalizados(data, turno)
-    return sugestoes, registros
-
-
-def _listar_registros_manuais_normalizados(data: str, turno: str) -> list[dict]:
     registros = listar_registros_pcpi_manuais(data=data)
-    registros_turno = [
-        dict(item)
-        for item in registros
-        if turno_agendamento_pertence_ao_turno_pcpi(item.get("turno"), turno)
-    ]
-
-    for registro in registros_turno:
-        registro["turno"] = turno
-    return registros_turno
-
-
-def _filtrar_itens_automaticos_por_ids(
-    itens: list[dict], agendamento_ids: list[int] | None
-) -> list[dict]:
-    if agendamento_ids is None:
-        return list(itens or [])
-
-    ids_validos = {
-        int(valor) for valor in agendamento_ids if isinstance(valor, int) and int(valor) > 0
-    }
-    if not ids_validos:
-        return []
-
-    return [item for item in (itens or []) if int(item.get("agendamento_id") or 0) in ids_validos]
+    try:
+        return montar_contexto_pcpi(data, turno, agendamentos_dia, cargas, registros)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.get("/pcpi/sugestoes", response_model=PcpiSugestoesOut)
@@ -142,9 +98,9 @@ def listar_sugestoes_pcpi_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    data_norm = _validar_data_iso(data)
-    turno_norm = _validar_turno(turno)
-    sugestoes, _registros = _carregar_contexto_pcpi(data_norm, turno_norm)
+    data_norm = _validar_data_iso_http(data)
+    turno_norm = _validar_turno_http(turno)
+    sugestoes, _registros = _carregar_contexto_pcpi_http(data_norm, turno_norm)
     return sugestoes
 
 
@@ -155,17 +111,16 @@ def listar_registros_manuais_pcpi_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    data_norm = _validar_data_iso(data)
-    turno_norm = _validar_turno(turno)
-
-    registros = _listar_registros_manuais_normalizados(data_norm, turno_norm)
-    return {
-        "data": data_norm,
-        "turno": turno_norm,
-        "turno_nome": nome_turno_pcpi(turno_norm),
-        "total_registros": len(registros),
-        "itens": registros,
-    }
+    data_norm = _validar_data_iso_http(data)
+    turno_norm = _validar_turno_http(turno)
+    try:
+        return montar_listagem_registros_manuais_pcpi(
+            data_norm,
+            turno_norm,
+            listar_registros_pcpi_manuais(data=data_norm),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.post("/pcpi/registros-manuais", response_model=PcpiRegistroManualOut)
@@ -175,14 +130,14 @@ def criar_registro_manual_pcpi_api(
 ):
     _exigir_gestor(usuario)
 
-    data_norm = _validar_data_iso(payload.data)
-    turno_norm = _validar_turno(payload.turno)
-    professor_nome = _texto_opcional(payload.professor_nome, "Professor ou setor", max_len=160)
-    componente = _texto_opcional(payload.componente, "Componente ou recurso", max_len=160)
-    turma = _texto_opcional(payload.turma, "Turma", max_len=120)
-    descricao_curta = _texto_obrigatorio(payload.descricao_curta, "Descrição curta", max_len=500)
-    observacoes = _texto_opcional(payload.observacoes, "Observações", max_len=2000)
-    usuario_id = _obter_usuario_id(usuario)
+    data_norm = _validar_data_iso_http(payload.data)
+    turno_norm = _validar_turno_http(payload.turno)
+    professor_nome = _texto_opcional_http(payload.professor_nome, "Professor ou setor", max_len=160)
+    componente = _texto_opcional_http(payload.componente, "Componente ou recurso", max_len=160)
+    turma = _texto_opcional_http(payload.turma, "Turma", max_len=120)
+    descricao_curta = _texto_obrigatorio_http(payload.descricao_curta, "Descricao curta", max_len=500)
+    observacoes = _texto_opcional_http(payload.observacoes, "Observacoes", max_len=2000)
+    usuario_id = obter_usuario_id_pcpi(usuario)
 
     registro_id = criar_registro_pcpi_manual(
         data=data_norm,
@@ -210,10 +165,10 @@ def gerar_texto_pcpi_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    data_norm = _validar_data_iso(data)
-    turno_norm = _validar_turno(turno)
+    data_norm = _validar_data_iso_http(data)
+    turno_norm = _validar_turno_http(turno)
 
-    sugestoes, registros = _carregar_contexto_pcpi(data_norm, turno_norm)
+    sugestoes, registros = _carregar_contexto_pcpi_http(data_norm, turno_norm)
     return gerar_texto_pcpi(
         data=data_norm,
         turno=turno_norm,
@@ -228,11 +183,11 @@ def gerar_texto_pcpi_preview_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    data_norm = _validar_data_iso(payload.data)
-    turno_norm = _validar_turno(payload.turno)
+    data_norm = _validar_data_iso_http(payload.data)
+    turno_norm = _validar_turno_http(payload.turno)
 
-    sugestoes, registros = _carregar_contexto_pcpi(data_norm, turno_norm)
-    itens_automaticos = _filtrar_itens_automaticos_por_ids(
+    sugestoes, registros = _carregar_contexto_pcpi_http(data_norm, turno_norm)
+    itens_automaticos = filtrar_itens_automaticos_pcpi(
         sugestoes.get("itens") or [],
         payload.agendamento_ids,
     )
