@@ -55,6 +55,7 @@ from services.apc_service import (
     APC_TIPO_ENTREGA_PROVA_BIMESTRAL,
 )
 from services.file_service import arquivo_suportado
+from services.horario_escolar_service import validar_ano_letivo
 
 from .common import normalizar_cargo_usuario, usuario_eh_professor, usuario_tem_acesso_coordenacao
 from .config import APC_DIR, FORMATOS_UPLOAD_DESCRICAO
