@@ -5652,6 +5652,135 @@ def excluir_apc_periodo(periodo_id: int):
     return alterado
 
 
+def _mapear_apc_destinatario(row) -> dict:
+    return {
+        "id": int(row["id"]),
+        "periodo_id": int(row["periodo_id"] or 0),
+        "professor_id": int(row["professor_usuario_id"] or 0),
+        "professor_nome": str(row["professor_nome"] or "").strip(),
+        "professor_email": str(row["professor_email"] or "").strip(),
+        "turma_id": int(row["turma_id"] or 0),
+        "turma_nome": str(row["turma_nome"] or "").strip(),
+        "disciplina_id": int(row["disciplina_id"] or 0),
+        "disciplina_nome": str(row["disciplina_nome"] or "").strip(),
+    }
+
+
+def _consultar_apc_destinatarios(cursor, *, filtros_sql=None, params=None):
+    where = list(filtros_sql or [])
+    parametros = list(params or [])
+    clausula_where = f"WHERE {' AND '.join(where)}" if where else ""
+
+    cursor.execute(
+        f"""
+        SELECT
+            ad.id,
+            ad.periodo_id,
+            ad.professor_usuario_id,
+            ad.turma_id,
+            ad.disciplina_id,
+            COALESCE(u.nome, '') AS professor_nome,
+            COALESCE(u.email, '') AS professor_email,
+            COALESCE(t.nome, '') AS turma_nome,
+            COALESCE(d.nome, '') AS disciplina_nome
+        FROM apc_periodo_destinatarios ad
+        INNER JOIN usuarios u ON u.id = ad.professor_usuario_id
+        LEFT JOIN turmas t ON t.id = ad.turma_id
+        LEFT JOIN disciplinas d ON d.id = ad.disciplina_id
+        {clausula_where}
+        ORDER BY
+            u.nome COLLATE NOCASE ASC,
+            t.nome COLLATE NOCASE ASC,
+            d.nome COLLATE NOCASE ASC,
+            ad.id ASC
+        """,
+        parametros,
+    )
+    return [_mapear_apc_destinatario(row) for row in cursor.fetchall()]
+
+
+def listar_apc_destinatarios(
+    *,
+    periodo_id: int | None = None,
+    professor_id: int | None = None,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    filtros = []
+    params = []
+
+    if periodo_id is not None:
+        filtros.append("ad.periodo_id = ?")
+        params.append(int(periodo_id))
+    if professor_id is not None:
+        filtros.append("ad.professor_usuario_id = ?")
+        params.append(int(professor_id))
+
+    itens = _consultar_apc_destinatarios(cursor, filtros_sql=filtros, params=params)
+    conn.close()
+    return itens
+
+
+def buscar_apc_destinatario_por_chave(
+    periodo_id: int,
+    professor_id: int,
+    turma_id: int = 0,
+    disciplina_id: int = 0,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    itens = _consultar_apc_destinatarios(
+        cursor,
+        filtros_sql=[
+            "ad.periodo_id = ?",
+            "ad.professor_usuario_id = ?",
+            "COALESCE(ad.turma_id, 0) = ?",
+            "COALESCE(ad.disciplina_id, 0) = ?",
+        ],
+        params=[
+            int(periodo_id),
+            int(professor_id),
+            int(turma_id or 0),
+            int(disciplina_id or 0),
+        ],
+    )
+    conn.close()
+    return itens[0] if itens else None
+
+
+def substituir_apc_destinatarios(periodo_id: int, destinatarios: list[dict] | None):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "DELETE FROM apc_periodo_destinatarios WHERE periodo_id = ?",
+        (int(periodo_id),),
+    )
+
+    for item in destinatarios or []:
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO apc_periodo_destinatarios (
+                periodo_id,
+                professor_usuario_id,
+                turma_id,
+                disciplina_id,
+                criado_em
+            )
+            VALUES (?, ?, ?, ?, datetime('now'))
+            """,
+            (
+                int(periodo_id),
+                int(item.get("professor_id") or 0),
+                int(item.get("turma_id") or 0),
+                int(item.get("disciplina_id") or 0),
+            ),
+        )
+
+    conn.commit()
+    conn.close()
+    return listar_apc_destinatarios(periodo_id=int(periodo_id))
+
+
 def _mapear_apc_envio(row) -> dict:
     arquivo_nome_original = str(row["arquivo_nome_original"] or "").strip()
     arquivo_nome_cliente = str(row["arquivo_nome_cliente"] or "").strip()
@@ -6822,6 +6951,8 @@ def _descricao_documento_relatorio_anexos(periodo: dict, item: dict) -> str:
 def _obter_elegiveis_periodo_apc_relatorios(periodo: dict) -> list[dict]:
     from services.apc_service import (
         APC_PUBLICO_ALVO_TODOS_PROFESSORES,
+        APC_PUBLICO_ALVO_PROFESSORES_SELECIONADOS,
+        agrupar_destinatarios_selecionados_apc,
         agrupar_horarios_professor_dia,
         agrupar_professores_elegiveis,
         enriquecer_periodo_apc,
@@ -6831,6 +6962,10 @@ def _obter_elegiveis_periodo_apc_relatorios(periodo: dict) -> list[dict]:
     periodo_norm = enriquecer_periodo_apc(periodo)
     if periodo_norm["publico_alvo"] == APC_PUBLICO_ALVO_TODOS_PROFESSORES:
         return agrupar_professores_elegiveis(listar_professores_agendamento())
+    if periodo_norm["publico_alvo"] == APC_PUBLICO_ALVO_PROFESSORES_SELECIONADOS:
+        return agrupar_destinatarios_selecionados_apc(
+            listar_apc_destinatarios(periodo_id=int(periodo_norm["id"]))
+        )
 
     horarios = listar_horarios_escolares(
         ano_letivo=int(periodo_norm["ano_letivo"]),

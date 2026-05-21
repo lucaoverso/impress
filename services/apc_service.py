@@ -12,13 +12,16 @@ from services.horario_escolar_service import (
 
 APC_PUBLICO_ALVO_TODOS_PROFESSORES = "TODOS_PROFESSORES"
 APC_PUBLICO_ALVO_HORARIO_DIA = "HORARIO_DIA"
+APC_PUBLICO_ALVO_PROFESSORES_SELECIONADOS = "PROFESSORES_SELECIONADOS"
 APC_PUBLICOS_ALVO_VALIDOS = (
     APC_PUBLICO_ALVO_TODOS_PROFESSORES,
     APC_PUBLICO_ALVO_HORARIO_DIA,
+    APC_PUBLICO_ALVO_PROFESSORES_SELECIONADOS,
 )
 APC_PUBLICO_ALVO_LABELS = {
     APC_PUBLICO_ALVO_TODOS_PROFESSORES: "Todos os professores",
     APC_PUBLICO_ALVO_HORARIO_DIA: "Professores com aula na data",
+    APC_PUBLICO_ALVO_PROFESSORES_SELECIONADOS: "Professores selecionados",
 }
 APC_TIPO_ENTREGA_GERAL = "GERAL"
 APC_TIPO_ENTREGA_APC = "APC"
@@ -321,6 +324,36 @@ def agrupar_professores_elegiveis(professores: list[dict]) -> list[dict]:
                 "disciplina_nome": "",
                 "turmas": [],
                 "disciplinas": [],
+                "horarios": [],
+            }
+        )
+    return itens
+
+
+def agrupar_destinatarios_selecionados_apc(destinatarios: list[dict]) -> list[dict]:
+    itens = []
+    for item in sorted(
+        [dict(item) for item in (destinatarios or []) if int(item.get("professor_id") or 0) > 0],
+        key=lambda destino: (
+            str(destino.get("professor_nome") or "").casefold(),
+            str(destino.get("turma_nome") or "").casefold(),
+            str(destino.get("disciplina_nome") or "").casefold(),
+            int(destino.get("professor_id") or 0),
+            int(destino.get("turma_id") or 0),
+            int(destino.get("disciplina_id") or 0),
+        ),
+    ):
+        itens.append(
+            {
+                "professor_id": int(item.get("professor_id") or 0),
+                "professor_nome": str(item.get("professor_nome") or "").strip(),
+                "professor_email": str(item.get("professor_email") or "").strip(),
+                "turma_id": int(item.get("turma_id") or 0),
+                "turma_nome": str(item.get("turma_nome") or "").strip(),
+                "disciplina_id": int(item.get("disciplina_id") or 0),
+                "disciplina_nome": str(item.get("disciplina_nome") or "").strip(),
+                "turmas": [str(item.get("turma_nome") or "").strip()] if str(item.get("turma_nome") or "").strip() else [],
+                "disciplinas": [str(item.get("disciplina_nome") or "").strip()] if str(item.get("disciplina_nome") or "").strip() else [],
                 "horarios": [],
             }
         )

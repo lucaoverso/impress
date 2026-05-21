@@ -310,6 +310,143 @@ class ApcRouterTest(unittest.TestCase):
 
             self.assertEqual(int(ctx.exception.status_code), 403)
 
+    def test_periodo_com_professores_selecionados_exibe_apenas_destinatarios_configurados(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            apc_dir = os.path.join(tmp_dir, "apc")
+            database, models, apc_router = _reload_modules(db_path, apc_dir)
+            database.criar_tabelas()
+
+            turma_8a_id = int(database.criar_turma("8A", "MATUTINO", 30))
+            turma_9b_id = int(database.criar_turma("9B", "MATUTINO", 29))
+            disciplina_matematica_id = int(database.criar_disciplina("Matematica", 5))
+            disciplina_geometria_id = int(database.criar_disciplina("Geometria", 3))
+            disciplina_historia_id = int(database.criar_disciplina("Historia", 2))
+
+            paulo_id = int(
+                database.criar_professor(
+                    nome="Paulo",
+                    email="paulo@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1987-04-10",
+                    aulas_semanais=18,
+                    turmas_quantidade=2,
+                    turmas=["8A", "9B"],
+                    disciplinas=["Matematica", "Geometria"],
+                )
+            )
+            maria_id = int(
+                database.criar_professor(
+                    nome="Maria",
+                    email="maria@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1986-06-12",
+                    aulas_semanais=10,
+                    turmas_quantidade=1,
+                    turmas=["8A"],
+                    disciplinas=["Historia"],
+                )
+            )
+
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_8a_id,
+                disciplina_id=disciplina_matematica_id,
+                carga_horaria=5,
+                professor_usuario_id=paulo_id,
+            )
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_9b_id,
+                disciplina_id=disciplina_geometria_id,
+                carga_horaria=3,
+                professor_usuario_id=paulo_id,
+            )
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_8a_id,
+                disciplina_id=disciplina_historia_id,
+                carga_horaria=2,
+                professor_usuario_id=maria_id,
+            )
+
+            periodo = apc_router.criar_periodo_apc_api(
+                payload=models.ApcPeriodoIn(
+                    ano_letivo=2033,
+                    data_referencia="2033-09-15",
+                    prazo_envio="2033-09-16T18:00",
+                    titulo="Prova",
+                    observacao="Somente os componentes selecionados devem anexar.",
+                    publico_alvo="PROFESSORES_SELECIONADOS",
+                    destinatarios=[
+                        models.ApcDestinatarioIn(
+                            professor_id=paulo_id,
+                            turma_id=turma_8a_id,
+                            disciplina_id=disciplina_matematica_id,
+                        ),
+                        models.ApcDestinatarioIn(
+                            professor_id=paulo_id,
+                            turma_id=turma_9b_id,
+                            disciplina_id=disciplina_geometria_id,
+                        ),
+                    ],
+                ),
+                usuario=self._usuario_coord(),
+            )
+
+            calendario_paulo = apc_router.listar_calendario_apc_api(
+                mes="2033-09",
+                ano_letivo=2033,
+                usuario=self._usuario_professor(paulo_id),
+            )
+            self.assertEqual(len(calendario_paulo["periodos"]), 1)
+
+            calendario_maria = apc_router.listar_calendario_apc_api(
+                mes="2033-09",
+                ano_letivo=2033,
+                usuario=self._usuario_professor(maria_id),
+            )
+            self.assertEqual(len(calendario_maria["periodos"]), 0)
+
+            detalhe_gestao = apc_router.obter_periodo_apc_api(
+                periodo_id=int(periodo["id"]),
+                usuario=self._usuario_coord(),
+            )
+            self.assertEqual(detalhe_gestao["periodo"]["publico_alvo"], "PROFESSORES_SELECIONADOS")
+            self.assertEqual(int(detalhe_gestao["total_elegiveis"]), 2)
+            self.assertEqual(len(detalhe_gestao["destinatarios_configurados"]), 2)
+
+            detalhe_paulo = apc_router.obter_periodo_apc_api(
+                periodo_id=int(periodo["id"]),
+                usuario=self._usuario_professor(paulo_id),
+            )
+            self.assertEqual(int(detalhe_paulo["total_entregas"]), 2)
+            self.assertEqual(
+                {item["disciplina_nome"] for item in detalhe_paulo["itens"]},
+                {"Matematica", "Geometria"},
+            )
+
+            upload = UploadFile(
+                io.BytesIO(b"prova matematica"),
+                filename="prova-matematica.pdf",
+                headers=Headers({"content-type": "application/pdf"}),
+            )
+            envio = apc_router.enviar_arquivo_apc_api(
+                periodo_id=int(periodo["id"]),
+                turma_id=turma_8a_id,
+                disciplina_id=disciplina_matematica_id,
+                arquivo=upload,
+                usuario=self._usuario_professor(paulo_id),
+            )
+            self.assertEqual(int(envio["professor_id"]), paulo_id)
+            self.assertEqual(int(envio["turma_id"]), turma_8a_id)
+            self.assertEqual(int(envio["disciplina_id"]), disciplina_matematica_id)
+
+            with self.assertRaises(HTTPException) as ctx:
+                apc_router.obter_periodo_apc_api(
+                    periodo_id=int(periodo["id"]),
+                    usuario=self._usuario_professor(maria_id),
+                )
+
+            self.assertEqual(int(ctx.exception.status_code), 403)
+
     def test_central_filtra_entregas_por_flag_da_disciplina_e_tipo_da_solicitacao(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")

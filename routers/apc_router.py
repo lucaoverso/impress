@@ -16,15 +16,20 @@ from db.apc import (
     excluir_apc_envio,
     excluir_apc_periodo,
     listar_anos_letivos_apc,
+    listar_apc_destinatarios,
     listar_apc_envios,
     listar_apc_periodos,
+    substituir_apc_destinatarios,
 )
+from db.docencia import listar_atribuicoes_docentes
 from db.horario_escolar import listar_anos_letivos_horario_escolar, listar_horarios_escolares
 from db.usuarios import listar_professores_agendamento
 from models import ApcEnvioOut, ApcPeriodoIn, ApcPeriodoOut, ApcPeriodoUpdateIn
 from services.apc_service import (
     APC_PUBLICO_ALVO_HORARIO_DIA,
+    APC_PUBLICO_ALVO_PROFESSORES_SELECIONADOS,
     APC_PUBLICO_ALVO_TODOS_PROFESSORES,
+    agrupar_destinatarios_selecionados_apc,
     agrupar_horarios_professor_dia,
     agrupar_professores_elegiveis,
     chave_entrega_apc,
@@ -125,6 +130,115 @@ def _dados_periodo_payload(payload: ApcPeriodoIn | ApcPeriodoUpdateIn) -> dict:
     }
 
 
+def _chave_destinatario(item: dict) -> tuple[int, int, int]:
+    return (
+        int(item.get("professor_id") or 0),
+        int(item.get("turma_id") or 0),
+        int(item.get("disciplina_id") or 0),
+    )
+
+
+def _listar_vinculos_destinatarios_ano(ano_letivo: int) -> list[dict]:
+    grupos: dict[tuple[int, int, int], dict] = {}
+
+    for item in listar_horarios_escolares(ano_letivo=int(ano_letivo)):
+        chave = _chave_destinatario(item)
+        if chave[0] <= 0 or chave[1] <= 0 or chave[2] <= 0:
+            continue
+        grupos.setdefault(
+            chave,
+            {
+                "professor_id": chave[0],
+                "professor_nome": str(item.get("professor_nome") or "").strip(),
+                "professor_email": str(item.get("professor_email") or "").strip(),
+                "turma_id": chave[1],
+                "turma_nome": str(item.get("turma_nome") or "").strip(),
+                "disciplina_id": chave[2],
+                "disciplina_nome": str(item.get("disciplina_nome") or "").strip(),
+            },
+        )
+
+    for item in listar_atribuicoes_docentes(incluir_inativos=False):
+        chave = (
+            int(item.get("professor_id") or 0),
+            int(item.get("turma_id") or 0),
+            int(item.get("disciplina_id") or 0),
+        )
+        if chave[0] <= 0 or chave[1] <= 0 or chave[2] <= 0:
+            continue
+        grupos.setdefault(
+            chave,
+            {
+                "professor_id": chave[0],
+                "professor_nome": str(item.get("professor_nome") or "").strip(),
+                "professor_email": str(item.get("professor_email") or "").strip(),
+                "turma_id": chave[1],
+                "turma_nome": str(item.get("turma_nome") or "").strip(),
+                "disciplina_id": chave[2],
+                "disciplina_nome": str(item.get("disciplina_nome") or "").strip(),
+            },
+        )
+
+    return sorted(
+        grupos.values(),
+        key=lambda item: (
+            str(item.get("professor_nome") or "").casefold(),
+            str(item.get("turma_nome") or "").casefold(),
+            str(item.get("disciplina_nome") or "").casefold(),
+            int(item.get("professor_id") or 0),
+            int(item.get("turma_id") or 0),
+            int(item.get("disciplina_id") or 0),
+        ),
+    )
+
+
+def _normalizar_destinatarios_payload(
+    payload: ApcPeriodoIn | ApcPeriodoUpdateIn,
+    *,
+    ano_letivo: int,
+    publico_alvo: str,
+) -> list[dict]:
+    itens = []
+    vistos: set[tuple[int, int, int]] = set()
+
+    if publico_alvo != APC_PUBLICO_ALVO_PROFESSORES_SELECIONADOS:
+        return itens
+
+    opcoes_validas = {
+        _chave_destinatario(item): item for item in _listar_vinculos_destinatarios_ano(ano_letivo)
+    }
+
+    for bruto in list(payload.destinatarios or []):
+        item = {
+            "professor_id": int(getattr(bruto, "professor_id", 0) or 0),
+            "turma_id": int(getattr(bruto, "turma_id", 0) or 0),
+            "disciplina_id": int(getattr(bruto, "disciplina_id", 0) or 0),
+        }
+        chave = _chave_destinatario(item)
+        if chave[0] <= 0 or chave[1] <= 0 or chave[2] <= 0:
+            raise HTTPException(
+                400,
+                "Selecione professor, turma e disciplina para cada destinatario da solicitacao.",
+            )
+        if chave in vistos:
+            continue
+        if chave not in opcoes_validas:
+            raise HTTPException(
+                400,
+                "Um dos destinatarios selecionados nao pertence aos vinculos ativos do ano letivo informado.",
+            )
+        itens.append(item)
+        vistos.add(chave)
+
+    if not itens:
+        raise HTTPException(
+            400,
+            "Selecione ao menos um professor com sua respectiva turma e disciplina.",
+        )
+
+    return itens
+
+
 def _obter_horarios_periodo(periodo: dict, professor_id: int | None = None) -> list[dict]:
     periodo_norm = enriquecer_periodo_apc(periodo)
     return listar_horarios_escolares(
@@ -143,6 +257,13 @@ def _obter_elegiveis_periodo(periodo: dict, professor_id: int | None = None) -> 
                 item for item in professores if int(item.get("id") or 0) == int(professor_id)
             ]
         return agrupar_professores_elegiveis(professores)
+
+    if periodo_norm["publico_alvo"] == APC_PUBLICO_ALVO_PROFESSORES_SELECIONADOS:
+        destinatarios = listar_apc_destinatarios(
+            periodo_id=int(periodo_norm["id"]),
+            professor_id=int(professor_id) if professor_id is not None else None,
+        )
+        return agrupar_destinatarios_selecionados_apc(destinatarios)
 
     horarios = _obter_horarios_periodo(periodo_norm, professor_id=professor_id)
     horarios_filtrados = filtrar_horarios_por_tipo_entrega(
@@ -217,6 +338,14 @@ def _resolver_visao_apc(usuario: dict, visao: str | None = None) -> str:
     raise HTTPException(403, "Acesso negado.")
 
 
+def _anexar_destinatarios_configurados(payload: dict, periodo_id: int) -> dict:
+    destinatarios = listar_apc_destinatarios(periodo_id=int(periodo_id))
+    return {
+        **payload,
+        "destinatarios_configurados": destinatarios,
+    }
+
+
 def _montar_resumo_calendario_para_usuario(periodo: dict, usuario: dict, visao: str) -> dict | None:
     periodo_norm = enriquecer_periodo_apc(periodo)
     elegiveis = _obter_elegiveis_periodo(periodo_norm)
@@ -279,6 +408,10 @@ def obter_contexto_apc_api(usuario=Depends(get_usuario_logado)):
                 "valor": APC_PUBLICO_ALVO_HORARIO_DIA,
                 "label": nome_publico_alvo(APC_PUBLICO_ALVO_HORARIO_DIA),
             },
+            {
+                "valor": APC_PUBLICO_ALVO_PROFESSORES_SELECIONADOS,
+                "label": nome_publico_alvo(APC_PUBLICO_ALVO_PROFESSORES_SELECIONADOS),
+            },
         ],
         "tipos_entrega": [
             {
@@ -301,6 +434,50 @@ def obter_contexto_apc_api(usuario=Depends(get_usuario_logado)):
             "pode_gerir": _pode_gerir_apc(usuario),
             "eh_professor": usuario_eh_professor(usuario),
         },
+    }
+
+
+@router.get("/apc/destinatarios/opcoes")
+def listar_opcoes_destinatarios_apc_api(
+    ano_letivo: int,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestao_apc(usuario)
+    try:
+        ano_letivo_validado = validar_ano_letivo(int(ano_letivo))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    vinculos = _listar_vinculos_destinatarios_ano(int(ano_letivo_validado))
+    professores: dict[int, dict] = {}
+    for item in vinculos:
+        professor_id = int(item.get("professor_id") or 0)
+        grupo = professores.setdefault(
+            professor_id,
+            {
+                "professor_id": professor_id,
+                "professor_nome": str(item.get("professor_nome") or "").strip(),
+                "professor_email": str(item.get("professor_email") or "").strip(),
+                "destinatarios": [],
+            },
+        )
+        grupo["destinatarios"].append(
+            {
+                "professor_id": professor_id,
+                "turma_id": int(item.get("turma_id") or 0),
+                "turma_nome": str(item.get("turma_nome") or "").strip(),
+                "disciplina_id": int(item.get("disciplina_id") or 0),
+                "disciplina_nome": str(item.get("disciplina_nome") or "").strip(),
+                "label": (
+                    f'{str(item.get("disciplina_nome") or "").strip()} - '
+                    f'{str(item.get("turma_nome") or "").strip()}'
+                ).strip(" -"),
+            }
+        )
+
+    return {
+        "ano_letivo": int(ano_letivo_validado),
+        "professores": list(professores.values()),
     }
 
 
@@ -353,10 +530,13 @@ def obter_periodo_apc_api(
     visao_resolvida = _resolver_visao_apc(usuario, visao)
     elegiveis = _obter_elegiveis_periodo(periodo)
     if visao_resolvida == "gestao":
-        return montar_painel_periodo_apc(
-            periodo,
-            elegiveis,
-            listar_apc_envios(periodo_id=periodo_id),
+        return _anexar_destinatarios_configurados(
+            montar_painel_periodo_apc(
+                periodo,
+                elegiveis,
+                listar_apc_envios(periodo_id=periodo_id),
+            ),
+            periodo_id,
         )
 
     painel = montar_painel_professor_apc(
@@ -374,6 +554,11 @@ def obter_periodo_apc_api(
 def criar_periodo_apc_api(payload: ApcPeriodoIn, usuario=Depends(get_usuario_logado)):
     _exigir_gestao_apc(usuario)
     dados = _dados_periodo_payload(payload)
+    destinatarios = _normalizar_destinatarios_payload(
+        payload,
+        ano_letivo=int(dados["ano_letivo"]),
+        publico_alvo=str(dados["publico_alvo"] or ""),
+    )
     try:
         periodo = criar_apc_periodo(
             ano_letivo=dados["ano_letivo"],
@@ -385,6 +570,8 @@ def criar_periodo_apc_api(payload: ApcPeriodoIn, usuario=Depends(get_usuario_log
             tipo_entrega=dados["tipo_entrega"],
             criado_por_usuario_id=int(usuario["id"]),
         )
+        if periodo and destinatarios:
+            substituir_apc_destinatarios(int(periodo["id"]), destinatarios)
     except sqlite3.IntegrityError as exc:
         raise HTTPException(
             409,
@@ -404,6 +591,11 @@ def atualizar_periodo_apc_api(
         raise HTTPException(404, "Solicitacao de entrega nao encontrada.")
 
     dados = _dados_periodo_payload(payload)
+    destinatarios = _normalizar_destinatarios_payload(
+        payload,
+        ano_letivo=int(dados["ano_letivo"]),
+        publico_alvo=str(dados["publico_alvo"] or ""),
+    )
     try:
         periodo = atualizar_apc_periodo(
             periodo_id=periodo_id,
@@ -415,6 +607,7 @@ def atualizar_periodo_apc_api(
             publico_alvo=dados["publico_alvo"],
             tipo_entrega=dados["tipo_entrega"],
         )
+        substituir_apc_destinatarios(periodo_id, destinatarios)
     except sqlite3.IntegrityError as exc:
         raise HTTPException(
             409,

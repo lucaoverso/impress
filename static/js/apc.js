@@ -27,6 +27,8 @@ let calendarioApc = { periodos: [] };
 let periodoSelecionadoApcId = null;
 let abaGestaoApc = "professores";
 let modoApc = "docente";
+let opcoesDestinatariosApc = [];
+let selecoesDestinatariosApc = new Set();
 
 function setMensagemApc(texto, erro = false) {
     const msg = el("msgApc");
@@ -266,6 +268,11 @@ function preencherFormularioPeriodo(periodo) {
     el("apcPublicoAlvo").value = periodo?.publico_alvo || "TODOS_PROFESSORES";
     el("apcTipoEntrega").value = periodo?.tipo_entrega || "GERAL";
     el("btnExcluirApc").hidden = !Boolean(periodo?.id);
+    if (!periodo) {
+        selecoesDestinatariosApc = new Set();
+        opcoesDestinatariosApc = [];
+        void sincronizarVisibilidadeDestinatariosApc({ recarregar: true });
+    }
 }
 
 function renderResumoPainelCards(itens) {
@@ -316,6 +323,166 @@ function nomeArquivoPadronizadoDivergeApc(envio) {
     const nomeCliente = nomeArquivoClienteApc(envio);
     const nomeSistema = nomeArquivoSistemaApc(envio);
     return Boolean(nomeCliente && nomeSistema && nomeCliente !== nomeSistema);
+}
+
+function chaveDestinatarioApc(item) {
+    return [
+        Number(item?.professor_id || 0),
+        Number(item?.turma_id || 0),
+        Number(item?.disciplina_id || 0),
+    ].join(":");
+}
+
+function publicoSelecionadoManualApc() {
+    return el("apcPublicoAlvo")?.value === "PROFESSORES_SELECIONADOS";
+}
+
+function coletarDestinatariosSelecionadosApc() {
+    return Array.from(selecoesDestinatariosApc).map((chave) => {
+        const [professorId, turmaId, disciplinaId] = String(chave).split(":").map((valor) => Number(valor || 0));
+        return {
+            professor_id: professorId,
+            turma_id: turmaId,
+            disciplina_id: disciplinaId,
+        };
+    });
+}
+
+function aplicarSelecoesDestinatariosApc(destinatarios) {
+    selecoesDestinatariosApc = new Set(
+        (destinatarios || []).map((item) => chaveDestinatarioApc(item))
+    );
+}
+
+function atualizarResumoDestinatariosApc() {
+    const resumo = el("apcDestinatariosResumo");
+    if (!resumo) return;
+    const total = selecoesDestinatariosApc.size;
+    resumo.innerText = total
+        ? `${pluralizarApc(total, "combinacao selecionada", "combinacoes selecionadas")} para esta solicitacao.`
+        : "Nenhuma combinacao selecionada ainda.";
+}
+
+async function carregarOpcoesDestinatariosApc(force = false) {
+    if (!publicoSelecionadoManualApc()) return;
+    if (opcoesDestinatariosApc.length && !force) {
+        renderDestinatariosApc();
+        return;
+    }
+    const anoLetivo = Number(el("apcAnoLetivo")?.value || 0);
+    if (!anoLetivo) {
+        opcoesDestinatariosApc = [];
+        renderDestinatariosApc();
+        return;
+    }
+    const resposta = await fetchJson(`/apc/destinatarios/opcoes?ano_letivo=${anoLetivo}`, {
+        headers: headersApc,
+    });
+    opcoesDestinatariosApc = Array.isArray(resposta?.professores) ? resposta.professores : [];
+    renderDestinatariosApc();
+}
+
+function renderDestinatariosApc() {
+    const lista = el("apcDestinatariosLista");
+    if (!lista) return;
+    lista.innerHTML = "";
+
+    if (!publicoSelecionadoManualApc()) {
+        atualizarResumoDestinatariosApc();
+        return;
+    }
+
+    if (!opcoesDestinatariosApc.length) {
+        lista.innerHTML = '<div class="booking-empty">Nenhum vinculo de professor, turma e disciplina foi encontrado para este ano letivo.</div>';
+        atualizarResumoDestinatariosApc();
+        return;
+    }
+
+    opcoesDestinatariosApc.forEach((professor) => {
+        const card = document.createElement("article");
+        card.className = "apc-destinatario-card";
+
+        const topo = document.createElement("div");
+        topo.className = "apc-destinatario-topo";
+        topo.innerHTML = `
+            <div>
+                <h5>${professor.professor_nome || "Professor"}</h5>
+                <p>${professor.professor_email || "Sem e-mail"}</p>
+            </div>
+        `;
+
+        const acoes = document.createElement("div");
+        acoes.className = "apc-inline-actions";
+
+        const marcarTodos = document.createElement("button");
+        marcarTodos.type = "button";
+        marcarTodos.innerText = "Marcar professor";
+        marcarTodos.addEventListener("click", () => {
+            (professor.destinatarios || []).forEach((item) => {
+                selecoesDestinatariosApc.add(chaveDestinatarioApc(item));
+            });
+            renderDestinatariosApc();
+        });
+        acoes.appendChild(marcarTodos);
+
+        const limpar = document.createElement("button");
+        limpar.type = "button";
+        limpar.innerText = "Limpar professor";
+        limpar.addEventListener("click", () => {
+            (professor.destinatarios || []).forEach((item) => {
+                selecoesDestinatariosApc.delete(chaveDestinatarioApc(item));
+            });
+            renderDestinatariosApc();
+        });
+        acoes.appendChild(limpar);
+        topo.appendChild(acoes);
+        card.appendChild(topo);
+
+        const grid = document.createElement("div");
+        grid.className = "apc-destinatario-opcoes";
+
+        (professor.destinatarios || []).forEach((item) => {
+            const chave = chaveDestinatarioApc(item);
+            const label = document.createElement("label");
+            label.className = "apc-destinatario-item";
+
+            const input = document.createElement("input");
+            input.type = "checkbox";
+            input.checked = selecoesDestinatariosApc.has(chave);
+            input.addEventListener("change", () => {
+                if (input.checked) {
+                    selecoesDestinatariosApc.add(chave);
+                } else {
+                    selecoesDestinatariosApc.delete(chave);
+                }
+                atualizarResumoDestinatariosApc();
+            });
+
+            const texto = document.createElement("span");
+            texto.innerText = item.label || `${item.disciplina_nome} - ${item.turma_nome}`;
+
+            label.appendChild(input);
+            label.appendChild(texto);
+            grid.appendChild(label);
+        });
+
+        card.appendChild(grid);
+        lista.appendChild(card);
+    });
+
+    atualizarResumoDestinatariosApc();
+}
+
+async function sincronizarVisibilidadeDestinatariosApc({ recarregar = false } = {}) {
+    const wrap = el("apcDestinatariosWrap");
+    if (!wrap) return;
+    const ativo = publicoSelecionadoManualApc();
+    wrap.hidden = !ativo;
+    if (!ativo) {
+        atualizarResumoDestinatariosApc();
+        return;
+    }
+    await carregarOpcoesDestinatariosApc(recarregar);
 }
 
 function ativarAbaGestaoApc(aba) {
@@ -646,7 +813,9 @@ function criarCorpoProfessorPeriodoApc(detalhe) {
     if (!Array.isArray(detalhe.itens) || !detalhe.itens.length) {
         const vazio = document.createElement("p");
         vazio.className = "apc-accordion-note";
-        vazio.innerText = "Nenhuma disciplina vinculada a esta solicitacao para o seu horario.";
+        vazio.innerText = periodo.publico_alvo === "PROFESSORES_SELECIONADOS"
+            ? "Nenhuma disciplina foi vinculada a voce nesta solicitacao."
+            : "Nenhuma disciplina vinculada a esta solicitacao para o seu horario.";
         body.appendChild(vazio);
         return body;
     }
@@ -812,9 +981,11 @@ function renderListaGestaoApc(detalhe) {
 
             const contexto = document.createElement("p");
             contexto.className = "apc-inline-hint";
-            contexto.innerText = (item.horarios || []).length
-                ? "Entrega vinculada a disciplina do horario escolar."
-                : "Entrega liberada para este professor sem dependencia do horario escolar.";
+            contexto.innerText = detalhe.periodo?.publico_alvo === "PROFESSORES_SELECIONADOS"
+                ? "Entrega direcionada manualmente pela coordenacao."
+                : ((item.horarios || []).length
+                    ? "Entrega vinculada a disciplina do horario escolar."
+                    : "Entrega liberada para este professor sem dependencia do horario escolar.");
             card.appendChild(contexto);
 
             if ((item.horarios || []).length) {
@@ -1094,6 +1265,8 @@ async function carregarDetalheSelecionadoApc() {
         renderListaGestaoApc(detalhe);
         renderArquivosGestaoApc(detalhe);
         preencherFormularioPeriodo(periodo);
+        aplicarSelecoesDestinatariosApc(detalhe.destinatarios_configurados || []);
+        await sincronizarVisibilidadeDestinatariosApc({ recarregar: true });
         return;
     }
 
@@ -1226,6 +1399,7 @@ async function salvarPeriodoApc(event) {
         observacao: el("apcObservacao").value.trim(),
         publico_alvo: el("apcPublicoAlvo").value,
         tipo_entrega: el("apcTipoEntrega").value,
+        destinatarios: coletarDestinatariosSelecionadosApc(),
     };
 
     try {
@@ -1325,8 +1499,18 @@ function registrarEventosApc() {
     el("apcAnoLetivo").addEventListener("change", async () => {
         periodoSelecionadoApcId = null;
         dataSelecionadaManualmenteApc = false;
+        opcoesDestinatariosApc = [];
+        selecoesDestinatariosApc = new Set();
         aplicarVisibilidadeApc();
+        await sincronizarVisibilidadeDestinatariosApc({ recarregar: true });
         await carregarCalendarioApc();
+    });
+
+    el("apcPublicoAlvo")?.addEventListener("change", async () => {
+        if (!publicoSelecionadoManualApc()) {
+            selecoesDestinatariosApc = new Set();
+        }
+        await sincronizarVisibilidadeDestinatariosApc({ recarregar: true });
     });
 
     el("btnApcMesAnterior").addEventListener("click", async () => {
@@ -1361,6 +1545,18 @@ function registrarEventosApc() {
         renderPainelSemSelecaoGestao();
     });
     el("btnExcluirApc")?.addEventListener("click", excluirPeriodoApc);
+    el("btnApcDestinatariosTodos")?.addEventListener("click", () => {
+        opcoesDestinatariosApc.forEach((professor) => {
+            (professor.destinatarios || []).forEach((item) => {
+                selecoesDestinatariosApc.add(chaveDestinatarioApc(item));
+            });
+        });
+        renderDestinatariosApc();
+    });
+    el("btnApcDestinatariosLimpar")?.addEventListener("click", () => {
+        selecoesDestinatariosApc = new Set();
+        renderDestinatariosApc();
+    });
 }
 
 async function initApc() {
@@ -1372,8 +1568,10 @@ async function initApc() {
         preencherSelectAnosApc();
         preencherSelectPublicoApc();
         preencherSelectTiposEntregaApc();
+        atualizarResumoDestinatariosApc();
         aplicarVisibilidadeApc();
         registrarEventosApc();
+        await sincronizarVisibilidadeDestinatariosApc({ recarregar: true });
         await carregarCalendarioApc();
     } catch (_err) {
         encerrarSessao();

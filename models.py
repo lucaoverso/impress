@@ -557,6 +557,7 @@ class HorarioEscolarRegistroOut(BaseModel):
 ApcPublicoAlvo = Literal[
     "TODOS_PROFESSORES",
     "HORARIO_DIA",
+    "PROFESSORES_SELECIONADOS",
 ]
 
 ApcTipoEntrega = Literal[
@@ -564,6 +565,22 @@ ApcTipoEntrega = Literal[
     "APC",
     "PROVA_BIMESTRAL",
 ]
+
+
+class ApcDestinatarioIn(BaseModel):
+    professor_id: int
+    turma_id: int = 0
+    disciplina_id: int = 0
+
+
+class ApcDestinatarioOut(BaseModel):
+    professor_id: int
+    professor_nome: str = ""
+    professor_email: str = ""
+    turma_id: int = 0
+    turma_nome: str = ""
+    disciplina_id: int = 0
+    disciplina_nome: str = ""
 
 
 class ApcPeriodoIn(BaseModel):
@@ -574,6 +591,7 @@ class ApcPeriodoIn(BaseModel):
     observacao: str = ""
     publico_alvo: ApcPublicoAlvo = "TODOS_PROFESSORES"
     tipo_entrega: ApcTipoEntrega = "GERAL"
+    destinatarios: list[ApcDestinatarioIn] = Field(default_factory=list)
 
 
 class ApcPeriodoUpdateIn(BaseModel):
@@ -584,6 +602,7 @@ class ApcPeriodoUpdateIn(BaseModel):
     observacao: str = ""
     publico_alvo: ApcPublicoAlvo = "TODOS_PROFESSORES"
     tipo_entrega: ApcTipoEntrega = "GERAL"
+    destinatarios: list[ApcDestinatarioIn] = Field(default_factory=list)
 
 
 class ApcPeriodoOut(BaseModel):
