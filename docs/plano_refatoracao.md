@@ -138,6 +138,12 @@ Objetivo:
 
 - dividir services extensos sem dispersar a regra de negocio
 
+Validacao inicial:
+
+- `pcpi` passou a ser a referencia do projeto para esse passo
+- o dominio foi dividido em services especializados sem mudar comportamento
+- os arquivos resultantes ficaram abaixo da regra de `300` linhas
+
 ## Fase 6. Trocar implementacao interna dos repositories
 
 Objetivo:
@@ -155,6 +161,12 @@ Objetivo:
 Objetivo:
 
 - remover restos de acoplamento apos as migracoes principais
+
+Primeiro dominio consolidado:
+
+- `pcpi`
+- fronteiras validadas entre `router`, `service`, `repository` e `schemas`
+- pronto para servir de modelo a `preconselho` e `ocorrencias`
 
 ## Fase 9. Modularizacao por dominio
 
@@ -178,16 +190,16 @@ Antes de concluir cada commit de refatoracao:
 
 1. criar `docs/arquitetura.md` e `docs/plano_refatoracao.md`
 2. introduzir `repositories/` e `schemas/` como destino oficial
-3. escolher um primeiro dominio piloto pequeno
-4. extrair um repository de fachada para esse dominio
-5. extrair um service simples ou um trecho de router
-6. repetir o padrao antes de atacar os modulos mais pesados
+3. consolidar `pcpi` como piloto do padrao
+4. repetir o mesmo fluxo em `preconselho`
+5. atacar um primeiro corte pequeno em `ocorrencias`
+6. revisar contratos remanescentes e reduzir compatibilidades legadas
 
 ## Dominios piloto sugeridos
 
 Boas candidaturas para primeiros passos:
 
-- `pcpi`, por ser menor que `ocorrencias` e `preconselho`
+- `preconselho`, reaproveitando o padrao validado em `pcpi`
 - um trecho especifico de `admin`
 - uma leitura simples de catalogo ou consulta auxiliar
 

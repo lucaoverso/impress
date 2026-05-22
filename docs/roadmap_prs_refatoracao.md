@@ -47,10 +47,18 @@ Objetivo:
 
 - usar `pcpi` para validar o padrao sem alto risco
 
+Status:
+
+- concluido como dominio piloto da transicao
+- `router` enxuto e focado em HTTP
+- `repository` criado como fronteira de persistencia
+- `schemas` definidos fora de `models.py`
+- `service` dividido por responsabilidade e abaixo da regra de `300` linhas por arquivo
+
 ## Sequencia curta recomendada para agora
 
 1. fechar o PR de documentacao e padroes
-2. fechar o PR piloto de `pcpi`
+2. usar `pcpi` como referencia para os proximos dominios
 3. criar `repository` de fachada para `preconselho`
 4. criar `schemas` iniciais de `preconselho`
 5. extrair o primeiro fluxo pequeno de `preconselho_router.py`

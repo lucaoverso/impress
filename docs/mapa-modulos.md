@@ -65,10 +65,23 @@ Um dominio so deve migrar para `modules/<dominio>/` quando:
 
 Os dominios com maior potencial para modularizacao futura sao:
 
+- `pcpi`, por ja estar consolidado como piloto das camadas tecnicas
 - `ocorrencias`
 - `preconselho`
 - `impressao`
 - `agendamento`
+
+## Dominio piloto validado
+
+O dominio `pcpi` ja validou a fase de transicao por camadas com:
+
+- `router` focado em HTTP
+- `repository` de persistencia dedicado
+- `schemas` explicitados fora do concentrador generico
+- `services` especializados por responsabilidade
+- arquivos de service abaixo da regra de `300` linhas
+
+Por isso, `pcpi` passa a ser a referencia pratica para as proximas extracoes.
 
 ## Regra pratica
 
