@@ -18,6 +18,7 @@ def _reload_modules(db_path: str):
         "pcpi_router",
         "routers.pcpi_router",
         "ocorrencias_router",
+        "routers.ocorrencias_router",
         "database",
     ):
         if module_name in sys.modules:

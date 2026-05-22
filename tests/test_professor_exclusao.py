@@ -17,6 +17,7 @@ def _reload_modules(db_path: str):
         "services.radius_service",
         "auth",
         "ocorrencias_router",
+        "routers.ocorrencias_router",
         "database",
         "main",
     ):

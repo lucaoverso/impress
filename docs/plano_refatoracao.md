@@ -40,7 +40,7 @@ Nesta etapa, a arquitetura sera organizada por camadas tecnicas:
 Prioridade alta:
 
 - `database.py`
-- `ocorrencias_router.py`
+- `routers/ocorrencias_router.py`
 - `routers/preconselho_router.py`
 - `services/ocorrencia_pdf_service.py`
 
@@ -127,7 +127,7 @@ Objetivo:
 
 Sequencia sugerida:
 
-1. `ocorrencias_router.py`
+1. `routers/ocorrencias_router.py`
 2. `routers/preconselho_router.py`
 3. `routers/pcpi_router.py`
 4. `routers/admin_router.py`

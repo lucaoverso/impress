@@ -11,9 +11,9 @@ from fastapi.staticfiles import StaticFiles
 from app_logging import setup_logging
 from auth import router as auth_router
 from db.bootstrap import criar_tabelas, criar_usuario_se_nao_existir, seed_recursos_padrao
-from ocorrencias_router import router as ocorrencias_router
 import routers.admin_router as admin_router_module
 import routers.agendamento_router as agendamento_router_module
+import routers.ocorrencias_router as ocorrencias_router_module
 import routers.common as common_module
 import routers.config as config_module
 import routers.impressao_router as impressao_router_module
@@ -50,6 +50,7 @@ system_router_module = _reload_or_import(system_router_module)
 pages_router_module = _reload_or_import(pages_router_module)
 impressao_router_module = _reload_or_import(impressao_router_module)
 relatorios_router_module = _reload_or_import(relatorios_router_module)
+ocorrencias_router_module = _reload_or_import(ocorrencias_router_module)
 pcpi_router_module = _reload_or_import(pcpi_router_module)
 preconselho_router_module = _reload_or_import(preconselho_router_module)
 download_router_module = _reload_or_import(download_router_module)
@@ -66,6 +67,7 @@ system_router = system_router_module.router
 pages_router = pages_router_module.router
 impressao_router = impressao_router_module.router
 relatorios_router = relatorios_router_module.router
+ocorrencias_router = ocorrencias_router_module.router
 pcpi_router = pcpi_router_module.router
 preconselho_router = preconselho_router_module.router
 download_router = download_router_module.router

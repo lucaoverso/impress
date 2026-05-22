@@ -13,6 +13,7 @@ def _reload_modules(db_path: str):
         "services.auth_service",
         "auth",
         "ocorrencias_router",
+        "routers.ocorrencias_router",
         "pcpi_router",
         "routers.pcpi_router",
         "preconselho_router",

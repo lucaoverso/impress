@@ -7,11 +7,11 @@ import unittest
 
 def _reload_modulos(db_path: str):
     os.environ["DB_PATH"] = db_path
-    for nome_modulo in ("database", "ocorrencias_router"):
+    for nome_modulo in ("database", "ocorrencias_router", "routers.ocorrencias_router"):
         if nome_modulo in sys.modules:
             del sys.modules[nome_modulo]
     database = importlib.import_module("database")
-    ocorrencias_router = importlib.import_module("ocorrencias_router")
+    ocorrencias_router = importlib.import_module("routers.ocorrencias_router")
     return database, ocorrencias_router
 
 
