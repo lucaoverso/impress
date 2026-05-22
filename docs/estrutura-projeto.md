@@ -19,7 +19,7 @@ Pontos de concentracao ainda importantes:
 
 - [database.py](/Users/lucassbaraini/sistema-impress/database.py:1): `8.184` linhas
 - [ocorrencias_router.py](/Users/lucassbaraini/sistema-impress/ocorrencias_router.py:1): `1.416` linhas
-- [preconselho_router.py](/Users/lucassbaraini/sistema-impress/preconselho_router.py:1): `877` linhas
+- [routers/preconselho_router.py](/Users/lucassbaraini/sistema-impress/routers/preconselho_router.py:1): `444` linhas
 - [models.py](/Users/lucassbaraini/sistema-impress/models.py:1): `770` linhas
 - [main.py](/Users/lucassbaraini/sistema-impress/main.py:1): `166` linhas
 
@@ -88,7 +88,8 @@ O projeto passou a ter uma camada de routers bem mais clara:
 - [routers/agendamento_router.py](/Users/lucassbaraini/sistema-impress/routers/agendamento_router.py:1): recursos e reservas.
 - [routers/professores_router.py](/Users/lucassbaraini/sistema-impress/routers/professores_router.py:1): cadastro publico e recuperacao de senha.
 - [routers/admin_router.py](/Users/lucassbaraini/sistema-impress/routers/admin_router.py:1): operacao administrativa.
-- [ocorrencias_router.py](/Users/lucassbaraini/sistema-impress/ocorrencias_router.py:1), [pcpi_router.py](/Users/lucassbaraini/sistema-impress/pcpi_router.py:1) e [preconselho_router.py](/Users/lucassbaraini/sistema-impress/preconselho_router.py:1): modulos de dominio ainda fora de `routers/`, mas ja desacoplados de `main.py`.
+- [routers/preconselho_router.py](/Users/lucassbaraini/sistema-impress/routers/preconselho_router.py:1): dominio `preconselho` ja migrado para `routers/`.
+- [ocorrencias_router.py](/Users/lucassbaraini/sistema-impress/ocorrencias_router.py:1) e [pcpi_router.py](/Users/lucassbaraini/sistema-impress/pcpi_router.py:1): modulos de dominio ainda fora de `routers/`, mas ja desacoplados de `main.py`.
 
 Helpers compartilhados de autorizacao e validacao:
 
@@ -263,7 +264,7 @@ O projeto melhorou muito, mas ainda ha pontos que merecem proximos ciclos:
 
 - [database.py](/Users/lucassbaraini/sistema-impress/database.py:1) ainda e grande e acumula legado + bootstrap + compatibilidade.
 - [models.py](/Users/lucassbaraini/sistema-impress/models.py:1) ainda esta centralizado demais.
-- [ocorrencias_router.py](/Users/lucassbaraini/sistema-impress/ocorrencias_router.py:1), [pcpi_router.py](/Users/lucassbaraini/sistema-impress/pcpi_router.py:1) e [preconselho_router.py](/Users/lucassbaraini/sistema-impress/preconselho_router.py:1) ainda podem migrar para o pacote `routers/`.
+- [ocorrencias_router.py](/Users/lucassbaraini/sistema-impress/ocorrencias_router.py:1) e [pcpi_router.py](/Users/lucassbaraini/sistema-impress/pcpi_router.py:1) ainda podem migrar para o pacote `routers/`.
 - Parte do schema ainda depende do backstop de compatibilidade em `_garantir_colunas_*`.
 
 ## Resumo executivo

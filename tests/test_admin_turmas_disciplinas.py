@@ -15,6 +15,7 @@ def _reload_modules(db_path: str):
         "ocorrencias_router",
         "pcpi_router",
         "preconselho_router",
+        "routers.preconselho_router",
         "database",
         "main",
         "models",

@@ -15,6 +15,7 @@ def _reload_modulos(db_path: str):
         "services.preconselho_service",
         "auth",
         "preconselho_router",
+        "routers.preconselho_router",
         "database",
     ):
         if nome_modulo in sys.modules:
@@ -28,7 +29,7 @@ def _reload_modulos(db_path: str):
         )
 
     database = importlib.import_module("database")
-    preconselho_router = importlib.import_module("preconselho_router")
+    preconselho_router = importlib.import_module("routers.preconselho_router")
     models = importlib.import_module("models")
     return database, preconselho_router, models
 

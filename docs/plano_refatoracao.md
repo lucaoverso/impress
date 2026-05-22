@@ -41,7 +41,7 @@ Prioridade alta:
 
 - `database.py`
 - `ocorrencias_router.py`
-- `preconselho_router.py`
+- `routers/preconselho_router.py`
 - `services/ocorrencia_pdf_service.py`
 
 Prioridade media:
@@ -128,7 +128,7 @@ Objetivo:
 Sequencia sugerida:
 
 1. `ocorrencias_router.py`
-2. `preconselho_router.py`
+2. `routers/preconselho_router.py`
 3. `pcpi_router.py`
 4. `routers/admin_router.py`
 

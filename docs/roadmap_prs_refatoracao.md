@@ -61,7 +61,7 @@ Status:
 2. usar `pcpi` como referencia para os proximos dominios
 3. criar `repository` de fachada para `preconselho`
 4. criar `schemas` iniciais de `preconselho`
-5. extrair o primeiro fluxo pequeno de `preconselho_router.py`
+5. extrair o primeiro fluxo pequeno de `routers/preconselho_router.py`
 6. repetir o mesmo movimento em `ocorrencias`
 
 ## Resumo executivo
