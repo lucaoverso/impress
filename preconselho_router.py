@@ -67,10 +67,16 @@ from services.preconselho_contexto_service import (
     normalizar_cargo_preconselho,
     obter_contexto_preconselho,
 )
+from services.preconselho_consolidado_service import (
+    gerar_consolidado_preconselho_service,
+)
 from services.preconselho_registros_service import (
     excluir_registro_preconselho_service,
     listar_registros_preconselho_service,
     salvar_registro_preconselho,
+)
+from services.preconselho_relatorio_service import (
+    gerar_relatorio_preconselho_service,
 )
 from services.preconselho_service import (
     STATUS_PERIODO_PRE_CONSELHO_ABERTO,
@@ -940,6 +946,20 @@ def gerar_consolidado_preconselho_api(
 ):
     if not _usuario_eh_gestor(usuario):
         raise HTTPException(403, "Acesso negado.")
+    try:
+        return gerar_consolidado_preconselho_service(
+            periodo_id=periodo_id,
+            turma_id=turma_id,
+            disciplina_id=disciplina_id,
+            professor_id=professor_id,
+            usuario=usuario,
+        )
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     periodo = _validar_periodo(periodo_id)
 
     turma = _validar_turma(turma_id) if turma_id is not None else None
@@ -988,6 +1008,12 @@ def gerar_relatorio_preconselho_api(
 ):
     if not _usuario_eh_gestor(usuario):
         raise HTTPException(403, "Acesso negado.")
+    try:
+        return gerar_relatorio_preconselho_service(periodo_id=periodo_id, usuario=usuario)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     periodo = _validar_periodo(periodo_id)
 
     registros = _enriquecer_editavel(
