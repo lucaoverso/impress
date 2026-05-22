@@ -3,6 +3,13 @@ import unicodedata
 from collections import defaultdict
 from datetime import datetime
 
+from repositories.pcpi_repository import (
+    criar_e_buscar_registro_pcpi_manual,
+    listar_agendamentos_pcpi_por_data,
+    listar_cargas_professores_pcpi_por_usuario_ids,
+    listar_registros_pcpi_manuais_por_data,
+)
+
 TURNOS_PCPI_CONFIG = {
     "MATUTINO": {"nome": "Matutino", "aulas": 5},
     "VESPERTINO": {"nome": "Vespertino", "aulas": 6},
@@ -797,6 +804,90 @@ def montar_contexto_pcpi(
     )
     registros_norm = normalizar_registros_manuais_pcpi(registros_manuais, turno_norm)
     return sugestoes, registros_norm
+
+
+def carregar_contexto_pcpi(data: str, turno: str) -> tuple[dict, list[dict]]:
+    data_norm = validar_data_pcpi(data)
+    turno_norm = validar_turno_pcpi(turno)
+    agendamentos_dia = listar_agendamentos_pcpi_por_data(data_norm)
+    cargas = listar_cargas_professores_pcpi_por_usuario_ids(
+        [
+            int(item.get("usuario_id") or 0)
+            for item in agendamentos_dia
+            if agendamento_pertence_ao_turno_pcpi(item, turno_norm)
+        ]
+    )
+    registros = listar_registros_pcpi_manuais_por_data(data=data_norm)
+    return montar_contexto_pcpi(data_norm, turno_norm, agendamentos_dia, cargas, registros)
+
+
+def listar_registros_manuais_pcpi(data: str, turno: str) -> dict:
+    data_norm = validar_data_pcpi(data)
+    turno_norm = validar_turno_pcpi(turno)
+    registros = listar_registros_pcpi_manuais_por_data(data=data_norm)
+    return montar_listagem_registros_manuais_pcpi(data_norm, turno_norm, registros)
+
+
+def criar_registro_manual_pcpi(payload, usuario: dict) -> dict:
+    data_norm = validar_data_pcpi(payload.data)
+    turno_norm = validar_turno_pcpi(payload.turno)
+    professor_nome = validar_texto_opcional_pcpi(
+        payload.professor_nome,
+        "Professor ou setor",
+        max_len=160,
+    )
+    componente = validar_texto_opcional_pcpi(
+        payload.componente,
+        "Componente ou recurso",
+        max_len=160,
+    )
+    turma = validar_texto_opcional_pcpi(payload.turma, "Turma", max_len=120)
+    descricao_curta = validar_texto_obrigatorio_pcpi(
+        payload.descricao_curta,
+        "Descricao curta",
+        max_len=500,
+    )
+    observacoes = validar_texto_opcional_pcpi(payload.observacoes, "Observacoes", max_len=2000)
+    usuario_id = obter_usuario_id_pcpi(usuario)
+
+    return criar_e_buscar_registro_pcpi_manual(
+        data=data_norm,
+        turno=turno_norm,
+        tipo_acao=str(payload.tipo_acao).strip(),
+        professor_nome=professor_nome,
+        componente=componente,
+        turma=turma,
+        descricao_curta=descricao_curta,
+        observacoes=observacoes,
+        criado_por_usuario_id=usuario_id,
+        atualizado_por_usuario_id=usuario_id,
+    )
+
+
+def gerar_texto_completo_pcpi(data: str, turno: str) -> dict:
+    sugestoes, registros = carregar_contexto_pcpi(data, turno)
+    return gerar_texto_pcpi(
+        data=validar_data_pcpi(data),
+        turno=validar_turno_pcpi(turno),
+        itens_automaticos=sugestoes.get("itens") or [],
+        registros_manuais=registros,
+    )
+
+
+def gerar_texto_preview_pcpi(data: str, turno: str, agendamento_ids: list[int] | None) -> dict:
+    data_norm = validar_data_pcpi(data)
+    turno_norm = validar_turno_pcpi(turno)
+    sugestoes, registros = carregar_contexto_pcpi(data_norm, turno_norm)
+    itens_automaticos = filtrar_itens_automaticos_pcpi(
+        sugestoes.get("itens") or [],
+        agendamento_ids,
+    )
+    return gerar_texto_pcpi(
+        data=data_norm,
+        turno=turno_norm,
+        itens_automaticos=itens_automaticos,
+        registros_manuais=registros,
+    )
 
 
 def filtrar_itens_automaticos_pcpi(
