@@ -186,6 +186,24 @@ Na pratica, a migracao pode seguir esta ordem:
 - cada commit deve ter escopo pequeno e validacao objetiva
 - sempre que possivel, migrar um fluxo completo por vez
 
+## Regra pratica de tamanho de arquivo
+
+Durante a refatoracao, usar esta referencia para decidir quando estudar separacao de arquivos:
+
+- ate `200` linhas: tamanho normalmente saudavel
+- entre `200` e `300` linhas: manter apenas se a coesao estiver clara
+- acima de `300` linhas: estudar separacao obrigatoriamente
+- acima de `500` linhas: quase sempre exige divisao por responsabilidade
+
+A separacao deve acontecer por coesao e responsabilidade, nao apenas por contagem de linhas.
+Exemplos de cortes validos:
+
+- `service.py`: validacao, casos de uso, montagem textual, integracoes externas
+- `repository.py`: leitura, escrita, consultas especializadas
+- `schemas.py`: requests, responses, DTOs internos
+
+O objetivo dessa regra e evitar novos arquivos gigantes e tornar a modularizacao futura mais previsivel.
+
 ## Criterios de sucesso da arquitetura
 
 Um dominio pode ser considerado alinhado com a arquitetura alvo quando:

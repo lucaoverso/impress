@@ -30,6 +30,12 @@ Uma entrega boa para este projeto normalmente:
 - inclui testes quando ha mudanca de comportamento
 - atualiza documentacao quando o uso ou a operacao mudam
 
+Regra pratica adicional:
+
+- arquivos acima de `300` linhas devem ser reavaliados
+- se a coesao continuar boa, registrar essa decisao no PR
+- acima de `500` linhas, a expectativa padrao passa a ser separar por responsabilidade
+
 Evite no mesmo commit:
 
 - refatorar estrutura e mudar regra de negocio ao mesmo tempo

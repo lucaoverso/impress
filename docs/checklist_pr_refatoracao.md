@@ -55,6 +55,7 @@ Todo PR de refatoracao deve responder:
 - [ ] os contratos foram movidos ou preparados para `schemas.py` quando aplicavel
 - [ ] `database.py` foi isolado ou reduzido, nunca expandido sem motivo forte
 - [ ] os testes relevantes foram executados
+- [ ] arquivos acima de `300` linhas foram reavaliados ou tiveram justificativa explicita para permanecer assim
 
 ## Checklist opcional por tipo de mudanca
 
@@ -69,18 +70,21 @@ Todo PR de refatoracao deve responder:
 - [ ] o service concentra a regra de negocio do fluxo alterado
 - [ ] o service nao depende de detalhes HTTP sem necessidade
 - [ ] a responsabilidade do service ficou mais coesa
+- [ ] se o service passar de `300` linhas, o PR avaliou separacao por responsabilidade
 
 ### Se o PR tocar repository
 
 - [ ] o repository encapsula persistencia do dominio
 - [ ] nao houve mistura com regra de negocio de alto nivel
 - [ ] a dependencia de `database.py` ficou menor ou mais isolada
+- [ ] se o repository passar de `300` linhas, o PR avaliou separacao de leituras, escritas ou consultas especializadas
 
 ### Se o PR tocar schemas
 
 - [ ] os contratos ficaram mais explicitos
 - [ ] a validacao estrutural saiu de lugares dispersos
 - [ ] nao houve quebra desnecessaria de compatibilidade
+- [ ] se o arquivo de schemas passar de `300` linhas, o PR avaliou dividir requests, responses ou DTOs internos
 
 ## Tamanho recomendado
 
