@@ -70,8 +70,8 @@ def criar_periodo_pre_conselho(**dados):
     return _criar_periodo_pre_conselho(**dados)
 
 
-def excluir_registro_pre_conselho(registro_id: int):
-    return _excluir_registro_pre_conselho(registro_id)
+def excluir_registro_pre_conselho(registro_id: int, **filtros):
+    return _excluir_registro_pre_conselho(registro_id, **filtros)
 
 
 def listar_estudantes_pre_conselho_painel(**filtros):

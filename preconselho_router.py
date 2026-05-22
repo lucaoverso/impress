@@ -25,12 +25,9 @@ from repositories.preconselho_repository import (
     buscar_motivo_pre_conselho_por_id,
     buscar_motivos_pre_conselho_por_ids,
     buscar_periodo_pre_conselho_por_id,
-    buscar_registro_pre_conselho_por_id,
     contar_registros_pre_conselho_por_professor_periodo,
     criar_motivo_pre_conselho,
-    criar_ou_atualizar_registro_pre_conselho,
     criar_periodo_pre_conselho,
-    excluir_registro_pre_conselho,
     listar_estudantes_pre_conselho_painel,
     listar_motivos_pre_conselho,
     listar_periodos_pre_conselho,
@@ -69,6 +66,11 @@ from services.preconselho_contexto_service import (
     minhas_turmas_disciplinas_preconselho,
     normalizar_cargo_preconselho,
     obter_contexto_preconselho,
+)
+from services.preconselho_registros_service import (
+    excluir_registro_preconselho_service,
+    listar_registros_preconselho_service,
+    salvar_registro_preconselho,
 )
 from services.preconselho_service import (
     STATUS_PERIODO_PRE_CONSELHO_ABERTO,
@@ -754,6 +756,16 @@ def salvar_registro_preconselho_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_acesso_preconselho(usuario)
+    try:
+        return salvar_registro_preconselho(payload, usuario)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(500, str(exc)) from exc
     periodo = _validar_periodo(payload.periodo_id)
     turma = _validar_turma(payload.turma_id)
     disciplina = _validar_disciplina(payload.disciplina_id)
@@ -852,6 +864,14 @@ def salvar_registro_preconselho_api(
 @router.delete("/preconselho/registros/{registro_id}")
 def excluir_registro_preconselho_api(registro_id: int, usuario=Depends(get_usuario_logado)):
     _exigir_acesso_preconselho(usuario)
+    try:
+        return excluir_registro_preconselho_service(registro_id, usuario)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(500, str(exc)) from exc
     registro = buscar_registro_pre_conselho_por_id(registro_id)
     if not registro:
         raise HTTPException(404, "Registro não encontrado.")
@@ -875,6 +895,20 @@ def listar_registros_preconselho_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_acesso_preconselho(usuario)
+    try:
+        return listar_registros_preconselho_service(
+            periodo_id=periodo_id,
+            turma_id=turma_id,
+            disciplina_id=disciplina_id,
+            professor_id=professor_id,
+            usuario=usuario,
+        )
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
     _validar_periodo(periodo_id)
 
     professor_filtro = professor_id
