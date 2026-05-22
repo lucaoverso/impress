@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from auth import get_usuario_logado
-from db.agendamento import listar_agendamentos
-from db.usuarios import listar_cargas_professores_por_usuario_ids
 from repositories.pcpi_repository import (
-    buscar_registro_pcpi_manual_por_id,
-    criar_registro_pcpi_manual,
-    listar_registros_pcpi_manuais,
+    criar_e_buscar_registro_pcpi_manual,
+    listar_agendamentos_pcpi_por_data,
+    listar_cargas_professores_pcpi_por_usuario_ids,
+    listar_registros_pcpi_manuais_por_data,
 )
 from routers.common import normalizar_cargo_usuario, usuario_tem_acesso_coordenacao
 from schemas.pcpi_schemas import (
@@ -73,18 +72,15 @@ def _texto_opcional_http(valor: str | None, campo: str = "Texto", *, max_len: in
 
 
 def _carregar_contexto_pcpi_http(data: str, turno: str) -> tuple[dict, list[dict]]:
-    agendamentos_dia = listar_agendamentos(
-        data_inicio=data,
-        data_fim=data,
-    )
-    cargas = listar_cargas_professores_por_usuario_ids(
+    agendamentos_dia = listar_agendamentos_pcpi_por_data(data)
+    cargas = listar_cargas_professores_pcpi_por_usuario_ids(
         [
             int(item.get("usuario_id") or 0)
             for item in agendamentos_dia
             if agendamento_pertence_ao_turno_pcpi(item, turno)
         ]
     )
-    registros = listar_registros_pcpi_manuais(data=data)
+    registros = listar_registros_pcpi_manuais_por_data(data=data)
     try:
         return montar_contexto_pcpi(data, turno, agendamentos_dia, cargas, registros)
     except ValueError as exc:
@@ -117,7 +113,7 @@ def listar_registros_manuais_pcpi_api(
         return montar_listagem_registros_manuais_pcpi(
             data_norm,
             turno_norm,
-            listar_registros_pcpi_manuais(data=data_norm),
+            listar_registros_pcpi_manuais_por_data(data=data_norm),
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -139,7 +135,7 @@ def criar_registro_manual_pcpi_api(
     observacoes = _texto_opcional_http(payload.observacoes, "Observacoes", max_len=2000)
     usuario_id = obter_usuario_id_pcpi(usuario)
 
-    registro_id = criar_registro_pcpi_manual(
+    registro = criar_e_buscar_registro_pcpi_manual(
         data=data_norm,
         turno=turno_norm,
         tipo_acao=str(payload.tipo_acao).strip(),
@@ -151,8 +147,6 @@ def criar_registro_manual_pcpi_api(
         criado_por_usuario_id=usuario_id,
         atualizado_por_usuario_id=usuario_id,
     )
-
-    registro = buscar_registro_pcpi_manual_por_id(registro_id)
     if not registro:
         raise HTTPException(500, "Falha ao carregar o registro manual criado.")
     return registro
