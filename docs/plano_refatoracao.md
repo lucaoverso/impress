@@ -129,7 +129,7 @@ Sequencia sugerida:
 
 1. `ocorrencias_router.py`
 2. `routers/preconselho_router.py`
-3. `pcpi_router.py`
+3. `routers/pcpi_router.py`
 4. `routers/admin_router.py`
 
 ## Fase 5. Modularizar services grandes

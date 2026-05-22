@@ -16,6 +16,7 @@ def _reload_modules(db_path: str):
         "services.pcpi_service",
         "auth",
         "pcpi_router",
+        "routers.pcpi_router",
         "ocorrencias_router",
         "database",
     ):
@@ -30,7 +31,7 @@ def _reload_modules(db_path: str):
         )
 
     database = importlib.import_module("database")
-    pcpi_router = importlib.import_module("pcpi_router")
+    pcpi_router = importlib.import_module("routers.pcpi_router")
     models = importlib.import_module("models")
     return database, pcpi_router, models
 
