@@ -64,6 +64,12 @@ from schemas.preconselho_schemas import (
     PreConselhoTurmaDisciplinaOut,
     PreConselhoTurmaOut,
 )
+from services.preconselho_contexto_service import (
+    listar_estudantes_painel_preconselho,
+    minhas_turmas_disciplinas_preconselho,
+    normalizar_cargo_preconselho,
+    obter_contexto_preconselho,
+)
 from services.preconselho_service import (
     STATUS_PERIODO_PRE_CONSELHO_ABERTO,
     gerar_texto_consolidado_pre_conselho,
@@ -84,7 +90,7 @@ router = APIRouter()
 
 
 def _normalizar_cargo(usuario: dict) -> str:
-    return normalizar_cargo_usuario(usuario)
+    return normalizar_cargo_preconselho(usuario)
 
 
 def _exigir_acesso_preconselho(usuario: dict):
@@ -657,63 +663,10 @@ def _minhas_turmas_disciplinas(periodo_id: int, professor_id: int) -> list[dict]
 @router.get("/preconselho/contexto", response_model=PreConselhoContextoOut)
 def obter_contexto_preconselho_api(usuario=Depends(get_usuario_logado)):
     _exigir_acesso_preconselho(usuario)
-    cargo = _normalizar_cargo(usuario)
-    usuario_id = _usuario_id(usuario)
-    turmas_professor, disciplinas_professor = (
-        _opcoes_professor(usuario_id) if _usuario_eh_professor(usuario) else ([], [])
-    )
-    periodos = listar_periodos_pre_conselho()
-    periodo_referencia = next(
-        (item for item in periodos if item.get("status") == STATUS_PERIODO_PRE_CONSELHO_ABERTO),
-        None,
-    )
-    minhas_turmas_disciplinas = (
-        _minhas_turmas_disciplinas(int(periodo_referencia["id"]), usuario_id)
-        if _usuario_eh_professor(usuario) and periodo_referencia
-        else []
-    )
-
-    return {
-        "cargo": cargo,
-        "pode_configurar": _usuario_eh_admin(usuario),
-        "pode_consolidar": _usuario_eh_gestor(usuario),
-        "pode_relatorio": _usuario_eh_gestor(usuario),
-        "pode_editar_periodo_fechado": _usuario_eh_admin(usuario),
-        "professor_id": usuario_id if _usuario_eh_professor(usuario) else None,
-        "professor_nome": str(usuario.get("nome") or "").strip()
-        if _usuario_eh_professor(usuario)
-        else "",
-        "periodos": [
-            {
-                **item,
-                "editavel": periodo_editavel_para_cargo(item.get("status"), cargo),
-            }
-            for item in periodos
-        ],
-        "turmas": turmas_professor if _usuario_eh_professor(usuario) else listar_turmas_ativas(),
-        "disciplinas": disciplinas_professor
-        if _usuario_eh_professor(usuario)
-        else listar_disciplinas_ativas(),
-        "motivos": listar_motivos_pre_conselho(incluir_inativos=_usuario_eh_admin(usuario)),
-        "professores": [
-            {
-                "id": int(item["id"]),
-                "nome": item["nome"],
-                "email": item.get("email", ""),
-                "label": (
-                    f"{item['nome']} ({item.get('email', '')})"
-                    if str(item.get("email", "")).strip()
-                    else item["nome"]
-                ),
-            }
-            for item in listar_professores_agendamento()
-        ]
-        if _usuario_eh_gestor(usuario)
-        else [],
-        "niveis_atencao": listar_niveis_atencao_pre_conselho(),
-        "motivos_pos_preconselho": listar_motivos_pos_pre_conselho(),
-        "minhas_turmas_disciplinas": minhas_turmas_disciplinas,
-    }
+    try:
+        return obter_contexto_preconselho(usuario)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.get(
@@ -726,7 +679,7 @@ def listar_minhas_turmas_disciplinas_preconselho_api(
     if not _usuario_eh_professor(usuario):
         raise HTTPException(403, "Acesso negado.")
     _validar_periodo(periodo_id)
-    return _minhas_turmas_disciplinas(int(periodo_id), _usuario_id(usuario))
+    return minhas_turmas_disciplinas_preconselho(int(periodo_id), _usuario_id(usuario))
 
 
 @router.get("/preconselho/estudantes", response_model=list[PreConselhoEstudantePainelOut])
@@ -740,21 +693,22 @@ def listar_estudantes_preconselho_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_acesso_preconselho(usuario)
-    periodo = _validar_periodo(periodo_id)
-    turma = _validar_turma(turma_id)
-    disciplina = _validar_disciplina(disciplina_id)
-    professor = _resolver_professor(usuario, professor_id, permitir_gestor=True)
-    _validar_escopo_professor(int(professor["id"]), int(turma["id"]), int(disciplina["id"]))
-
-    itens = listar_estudantes_pre_conselho_painel(
-        periodo_id=int(periodo["id"]),
-        turma_id=int(turma["id"]),
-        disciplina_id=int(disciplina["id"]),
-        professor_usuario_id=int(professor["id"]),
-        busca_nome=q,
-        status=status,
-    )
-    return itens
+    try:
+        return listar_estudantes_painel_preconselho(
+            periodo_id=periodo_id,
+            turma_id=turma_id,
+            disciplina_id=disciplina_id,
+            q=q,
+            status=status,
+            professor_id=professor_id,
+            usuario=usuario,
+        )
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
 
 
 @router.post("/preconselho/texto/preview", response_model=PreConselhoTextoOut)
