@@ -4,7 +4,7 @@
 
 O projeto usa Python `3.13`.
 
-## Rodando o app localmente
+## Rodando o app localmente padrão
 
 ### 1. Abra o repositorio na raiz do projeto
 
