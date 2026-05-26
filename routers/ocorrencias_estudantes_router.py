@@ -1,14 +1,6 @@
 from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 
 from auth import get_usuario_logado
-from repositories.ocorrencias_repository import (
-    atualizar_estudante,
-    atualizar_status_estudante,
-    buscar_estudante_por_id,
-    criar_estudante,
-    listar_estudantes,
-    remover_estudante,
-)
 from schemas.ocorrencias_schemas import (
     EstudanteCreateIn,
     EstudanteOut,
@@ -16,13 +8,18 @@ from schemas.ocorrencias_schemas import (
     EstudanteUpdateIn,
     ImportacaoCsvOut,
 )
-from services.csv_import_service import importar_estudantes_arquivo
+from services.ocorrencias_estudantes_service import (
+    atualizar_estudante_service,
+    atualizar_status_estudante_service,
+    buscar_estudante_service,
+    criar_estudante_service,
+    importar_estudantes_arquivo_service,
+    listar_estudantes_service,
+    remover_estudante_service,
+)
 from routers.ocorrencias_common import (
     _exigir_gestor,
     _ler_upload_estudantes,
-    _montar_resposta_estudante,
-    _texto_obrigatorio,
-    _validar_turma_id,
 )
 
 router = APIRouter()
@@ -36,33 +33,32 @@ def listar_estudantes_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    turma_id_filtro = _validar_turma_id(turma_id) if turma_id is not None else None
-    return listar_estudantes(
-        incluir_inativos=incluir_inativos,
-        nome=str(nome or "").strip() or None,
-        turma_id=turma_id_filtro,
-    )
+    try:
+        return listar_estudantes_service(
+            nome=nome,
+            turma_id=turma_id,
+            incluir_inativos=incluir_inativos,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.get("/estudantes/{estudante_id}", response_model=EstudanteOut)
 def buscar_estudante_api(estudante_id: int, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
-    return _montar_resposta_estudante(estudante_id)
+    try:
+        return buscar_estudante_service(estudante_id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
 
 
 @router.post("/estudantes", response_model=EstudanteOut)
 def criar_estudante_api(payload: EstudanteCreateIn, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
-    turma_id = _validar_turma_id(payload.turma_id)
     try:
-        estudante_id = criar_estudante(
-            nome=_texto_obrigatorio(payload.nome, "Nome do estudante"),
-            turma_id=turma_id,
-            ativo=True,
-        )
+        return criar_estudante_service(nome=payload.nome, turma_id=payload.turma_id)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    return _montar_resposta_estudante(estudante_id)
 
 
 @router.post("/estudantes/importar", response_model=ImportacaoCsvOut)
@@ -74,8 +70,8 @@ def importar_estudantes_arquivo_api(
     _exigir_gestor(usuario)
     try:
         conteudo, nome_arquivo, tipo_conteudo = _ler_upload_estudantes(arquivo)
-        return importar_estudantes_arquivo(
-            conteudo,
+        return importar_estudantes_arquivo_service(
+            conteudo=conteudo,
             nome_arquivo=nome_arquivo,
             tipo_conteudo=tipo_conteudo,
         )
@@ -90,23 +86,17 @@ def atualizar_estudante_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    if not buscar_estudante_por_id(estudante_id):
-        raise HTTPException(404, "Estudante nao encontrado.")
-
-    turma_id = _validar_turma_id(payload.turma_id)
     try:
-        alterado = atualizar_estudante(
+        return atualizar_estudante_service(
             estudante_id=estudante_id,
-            nome=_texto_obrigatorio(payload.nome, "Nome do estudante"),
-            turma_id=turma_id,
-            ativo=bool(payload.ativo),
+            nome=payload.nome,
+            turma_id=payload.turma_id,
+            ativo=payload.ativo,
         )
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-
-    if not alterado:
-        raise HTTPException(404, "Estudante nao encontrado.")
-    return _montar_resposta_estudante(estudante_id)
 
 
 @router.put("/estudantes/{estudante_id}/status")
@@ -116,18 +106,20 @@ def atualizar_status_estudante_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    alterado = atualizar_status_estudante(estudante_id, bool(payload.ativo))
-    if not alterado:
-        raise HTTPException(404, "Estudante nao encontrado.")
+    try:
+        atualizar_status_estudante_service(estudante_id=estudante_id, ativo=payload.ativo)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
     return {"mensagem": "Status do estudante atualizado com sucesso."}
 
 
 @router.delete("/estudantes/{estudante_id}")
 def remover_estudante_api(estudante_id: int, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
-    removido, ocorrencias_desvinculadas = remover_estudante(estudante_id)
-    if not removido:
-        raise HTTPException(404, "Estudante nao encontrado.")
+    try:
+        ocorrencias_desvinculadas = remover_estudante_service(estudante_id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
     return {
         "mensagem": "Estudante excluido com sucesso.",
         "ocorrencias_desvinculadas": ocorrencias_desvinculadas,
