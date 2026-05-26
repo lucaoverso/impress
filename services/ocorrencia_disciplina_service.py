@@ -74,7 +74,7 @@ ACOES_ROTULOS = {
     ACAO_OCORRENCIA_TRANSFERENCIA_COMPULSORIA: "Transferencia compulsoria",
     ACAO_OCORRENCIA_ORIENTACAO_VERBAL: "Orientacao verbal",
     ACAO_OCORRENCIA_ADVERTENCIA: "Advertencia",
-    ACAO_OCORRENCIA_CHAMADA_RESPONSAVEL: "Chamada de responsavel",
+    ACAO_OCORRENCIA_CHAMADA_RESPONSAVEL: "Chamada de responsável",
     ACAO_OCORRENCIA_ENCAMINHAMENTO_DIRECAO: "Encaminhamento a direcao",
     ACAO_OCORRENCIA_REGISTRO_INFORMATIVO: "Registro informativo",
     ACAO_OCORRENCIA_ORIENTACAO_PROFESSOR: "Orientacao individual ao professor",
