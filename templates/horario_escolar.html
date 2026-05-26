@@ -136,6 +136,21 @@
                     <p class="horario-professor-scope-help">As aulas do professor logado aparecem destacadas no horario geral e podem ser vistas em uma grade unica ao selecionar "Ver meu horario".</p>
                 </div>
 
+                <div id="horarioVisualizacaoGestorCard" class="horario-professor-scope" hidden>
+                    <span class="horario-professor-scope-label">Agrupar consulta</span>
+                    <div class="horario-professor-scope-options">
+                        <label class="horario-professor-scope-option">
+                            <input type="radio" name="horarioVisualizacaoGestor" value="turmas" checked>
+                            <span>Por turma</span>
+                        </label>
+                        <label class="horario-professor-scope-option">
+                            <input type="radio" name="horarioVisualizacaoGestor" value="professores">
+                            <span>Por professor</span>
+                        </label>
+                    </div>
+                    <p class="horario-professor-scope-help">O admin pode alternar entre a grade por turma e uma tabela semanal separada para cada professor.</p>
+                </div>
+
                 <form id="formFiltrosHorarioEscolar" class="coordenacao-filter-grid">
                     <label class="coordenacao-field" for="filtroHorarioAnoLetivo">
                         <span>Ano letivo</span>
@@ -177,7 +192,7 @@
                 <div id="horarioListaTurmas" class="horario-group-stack"></div>
             </article>
 
-            <article id="horarioBoardProfessores" class="coordenacao-card horario-board-card">
+            <article id="horarioBoardProfessores" class="coordenacao-card horario-board-card" hidden>
                 <div class="coordenacao-section-header">
                     <div>
                         <p class="coordenacao-eyebrow">Visão espelhada</p>

@@ -410,12 +410,12 @@ def _obter_observacao_final(ocorrencia: dict) -> str:
     if acao in observacoes:
         return observacoes[acao]
     if tipo_registro == TIPO_REGISTRO_PROFESSOR:
-        return "OBS.: Documento emitido para registro funcional e acompanhamento da orientacao ao professor."
+        return "OBS.: Documento emitido para registro funcional e acompanhamento da orientação ao professor."
     if tipo_registro == TIPO_REGISTRO_GERAL:
-        return "OBS.: Documento emitido para registro institucional de orientacao geral ao corpo docente."
+        return "OBS.: Documento emitido para registro institucional de orientação geral ao corpo docente."
     return observacoes.get(
         acao,
-        f"OBS.: Documento emitido para registro e acompanhamento da acao aplicada: {_rotulo_acao(acao)}.",
+        f"OBS.: Documento emitido para registro e acompanhamento da ação aplicada: {_rotulo_acao(acao)}.",
     )
 
 
@@ -1329,13 +1329,13 @@ class _RenderizadorRegistroOcorrencia:
             self.centro_x - 330,
             y_gestao,
             420,
-            "Coordenacao Pedagogica",
+            "Coordenação Pedagógica",
         )
         self._desenhar_linha_assinatura(
             self.centro_x + 330,
             y_gestao,
             420,
-            "Direcao",
+            "Direção",
         )
         self._desenhar_emitido_em(y_gestao + 94)
 
@@ -1375,7 +1375,7 @@ class _RenderizadorRegistroOcorrencia:
                 self.centro_x,
                 self.direita - ((self.direita - self.esquerda) * 0.18),
             ]
-            titulos = ["Professor(a)", "Coordenacao Pedagogica", "Direcao"]
+            titulos = ["Professor(a)", "Coordenação Pedagógica", "Direção"]
             for centro, titulo in zip(centros, titulos):
                 self._desenhar_linha_assinatura(int(centro), y_base + 54, 420, titulo)
             self._desenhar_emitido_em(y_base + 142)
@@ -1403,7 +1403,7 @@ class _RenderizadorRegistroOcorrencia:
             self.centro_x,
             self.direita - ((self.direita - self.esquerda) * 0.18),
         ]
-        titulos = ["Estudante", "Coordenacao Pedagogica", "Direcao"]
+        titulos = ["Estudante", "Coordenação Pedagógica", "Direção"]
         for centro, titulo in zip(centros, titulos):
             self._desenhar_linha_assinatura(int(centro), y_base + 54, 420, titulo)
         self._desenhar_emitido_em(y_base + 142)
@@ -1412,7 +1412,7 @@ class _RenderizadorRegistroOcorrencia:
         total = len(self.paginas)
         for indice, pagina in enumerate(self.paginas, start=1):
             draw = ImageDraw.Draw(pagina)
-            texto = f"Pagina {indice}/{total}"
+            texto = f"Página {indice}/{total}"
             bbox = draw.textbbox((0, 0), texto, font=self.fontes.rodape)
             largura = bbox[2] - bbox[0]
             altura = bbox[3] - bbox[1]
@@ -1450,11 +1450,11 @@ class _RenderizadorRegistroOcorrencia:
         if tipo_registro == TIPO_REGISTRO_GERAL:
             return [
                 ("Registro geral", referencia),
-                ("Publico", professor),
+                ("Público", professor),
                 ("Tema ou pauta", disciplina),
                 ("Data", data),
-                ("Horario", f"As {horario} h" if horario != "Nao informado" else horario),
-                ("Acao aplicada", acao),
+                ("Horário", f"As {horario} h" if horario != "ão informado" else horario),
+                ("Ação aplicada", acao),
                 ("Status", status),
             ]
 
@@ -1464,12 +1464,12 @@ class _RenderizadorRegistroOcorrencia:
         return [
             ("Estudante(s)" if total_estudantes > 1 else "Estudante", referencia),
             ("Turma", turma),
-            ("Professor requerente", professor),
+            ("Requerente", professor),
             ("Disciplina ou funcao", disciplina),
             ("Data", data),
             ("Aula", aula),
-            ("Horario", f"As {horario} h" if horario != "Nao informado" else horario),
-            ("Acao aplicada", acao),
+            ("Horário", f"As {horario} h" if horario != "Não informado" else horario),
+            ("Ação aplicada", acao),
             ("Status", status),
         ]
 
