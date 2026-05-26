@@ -1,4 +1,6 @@
-from db.catalogos import listar_disciplinas_ativas, listar_turmas_ativas
+from datetime import datetime
+
+from db.catalogos import buscar_turma_por_id, listar_disciplinas_ativas, listar_turmas_ativas
 from db.usuarios import listar_professores_agendamento
 from repositories.ocorrencias_repository import (
     STATUS_OCORRENCIA_REGISTRADO,
@@ -148,6 +150,75 @@ def buscar_estudantes_ocorrencia_service(*, termo: str, limite: int = 20) -> lis
     ]
 
 
+def _validar_status_filtro_ocorrencia(status: str | None) -> str | None:
+    if status is None or not str(status).strip():
+        return None
+    status_normalizado = str(status).strip().lower()
+    if status_normalizado not in STATUS_OCORRENCIA_VALIDOS:
+        raise ValueError("Status invalido.")
+    return status_normalizado
+
+
+def _validar_tipo_registro_filtro_ocorrencia(tipo_registro: str | None) -> str | None:
+    if tipo_registro is None or not str(tipo_registro).strip():
+        return None
+    tipo_normalizado = str(tipo_registro).strip().lower()
+    if tipo_normalizado not in TIPOS_REGISTRO_OCORRENCIA:
+        raise ValueError("Tipo de registro invalido.")
+    return tipo_normalizado
+
+
+def _validar_data_filtro_ocorrencia(valor: str | None, campo: str) -> str | None:
+    if valor is None:
+        return None
+    texto = str(valor).strip()
+    if not texto:
+        return None
+    try:
+        data = datetime.strptime(texto, "%Y-%m-%d").date()
+    except ValueError as exc:
+        raise ValueError(f"{campo} invalida. Use o formato YYYY-MM-DD.") from exc
+    return data.isoformat()
+
+
+def _validar_turma_filtro_ocorrencia(turma_id: int | None) -> int | None:
+    if turma_id is None:
+        return None
+    try:
+        turma_id_valor = int(turma_id)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("Turma invalida.") from exc
+    if turma_id_valor <= 0 or not buscar_turma_por_id(turma_id_valor):
+        raise ValueError("Turma invalida.")
+    return turma_id_valor
+
+
+def listar_ocorrencias_filtradas_service(
+    *,
+    tipo_registro: str | None = None,
+    status: str | None = None,
+    turma_id: int | None = None,
+    nome_estudante: str | None = None,
+    data_inicial: str | None = None,
+    data_final: str | None = None,
+) -> list[dict]:
+    tipo_registro_filtro = _validar_tipo_registro_filtro_ocorrencia(tipo_registro)
+    status_filtro = _validar_status_filtro_ocorrencia(status)
+    data_inicial_norm = _validar_data_filtro_ocorrencia(data_inicial, "Data inicial")
+    data_final_norm = _validar_data_filtro_ocorrencia(data_final, "Data final")
+    if data_inicial_norm and data_final_norm and data_inicial_norm > data_final_norm:
+        raise ValueError("Periodo invalido: data inicial maior que data final.")
+    turma_id_filtro = _validar_turma_filtro_ocorrencia(turma_id)
+    return listar_ocorrencias(
+        tipo_registro=tipo_registro_filtro,
+        status=status_filtro,
+        turma_id=turma_id_filtro,
+        nome_estudante=str(nome_estudante or "").strip() or None,
+        data_inicial=data_inicial_norm,
+        data_final=data_final_norm,
+    )
+
+
 def listar_ocorrencias_service(**filtros) -> list[dict]:
     return listar_ocorrencias(**filtros)
 
@@ -157,3 +228,25 @@ def buscar_ocorrencia_service(ocorrencia_id: int) -> dict:
     if not ocorrencia:
         raise ValueError("Ocorrencia nao encontrada.")
     return ocorrencia
+
+
+def _nome_arquivo_pdf_ocorrencia_service(ocorrencia: dict) -> str:
+    estudante = str(ocorrencia.get("nome_estudante") or "ocorrencia").strip() or "ocorrencia"
+    estudante_limpo = "".join(ch if ch.isalnum() else "_" for ch in estudante).strip("_").lower()
+    estudante_limpo = estudante_limpo or "ocorrencia"
+    data = str(ocorrencia.get("data_ocorrencia") or "").strip() or datetime.now().date().isoformat()
+    data_limpa = "".join(ch for ch in data if ch.isdigit() or ch == "-") or datetime.now().date().isoformat()
+    return f"registro_ocorrencia_{estudante_limpo}_{data_limpa}.pdf"
+
+
+def _gerar_pdf_ocorrencia_bytes(ocorrencia: dict, turma: dict | None) -> bytes:
+    from services.ocorrencia_pdf_service import gerar_pdf_ocorrencia_registro
+
+    return gerar_pdf_ocorrencia_registro(ocorrencia, turma=turma)
+
+
+def gerar_pdf_ocorrencia_service(ocorrencia_id: int) -> tuple[bytes, str]:
+    ocorrencia = buscar_ocorrencia_service(ocorrencia_id)
+    turma = buscar_turma_por_id(int(ocorrencia.get("turma_id") or 0))
+    pdf_bytes = _gerar_pdf_ocorrencia_bytes(ocorrencia, turma)
+    return pdf_bytes, _nome_arquivo_pdf_ocorrencia_service(ocorrencia)

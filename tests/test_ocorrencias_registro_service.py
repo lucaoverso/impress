@@ -5,6 +5,7 @@ from unittest.mock import patch
 from services.ocorrencias_registro_service import (
     atualizar_ocorrencia_parcial_service,
     criar_ocorrencia_service,
+    remover_ocorrencia_service,
 )
 
 
@@ -179,6 +180,13 @@ class OcorrenciasRegistroServiceTest(unittest.TestCase):
         self.assertEqual(mock_salvar_regimento.call_args.args[1], [])
         self.assertEqual(mock_salvar_professores.call_args.args[0], 12)
         self.assertEqual(resposta["tipo_registro"], "professor")
+
+    @patch("services.ocorrencias_registro_service.remover_ocorrencia")
+    def test_remove_ocorrencia_retorna_lookup_quando_nao_remove(self, mock_remover):
+        mock_remover.return_value = False
+
+        with self.assertRaisesRegex(LookupError, "Registro nao encontrado."):
+            remover_ocorrencia_service(44)
 
 
 if __name__ == "__main__":

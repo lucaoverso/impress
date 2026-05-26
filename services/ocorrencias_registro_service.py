@@ -4,6 +4,7 @@ from repositories.ocorrencias_repository import (
     buscar_ocorrencia_por_id,
     buscar_regimento_itens_por_ids,
     criar_ocorrencia,
+    remover_ocorrencia,
     salvar_ocorrencia_estudantes_vinculados,
     salvar_ocorrencia_professores_vinculados,
     salvar_regimento_itens_ocorrencia,
@@ -291,3 +292,9 @@ def atualizar_ocorrencia_parcial_service(ocorrencia_id: int, payload) -> dict:
     if regimento_item_ids_validados is not None:
         salvar_regimento_itens_ocorrencia(ocorrencia_id, regimento_item_ids_validados)
     return buscar_ocorrencia_service(ocorrencia_id)
+
+
+def remover_ocorrencia_service(ocorrencia_id: int) -> None:
+    removido = remover_ocorrencia(ocorrencia_id)
+    if not removido:
+        raise LookupError("Registro nao encontrado.")

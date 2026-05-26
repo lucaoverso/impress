@@ -5,6 +5,8 @@ from services.ocorrencias_consulta_service import (
     buscar_estudantes_ocorrencia_service,
     buscar_ocorrencia_service,
     buscar_professores_ocorrencia_service,
+    gerar_pdf_ocorrencia_service,
+    listar_ocorrencias_filtradas_service,
     listar_ocorrencias_service,
     listar_opcoes_ocorrencias_service,
 )
@@ -105,6 +107,66 @@ class OcorrenciasConsultaServiceTest(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "Ocorrencia nao encontrada."):
             buscar_ocorrencia_service(77)
+
+    @patch("services.ocorrencias_consulta_service.buscar_turma_por_id")
+    @patch("services.ocorrencias_consulta_service.listar_ocorrencias")
+    def test_lista_ocorrencias_filtradas_valida_e_normaliza_parametros(
+        self,
+        mock_listar,
+        mock_buscar_turma,
+    ):
+        mock_buscar_turma.return_value = {"id": 3, "nome": "7A"}
+        mock_listar.return_value = [{"id": 21}]
+
+        resposta = listar_ocorrencias_filtradas_service(
+            tipo_registro="estudante",
+            status="registrado",
+            turma_id=3,
+            nome_estudante=" Ana ",
+            data_inicial="2026-03-01",
+            data_final="2026-03-31",
+        )
+
+        mock_listar.assert_called_once_with(
+            tipo_registro="estudante",
+            status="registrado",
+            turma_id=3,
+            nome_estudante="Ana",
+            data_inicial="2026-03-01",
+            data_final="2026-03-31",
+        )
+        self.assertEqual(resposta[0]["id"], 21)
+
+    def test_lista_ocorrencias_filtradas_rejeita_periodo_invalido(self):
+        with self.assertRaisesRegex(ValueError, "Periodo invalido"):
+            listar_ocorrencias_filtradas_service(
+                data_inicial="2026-04-01",
+                data_final="2026-03-01",
+            )
+
+    @patch("services.ocorrencias_consulta_service._gerar_pdf_ocorrencia_bytes")
+    @patch("services.ocorrencias_consulta_service.buscar_turma_por_id")
+    @patch("services.ocorrencias_consulta_service.buscar_ocorrencia_por_id")
+    def test_gera_pdf_ocorrencia_retorna_bytes_e_nome(
+        self,
+        mock_buscar_ocorrencia,
+        mock_buscar_turma,
+        mock_gerar_pdf_bytes,
+    ):
+        mock_buscar_ocorrencia.return_value = {
+            "id": 14,
+            "nome_estudante": "Aluno Teste",
+            "turma_id": 2,
+            "data_ocorrencia": "2026-03-20",
+        }
+        mock_buscar_turma.return_value = {"id": 2, "nome": "7A"}
+        mock_gerar_pdf_bytes.return_value = b"%PDF"
+
+        pdf_bytes, nome_arquivo = gerar_pdf_ocorrencia_service(14)
+
+        self.assertEqual(pdf_bytes, b"%PDF")
+        self.assertIn("registro_ocorrencia_", nome_arquivo)
+        self.assertIn("2026-03-20", nome_arquivo)
 
 
 if __name__ == "__main__":

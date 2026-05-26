@@ -1,30 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from auth import get_usuario_logado
-from db.catalogos import buscar_turma_por_id
-from repositories.ocorrencias_repository import remover_ocorrencia
 from schemas.ocorrencias_schemas import OcorrenciaCreateIn, OcorrenciaOut, OcorrenciaUpdateIn
-from services.ocorrencia_pdf_service import gerar_pdf_ocorrencia_registro
 from services.ocorrencias_consulta_service import (
     buscar_estudantes_ocorrencia_service,
     buscar_ocorrencia_service,
     buscar_professores_ocorrencia_service,
-    listar_ocorrencias_service,
+    gerar_pdf_ocorrencia_service,
+    listar_ocorrencias_filtradas_service,
     listar_opcoes_ocorrencias_service,
 )
 from services.ocorrencias_registro_service import (
     atualizar_ocorrencia_parcial_service,
     criar_ocorrencia_service,
+    remover_ocorrencia_service,
 )
-from routers.ocorrencias_common import (
-    _exigir_gestor,
-    _montar_resposta_ocorrencia,
-    _nome_arquivo_pdf_ocorrencia,
-    _validar_data_opcional,
-    _validar_status,
-    _validar_tipo_registro,
-    _validar_turma_id,
-)
+from routers.ocorrencias_common import _exigir_gestor
 
 router = APIRouter()
 
@@ -77,26 +68,17 @@ def listar_ocorrencias_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    status_filtro = _validar_status(status) if status is not None and str(status).strip() else None
-    tipo_registro_filtro = (
-        _validar_tipo_registro(tipo_registro)
-        if tipo_registro is not None and str(tipo_registro).strip()
-        else None
-    )
-    data_inicial_norm = _validar_data_opcional(data_inicial, "Data inicial")
-    data_final_norm = _validar_data_opcional(data_final, "Data final")
-    if data_inicial_norm and data_final_norm and data_inicial_norm > data_final_norm:
-        raise HTTPException(400, "Periodo invalido: data inicial maior que data final.")
-
-    turma_id_filtro = _validar_turma_id(turma_id) if turma_id is not None else None
-    return listar_ocorrencias_service(
-        tipo_registro=tipo_registro_filtro,
-        status=status_filtro,
-        turma_id=turma_id_filtro,
-        nome_estudante=str(nome_estudante or "").strip() or None,
-        data_inicial=data_inicial_norm,
-        data_final=data_final_norm,
-    )
+    try:
+        return listar_ocorrencias_filtradas_service(
+            tipo_registro=tipo_registro,
+            status=status,
+            turma_id=turma_id,
+            nome_estudante=nome_estudante,
+            data_inicial=data_inicial,
+            data_final=data_final,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 @router.get("/ocorrencias/{ocorrencia_id}", response_model=OcorrenciaOut)
@@ -111,10 +93,10 @@ def buscar_ocorrencia_api(ocorrencia_id: int, usuario=Depends(get_usuario_logado
 @router.get("/ocorrencias/{ocorrencia_id}/pdf")
 def gerar_pdf_ocorrencia_api(ocorrencia_id: int, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
-    ocorrencia = _montar_resposta_ocorrencia(ocorrencia_id)
-    turma = buscar_turma_por_id(int(ocorrencia.get("turma_id") or 0))
-    pdf_bytes = gerar_pdf_ocorrencia_registro(ocorrencia, turma=turma)
-    nome_arquivo = _nome_arquivo_pdf_ocorrencia(ocorrencia)
+    try:
+        pdf_bytes, nome_arquivo = gerar_pdf_ocorrencia_service(ocorrencia_id)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
@@ -149,9 +131,10 @@ def atualizar_ocorrencia_api(
 @router.delete("/ocorrencias/{ocorrencia_id}")
 def remover_ocorrencia_api(ocorrencia_id: int, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
-    removido = remover_ocorrencia(ocorrencia_id)
-    if not removido:
-        raise HTTPException(404, "Registro nao encontrado.")
+    try:
+        remover_ocorrencia_service(ocorrencia_id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
     return {"mensagem": "Registro excluido com sucesso."}
 
 
