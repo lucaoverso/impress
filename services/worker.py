@@ -131,7 +131,7 @@ def limpar_spool_expirado() -> int:
         except FileNotFoundError:
             continue
         except OSError as exc:
-            logger.warning("Nao foi possivel remover arquivo expirado do spool %s: %s", caminho, exc)
+            logger.warning("Nao foi possível remover arquivo expirado do spool %s: %s", caminho, exc)
 
     _remover_diretorios_vazios(DIRETORIO_SPOOL)
     return removidos
