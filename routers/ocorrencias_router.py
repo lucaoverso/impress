@@ -10,7 +10,7 @@ from db.catalogos import (
     listar_disciplinas_ativas,
     listar_turmas_ativas,
 )
-from db.ocorrencias import (
+from repositories.ocorrencias_repository import (
     ACAO_OCORRENCIA_VALIDAS,
     STATUS_OCORRENCIA_REGISTRADO,
     STATUS_OCORRENCIA_VALIDOS,
@@ -61,7 +61,7 @@ from db.ocorrencias import (
     salvar_regimento_itens_ocorrencia,
 )
 from db.usuarios import listar_professores_agendamento
-from models import (
+from schemas.ocorrencias_schemas import (
     AlineaCreateIn,
     AlineaOut,
     AlineaUpdateIn,
