@@ -1,0 +1,254 @@
+﻿Diagnose log at 2026-05-26T11:56:37Z
+
+AppPath: C:\Program Files\Git\mingw64\bin\git-credential-manager.exe
+InstallDir: C:\Program Files\Git\mingw64\bin\
+Version: 2.7.0+d1dd8a4ded75a2b1faae653157ac1699609442ad
+
+------------
+Diagnostic: Environment
+Skipped: False
+Success: True
+Exception: None
+Log:
+OSType: Windows
+OSVersion: 10.0 (build 26200)
+Reading environment variables... OK
+ Variables:
+OneDriveConsumer=C:\Users\lucas\OneDrive
+ProgramFiles(x86)=C:\Program Files (x86)
+MSYSTEM=MINGW64
+ProgramW6432=C:\Program Files
+PAGER=more.com
+PROCESSOR_IDENTIFIER=Intel64 Family 6 Model 151 Stepping 2, GenuineIntel
+TMP=C:\Users\lucas\AppData\Local\Temp
+CODEX_INTERNAL_ORIGINATOR_OVERRIDE=codex_vscode
+NODE_TLS_REJECT_UNAUTHORIZED=undefined
+PATHEXT=.COM;.EXE;.BAT;.CMD;.VBS;.VBE;.JS;.JSE;.WSF;.WSH;.MSC;.CPL
+ProgramData=C:\ProgramData
+LC_CTYPE=C.UTF-8
+VSCODE_CWD=C:\Users\lucas\AppData\Local\Programs\Microsoft VS Code
+VSCODE_ESM_ENTRYPOINT=vs/workbench/api/node/extensionHostProcess
+PROCESSOR_REVISION=9702
+TEMP=C:\Users\lucas\AppData\Local\Temp
+USERPROFILE=C:\Users\lucas
+CommonProgramFiles(x86)=C:\Program Files (x86)\Common Files
+LOGONSERVER=\\PC
+EFC_14804_1592913036=1
+USERNAME=lucas
+SystemRoot=C:\WINDOWS
+CHROME_CRASHPAD_PIPE_NAME=\\.\pipe\crashpad_21804_MWPDYIWKHJXXBDHK
+CODEX_THREAD_ID=019e6405-da79-76b3-a68e-3808cedda702
+PLINK_PROTOCOL=ssh
+LESS=
+OneDrive=C:\Users\lucas\OneDrive
+PATH=C:/Program Files/Git/mingw64/libexec/git-core;C:\Program Files\Git\mingw64\bin;C:\Program Files\Git\usr\bin;C:\Users\lucas\bin;C:\Users\lucas\.codex\tmp\arg0\codex-arg0L7s5xR;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\WINDOWS\System32\OpenSSH\;C:\Program Files\Git\cmd;C:\Program Files\nodejs\;C:\Users\lucas\AppData\Local\Programs\Python\Python314\Scripts\;C:\Users\lucas\AppData\Local\Programs\Python\Python314\;C:\Users\lucas\AppData\Local\Microsoft\WindowsApps;C:\Users\lucas\AppData\Local\Programs\Microsoft VS Code\bin;C:\Users\lucas\AppData\Local\Programs\Ollama;C:\Users\lucas\AppData\Roaming\npm;c:\Users\lucas\.vscode\extensions\openai.chatgpt-26.5519.32039-win32-x64\bin\windows-x86_64
+CommonProgramFiles=C:\Program Files\Common Files
+windir=C:\WINDOWS
+ZES_ENABLE_SYSMAN=1
+PROCESSOR_LEVEL=6
+VSCODE_L10N_BUNDLE_LOCATION=file:///c%3A/Users/lucas/.vscode/extensions/ms-ceintl.vscode-language-pack-pt-br-1.121.2026052214/translations/extensions/vscode.json-language-features.i18n.json
+GIT_CONFIG_KEY_0=safe.directory
+APPLICATION_INSIGHTS_NO_STATSBEAT=true
+HOMEPATH=\Users\lucas
+GIT_CONFIG_VALUE_0=C:\Users\lucas\impress
+COPILOT_OTEL_EXPORTER_TYPE=file
+VSCODE_HANDLES_UNCAUGHT_ERRORS=true
+ALLUSERSPROFILE=C:\ProgramData
+CommonProgramW6432=C:\Program Files\Common Files
+OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT=true
+TERM=xterm-256color
+GIT_EXEC_PATH=C:/Program Files/Git/mingw64/libexec/git-core
+PROCESSOR_ARCHITECTURE=AMD64
+SESSIONNAME=Console
+GIT_CONFIG_COUNT=1
+DriverData=C:\Windows\System32\Drivers\DriverData
+HOMEDRIVE=C:
+VSCODE_PID=21804
+VSCODE_CRASH_REPORTER_PROCESS_TYPE=extensionHost
+GIT_TRACE2_PARENT_SID=fcef0c39-214e-4f39-a45e-0285fa057c8f
+SystemDrive=C:
+NUMBER_OF_PROCESSORS=12
+OS=Windows_NT
+VSCODE_IPC_HOOK=\\.\pipe\2897b20b-1.121.0-main-sock
+ProgramFiles=C:\Program Files
+ComSpec=C:\WINDOWS\system32\cmd.exe
+USERDOMAIN_ROAMINGPROFILE=PC
+HOME=C:\Users\lucas
+APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL=1
+CODEX_SANDBOX_NETWORK_DISABLED=1
+ELECTRON_RUN_AS_NODE=1
+PSModulePath=C:\Users\lucas\Documents\WindowsPowerShell\Modules;C:\Program Files\WindowsPowerShell\Modules;C:\WINDOWS\system32\WindowsPowerShell\v1.0\Modules
+TMPDIR=C:\Users\lucas\AppData\Local\Temp
+RUST_LOG=warn
+APPDATA=C:\Users\lucas\AppData\Roaming
+USERDOMAIN=PC
+COMPUTERNAME=PC
+EFC_14804_4126798990=1
+LOCALAPPDATA=C:\Users\lucas\AppData\Local
+DEBUG=release
+VSCODE_NLS_CONFIG={"userLocale":"pt-br","osLocale":"pt-br","resolvedLanguage":"pt-br","defaultMessagesFile":"C:\\Users\\lucas\\AppData\\Local\\Programs\\Microsoft VS Code\\f6cfa2ea24\\resources\\app\\out\\nls.messages.json","languagePack":{"translationsConfigFile":"C:\\Users\\lucas\\AppData\\Roaming\\Code\\clp\\26906703ce8d839d374016eabd51659c.pt-br\\tcf.json","messagesFile":"C:\\Users\\lucas\\AppData\\Roaming\\Code\\clp\\26906703ce8d839d374016eabd51659c.pt-br\\f6cfa2ea2403534de03f069bdf160d06451ed282\\nls.messages.json","corruptMarkerFile":"C:\\Users\\lucas\\AppData\\Roaming\\Code\\clp\\26906703ce8d839d374016eabd51659c.pt-br\\corrupted.info"},"locale":"pt-br","availableLanguages":{"*":"pt-br"},"_languagePackId":"26906703ce8d839d374016eabd51659c.pt-br","_languagePackSupport":true,"_translationsConfigFile":"C:\\Users\\lucas\\AppData\\Roaming\\Code\\clp\\26906703ce8d839d374016eabd51659c.pt-br\\tcf.json","_cacheRoot":"C:\\Users\\lucas\\AppData\\Roaming\\Code\\clp\\26906703ce8d839d374016eabd51659c.pt-br","_resolvedLanguagePackCoreLocation":"C:\\Users\\lucas\\AppData\\Roaming\\Code\\clp\\26906703ce8d839d374016eabd51659c.pt-br\\f6cfa2ea2403534de03f069bdf160d06451ed282","_corruptedFile":"C:\\Users\\lucas\\AppData\\Roaming\\Code\\clp\\26906703ce8d839d374016eabd51659c.pt-br\\corrupted.info"}
+GIT_PAGER=more.com
+COPILOT_OTEL_FILE_EXPORTER_PATH=\\.\nul
+COLORTERM=truecolor
+VSCODE_CODE_CACHE_PATH=C:\Users\lucas\AppData\Roaming\Code\CachedData\f6cfa2ea2403534de03f069bdf160d06451ed282
+PUBLIC=C:\Users\Public
+COPILOT_OTEL_ENABLED=true
+
+
+------------
+Diagnostic: File system
+Skipped: False
+Success: True
+Exception: None
+Log:
+Temporary directory is 'C:\Users\lucas\AppData\Local\Temp\'...
+Checking basic file I/O...
+Writing to temporary file 'C:\Users\lucas\AppData\Local\Temp\4a3043cc8a31f319d2d2a4de'... OK
+Reading from temporary file 'C:\Users\lucas\AppData\Local\Temp\4a3043cc8a31f319d2d2a4de'... OK
+Deleting temporary file 'C:\Users\lucas\AppData\Local\Temp\4a3043cc8a31f319d2d2a4de'... OK
+Testing IFileSystem instance...
+UserHomePath: C:\Users\CodexSandboxOffline
+UserDataDirectoryPath: C:\Users\CodexSandboxOffline\.gcm
+GetCurrentDirectory(): C:\Users\lucas\impress
+
+------------
+Diagnostic: Networking
+Skipped: False
+Success: False
+Exception:
+System.Net.Http.HttpRequestException: Ocorreu um erro ao enviar a solicitação. ---> System.Net.WebException: Impossível conectar-se ao servidor remoto ---> System.Net.Sockets.SocketException: Foi feita uma tentativa de acesso a um soquete de uma maneira que é proibida pelas permissões de acesso 104.20.23.154:443
+   em System.Net.Sockets.Socket.InternalEndConnect(IAsyncResult asyncResult)
+   em System.Net.Sockets.Socket.EndConnect(IAsyncResult asyncResult)
+   em System.Net.ServicePoint.ConnectSocketInternal(Boolean connectFailure, Socket s4, Socket s6, Socket& socket, IPAddress& address, ConnectSocketState state, IAsyncResult asyncResult, Exception& exception)
+   --- Fim do rastreamento de pilha de exceções internas ---
+   em System.Net.HttpWebRequest.EndGetResponse(IAsyncResult asyncResult)
+   em System.Net.Http.HttpClientHandler.GetResponseCallback(IAsyncResult ar)
+   --- Fim do rastreamento de pilha de exceções internas ---
+   em System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+   em System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
+   em GitCredentialManager.Diagnostics.NetworkingDiagnostic.<RunInternalAsync>d__4.MoveNext()
+--- Fim do rastreamento de pilha do local anterior onde a exceção foi gerada ---
+   em System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+   em System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
+   em GitCredentialManager.Diagnostics.Diagnostic.<RunAsync>d__6.MoveNext()
+Log:
+Checking networking and HTTP stack...
+Creating HTTP client... OK
+IsNetworkAvailable: True
+Sending HEAD request to http://example.com...Sending HEAD request to https://example.com... warning: HEAD request failed
+Sending HEAD request to http://httpforever.com...
+------------
+Diagnostic: Git
+Skipped: False
+Success: True
+Exception: None
+Log:
+Getting Git version... OK
+Git version is '2.53.0.windows.1'
+Locating current repository...Git repository at 'C:/Users/lucas/impress/.git'
+ OK
+Listing all Git configuration... OK
+Git configuration:
+file:C:/Program Files/Git/etc/gitconfig	diff.astextplain.textconv=astextplain
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.clean=git-lfs clean -- %f
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.smudge=git-lfs smudge -- %f
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.process=git-lfs filter-process
+file:C:/Program Files/Git/etc/gitconfig	filter.lfs.required=true
+file:C:/Program Files/Git/etc/gitconfig	http.sslbackend=schannel
+file:C:/Program Files/Git/etc/gitconfig	core.autocrlf=true
+file:C:/Program Files/Git/etc/gitconfig	core.fscache=true
+file:C:/Program Files/Git/etc/gitconfig	core.symlinks=false
+file:C:/Program Files/Git/etc/gitconfig	pull.rebase=false
+file:C:/Program Files/Git/etc/gitconfig	credential.helper=manager
+file:C:/Program Files/Git/etc/gitconfig	credential.https://dev.azure.com.usehttppath=true
+file:C:/Program Files/Git/etc/gitconfig	init.defaultbranch=master
+file:C:/Users/lucas/.gitconfig	user.email=lucassbaraini22@gmail.com
+file:C:/Users/lucas/.gitconfig	user.name=lucas sbaraini
+file:C:/Users/lucas/.gitconfig	core.autocrlf=input
+file:.git/config	core.repositoryformatversion=0
+file:.git/config	core.filemode=false
+file:.git/config	core.bare=false
+file:.git/config	core.logallrefupdates=true
+file:.git/config	core.symlinks=false
+file:.git/config	core.ignorecase=true
+file:.git/config	remote.origin.url=https://github.com/lucaoverso/impress.git
+file:.git/config	remote.origin.fetch=+refs/heads/*:refs/remotes/origin/*
+file:.git/config	branch.main.remote=origin
+file:.git/config	branch.main.vscode-merge-base=origin/main
+file:.git/config	branch.main.merge=refs/heads/main
+file:.git/config	branch.refactor-transicao-camadas.vscode-merge-base=origin/main
+file:.git/config	branch.refactor-transicao-camadas.remote=origin
+file:.git/config	branch.refactor-transicao-camadas.merge=refs/heads/refactor-transicao-camadas
+file:.git/config	branch.Refatoração.vscode-merge-base=origin/refactor-transicao-camadas
+file:.git/config	branch.refactor.vscode-merge-base=origin/main
+file:.git/config	branch.refactor.remote=origin
+file:.git/config	branch.refactor.merge=refs/heads/refactor
+command line:	safe.directory=C:\Users\lucas\impress
+
+
+------------
+Diagnostic: Credential storage
+Skipped: False
+Success: True
+Exception: None
+Log:
+ICredentialStore instance is of type: CredentialStore
+Writing test credential... OK
+Reading test credential... OK
+Deleting test credential... OK
+
+------------
+Diagnostic: Microsoft authentication (AAD/MSA)
+Skipped: False
+Success: False
+Exception:
+System.UnauthorizedAccessException: O acesso ao caminho 'C:\Users\lucas\AppData\Local\.IdentityService' foi negado.
+   em System.IO.__Error.WinIOError(Int32 errorCode, String maybeFullPath)
+   em System.IO.Directory.InternalCreateDirectory(String fullPath, String path, Object dirSecurityObj, Boolean checkHost)
+   em System.IO.Directory.InternalCreateDirectoryHelper(String path, Boolean checkHost)
+   em Microsoft.Identity.Client.Extensions.Msal.CrossPlatLock..ctor(String lockfilePath, Int32 lockFileRetryDelay, Int32 lockFileRetryCount)
+   em Microsoft.Identity.Client.Extensions.Msal.MsalCacheHelper.CreateCrossPlatLock(StorageCreationProperties storageCreationProperties)
+   em Microsoft.Identity.Client.Extensions.Msal.MsalCacheHelper.<CreateAsync>d__23.MoveNext()
+--- Fim do rastreamento de pilha do local anterior onde a exceção foi gerada ---
+   em System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+   em System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
+   em GitCredentialManager.Diagnostics.MicrosoftAuthenticationDiagnostic.<RunInternalAsync>d__1.MoveNext()
+--- Fim do rastreamento de pilha do local anterior onde a exceção foi gerada ---
+   em System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+   em System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
+   em GitCredentialManager.Diagnostics.Diagnostic.<RunAsync>d__6.MoveNext()
+Log:
+Broker is not enabled.
+Flow type is: Auto
+Gathering MSAL token cache data... OK
+CacheDirectory: C:\Users\lucas\AppData\Local\.IdentityService
+CacheFileName: msal.cache
+CacheFilePath: C:\Users\lucas\AppData\Local\.IdentityService\msal.cache
+Creating cache helper...
+------------
+Diagnostic: GitHub API
+Skipped: False
+Success: False
+Exception:
+System.Net.Http.HttpRequestException: Ocorreu um erro ao enviar a solicitação. ---> System.Net.WebException: Impossível conectar-se ao servidor remoto ---> System.Net.Sockets.SocketException: Foi feita uma tentativa de acesso a um soquete de uma maneira que é proibida pelas permissões de acesso 4.228.31.149:443
+   em System.Net.Sockets.Socket.InternalEndConnect(IAsyncResult asyncResult)
+   em System.Net.Sockets.Socket.EndConnect(IAsyncResult asyncResult)
+   em System.Net.ServicePoint.ConnectSocketInternal(Boolean connectFailure, Socket s4, Socket s6, Socket& socket, IPAddress& address, ConnectSocketState state, IAsyncResult asyncResult, Exception& exception)
+   --- Fim do rastreamento de pilha de exceções internas ---
+   em System.Net.HttpWebRequest.EndGetResponse(IAsyncResult asyncResult)
+   em System.Net.Http.HttpClientHandler.GetResponseCallback(IAsyncResult ar)
+   --- Fim do rastreamento de pilha de exceções internas ---
+   em System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+   em System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
+   em GitHub.GitHubRestApi.<GetMetaInfoAsync>d__5.MoveNext()
+--- Fim do rastreamento de pilha do local anterior onde a exceção foi gerada ---
+   em System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+   em System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
+   em GitHub.Diagnostics.GitHubApiDiagnostic.<RunInternalAsync>d__2.MoveNext()
+--- Fim do rastreamento de pilha do local anterior onde a exceção foi gerada ---
+   em System.Runtime.ExceptionServices.ExceptionDispatchInfo.Throw()
+   em System.Runtime.CompilerServices.TaskAwaiter.HandleNonSuccessAndDebuggerNotification(Task task)
+   em GitCredentialManager.Diagnostics.Diagnostic.<RunAsync>d__6.MoveNext()
+Log:
+Using 'https://github.com/' as API target.
+Querying '/meta' endpoint...
