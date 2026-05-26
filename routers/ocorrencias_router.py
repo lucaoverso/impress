@@ -5,11 +5,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 
 from auth import get_usuario_logado
-from db.catalogos import (
-    buscar_turma_por_id,
-    listar_disciplinas_ativas,
-    listar_turmas_ativas,
-)
+from db.catalogos import buscar_turma_por_id
 from repositories.ocorrencias_repository import (
     ACAO_OCORRENCIA_VALIDAS,
     STATUS_OCORRENCIA_REGISTRADO,
@@ -60,7 +56,6 @@ from repositories.ocorrencias_repository import (
     salvar_ocorrencia_professores_vinculados,
     salvar_regimento_itens_ocorrencia,
 )
-from db.usuarios import listar_professores_agendamento
 from schemas.ocorrencias_schemas import (
     AlineaCreateIn,
     AlineaOut,
@@ -90,6 +85,13 @@ from schemas.ocorrencias_schemas import (
     RegimentoItemUpdateIn,
 )
 from services.csv_import_service import importar_base_legal_arquivo, importar_estudantes_arquivo
+from services.ocorrencias_consulta_service import (
+    buscar_estudantes_ocorrencia_service,
+    buscar_ocorrencia_service,
+    buscar_professores_ocorrencia_service,
+    listar_ocorrencias_service,
+    listar_opcoes_ocorrencias_service,
+)
 from services.ocorrencia_disciplina_service import (
     acao_permitida_para_tipo_registro,
     inferir_gravidade_ocorrencia,
@@ -803,70 +805,7 @@ def _ler_upload_base_legal(arquivo: UploadFile) -> tuple[bytes, str, str]:
 @router.get("/ocorrencias/opcoes")
 def listar_opcoes_ocorrencias(usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
-    turmas = listar_turmas_ativas()
-    professores = listar_professores_agendamento()
-
-    turmas_formatadas = []
-    for turma in turmas:
-        turno_turma = _normalizar_turno_turma(turma.get("turno"))
-        config_turno = _TURNOS_CONFIG.get(turno_turma)
-        turmas_formatadas.append(
-            {
-                "id": turma["id"],
-                "nome": turma["nome"],
-                "turno": turno_turma,
-                "turno_nome": config_turno["nome"] if config_turno else "Turno nao configurado",
-                "aulas": int(config_turno["aulas"]) if config_turno else 0,
-                "turno_valido": bool(config_turno),
-                "faixas_disponiveis": _faixas_disponiveis_turno(turno_turma),
-            }
-        )
-
-    return {
-        "status_padrao": STATUS_OCORRENCIA_REGISTRADO,
-        "tipos_registro": [
-            {"id": tipo, "nome": _TIPOS_REGISTRO_ROTULOS.get(tipo, tipo)}
-            for tipo in TIPOS_REGISTRO_OCORRENCIA
-        ],
-        "acoes_aplicadas": listar_acoes_aplicadas(),
-        "status": [
-            {"id": status, "nome": _STATUS_ROTULOS.get(status, status)}
-            for status in STATUS_OCORRENCIA_VALIDOS
-        ],
-        "turmas": turmas_formatadas,
-        "professores": [
-            {
-                "id": professor["id"],
-                "nome": professor["nome"],
-                "email": professor.get("email", ""),
-                "label": (
-                    f"{professor['nome']} ({professor.get('email', '')})"
-                    if str(professor.get("email", "")).strip()
-                    else str(professor["nome"])
-                ),
-            }
-            for professor in professores
-        ],
-        "disciplinas": [
-            {
-                "id": disciplina["id"],
-                "nome": disciplina["nome"],
-                "label": disciplina["nome"],
-            }
-            for disciplina in listar_disciplinas_ativas()
-        ],
-        "leis": listar_leis(),
-        "artigos": listar_artigos(),
-        "incisos": listar_incisos(),
-        "alineas": listar_alineas(),
-        "regimento_itens": [
-            {
-                **item,
-                "label": item["artigo"],
-            }
-            for item in listar_regimento_itens(incluir_inativos=True)
-        ],
-    }
+    return listar_opcoes_ocorrencias_service()
 
 
 @router.get("/ocorrencias/busca/professores")
@@ -876,20 +815,7 @@ def buscar_professores_ocorrencia_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    professores = buscar_professores_ocorrencia(termo=q, limite=limite)
-    return [
-        {
-            "id": professor["id"],
-            "nome": professor["nome"],
-            "email": professor.get("email", ""),
-            "label": (
-                f"{professor['nome']} ({professor.get('email', '')})"
-                if str(professor.get("email", "")).strip()
-                else str(professor["nome"])
-            ),
-        }
-        for professor in professores
-    ]
+    return buscar_professores_ocorrencia_service(termo=q, limite=limite)
 
 
 @router.get("/ocorrencias/busca/estudantes")
@@ -899,20 +825,7 @@ def buscar_estudantes_ocorrencia_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    estudantes = buscar_estudantes_ocorrencia(
-        termo=q,
-        limite=limite,
-    )
-    return [
-        {
-            "id": estudante["id"],
-            "nome": estudante["nome"],
-            "turma_id": estudante["turma_id"],
-            "turma_nome": estudante.get("turma_nome", ""),
-            "label": f"{estudante['nome']} ({estudante.get('turma_nome', 'Sem turma')})",
-        }
-        for estudante in estudantes
-    ]
+    return buscar_estudantes_ocorrencia_service(termo=q, limite=limite)
 
 
 @router.post("/ocorrencias", response_model=OcorrenciaOut)
@@ -1008,7 +921,7 @@ def listar_ocorrencias_api(
     if turma_id is not None:
         turma_id_filtro = _validar_turma_id(turma_id)
 
-    return listar_ocorrencias(
+    return listar_ocorrencias_service(
         tipo_registro=tipo_registro_filtro,
         status=status_filtro,
         turma_id=turma_id_filtro,
@@ -1021,7 +934,10 @@ def listar_ocorrencias_api(
 @router.get("/ocorrencias/{ocorrencia_id}", response_model=OcorrenciaOut)
 def buscar_ocorrencia_api(ocorrencia_id: int, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
-    return _montar_resposta_ocorrencia(ocorrencia_id)
+    try:
+        return buscar_ocorrencia_service(ocorrencia_id)
+    except ValueError as exc:
+        raise HTTPException(404, str(exc)) from exc
 
 
 @router.get("/ocorrencias/{ocorrencia_id}/pdf")

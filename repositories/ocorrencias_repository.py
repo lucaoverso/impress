@@ -161,20 +161,20 @@ def criar_regimento_item(**dados):
     return _criar_regimento_item(**dados)
 
 
-def listar_alineas():
-    return _listar_alineas()
+def listar_alineas(*, inciso_id: int | None = None):
+    return _listar_alineas(inciso_id=inciso_id)
 
 
-def listar_artigos():
-    return _listar_artigos()
+def listar_artigos(*, lei_id: int | None = None):
+    return _listar_artigos(lei_id=lei_id)
 
 
 def listar_estudantes(**filtros):
     return _listar_estudantes(**filtros)
 
 
-def listar_incisos():
-    return _listar_incisos()
+def listar_incisos(*, artigo_id: int | None = None):
+    return _listar_incisos(artigo_id=artigo_id)
 
 
 def listar_leis():
@@ -185,8 +185,8 @@ def listar_ocorrencias(**filtros):
     return _listar_ocorrencias(**filtros)
 
 
-def listar_regimento_itens():
-    return _listar_regimento_itens()
+def listar_regimento_itens(*, incluir_inativos: bool = True):
+    return _listar_regimento_itens(incluir_inativos=incluir_inativos)
 
 
 def remover_alinea(alinea_id: int):
