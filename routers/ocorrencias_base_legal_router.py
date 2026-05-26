@@ -1,28 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from auth import get_usuario_logado
-from repositories.ocorrencias_repository import (
-    atualizar_alinea,
-    atualizar_artigo,
-    atualizar_inciso,
-    atualizar_lei,
-    buscar_alinea_por_id,
-    buscar_artigo_por_id,
-    buscar_inciso_por_id,
-    buscar_lei_por_id,
-    criar_alinea,
-    criar_artigo,
-    criar_inciso,
-    criar_lei,
-    listar_alineas,
-    listar_artigos,
-    listar_incisos,
-    listar_leis,
-    remover_alinea,
-    remover_artigo,
-    remover_inciso,
-    remover_lei,
-)
 from schemas.ocorrencias_schemas import (
     AlineaCreateIn,
     AlineaOut,
@@ -37,14 +15,29 @@ from schemas.ocorrencias_schemas import (
     LeiOut,
     LeiUpdateIn,
 )
-from routers.ocorrencias_common import (
-    _exigir_gestor,
-    _montar_resposta_alinea,
-    _montar_resposta_artigo,
-    _montar_resposta_inciso,
-    _montar_resposta_lei,
-    _texto_obrigatorio,
+from services.ocorrencias_base_legal_service import (
+    atualizar_alinea_service,
+    atualizar_artigo_service,
+    atualizar_inciso_service,
+    atualizar_lei_service,
+    buscar_alinea_service,
+    buscar_artigo_service,
+    buscar_inciso_service,
+    buscar_lei_service,
+    criar_alinea_service,
+    criar_artigo_service,
+    criar_inciso_service,
+    criar_lei_service,
+    listar_alineas_service,
+    listar_artigos_service,
+    listar_incisos_service,
+    listar_leis_service,
+    remover_alinea_service,
+    remover_artigo_service,
+    remover_inciso_service,
+    remover_lei_service,
 )
+from routers.ocorrencias_common import _exigir_gestor
 
 router = APIRouter()
 
@@ -52,51 +45,47 @@ router = APIRouter()
 @router.get("/leis", response_model=list[LeiOut])
 def listar_leis_api(usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
-    return listar_leis()
+    return listar_leis_service()
 
 
 @router.get("/leis/{lei_id}", response_model=LeiOut)
 def buscar_lei_api(lei_id: int, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
-    return _montar_resposta_lei(lei_id)
+    try:
+        return buscar_lei_service(lei_id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
 
 
 @router.post("/leis", response_model=LeiOut)
 def criar_lei_api(payload: LeiCreateIn, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
     try:
-        lei_id = criar_lei(nome=_texto_obrigatorio(payload.nome, "Nome da lei", max_len=120))
+        return criar_lei_service(nome=payload.nome)
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    return _montar_resposta_lei(lei_id)
 
 
 @router.put("/leis/{lei_id}", response_model=LeiOut)
 def atualizar_lei_api(lei_id: int, payload: LeiUpdateIn, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
-    if not buscar_lei_por_id(lei_id):
-        raise HTTPException(404, "Lei nao encontrada.")
     try:
-        alterado = atualizar_lei(
-            lei_id=lei_id,
-            nome=_texto_obrigatorio(payload.nome, "Nome da lei", max_len=120),
-        )
+        return atualizar_lei_service(lei_id=lei_id, nome=payload.nome)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    if not alterado:
-        raise HTTPException(404, "Lei nao encontrada.")
-    return _montar_resposta_lei(lei_id)
 
 
 @router.delete("/leis/{lei_id}")
 def remover_lei_api(lei_id: int, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
     try:
-        removido = remover_lei(lei_id)
+        remover_lei_service(lei_id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    if not removido:
-        raise HTTPException(404, "Lei nao encontrada.")
     return {"mensagem": "Lei excluida com sucesso."}
 
 
@@ -111,29 +100,31 @@ def listar_artigos_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    return listar_artigos(lei_id=lei_id)
+    return listar_artigos_service(lei_id=lei_id)
 
 
 @router.get("/artigos/{artigo_id}", response_model=ArtigoOut)
 def buscar_artigo_api(artigo_id: int, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
-    return _montar_resposta_artigo(artigo_id)
+    try:
+        return buscar_artigo_service(artigo_id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
 
 
 @router.post("/artigos", response_model=ArtigoOut)
 def criar_artigo_api(payload: ArtigoCreateIn, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
-    if not buscar_lei_por_id(payload.lei_id):
-        raise HTTPException(404, "Lei nao encontrada.")
     try:
-        artigo_id = criar_artigo(
+        return criar_artigo_service(
             lei_id=payload.lei_id,
-            numero=_texto_obrigatorio(payload.numero, "Numero do artigo", max_len=120),
-            descricao=_texto_obrigatorio(payload.descricao, "Descricao do artigo", max_len=5000),
+            numero=payload.numero,
+            descricao=payload.descricao,
         )
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    return _montar_resposta_artigo(artigo_id)
 
 
 @router.put("/artigos/{artigo_id}", response_model=ArtigoOut)
@@ -143,33 +134,28 @@ def atualizar_artigo_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    if not buscar_artigo_por_id(artigo_id):
-        raise HTTPException(404, "Artigo nao encontrado.")
-    if not buscar_lei_por_id(payload.lei_id):
-        raise HTTPException(404, "Lei nao encontrada.")
     try:
-        alterado = atualizar_artigo(
+        return atualizar_artigo_service(
             artigo_id=artigo_id,
             lei_id=payload.lei_id,
-            numero=_texto_obrigatorio(payload.numero, "Numero do artigo", max_len=120),
-            descricao=_texto_obrigatorio(payload.descricao, "Descricao do artigo", max_len=5000),
+            numero=payload.numero,
+            descricao=payload.descricao,
         )
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    if not alterado:
-        raise HTTPException(404, "Artigo nao encontrado.")
-    return _montar_resposta_artigo(artigo_id)
 
 
 @router.delete("/artigos/{artigo_id}")
 def remover_artigo_api(artigo_id: int, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
     try:
-        removido = remover_artigo(artigo_id)
+        remover_artigo_service(artigo_id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    if not removido:
-        raise HTTPException(404, "Artigo nao encontrado.")
     return {"mensagem": "Artigo excluido com sucesso."}
 
 
@@ -184,29 +170,31 @@ def listar_incisos_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    return listar_incisos(artigo_id=artigo_id)
+    return listar_incisos_service(artigo_id=artigo_id)
 
 
 @router.get("/incisos/{inciso_id}", response_model=IncisoOut)
 def buscar_inciso_api(inciso_id: int, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
-    return _montar_resposta_inciso(inciso_id)
+    try:
+        return buscar_inciso_service(inciso_id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
 
 
 @router.post("/incisos", response_model=IncisoOut)
 def criar_inciso_api(payload: IncisoCreateIn, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
-    if not buscar_artigo_por_id(payload.artigo_id):
-        raise HTTPException(404, "Artigo nao encontrado.")
     try:
-        inciso_id = criar_inciso(
+        return criar_inciso_service(
             artigo_id=payload.artigo_id,
-            numero=_texto_obrigatorio(payload.numero, "Numero do inciso", max_len=40),
-            descricao=_texto_obrigatorio(payload.descricao, "Descricao do inciso", max_len=5000),
+            numero=payload.numero,
+            descricao=payload.descricao,
         )
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    return _montar_resposta_inciso(inciso_id)
 
 
 @router.put("/incisos/{inciso_id}", response_model=IncisoOut)
@@ -216,33 +204,28 @@ def atualizar_inciso_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    if not buscar_inciso_por_id(inciso_id):
-        raise HTTPException(404, "Inciso nao encontrado.")
-    if not buscar_artigo_por_id(payload.artigo_id):
-        raise HTTPException(404, "Artigo nao encontrado.")
     try:
-        alterado = atualizar_inciso(
+        return atualizar_inciso_service(
             inciso_id=inciso_id,
             artigo_id=payload.artigo_id,
-            numero=_texto_obrigatorio(payload.numero, "Numero do inciso", max_len=40),
-            descricao=_texto_obrigatorio(payload.descricao, "Descricao do inciso", max_len=5000),
+            numero=payload.numero,
+            descricao=payload.descricao,
         )
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    if not alterado:
-        raise HTTPException(404, "Inciso nao encontrado.")
-    return _montar_resposta_inciso(inciso_id)
 
 
 @router.delete("/incisos/{inciso_id}")
 def remover_inciso_api(inciso_id: int, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
     try:
-        removido = remover_inciso(inciso_id)
+        remover_inciso_service(inciso_id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    if not removido:
-        raise HTTPException(404, "Inciso nao encontrado.")
     return {"mensagem": "Inciso excluido com sucesso."}
 
 
@@ -257,33 +240,31 @@ def listar_alineas_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    return listar_alineas(inciso_id=inciso_id)
+    return listar_alineas_service(inciso_id=inciso_id)
 
 
 @router.get("/alineas/{alinea_id}", response_model=AlineaOut)
 def buscar_alinea_api(alinea_id: int, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
-    return _montar_resposta_alinea(alinea_id)
+    try:
+        return buscar_alinea_service(alinea_id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
 
 
 @router.post("/alineas", response_model=AlineaOut)
 def criar_alinea_api(payload: AlineaCreateIn, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
-    if not buscar_inciso_por_id(payload.inciso_id):
-        raise HTTPException(404, "Inciso nao encontrado.")
     try:
-        alinea_id = criar_alinea(
+        return criar_alinea_service(
             inciso_id=payload.inciso_id,
-            identificador=_texto_obrigatorio(
-                payload.identificador,
-                "Identificador da alinea",
-                max_len=40,
-            ),
-            descricao=_texto_obrigatorio(payload.descricao, "Descricao da alinea", max_len=5000),
+            identificador=payload.identificador,
+            descricao=payload.descricao,
         )
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    return _montar_resposta_alinea(alinea_id)
 
 
 @router.put("/alineas/{alinea_id}", response_model=AlineaOut)
@@ -293,37 +274,28 @@ def atualizar_alinea_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    if not buscar_alinea_por_id(alinea_id):
-        raise HTTPException(404, "Alinea nao encontrada.")
-    if not buscar_inciso_por_id(payload.inciso_id):
-        raise HTTPException(404, "Inciso nao encontrado.")
     try:
-        alterado = atualizar_alinea(
+        return atualizar_alinea_service(
             alinea_id=alinea_id,
             inciso_id=payload.inciso_id,
-            identificador=_texto_obrigatorio(
-                payload.identificador,
-                "Identificador da alinea",
-                max_len=40,
-            ),
-            descricao=_texto_obrigatorio(payload.descricao, "Descricao da alinea", max_len=5000),
+            identificador=payload.identificador,
+            descricao=payload.descricao,
         )
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    if not alterado:
-        raise HTTPException(404, "Alinea nao encontrada.")
-    return _montar_resposta_alinea(alinea_id)
 
 
 @router.delete("/alineas/{alinea_id}")
 def remover_alinea_api(alinea_id: int, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
     try:
-        removido = remover_alinea(alinea_id)
+        remover_alinea_service(alinea_id)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    if not removido:
-        raise HTTPException(404, "Alinea nao encontrada.")
     return {"mensagem": "Alinea excluida com sucesso."}
 
 
