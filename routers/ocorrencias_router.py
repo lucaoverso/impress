@@ -92,6 +92,10 @@ from services.ocorrencias_consulta_service import (
     listar_ocorrencias_service,
     listar_opcoes_ocorrencias_service,
 )
+from services.ocorrencias_registro_service import (
+    atualizar_ocorrencia_parcial_service,
+    criar_ocorrencia_service,
+)
 from services.ocorrencia_disciplina_service import (
     acao_permitida_para_tipo_registro,
     inferir_gravidade_ocorrencia,
@@ -831,65 +835,12 @@ def buscar_estudantes_ocorrencia_api(
 @router.post("/ocorrencias", response_model=OcorrenciaOut)
 def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuario_logado)):
     _exigir_gestor(usuario)
-
-    tipo_registro = _validar_tipo_registro(payload.tipo_registro)
-    status = _validar_status(payload.status or STATUS_OCORRENCIA_REGISTRADO)
-    acao_aplicada = _validar_acao_aplicada_para_tipo(payload.acao_aplicada, tipo_registro)
-    regimento_item_ids = _normalizar_regimento_item_ids(payload.regimento_item_ids)
-    if _registro_exige_base_legal(tipo_registro):
-        regimento_item_ids = _exigir_regimento_item_ids(regimento_item_ids)
-    else:
-        regimento_item_ids = []
-    regimento_itens = (
-        buscar_regimento_itens_por_ids(regimento_item_ids) if regimento_item_ids else []
-    )
-    if tipo_registro == TIPO_REGISTRO_ESTUDANTE and regimento_itens:
-        _validar_acao_compativel_com_base_legal(acao_aplicada, regimento_itens)
-    descricao = _texto_obrigatorio(payload.descricao, "Descricao", max_len=5000)
-    contexto = _resolver_contexto_registro(
-        tipo_registro=tipo_registro,
-        nome_estudante=payload.nome_estudante,
-        estudante_id=payload.estudante_id,
-        estudantes_vinculados=payload.estudantes_vinculados,
-        turma_id=payload.turma_id,
-        professor_requerente=payload.professor_requerente,
-        professor_requerente_id=payload.professor_requerente_id,
-        professores_vinculados=payload.professores_vinculados,
-    )
-    turma_id = contexto["turma_id"]
-    faixa_aula = (
-        _validar_faixa_aula_por_turma(payload.aula, turma_id)
-        if _registro_exige_aula(tipo_registro) and turma_id
-        else ""
-    )
-    disciplina = (
-        _texto_obrigatorio(payload.disciplina, "Disciplina")
-        if tipo_registro == TIPO_REGISTRO_ESTUDANTE
-        else (_texto_opcional(payload.disciplina, max_len=255) or "")
-    )
-
     try:
-        ocorrencia_id = criar_ocorrencia(
-            tipo_registro=tipo_registro,
-            nome_estudante=contexto["nome_estudante"],
-            estudante_id=contexto["estudante_id"],
-            turma_id=turma_id,
-            professor_requerente=contexto["professor_requerente"],
-            professor_requerente_id=contexto["professor_requerente_id"],
-            disciplina=disciplina,
-            data_ocorrencia=_validar_data_iso(payload.data_ocorrencia, "Data da ocorrencia"),
-            aula=faixa_aula,
-            horario_ocorrencia=_validar_horario_ocorrencia(payload.horario_ocorrencia),
-            descricao=descricao,
-            acao_aplicada=acao_aplicada,
-            status=status,
-            regimento_item_ids=regimento_item_ids,
-            estudantes_vinculados=contexto["estudantes_vinculados"],
-            professores_vinculados=contexto["professores_vinculados"],
-        )
+        return criar_ocorrencia_service(payload)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
-    return _montar_resposta_ocorrencia(ocorrencia_id)
 
 
 @router.get("/ocorrencias", response_model=list[OcorrenciaOut])
@@ -961,6 +912,13 @@ def atualizar_ocorrencia_parcial_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
+    try:
+        return atualizar_ocorrencia_parcial_service(ocorrencia_id, payload)
+    except LookupError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
     atual = buscar_ocorrencia_por_id(ocorrencia_id)
     if not atual:
         raise HTTPException(404, "Ocorrencia nao encontrada.")
