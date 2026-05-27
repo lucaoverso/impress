@@ -62,6 +62,7 @@ class PcpiRegistroTest(unittest.TestCase):
             self.assertIn("/pcpi/registros-manuais", rotas)
             self.assertIn("/pcpi/texto", rotas)
             self.assertIn("/pcpi/texto/preview", rotas)
+            self.assertIn("/pcpi/texto/pdf", rotas)
 
     def test_listar_sugestoes_pcpi_retorna_agendamentos_normalizados(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -170,8 +171,111 @@ class PcpiRegistroTest(unittest.TestCase):
             self.assertEqual(listagem["data"], "2026-04-03")
             self.assertEqual(listagem["turno"], "MATUTINO")
             self.assertEqual(listagem["total_registros"], 1)
+            self.assertEqual(listagem["total_registros_manuais"], 1)
+            self.assertEqual(listagem["total_registros_vinculados"], 0)
             self.assertEqual(len(listagem["itens"]), 1)
             self.assertEqual(listagem["itens"][0]["descricao_curta"], payload.descricao_curta)
+
+    def test_criar_execucao_vinculada_a_agendamento_pcpi(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, pcpi_router, models = _reload_modules(db_path)
+            database.criar_tabelas()
+            database.seed_recursos_padrao()
+
+            professor_id = database.criar_professor(
+                nome="Professor Vinculado",
+                email="vinculado.prof@escola.local",
+                senha_hash=database.hash_senha("Senha@123"),
+                data_nascimento="1991-02-18",
+                aulas_semanais=12,
+                turmas_quantidade=1,
+                turmas=["6A"],
+                disciplinas=["Historia"],
+            )
+            database.criar_turma("6A", "MATUTINO", 28)
+
+            recurso = next(
+                item
+                for item in database.listar_recursos_ativos()
+                if "Notebook" in str(item.get("nome") or "")
+            )
+
+            agendamento_id = database.criar_agendamento(
+                recurso_id=int(recurso["id"]),
+                usuario_id=professor_id,
+                data="2026-04-03",
+                turno="MATUTINO",
+                aula="2",
+                faixa_global=2,
+                turma="6A",
+                tema_aula="Pesquisa orientada",
+                observacao="Atividade com laboratorio.",
+            )
+
+            payload = models.PcpiRegistroManualIn(
+                data="2026-04-03",
+                turno="MATUTINO",
+                agendamento_id=agendamento_id,
+                tipo_acao="suporte_aula",
+                acao_realizada="Ligou os computadores",
+                professor_nome="Professor Vinculado",
+                componente="Notebook",
+                turma="6A",
+                descricao_curta="Suporte ao uso do laboratorio na aula.",
+                resultado="Aula iniciada com equipamentos prontos.",
+                observacoes="Acompanhamento da turma no inicio da atividade.",
+            )
+
+            criado = pcpi_router.criar_registro_manual_pcpi_api(
+                payload=payload,
+                usuario={"id": 1, "cargo": "ADMIN"},
+            )
+
+            self.assertEqual(criado["origem"], "AGENDAMENTO")
+            self.assertEqual(criado["agendamento_id"], agendamento_id)
+            self.assertEqual(criado["acao_realizada"], "Ligou os computadores")
+            self.assertEqual(criado["resultado"], "Aula iniciada com equipamentos prontos.")
+
+            listagem = pcpi_router.listar_registros_manuais_pcpi_api(
+                data="2026-04-03",
+                turno="MATUTINO",
+                usuario={"id": 1, "cargo": "ADMIN"},
+            )
+
+            self.assertEqual(listagem["total_registros"], 1)
+            self.assertEqual(listagem["total_registros_manuais"], 0)
+            self.assertEqual(listagem["total_registros_vinculados"], 1)
+
+            resposta_texto = pcpi_router.gerar_texto_pcpi_preview_api(
+                payload=models.PcpiTextoPreviewIn(
+                    data="2026-04-03",
+                    turno="MATUTINO",
+                    agendamento_ids=[agendamento_id],
+                ),
+                usuario={"id": 1, "cargo": "ADMIN"},
+            )
+
+            self.assertIn("o pcpi ligou os computadores", resposta_texto["texto"].lower())
+            self.assertIn("resultando em aula iniciada com equipamentos prontos", resposta_texto["texto"].lower())
+
+    def test_exportar_pdf_pcpi_retorna_pdf(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, pcpi_router, models = _reload_modules(db_path)
+            database.criar_tabelas()
+
+            resposta = pcpi_router.gerar_texto_pcpi_pdf_api(
+                payload=models.PcpiTextoPreviewIn(
+                    data="2026-04-03",
+                    turno="MATUTINO",
+                    agendamento_ids=[],
+                ),
+                usuario={"id": 1, "cargo": "ADMIN"},
+            )
+
+            self.assertEqual(resposta.media_type, "application/pdf")
+            self.assertTrue(bytes(resposta.body).startswith(b"%PDF"))
 
     def test_endpoint_texto_pcpi_combina_agendamentos_e_registros_manuais(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

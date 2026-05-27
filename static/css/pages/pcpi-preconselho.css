@@ -185,6 +185,10 @@
     gap: 6px;
 }
 
+.pcpi-item-panel {
+    padding: 12px;
+}
+
 .pcpi-item-top {
     display: flex;
     align-items: flex-start;
@@ -274,6 +278,39 @@
 
 .pcpi-subsection-header h3 {
     font-size: 16px;
+}
+
+.pcpi-linked-shell {
+    display: grid;
+    gap: 10px;
+    padding: 0 12px 12px;
+    border-top: 1px solid #dbe4ef;
+    background: rgba(255, 255, 255, 0.78);
+}
+
+.pcpi-linked-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.pcpi-linked-form {
+    display: grid;
+    gap: 10px;
+}
+
+.pcpi-linked-history {
+    display: grid;
+    gap: 8px;
+}
+
+.pcpi-linked-history-item {
+    display: grid;
+    gap: 4px;
+    padding: 10px 12px;
+    border: 1px solid #dbe4ef;
+    border-radius: 12px;
+    background: #ffffff;
 }
 
 .preconselho-motivos {
@@ -794,6 +831,10 @@ body.preconselho-modal-open {
     .pcpi-subsection-header {
         flex-direction: column;
         align-items: flex-start;
+    }
+
+    .pcpi-linked-grid {
+        grid-template-columns: 1fr;
     }
 
     .pcpi-inline-actions {

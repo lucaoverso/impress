@@ -70,6 +70,12 @@ TipoAcaoPcpi = Literal[
     "evento",
     "planejamento",
     "formulario2",
+    "suporte_aula",
+    "preparacao_recurso",
+    "suporte_tecnico",
+    "atendimento_alunos",
+    "producao_material",
+    "articulacao",
 ]
 
 
@@ -77,10 +83,13 @@ class PcpiRegistroManualIn(BaseModel):
     data: str
     turno: str
     tipo_acao: TipoAcaoPcpi
+    agendamento_id: int | None = None
+    acao_realizada: str = ""
     professor_nome: str = ""
     componente: str = ""
     turma: str = ""
     descricao_curta: str
+    resultado: str = ""
     observacoes: str = ""
 
 
@@ -89,10 +98,14 @@ class PcpiRegistroManualOut(BaseModel):
     data: str
     turno: str
     tipo_acao: str
+    origem: str = "MANUAL"
+    agendamento_id: int | None = None
+    acao_realizada: str = ""
     professor_nome: str = ""
     componente: str = ""
     turma: str = ""
     descricao_curta: str
+    resultado: str = ""
     observacoes: str = ""
     criado_por_usuario_id: int | None = None
     atualizado_por_usuario_id: int | None = None
@@ -105,6 +118,8 @@ class PcpiRegistrosManuaisOut(BaseModel):
     turno: str
     turno_nome: str = ""
     total_registros: int = 0
+    total_registros_manuais: int = 0
+    total_registros_vinculados: int = 0
     itens: list[PcpiRegistroManualOut] = Field(default_factory=list)
 
 

@@ -540,15 +540,20 @@ def criar_tabelas():
             data TEXT NOT NULL,
             turno TEXT NOT NULL,
             tipo_acao TEXT NOT NULL,
+            origem TEXT NOT NULL DEFAULT 'MANUAL',
+            agendamento_id INTEGER,
+            acao_realizada TEXT,
             professor_nome TEXT,
             componente TEXT,
             turma TEXT,
             descricao_curta TEXT NOT NULL,
+            resultado TEXT,
             observacoes TEXT,
             criado_por_usuario_id INTEGER,
             atualizado_por_usuario_id INTEGER,
             criado_em TEXT NOT NULL DEFAULT (datetime('now')),
             atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(agendamento_id) REFERENCES agendamentos(id),
             FOREIGN KEY(criado_por_usuario_id) REFERENCES usuarios(id),
             FOREIGN KEY(atualizado_por_usuario_id) REFERENCES usuarios(id)
         )
@@ -734,6 +739,7 @@ def _aplicar_compatibilidade_schema_legada(cursor):
     _garantir_colunas_tokens(cursor)
     _garantir_colunas_jobs(cursor)
     _garantir_colunas_agendamentos(cursor)
+    _garantir_colunas_pcpi_registros_manuais(cursor)
     _garantir_colunas_professores_carga(cursor)
     _garantir_colunas_professores_turmas_disciplinas(cursor)
     _garantir_colunas_cota_regras(cursor)
@@ -825,6 +831,11 @@ def _criar_indices_schema(cursor):
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_pcpi_registros_manuais_data_turno
         ON pcpi_registros_manuais(data, turno)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_pcpi_registros_manuais_agendamento
+        ON pcpi_registros_manuais(agendamento_id)
     """)
 
     cursor.execute("""
@@ -1488,6 +1499,28 @@ def _garantir_colunas_agendamentos(cursor):
                 ELSE CAST(COALESCE(NULLIF(TRIM(aula), ''), '0') AS INTEGER)
             END
         )
+    """)
+
+
+def _garantir_colunas_pcpi_registros_manuais(cursor):
+    cursor.execute("PRAGMA table_info(pcpi_registros_manuais)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+
+    if "origem" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pcpi_registros_manuais ADD COLUMN origem TEXT NOT NULL DEFAULT 'MANUAL'"
+        )
+    if "agendamento_id" not in colunas:
+        cursor.execute("ALTER TABLE pcpi_registros_manuais ADD COLUMN agendamento_id INTEGER")
+    if "acao_realizada" not in colunas:
+        cursor.execute("ALTER TABLE pcpi_registros_manuais ADD COLUMN acao_realizada TEXT")
+    if "resultado" not in colunas:
+        cursor.execute("ALTER TABLE pcpi_registros_manuais ADD COLUMN resultado TEXT")
+
+    cursor.execute("""
+        UPDATE pcpi_registros_manuais
+        SET origem = 'MANUAL'
+        WHERE COALESCE(TRIM(origem), '') = ''
     """)
 
 
@@ -9753,9 +9786,13 @@ def criar_registro_pcpi_manual(
     tipo_acao: str,
     descricao_curta: str,
     *,
+    origem: str = "MANUAL",
+    agendamento_id: int | None = None,
+    acao_realizada: str = "",
     professor_nome: str = "",
     componente: str = "",
     turma: str = "",
+    resultado: str = "",
     observacoes: str = "",
     criado_por_usuario_id: int | None = None,
     atualizado_por_usuario_id: int | None = None,
@@ -9769,26 +9806,34 @@ def criar_registro_pcpi_manual(
             data,
             turno,
             tipo_acao,
+            origem,
+            agendamento_id,
+            acao_realizada,
             professor_nome,
             componente,
             turma,
             descricao_curta,
+            resultado,
             observacoes,
             criado_por_usuario_id,
             atualizado_por_usuario_id,
             criado_em,
             atualizado_em
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     """,
         (
             data,
             turno,
             tipo_acao,
+            origem or "MANUAL",
+            agendamento_id,
+            acao_realizada or None,
             professor_nome or None,
             componente or None,
             turma or None,
             descricao_curta,
+            resultado or None,
             observacoes or None,
             criado_por_usuario_id,
             atualizado_por_usuario_id,
@@ -9815,10 +9860,14 @@ def listar_registros_pcpi_manuais(
             data,
             turno,
             tipo_acao,
+            COALESCE(origem, 'MANUAL') AS origem,
+            agendamento_id,
+            COALESCE(acao_realizada, '') AS acao_realizada,
             COALESCE(professor_nome, '') AS professor_nome,
             COALESCE(componente, '') AS componente,
             COALESCE(turma, '') AS turma,
             descricao_curta,
+            COALESCE(resultado, '') AS resultado,
             COALESCE(observacoes, '') AS observacoes,
             criado_por_usuario_id,
             atualizado_por_usuario_id,
@@ -9862,10 +9911,14 @@ def buscar_registro_pcpi_manual_por_id(registro_id: int):
             data,
             turno,
             tipo_acao,
+            COALESCE(origem, 'MANUAL') AS origem,
+            agendamento_id,
+            COALESCE(acao_realizada, '') AS acao_realizada,
             COALESCE(professor_nome, '') AS professor_nome,
             COALESCE(componente, '') AS componente,
             COALESCE(turma, '') AS turma,
             descricao_curta,
+            COALESCE(resultado, '') AS resultado,
             COALESCE(observacoes, '') AS observacoes,
             criado_por_usuario_id,
             atualizado_por_usuario_id,
