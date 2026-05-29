@@ -13,6 +13,7 @@ function registrarEventos() {
         el("formAtribuicaoDocente").addEventListener("submit", cadastrarAtribuicaoDocente);
         el("formImportarAtribuicoesDocentes").addEventListener("submit", importarAtribuicoesDocentesArquivo);
         el("formCotaRegras").addEventListener("submit", salvarRegrasCota);
+        el("formStatusImpressao").addEventListener("submit", salvarStatusImpressao);
         el("profSenha").addEventListener("input", atualizarHintSenha);
         el("profCargo").addEventListener("change", () => {
             if (!professorEmEdicaoId) {
@@ -67,6 +68,7 @@ async function init() {
         }
 
         const tarefas = [
+            carregarStatusImpressaoAdmin(),
             carregarFilaAdmin(),
             buscarHistorico(),
             carregarRecursos(),

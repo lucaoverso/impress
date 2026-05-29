@@ -707,6 +707,11 @@ class RegrasCotaIn(BaseModel):
     cota_mensal_escola: int
 
 
+class ImpressaoStatusIn(BaseModel):
+    sem_papel: bool = False
+    mensagem: str = ""
+
+
 class LeiCreateIn(BaseModel):
     nome: str
 

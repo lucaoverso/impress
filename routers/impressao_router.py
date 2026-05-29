@@ -19,6 +19,7 @@ from db.impressao import (
     criar_job,
     listar_fila,
     listar_jobs_por_usuario,
+    obter_status_impressao,
 )
 from db.usuarios import buscar_usuario_por_id
 from services.cota_service import obter_cota_atual, validar_e_consumir_cota
@@ -145,6 +146,24 @@ def montar_opcoes_cups(
         opcoes["page-ranges"] = intervalo
 
     return opcoes
+
+
+def obter_alerta_indisponibilidade_impressao() -> dict:
+    status = obter_status_impressao()
+    mensagem = str(status.get("mensagem") or "").strip()
+    if not mensagem:
+        mensagem = "Impressao indisponivel no momento: a escola esta sem papel."
+    return {
+        "sem_papel": bool(status.get("sem_papel")),
+        "mensagem": mensagem,
+        "atualizado_em": status.get("atualizado_em") or "",
+    }
+
+
+def exigir_impressao_disponivel():
+    alerta = obter_alerta_indisponibilidade_impressao()
+    if alerta["sem_papel"]:
+        raise HTTPException(409, alerta["mensagem"])
 
 
 def validar_parametros_impressao(
@@ -423,6 +442,11 @@ def tags_impressao(_usuario=Depends(get_usuario_logado)):
     return [{"id": item, "label": item} for item in TAGS_IMPRESSAO_DISPONIVEIS]
 
 
+@router.get("/impressao/status")
+def status_impressao(_usuario=Depends(get_usuario_logado)):
+    return obter_alerta_indisponibilidade_impressao()
+
+
 @router.post("/imprimir")
 def imprimir(
     copias: int = Form(...),
@@ -435,6 +459,7 @@ def imprimir(
     professor_id: int | None = Form(None),
     usuario=Depends(get_usuario_logado),
 ):
+    exigir_impressao_disponivel()
     validar_parametros_impressao(copias, paginas_por_folha, orientacao)
 
     if not arquivo or not arquivo.filename:
@@ -594,6 +619,7 @@ def reimprimir_job_historico(
     professor_id: int | None = Form(None),
     usuario=Depends(get_usuario_logado),
 ):
+    exigir_impressao_disponivel()
     validar_parametros_impressao(copias, paginas_por_folha, orientacao)
 
     job = obter_job_com_acesso(job_id, usuario)

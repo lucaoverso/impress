@@ -320,6 +320,11 @@
     gap: 18px;
 }
 
+.print-alert-modal-card-warning {
+    border-color: #fcd34d;
+    background: linear-gradient(180deg, #fffdf5 0%, #fff7d6 100%);
+}
+
 .print-alert-modal-header {
     display: flex;
     align-items: flex-start;
@@ -377,6 +382,25 @@ body.print-alert-modal-open {
 .print-feedback-muted {
     color: #526174;
     font-size: 12px;
+}
+
+.print-unavailable-banner {
+    margin: 14px 16px 0;
+    border: 1px solid #fcd34d;
+    background: #fff7d6;
+    color: #92400e;
+    border-radius: 16px;
+    padding: 12px 16px;
+}
+
+.print-unavailable-banner-content {
+    display: grid;
+    gap: 4px;
+}
+
+.print-unavailable-banner-content p,
+.print-unavailable-banner-content strong {
+    margin: 0;
 }
 
 .print-meta-compact {

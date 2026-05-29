@@ -261,6 +261,24 @@
             <section id="tab-impressao" class="admin-tab-panel" data-admin-tab-panel="impressao" hidden>
                 <div class="admin-grid">
                     <article class="admin-card">
+                        <h2>Disponibilidade da impressora</h2>
+                        <form id="formStatusImpressao" class="admin-form admin-only" data-admin-only="true">
+                            <label class="admin-checkbox-item admin-checkbox-item-stack">
+                                <input id="statusSemPapel" type="checkbox">
+                                <div class="admin-checkbox-content">
+                                    <span>Estamos sem papel</span>
+                                    <small class="admin-checkbox-detail">Quando marcado, a tela de impressão avisa os professores e bloqueia novos envios.</small>
+                                </div>
+                            </label>
+                            <label for="statusMensagemImpressao">Mensagem exibida na tela de impressão</label>
+                            <input id="statusMensagemImpressao" type="text" maxlength="220"
+                                placeholder="Ex.: Impressora temporariamente sem papel. Aguarde reposição.">
+                            <button type="submit">Salvar status</button>
+                        </form>
+                        <div id="statusResumoImpressao" class="admin-status-box"></div>
+                        <p id="msgStatusImpressao"></p>
+                    </article>
+                    <article class="admin-card">
                         <h2>Fila de impressão atual</h2>
                         <ul id="fila-admin" class="admin-list"></ul>
                     </article>

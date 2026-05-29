@@ -17,6 +17,67 @@ function queryHistorico() {
     return params.toString() ? `?${params.toString()}` : "";
 }
 
+function renderResumoStatusImpressao(status) {
+    const resumo = el("statusResumoImpressao");
+    if (!resumo) {
+        return;
+    }
+
+    const semPapel = Boolean(status?.sem_papel);
+    const mensagem = String(status?.mensagem || "").trim();
+    const atualizadoEm = String(status?.atualizado_em || "").trim();
+
+    resumo.className = semPapel
+        ? "admin-status-box is-warning"
+        : "admin-status-box is-ok";
+    resumo.innerHTML = semPapel
+        ? `<strong>Impressao bloqueada</strong><p>${mensagem || "Sem papel informado no painel administrativo."}</p><small>Atualizado em: ${atualizadoEm || "agora"}</small>`
+        : `<strong>Impressao liberada</strong><p>Nenhum bloqueio por falta de papel ativo no momento.</p><small>Atualizado em: ${atualizadoEm || "agora"}</small>`;
+}
+
+async function carregarStatusImpressaoAdmin() {
+    const status = await fetchJson("/admin/impressao/status", { headers });
+
+    const checkbox = el("statusSemPapel");
+    const inputMensagem = el("statusMensagemImpressao");
+
+    if (checkbox) {
+        checkbox.checked = Boolean(status?.sem_papel);
+    }
+    if (inputMensagem) {
+        inputMensagem.value = String(status?.mensagem || "");
+    }
+
+    renderResumoStatusImpressao(status);
+}
+
+async function salvarStatusImpressao(event) {
+    event.preventDefault();
+    try {
+        const semPapel = Boolean(el("statusSemPapel")?.checked);
+        const mensagem = String(el("statusMensagemImpressao")?.value || "").trim();
+
+        await fetchJson("/admin/impressao/status", {
+            method: "PUT",
+            headers: headersJson,
+            body: JSON.stringify({
+                sem_papel: semPapel,
+                mensagem,
+            }),
+        });
+
+        setMensagem(
+            "msgStatusImpressao",
+            semPapel
+                ? "Bloqueio de impressao por falta de papel salvo."
+                : "Impressao liberada novamente."
+        );
+        await carregarStatusImpressaoAdmin();
+    } catch (err) {
+        setMensagem("msgStatusImpressao", err.message, true);
+    }
+}
+
 async function carregarFilaAdmin() {
     const jobs = await fetchJson("/admin/fila", { headers });
     const ul = el("fila-admin");

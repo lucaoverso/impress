@@ -22,6 +22,14 @@
         </div>
     </header>
 
+    <section id="bannerSemPapelImpressao" class="print-unavailable-banner" hidden>
+        <div class="print-unavailable-banner-content">
+            <p class="auth-badge">Status da impressora</p>
+            <strong>Impressora sem papel</strong>
+            <p id="textoBannerSemPapelImpressao"></p>
+        </div>
+    </section>
+
     <main class="print-ios-layout">
         <section class="print-options-panel">
             <header class="print-ios-topbar">
@@ -189,6 +197,33 @@
                 </button>
                 <button id="btnVoltarAjustarAlertaConsumoImpressao" type="button">
                     Voltar e ajustar
+                </button>
+            </div>
+        </article>
+    </section>
+
+    <section id="modalSemPapelImpressao" class="print-alert-modal" hidden>
+        <article
+            id="painelSemPapelImpressao"
+            class="print-alert-modal-card print-alert-modal-card-warning"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="tituloSemPapelImpressao"
+            tabindex="-1"
+        >
+            <header class="print-alert-modal-header">
+                <div>
+                    <p class="auth-badge">Impressao indisponivel</p>
+                    <h2 id="tituloSemPapelImpressao">Estamos sem papel no momento</h2>
+                </div>
+            </header>
+            <div class="print-alert-modal-body">
+                <p id="textoSemPapelImpressao"></p>
+                <p class="print-alert-suggestion">Assim que o papel for reposto, a impressao sera liberada novamente pelo painel administrativo.</p>
+            </div>
+            <div class="print-alert-modal-actions">
+                <button id="btnFecharModalSemPapelImpressao" class="btn-destaque" type="button">
+                    Entendi
                 </button>
             </div>
         </article>

@@ -27,6 +27,8 @@ let tagsImpressaoDisponiveis = [];
 let arquivoSelecionadoAtual = null;
 let jobHistoricoSelecionadoAtual = null;
 let resolverModalAlertaConsumoAtual = null;
+let statusImpressaoAtual = { sem_papel: false, mensagem: "", atualizado_em: "" };
+let modalSemPapelExibido = false;
 const QUALIDADE_MAX_DPR = 1.4;
 const FOLHA_PADDING = 8;
 const FOLHA_GAP = 6;
@@ -49,6 +51,84 @@ const TAMANHO_FOLHA = {
     retrato: { largura: 794, altura: 1123 },
     paisagem: { largura: 1123, altura: 794 }
 };
+
+function impressaoBloqueadaSemPapel() {
+    return Boolean(statusImpressaoAtual?.sem_papel);
+}
+
+function obterMensagemSemPapel() {
+    const mensagem = String(statusImpressaoAtual?.mensagem || "").trim();
+    return mensagem || "Impressao indisponivel no momento: a escola esta sem papel.";
+}
+
+function aplicarBloqueioSemPapelNosCampos() {
+    const bloqueado = impressaoBloqueadaSemPapel();
+    const ids = [
+        "arquivo",
+        "arquivoDropzone",
+        "professorSolicitante",
+        "turmaImpressao",
+        "copias",
+        "intervaloPaginas",
+        "paginasPorFolha",
+        "orientacao",
+        "duplex",
+    ];
+
+    ids.forEach((id) => {
+        const elemento = el(id);
+        if (elemento) {
+            elemento.disabled = bloqueado;
+        }
+    });
+
+    document.querySelectorAll("#tagsImpressao input[type='checkbox']").forEach((input) => {
+        input.disabled = bloqueado;
+    });
+
+    atualizarEstadoEnvio(false, bloqueado ? obterMensagemSemPapel() : "");
+}
+
+function aplicarStatusImpressaoNaTela({ mostrarModal = false } = {}) {
+    const bloqueado = impressaoBloqueadaSemPapel();
+    const mensagem = obterMensagemSemPapel();
+    const banner = el("bannerSemPapelImpressao");
+    const textoBanner = el("textoBannerSemPapelImpressao");
+    const modal = el("modalSemPapelImpressao");
+    const textoModal = el("textoSemPapelImpressao");
+
+    if (banner) {
+        banner.hidden = !bloqueado;
+    }
+    if (textoBanner) {
+        textoBanner.innerText = mensagem;
+    }
+    if (textoModal) {
+        textoModal.innerText = mensagem;
+    }
+
+    aplicarBloqueioSemPapelNosCampos();
+
+    if (bloqueado) {
+        el("msg").innerText = mensagem;
+        if (mostrarModal && modal && !modalSemPapelExibido) {
+            modal.hidden = false;
+            document.body.classList.add("print-alert-modal-open");
+            modalSemPapelExibido = true;
+            window.requestAnimationFrame(() => el("painelSemPapelImpressao")?.focus());
+        }
+        return;
+    }
+
+    if (modal) {
+        modal.hidden = true;
+    }
+    document.body.classList.remove("print-alert-modal-open");
+    if (el("msg")?.innerText === mensagem) {
+        el("msg").innerText = "";
+    }
+    modalSemPapelExibido = false;
+}
 
 function usuarioEhAdmin() {
     if (!usuarioAtual) {
@@ -177,6 +257,19 @@ async function carregarUsuario() {
 
     usuarioAtual = await lerJsonResposta(res, "Não foi possível carregar o usuário.");
     atualizarTitulosContextoImpressao();
+}
+
+async function carregarStatusImpressao(mostrarModal = false) {
+    const res = await fetchComAuth("/impressao/status", { headers });
+    if (!res.ok) {
+        throw new Error("Nao foi possivel verificar o status da impressora.");
+    }
+
+    statusImpressaoAtual = await lerJsonResposta(
+        res,
+        "Nao foi possivel verificar o status da impressora."
+    );
+    aplicarStatusImpressaoNaTela({ mostrarModal });
 }
 
 async function carregarProfessoresImpressaoAdmin() {
@@ -414,6 +507,7 @@ function renderTagsImpressao() {
     });
 
     atualizarContadorTagsImpressao();
+    aplicarBloqueioSemPapelNosCampos();
 }
 
 async function carregarTagsImpressao() {
@@ -1072,18 +1166,29 @@ function atualizarEstadoEnvio(ativo, mensagem = "") {
         botao.dataset.labelPadrao = botao.innerText || "Imprimir";
     }
 
-    botao.disabled = ativo;
+    const bloqueado = impressaoBloqueadaSemPapel();
+    botao.disabled = ativo || bloqueado;
     botao.classList.toggle("is-loading", ativo);
     botao.setAttribute("aria-busy", ativo ? "true" : "false");
-    botao.innerText = ativo ? "Enviando..." : botao.dataset.labelPadrao;
+    botao.innerText = ativo
+        ? "Enviando..."
+        : (bloqueado ? "Impressao indisponivel" : botao.dataset.labelPadrao);
 
-    estado.classList.toggle("is-active", Boolean(mensagem));
-    estado.innerText = mensagem || "";
+    const mensagemFinal = mensagem || (bloqueado ? obterMensagemSemPapel() : "");
+    estado.classList.toggle("is-active", Boolean(mensagemFinal));
+    estado.innerText = mensagemFinal;
 }
 
 async function enviarImpressao(confirmadoAlertaConsumo = false) {
     const envioConfirmado = confirmadoAlertaConsumo === true;
     if (envioEmAndamento) {
+        return;
+    }
+
+    if (impressaoBloqueadaSemPapel()) {
+        const mensagem = obterMensagemSemPapel();
+        el("msg").innerText = mensagem;
+        aplicarStatusImpressaoNaTela({ mostrarModal: true });
         return;
     }
 
@@ -1546,6 +1651,9 @@ function iniciarPollingFila() {
     }
 
     filaPollingTimer = window.setInterval(() => {
+        carregarStatusImpressao().catch(() => {
+            // Evita poluir a UI com erros intermitentes durante polling.
+        });
         carregarFila().catch(() => {
             // Evita poluir a UI com erros intermitentes durante polling.
         });
@@ -2100,11 +2208,24 @@ function registrarEventos() {
             }
         });
     }
+    const modalSemPapel = el("modalSemPapelImpressao");
+    if (modalSemPapel) {
+        modalSemPapel.addEventListener("click", (event) => {
+            if (event.target === modalSemPapel) {
+                modalSemPapel.hidden = true;
+                document.body.classList.remove("print-alert-modal-open");
+            }
+        });
+    }
     el("btnConfirmarAlertaConsumoImpressao")?.addEventListener("click", () => {
         fecharModalAlertaConsumo(true);
     });
     el("btnVoltarAjustarAlertaConsumoImpressao")?.addEventListener("click", () => {
         fecharModalAlertaConsumo(false);
+    });
+    el("btnFecharModalSemPapelImpressao")?.addEventListener("click", () => {
+        el("modalSemPapelImpressao").hidden = true;
+        document.body.classList.remove("print-alert-modal-open");
     });
     el("btnEnviar").addEventListener("click", () => {
         enviarImpressao(false);
@@ -2115,6 +2236,11 @@ function registrarEventos() {
     window.addEventListener("keydown", (event) => {
         if (event.key === "Escape" && modalAlertaConsumoAberto()) {
             fecharModalAlertaConsumo(false);
+            return;
+        }
+        if (event.key === "Escape" && !el("modalSemPapelImpressao")?.hidden) {
+            el("modalSemPapelImpressao").hidden = true;
+            document.body.classList.remove("print-alert-modal-open");
         }
     });
 
@@ -2173,6 +2299,7 @@ async function inicializarPagina() {
 
     try {
         await carregarUsuario();
+        await carregarStatusImpressao(true);
         atualizarTopbarUsuario();
         await carregarProfessoresImpressaoAdmin();
         await carregarTurmasImpressao();

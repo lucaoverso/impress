@@ -453,6 +453,15 @@ def criar_tabelas():
     """)
 
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS impressao_status (
+            id INTEGER PRIMARY KEY CHECK (id = 1),
+            sem_papel INTEGER NOT NULL DEFAULT 0,
+            mensagem TEXT NOT NULL DEFAULT '',
+            atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS recursos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT UNIQUE NOT NULL,
@@ -1023,6 +1032,15 @@ def _aplicar_seeds_iniciais(cursor):
             COTA_POR_TURMA_PADRAO,
             COTA_MENSAL_ESCOLA_PADRAO,
         ),
+    )
+
+    cursor.execute(
+        """
+        INSERT OR IGNORE INTO impressao_status (
+            id, sem_papel, mensagem, atualizado_em
+        )
+        VALUES (1, 0, '', datetime('now'))
+        """
     )
 
 
@@ -4378,6 +4396,62 @@ def obter_regras_cota():
             "atualizado_em": None,
         }
     return dict(row)
+
+
+def obter_status_impressao():
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT sem_papel, mensagem, atualizado_em
+        FROM impressao_status
+        WHERE id = 1
+        """
+    )
+    row = cursor.fetchone()
+    conn.close()
+
+    if not row:
+        return {
+            "sem_papel": False,
+            "mensagem": "",
+            "atualizado_em": "",
+        }
+
+    return {
+        "sem_papel": bool(int(row["sem_papel"] or 0)),
+        "mensagem": str(row["mensagem"] or "").strip(),
+        "atualizado_em": str(row["atualizado_em"] or ""),
+    }
+
+
+def atualizar_status_impressao(
+    *,
+    sem_papel: bool,
+    mensagem: str = "",
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    mensagem_limpa = str(mensagem or "").strip()
+
+    cursor.execute(
+        """
+        INSERT INTO impressao_status (
+            id, sem_papel, mensagem, atualizado_em
+        )
+        VALUES (1, ?, ?, datetime('now'))
+        ON CONFLICT(id) DO UPDATE SET
+            sem_papel = excluded.sem_papel,
+            mensagem = excluded.mensagem,
+            atualizado_em = excluded.atualizado_em
+        """,
+        (1 if sem_papel else 0, mensagem_limpa),
+    )
+
+    conn.commit()
+    conn.close()
+    return obter_status_impressao()
 
 
 def atualizar_regras_cota(

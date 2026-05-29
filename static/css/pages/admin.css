@@ -394,10 +394,45 @@
 #msgDisciplina,
 #msgTurmaDisciplina,
 #msgCotas,
+#msgStatusImpressao,
 #msgRecurso,
 #msgRelatorios {
     min-height: 20px;
     font-size: 14px;
+}
+
+.admin-status-box {
+    display: grid;
+    gap: 6px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line-soft);
+    padding: 12px;
+    background: var(--surface-0);
+}
+
+.admin-status-box strong {
+    font-size: 15px;
+}
+
+.admin-status-box p,
+.admin-status-box small {
+    margin: 0;
+}
+
+.admin-status-box small {
+    color: var(--text-muted);
+}
+
+.admin-status-box.is-warning {
+    border-color: #fcd34d;
+    background: #fff7d6;
+    color: #92400e;
+}
+
+.admin-status-box.is-ok {
+    border-color: #99f6e4;
+    background: #f0fdfa;
+    color: #0f766e;
 }
 
 @media (max-width: 1200px) {

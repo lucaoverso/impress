@@ -2,6 +2,7 @@ from ._proxy import proxy
 
 alterar_prioridade = proxy("alterar_prioridade")
 atualizar_regras_cota = proxy("atualizar_regras_cota")
+atualizar_status_impressao = proxy("atualizar_status_impressao")
 atualizar_erro_job = proxy("atualizar_erro_job")
 atualizar_job_cups = proxy("atualizar_job_cups")
 atualizar_status = proxy("atualizar_status")
@@ -25,11 +26,13 @@ listar_jobs_ativos = proxy("listar_jobs_ativos")
 listar_jobs_por_usuario = proxy("listar_jobs_por_usuario")
 normalizar_jobs_impressao_pendentes = proxy("normalizar_jobs_impressao_pendentes")
 obter_regras_cota = proxy("obter_regras_cota")
+obter_status_impressao = proxy("obter_status_impressao")
 recalcular_cotas_mes = proxy("recalcular_cotas_mes")
 
 __all__ = [
     "alterar_prioridade",
     "atualizar_regras_cota",
+    "atualizar_status_impressao",
     "atualizar_erro_job",
     "atualizar_job_cups",
     "atualizar_status",
@@ -53,5 +56,6 @@ __all__ = [
     "listar_jobs_por_usuario",
     "normalizar_jobs_impressao_pendentes",
     "obter_regras_cota",
+    "obter_status_impressao",
     "recalcular_cotas_mes",
 ]

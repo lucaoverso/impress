@@ -32,12 +32,14 @@ from db.docencia import (
 )
 from db.impressao import (
     atualizar_regras_cota,
+    atualizar_status_impressao,
     calcular_cotas_mensais_professores,
     gerar_relatorio_impressao,
     gerar_relatorio_uso_recursos,
     gerar_relatorio_uso_recursos_por_professor,
     listar_historico,
     listar_jobs_ativos,
+    obter_status_impressao,
     obter_regras_cota,
     recalcular_cotas_mes,
 )
@@ -64,6 +66,7 @@ from models import (
     ProfessorTurmaDisciplinaCreateIn,
     ProfessorTurmaDisciplinaOut,
     ProfessorUpdateIn,
+    ImpressaoStatusIn,
     RecursoCreateIn,
     RecursoStatusIn,
     RecursoUpdateIn,
@@ -293,6 +296,24 @@ def _serializar_contexto_professores(professores: list[dict]) -> list[dict]:
 def fila_admin(usuario=Depends(get_usuario_logado)):
     exigir_gestor(usuario)
     return listar_jobs_ativos()
+
+
+@router.get("/admin/impressao/status")
+def obter_status_impressao_admin(usuario=Depends(get_usuario_logado)):
+    exigir_gestor(usuario)
+    return obter_status_impressao()
+
+
+@router.put("/admin/impressao/status")
+def atualizar_status_impressao_admin(
+    payload: ImpressaoStatusIn,
+    usuario=Depends(get_usuario_logado),
+):
+    exigir_admin(usuario)
+    return atualizar_status_impressao(
+        sem_papel=bool(payload.sem_papel),
+        mensagem=payload.mensagem,
+    )
 
 
 @router.get("/admin/historico")
