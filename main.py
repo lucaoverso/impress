@@ -130,6 +130,7 @@ sincronizar_atribuicoes_docentes_admin_api = (
 )
 excluir_atribuicao_docente_admin_api = admin_router_module.excluir_atribuicao_docente_admin_api
 listar_professores_painel = admin_router_module.listar_professores_painel
+listar_coordenadores_painel = admin_router_module.listar_coordenadores_painel
 excluir_professor_painel = admin_router_module.excluir_professor_painel
 promover_professor_para_coordenador_painel = (
     admin_router_module.promover_professor_para_coordenador_painel
