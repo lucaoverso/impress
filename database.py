@@ -3455,6 +3455,40 @@ def criar_coordenador(
     return usuario_id
 
 
+def promover_professor_para_coordenador(usuario_id: int) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    cursor.execute(
+        """
+        SELECT id
+        FROM usuarios
+        WHERE id = ?
+          AND perfil = 'professor'
+          AND ativo = 1
+    """,
+        (usuario_id,),
+    )
+    if not cursor.fetchone():
+        conn.close()
+        return False
+
+    cursor.execute(
+        """
+        UPDATE usuarios
+        SET perfil = 'coordenador',
+            cargo = ?,
+            acesso_coordenacao = 0
+        WHERE id = ?
+    """,
+        (CARGO_COORDENADOR, usuario_id),
+    )
+
+    conn.commit()
+    conn.close()
+    return cursor.rowcount > 0
+
+
 def listar_coordenadores_admin():
     conn = get_connection()
     cursor = conn.cursor()

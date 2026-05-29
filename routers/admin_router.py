@@ -53,6 +53,7 @@ from db.usuarios import (
     listar_coordenadores_admin,
     listar_professores_admin,
     listar_professores_agendamento,
+    promover_professor_para_coordenador,
     revogar_tokens_usuario,
 )
 from models import (
@@ -843,6 +844,23 @@ def excluir_professor_painel(
         raise HTTPException(404, "Professor nao encontrado.")
 
     return {"mensagem": "Professor excluido com sucesso."}
+
+
+@router.put("/admin/professores/{professor_id}/promover-coordenador")
+def promover_professor_para_coordenador_painel(
+    professor_id: int,
+    usuario=Depends(get_usuario_logado),
+):
+    exigir_admin(usuario)
+    professor = buscar_usuario_por_id(professor_id)
+    if not professor or professor["perfil"] != "professor":
+        raise HTTPException(404, "Professor nao encontrado.")
+
+    alterado = promover_professor_para_coordenador(professor_id)
+    if not alterado:
+        raise HTTPException(404, "Professor nao encontrado.")
+
+    return {"mensagem": "Professor promovido para coordenador com sucesso."}
 
 
 @router.put("/admin/professores/{professor_id}/carga")

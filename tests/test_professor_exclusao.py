@@ -149,6 +149,78 @@ class ExclusaoProfessorTest(unittest.TestCase):
             }
             self.assertNotIn(email_professor, emails_ocorrencia)
 
+    def test_promover_professor_para_coordenador_move_usuario_entre_listas(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, main, auth_service = _reload_modules(db_path)
+            database.criar_tabelas()
+            database.criar_usuario_se_nao_existir(
+                nome="Administrador",
+                email="admin@escola",
+                senha_hash=database.hash_senha("admin123"),
+                senha_plana="admin123",
+                perfil="admin",
+                cargo="ADMIN",
+            )
+
+            senha_professor = "Senha@123"
+            email_professor = "promocao@escola.local"
+            professor_id = database.criar_professor(
+                nome="Professor Promocao",
+                email=email_professor,
+                senha_hash=database.hash_senha(senha_professor),
+                nt_hash=generate_nt_hash(senha_professor),
+                data_nascimento="1992-07-18",
+                aulas_semanais=8,
+                turmas_quantidade=1,
+                turmas=["8A"],
+                disciplinas=["Historia"],
+                acesso_coordenacao=True,
+            )
+
+            resultado_login = auth_service.autenticar_usuario(email_professor, senha_professor)
+            self.assertIsNotNone(resultado_login)
+            token_professor = resultado_login[0]
+            usuario_token_antes = auth_service.validar_token(token_professor)
+            self.assertIsNotNone(usuario_token_antes)
+            self.assertEqual(usuario_token_antes["cargo"], "PROFESSOR")
+
+            resposta = main.promover_professor_para_coordenador_painel(
+                professor_id=professor_id,
+                usuario={"id": 1, "perfil": "admin", "cargo": "ADMIN"},
+            )
+            self.assertEqual(
+                resposta["mensagem"],
+                "Professor promovido para coordenador com sucesso.",
+            )
+
+            usuario_promovido = database.buscar_usuario_por_email(email_professor)
+            self.assertIsNotNone(usuario_promovido)
+            self.assertEqual(usuario_promovido["perfil"], "coordenador")
+            self.assertEqual(usuario_promovido["cargo"], "COORDENADOR")
+            self.assertEqual(int(usuario_promovido["acesso_coordenacao"] or 0), 0)
+
+            usuario_token_depois = auth_service.validar_token(token_professor)
+            self.assertIsNotNone(usuario_token_depois)
+            self.assertEqual(usuario_token_depois["cargo"], "COORDENADOR")
+
+            professores_painel = main.listar_professores_painel(
+                usuario={"id": 1, "perfil": "admin", "cargo": "ADMIN"},
+            )
+            emails_professores = {item["email"] for item in professores_painel["professores"]}
+            self.assertNotIn(email_professor, emails_professores)
+
+            coordenadores_painel = main.listar_coordenadores_painel(
+                usuario={"id": 1, "perfil": "admin", "cargo": "ADMIN"},
+            )
+            emails_coordenadores = {item["email"] for item in coordenadores_painel}
+            self.assertIn(email_professor, emails_coordenadores)
+
+            emails_agendamento = {
+                item["email"] for item in database.listar_professores_agendamento()
+            }
+            self.assertNotIn(email_professor, emails_agendamento)
+
 
 if __name__ == "__main__":
     unittest.main()

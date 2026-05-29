@@ -11,6 +11,7 @@ criar_professor = proxy("criar_professor")
 criar_usuario = proxy("criar_usuario")
 criar_usuario_se_nao_existir = proxy("criar_usuario_se_nao_existir")
 desativar_professor = proxy("desativar_professor")
+promover_professor_para_coordenador = proxy("promover_professor_para_coordenador")
 hash_senha = proxy("hash_senha")
 limpar_tokens_expirados = proxy("limpar_tokens_expirados")
 listar_cargas_professores_por_usuario_ids = proxy("listar_cargas_professores_por_usuario_ids")
@@ -33,6 +34,7 @@ __all__ = [
     "criar_usuario",
     "criar_usuario_se_nao_existir",
     "desativar_professor",
+    "promover_professor_para_coordenador",
     "hash_senha",
     "limpar_tokens_expirados",
     "listar_cargas_professores_por_usuario_ids",

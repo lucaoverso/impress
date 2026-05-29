@@ -232,6 +232,13 @@ async function carregarProfessores() {
             await excluirProfessor(prof);
         });
 
+        const btnPromover = document.createElement("button");
+        btnPromover.type = "button";
+        btnPromover.innerText = "Tornar coordenador";
+        btnPromover.addEventListener("click", async () => {
+            await promoverProfessorParaCoordenador(prof);
+        });
+
         const linhaSenha = document.createElement("div");
         linhaSenha.className = "admin-inline";
 
@@ -283,6 +290,7 @@ async function carregarProfessores() {
         linha.appendChild(inputTurmas);
         linha.appendChild(btnSalvar);
         linha.appendChild(btnEditar);
+        linha.appendChild(btnPromover);
         linha.appendChild(btnExcluir);
 
         linhaSenha.appendChild(inputNovaSenha);
@@ -321,6 +329,40 @@ async function carregarCoordenadores() {
         li.innerText = `${coord.nome} (${coord.email}) | Nascimento: ${formatarDataBr(coord.data_nascimento)}`;
         ul.appendChild(li);
     });
+}
+
+async function promoverProfessorParaCoordenador(professor) {
+    const professorId = Number(professor?.id || 0);
+    if (professorId <= 0) {
+        setMensagem("msgProfessor", "Professor invalido para promocao.", true);
+        return;
+    }
+
+    const nomeProfessor = String(professor?.nome || "este professor").trim() || "este professor";
+    const confirmado = window.confirm(
+        `Transformar ${nomeProfessor} em coordenador? Ele saira da lista de professores e passara a ter acesso de gestao.`
+    );
+    if (!confirmado) {
+        return;
+    }
+
+    try {
+        await fetchJson(`/admin/professores/${professorId}/promover-coordenador`, {
+            method: "PUT",
+            headers,
+        });
+        if (professorEmEdicaoId === professorId) {
+            limparFormularioProfessor();
+        }
+        setMensagem("msgProfessor", `${nomeProfessor} promovido para coordenador com sucesso.`);
+        await Promise.all([
+            carregarProfessores(),
+            carregarCoordenadores(),
+            atualizarAtribuicoesDocentesSePermitido(),
+        ]);
+    } catch (err) {
+        setMensagem("msgProfessor", err.message, true);
+    }
 }
 
 async function cadastrarProfessor(event) {
