@@ -204,9 +204,41 @@ class PcpiServiceTest(unittest.TestCase):
 
         self.assertEqual(resultado["total_registros_manuais"], 4)
         self.assertEqual(len(resultado["frases_manuais"]), 3)
-        self.assertIn("Impressao e organizacao de materiais pedagogicos", resultado["frases_manuais"][0])
-        self.assertIn("Orientacao ao professor Daniela", resultado["frases_manuais"][1])
-        self.assertIn("Elaboracao do Formulario II", resultado["frases_manuais"][2])
+        self.assertIn("Impressão e organização de materiais pedagógicos", resultado["frases_manuais"][0])
+        self.assertIn("Orientação com o professor Daniela", resultado["frases_manuais"][1])
+        self.assertIn("Elaboração do Formulário II", resultado["frases_manuais"][2])
+
+    def test_refina_reuniao_orientacao_e_acao_pedagogica_com_tom_administrativo(self):
+        registros = [
+            {
+                "tipo_acao": "reuniao",
+                "professor_nome": "coordenação pedagógica",
+                "descricao_curta": "alinhamento do atendimento do turno",
+                "observacoes": "definição das prioridades do período",
+            },
+            {
+                "tipo_acao": "orientacao",
+                "professor_nome": "Márcia",
+                "componente": "Google Classroom",
+                "descricao_curta": "organização das devolutivas das atividades",
+                "observacoes": "com revisão dos acessos dos estudantes",
+            },
+            {
+                "tipo_acao": "suporte_aula",
+                "professor_nome": "Carlos",
+                "turma": "8º ano A",
+                "acao_realizada": "auxiliou na condução da atividade",
+                "descricao_curta": "execução da proposta avaliativa da aula",
+                "resultado": "participação integral da turma",
+                "observacoes": "com mediação inicial dos estudantes",
+            },
+        ]
+
+        resultado = gerar_texto_pcpi("2026-04-03", "MATUTINO", [], registros)
+
+        self.assertIn("Reunião com coordenação pedagógica para alinhamento do atendimento do turno", resultado["texto"])
+        self.assertIn("Orientação com o professor Márcia sobre o uso de Google Classroom", resultado["texto"])
+        self.assertIn("Ação pedagógica de suporte à aula, na turma 8º ano A", resultado["texto"])
 
     def test_adiciona_fechamento_quando_turno_tem_pouco_conteudo(self):
         registros = [

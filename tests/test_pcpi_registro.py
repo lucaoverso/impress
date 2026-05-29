@@ -186,6 +186,8 @@ class PcpiRegistroTest(unittest.TestCase):
             database.criar_tabelas()
             database.seed_recursos_padrao()
 
+            turma_id = int(database.criar_turma("6A PCPI", "MATUTINO", 28))
+            disciplina_id = int(database.criar_disciplina("História PCPI", 5))
             professor_id = database.criar_professor(
                 nome="Professor Vinculado",
                 email="vinculado.prof@escola.local",
@@ -193,10 +195,18 @@ class PcpiRegistroTest(unittest.TestCase):
                 data_nascimento="1991-02-18",
                 aulas_semanais=12,
                 turmas_quantidade=1,
-                turmas=["6A"],
+                turmas=["6A PCPI"],
                 disciplinas=["Historia"],
             )
-            database.criar_turma("6A", "MATUTINO", 28)
+            database.criar_atribuicao_docente(professor_id, turma_id, disciplina_id)
+            database.criar_horario_escolar(
+                ano_letivo=2026,
+                turma_id=turma_id,
+                disciplina_id=disciplina_id,
+                professor_usuario_id=professor_id,
+                dia_semana="SEXTA",
+                aula_numero=2,
+            )
 
             recurso = next(
                 item
@@ -211,7 +221,7 @@ class PcpiRegistroTest(unittest.TestCase):
                 turno="MATUTINO",
                 aula="2",
                 faixa_global=2,
-                turma="6A",
+                turma="6A PCPI",
                 tema_aula="Pesquisa orientada",
                 observacao="Atividade com laboratorio.",
             )
@@ -224,7 +234,7 @@ class PcpiRegistroTest(unittest.TestCase):
                 acao_realizada="Ligou os computadores",
                 professor_nome="Professor Vinculado",
                 componente="Notebook",
-                turma="6A",
+                turma="6A PCPI",
                 descricao_curta="Suporte ao uso do laboratorio na aula.",
                 resultado="Aula iniciada com equipamentos prontos.",
                 observacoes="Acompanhamento da turma no inicio da atividade.",
@@ -259,8 +269,70 @@ class PcpiRegistroTest(unittest.TestCase):
                 usuario={"id": 1, "cargo": "ADMIN"},
             )
 
-            self.assertIn("o pcpi ligou os computadores", resposta_texto["texto"].lower())
-            self.assertIn("resultando em aula iniciada com equipamentos prontos", resposta_texto["texto"].lower())
+            self.assertIn("Professor Vinculado (História PCPI)", resposta_texto["texto"])
+            self.assertIn("ligou os computadores e suporte ao uso do laboratorio na aula.", resposta_texto["texto"].lower())
+            self.assertNotIn("No atendimento agendado", resposta_texto["texto"])
+
+    def test_pcpi_usa_disciplina_do_horario_na_aula_em_vez_da_lista_completa(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, pcpi_router, _models = _reload_modules(db_path)
+            database.criar_tabelas()
+            database.seed_recursos_padrao()
+
+            turma_id = int(database.criar_turma("1 E.M A PCPI", "MATUTINO", 30))
+            disciplina_matematica_id = int(database.criar_disciplina("Matemática PCPI", 5))
+            disciplina_geometria_id = int(database.criar_disciplina("Geometria PCPI", 2))
+            professor_id = int(
+                database.criar_professor(
+                    nome="Alex Borges França",
+                    email="alex.pcpi@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1990-06-10",
+                    aulas_semanais=10,
+                    turmas_quantidade=1,
+                    turmas=["1 E.M A PCPI"],
+                    disciplinas=["Matemática", "Geometria", "R.A - Matemática"],
+                )
+            )
+            database.criar_atribuicao_docente(professor_id, turma_id, disciplina_matematica_id)
+            database.criar_atribuicao_docente(professor_id, turma_id, disciplina_geometria_id)
+            database.criar_horario_escolar(
+                ano_letivo=2026,
+                turma_id=turma_id,
+                disciplina_id=disciplina_matematica_id,
+                professor_usuario_id=professor_id,
+                dia_semana="SEXTA",
+                aula_numero=1,
+            )
+
+            recurso = next(
+                item
+                for item in database.listar_recursos_ativos()
+                if "Projetor" in str(item.get("nome") or "")
+            )
+
+            database.criar_agendamento(
+                recurso_id=int(recurso["id"]),
+                usuario_id=professor_id,
+                data="2026-04-03",
+                turno="MATUTINO",
+                aula="1",
+                faixa_global=1,
+                turma="1 E.M A PCPI",
+                tema_aula="Resolução de problemas",
+                observacao="Uso de projetor em sala.",
+            )
+
+            resposta = pcpi_router.gerar_texto_pcpi_api(
+                data="2026-04-03",
+                turno="MATUTINO",
+                usuario={"id": 1, "cargo": "ADMIN"},
+            )
+
+            self.assertIn("Alex Borges França (Matemática PCPI)", resposta["texto"])
+            self.assertNotIn("Geometria PCPI", resposta["texto"])
+            self.assertNotIn("R.A - Matemática", resposta["texto"])
 
     def test_exportar_pdf_pcpi_retorna_pdf(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -347,7 +419,7 @@ class PcpiRegistroTest(unittest.TestCase):
             self.assertEqual(resposta["total_agendamentos"], 1)
             self.assertEqual(resposta["total_registros_manuais"], 1)
             self.assertIn("equipamentos audiovisuais", resposta["texto"])
-            self.assertIn("Planejamento e organizacao", resposta["texto"])
+            self.assertIn("Planejamento e organização", resposta["texto"])
 
     def test_preview_texto_pcpi_respeita_agendamentos_selecionados(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

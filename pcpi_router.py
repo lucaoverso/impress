@@ -5,6 +5,7 @@ from fastapi.responses import Response
 
 from auth import get_usuario_logado
 from db.agendamento import buscar_agendamento_por_id, listar_agendamentos
+from db.horario_escolar import listar_horarios_escolares
 from db.pcpi import (
     buscar_registro_pcpi_manual_por_id,
     criar_registro_pcpi_manual,
@@ -32,6 +33,16 @@ from services.pcpi_service import (
 
 
 router = APIRouter()
+
+DIAS_SEMANA_POR_WEEKDAY = {
+    0: "SEGUNDA",
+    1: "TERCA",
+    2: "QUARTA",
+    3: "QUINTA",
+    4: "SEXTA",
+    5: "SABADO",
+    6: "DOMINGO",
+}
 
 
 def _normalizar_cargo(usuario: dict) -> str:
@@ -98,6 +109,85 @@ def _normalizar_agendamento_id(valor) -> int | None:
     return agendamento_id if agendamento_id > 0 else None
 
 
+def _dia_semana_data_iso(data_iso: str) -> str:
+    data_ref = datetime.strptime(data_iso, "%Y-%m-%d").date()
+    return DIAS_SEMANA_POR_WEEKDAY.get(data_ref.weekday(), "")
+
+
+def _montar_texto_acao_pcpi_registro(registro: dict) -> str:
+    acao_realizada = str(registro.get("acao_realizada") or "").strip()
+    descricao_curta = str(registro.get("descricao_curta") or "").strip()
+    observacoes = str(registro.get("observacoes") or "").strip()
+
+    acao = acao_realizada[:1].lower() + acao_realizada[1:] if acao_realizada else ""
+    descricao = descricao_curta[:1].lower() + descricao_curta[1:] if descricao_curta else ""
+    observacao = observacoes[:1].lower() + observacoes[1:] if observacoes else ""
+
+    if not acao and not descricao and not observacao:
+        return ""
+
+    texto = acao or descricao or observacao
+    if acao and descricao:
+        texto = f"{acao} e {descricao}"
+    elif descricao and not acao:
+        texto = descricao
+
+    if observacao:
+        texto = f"{texto}, com {observacao}" if texto else observacao
+    return texto
+
+
+def _resolver_disciplina_horario_item(item: dict, horarios: list[dict]) -> str:
+    professor_id = int(item.get("professor_id") or 0)
+    turma = str(item.get("turma") or "").strip()
+    faixa_global = int(item.get("faixa_global") or 0)
+    aula_numero = int(item.get("aula_numero") or 0)
+
+    for horario in horarios:
+        if int(horario.get("professor_id") or 0) != professor_id:
+            continue
+        if str(horario.get("turma_nome") or "").strip() != turma:
+            continue
+        if faixa_global > 0 and int(horario.get("faixa_global") or 0) == faixa_global:
+            return str(horario.get("disciplina_nome") or "").strip()
+        if aula_numero > 0 and int(horario.get("aula_numero") or 0) == aula_numero:
+            return str(horario.get("disciplina_nome") or "").strip()
+    return ""
+
+
+def _integrar_contexto_automatico_pcpi(
+    sugestoes: dict,
+    registros: list[dict],
+    horarios: list[dict],
+) -> tuple[dict, list[dict]]:
+    itens = [dict(item) for item in (sugestoes.get("itens") or [])]
+    registros_livres = []
+    registros_por_agendamento: dict[int, list[dict]] = {}
+
+    for registro in registros:
+        agendamento_id = _normalizar_agendamento_id(registro.get("agendamento_id"))
+        if agendamento_id is None:
+            registros_livres.append(registro)
+            continue
+        registros_por_agendamento.setdefault(agendamento_id, []).append(registro)
+
+    for item in itens:
+        disciplina_horario = _resolver_disciplina_horario_item(item, horarios)
+        if disciplina_horario:
+            item["disciplina"] = disciplina_horario
+
+        textos_acao = [
+            _montar_texto_acao_pcpi_registro(registro)
+            for registro in registros_por_agendamento.get(int(item.get("agendamento_id") or 0), [])
+        ]
+        textos_acao = [texto for texto in textos_acao if texto]
+        item["texto_acao_pcpi"] = "; ".join(textos_acao)
+
+    sugestoes_enriquecidas = dict(sugestoes)
+    sugestoes_enriquecidas["itens"] = itens
+    return sugestoes_enriquecidas, registros_livres
+
+
 def _carregar_contexto_pcpi(data: str, turno: str) -> tuple[dict, list[dict]]:
     agendamentos_dia = listar_agendamentos(
         data_inicio=data,
@@ -114,7 +204,11 @@ def _carregar_contexto_pcpi(data: str, turno: str) -> tuple[dict, list[dict]]:
     )
     sugestoes = montar_sugestoes_pcpi(data, turno, agendamentos_turno, cargas)
     registros = _listar_registros_manuais_normalizados(data, turno)
-    return sugestoes, registros
+    horarios = listar_horarios_escolares(
+        ano_letivo=int(str(data).split("-")[0]),
+        dia_semana=_dia_semana_data_iso(data),
+    )
+    return _integrar_contexto_automatico_pcpi(sugestoes, registros, horarios)
 
 
 def _listar_registros_manuais_normalizados(data: str, turno: str) -> list[dict]:
