@@ -147,6 +147,20 @@ function usuarioEhAdmin() {
     return String(usuarioAtual.perfil || "").trim().toLowerCase() === "admin";
 }
 
+function usuarioEhGestor() {
+    if (!usuarioAtual) {
+        return false;
+    }
+
+    const cargo = String(usuarioAtual.cargo || "").trim().toUpperCase();
+    if (cargo === "ADMIN" || cargo === "COORDENADOR") {
+        return true;
+    }
+
+    const perfil = String(usuarioAtual.perfil || "").trim().toLowerCase();
+    return perfil === "admin" || perfil === "coordenador";
+}
+
 function usuarioPodeSelecionarProfessorImpressao() {
     return Boolean(usuarioAtual) && usuarioPodeGerirImpressoes(usuarioAtual);
 }
@@ -190,11 +204,11 @@ function atualizarTitulosContextoImpressao() {
 
     const professor = obterProfessorSelecionado();
     if (!professor) {
-        tituloCota.innerText = usuarioEhAdmin() ? "Cota do admin" : "Sua cota";
-        tituloJobs.innerText = usuarioEhAdmin() ? "Pedidos do admin" : "Seus pedidos";
+        tituloCota.innerText = usuarioEhGestor() ? "Cota da gestao" : "Sua cota";
+        tituloJobs.innerText = usuarioEhGestor() ? "Pedidos da gestao" : "Seus pedidos";
         if (contexto) {
-            contexto.innerText = usuarioEhAdmin()
-                ? "Sem professor selecionado, a impressao usa a cota ilimitada do admin."
+            contexto.innerText = usuarioEhGestor()
+                ? "Sem professor selecionado, a impressao usa a cota ilimitada da gestao."
                 : "Sem professor selecionado, a impressao usa a sua propria cota.";
         }
         return;
@@ -1254,14 +1268,14 @@ async function enviarImpressao(confirmadoAlertaConsumo = false) {
     }
 
     envioEmAndamento = true;
-    const cotaIlimitadaAdmin = usuarioEhAdmin() && !professorSolicitanteId;
+    const cotaIlimitadaGestao = usuarioEhGestor() && !professorSolicitanteId;
     atualizarEstadoEnvio(
         true,
         usaHistorico
             ? "Reenviando arquivo do histórico para a fila..."
             : (
-                cotaIlimitadaAdmin
-                    ? "Enviando para fila com cota ilimitada do admin..."
+                cotaIlimitadaGestao
+                    ? "Enviando para fila com cota ilimitada da gestao..."
                     : "Enviando para fila e validando consumo da cota..."
             )
     );
@@ -1306,7 +1320,7 @@ async function enviarImpressao(confirmadoAlertaConsumo = false) {
         const sufixoDestino = professorSelecionado ? ` para ${professorSelecionado.nome}` : "";
         const verbo = usaHistorico ? "Reenviado" : "Enviado";
         el("msg").innerText = data.cota_ilimitada
-            ? `${verbo}${sufixoDestino}! Cota ilimitada do admin.`
+            ? `${verbo}${sufixoDestino}! Cota ilimitada da gestao.`
             : `${verbo}${sufixoDestino}! Restam ${data.paginas_restantes} páginas`;
         await carregarFila();
         await carregarCota();

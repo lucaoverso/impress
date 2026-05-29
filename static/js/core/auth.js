@@ -72,7 +72,8 @@
         if (typeof usuario.pode_gerir_impressoes === "boolean") {
             return usuario.pode_gerir_impressoes;
         }
-        return normalizarCargoUsuario(usuario) === CARGO_ADMIN || (
+        const cargo = normalizarCargoUsuario(usuario);
+        return cargo === CARGO_ADMIN || cargo === CARGO_COORDENADOR || (
             usuarioEhProfessor(usuario) && usuarioTemAcessoCoordenacao(usuario)
         );
     }
@@ -87,7 +88,7 @@
             return new Set(["impressao", "agendamento", "gestao", "relatorios", "coordenacao", "horario", "apc", "pcpi", "preconselho"]);
         }
         if (cargo === CARGO_COORDENADOR) {
-            return new Set(["relatorios", "coordenacao", "horario", "apc", "pcpi", "preconselho"]);
+            return new Set(["impressao", "relatorios", "coordenacao", "horario", "apc", "pcpi", "preconselho"]);
         }
         return new Set(["impressao", "agendamento", "horario", "apc", "preconselho"]);
     }

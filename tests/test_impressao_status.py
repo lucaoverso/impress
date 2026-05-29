@@ -129,6 +129,27 @@ class ImpressaoStatusTest(unittest.TestCase):
             self.assertEqual(ctx.exception.status_code, 409)
             self.assertEqual(ctx.exception.detail, "Sem papel no momento.")
 
+    def test_coordenador_tem_cota_ilimitada_na_impressao(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            spool_dir = os.path.join(tmp_dir, "spool")
+
+            database, _admin_router, impressao_router = _reload_modulos(db_path, spool_dir)
+            database.criar_tabelas()
+            database.criar_coordenador(
+                nome="Coordenadora",
+                email="coord@example.com",
+                senha_hash=database.hash_senha("Senha@123"),
+                data_nascimento="1988-03-12",
+            )
+            coordenadora = database.buscar_usuario_por_email("coord@example.com")
+
+            cota = impressao_router.minha_cota(professor_id=None, usuario=coordenadora)
+
+            self.assertTrue(cota["ilimitada"])
+            self.assertIsNone(cota["limite"])
+            self.assertIsNone(cota["restante"])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -127,7 +127,10 @@ class PcpiRegistroTest(unittest.TestCase):
             self.assertEqual(item["tema_aula"], "Exploracao de planilhas")
             self.assertEqual(item["categoria_uso"], "tecnologia_educacional")
             self.assertEqual(item["componentes"], ["Matematica", "Fisica"])
-            self.assertIn("Disponibilizacao e acompanhamento", resposta["texto_base"])
+            self.assertIn(
+                "Organização e recolhimento de equipamentos audiovisuais aos professores:",
+                resposta["texto_base"],
+            )
 
     def test_criar_e_listar_registros_manuais_pcpi(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -412,8 +415,11 @@ class PcpiRegistroTest(unittest.TestCase):
             )
 
             self.assertEqual(resposta["total_agendamentos"], 1)
-            self.assertIn("Disponibilizacao e acompanhamento de recursos de tecnologia educacional", resposta["texto"])
-            self.assertNotIn("equipamentos audiovisuais", resposta["texto"])
+            self.assertIn(
+                "Organização e recolhimento de equipamentos audiovisuais aos professores:",
+                resposta["texto"],
+            )
+            self.assertNotIn("Projetor", resposta["texto"])
 
     def test_sugestoes_pcpi_agrupa_vespertino_em_no_turno_vespertino(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

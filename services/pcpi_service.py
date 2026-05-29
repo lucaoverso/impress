@@ -44,8 +44,8 @@ GRUPO_AUTOMATICO_AUDIOVISUAL = "recurso_audiovisual"
 GRUPO_AUTOMATICO_APOIO = "apoio_pedagogico"
 
 FECHAMENTO_PCPI_PADRAO = (
-    "Acompanhamento continuo das demandas do turno, com suporte pedagogico e "
-    "tecnologico as acoes planejadas pela unidade escolar."
+    "Acompanhamento contínuo das demandas do turno, com suporte pedagógico e "
+    "tecnológico às ações planejadas pela unidade escolar."
 )
 
 
@@ -57,7 +57,7 @@ def nome_turno_pcpi(turno: str) -> str:
     turno_norm = _texto_limpo(turno).upper()
     config = TURNOS_PCPI_CONFIG.get(turno_norm)
     if not config:
-        return turno_norm or "Turno nao informado"
+        return turno_norm or "Turno não informado"
     return str(config["nome"])
 
 
@@ -83,6 +83,17 @@ def _aula_agendamento_para_int(valor) -> int | None:
 
 def _formatar_ordinal_aula(numero: int) -> str:
     return f"{numero}\u00AA aula"
+
+
+def _formatar_lista_com_ponto_e_virgula(itens: list[str]) -> str:
+    valores = _lista_unica_texto(itens)
+    if not valores:
+        return ""
+    if len(valores) == 1:
+        return valores[0]
+    if len(valores) == 2:
+        return f"{valores[0]}; e {valores[1]}"
+    return "; ".join(valores[:-1]) + f"; e {valores[-1]}"
 
 
 def agendamento_pertence_ao_turno_pcpi(agendamento: dict, turno_pcpi: str) -> bool:
@@ -268,49 +279,87 @@ def _complemento_resultado(resultado: str) -> str:
     return f", resultando em {texto}"
 
 
-def _frase_automatica_ste(itens: list[dict]) -> str:
-    docentes = _formatar_docentes_referencia(itens)
-    aulas = _formatar_aulas_referencia(itens)
-    turmas = _formatar_turmas_referencia(itens)
-    frase = (
-        "Atendimento na Sala de Tecnologia Educacional (STE), "
-        f"com suporte {docentes}{aulas}{turmas} para realizacao das atividades digitais"
+def _tipo_atividade_pcpi(item: dict) -> str:
+    tipo_atividade = _texto_limpo(item.get("tipo_atividade")).lower()
+    if tipo_atividade in {"ste", "equipamento"}:
+        return tipo_atividade
+
+    categoria = _texto_limpo(item.get("categoria_uso"))
+    if categoria == GRUPO_AUTOMATICO_STE:
+        return "ste"
+    return "equipamento"
+
+
+def _disciplina_pcpi(item: dict) -> str:
+    disciplina = _texto_limpo(item.get("disciplina"))
+    if disciplina:
+        return disciplina
+
+    componentes = _lista_unica_texto(item.get("componentes") or [])
+    return _formatar_lista_pt_br(componentes)
+
+
+def _aula_pcpi(item: dict) -> str:
+    aula = _texto_limpo(item.get("aula"))
+    if not aula:
+        return "aula não informada"
+
+    if "aula" in aula.casefold():
+        return aula
+
+    aula_num = _aula_agendamento_para_int(aula)
+    if aula_num is not None:
+        return _formatar_ordinal_aula(aula_num)
+    return aula
+
+
+def _item_texto_automatico_ste(item: dict) -> str:
+    professor_nome = _texto_limpo(item.get("professor_nome")) or "Professor não informado"
+    disciplina = _disciplina_pcpi(item) or "disciplina não informada"
+    turma = _texto_limpo(item.get("turma")) or "turma não informada"
+    aula = _aula_pcpi(item)
+    texto = f"{professor_nome} ({disciplina}), com a turma {turma} na {aula}"
+
+    texto_acao_pcpi = _texto_limpo(item.get("texto_acao_pcpi"))
+    if texto_acao_pcpi:
+        texto += f", com {texto_acao_pcpi}"
+    return texto
+
+
+def _item_texto_automatico_equipamento(item: dict) -> str:
+    professor_nome = _texto_limpo(item.get("professor_nome")) or "Professor não informado"
+    disciplina = _disciplina_pcpi(item) or "disciplina não informada"
+    turma = _texto_limpo(item.get("turma")) or "turma não informada"
+    aula = _aula_pcpi(item)
+    recurso_agendado = (
+        _texto_limpo(item.get("recurso_agendado"))
+        or _texto_limpo(item.get("recurso_nome"))
+        or "equipamento não informado"
     )
-    return _garantir_ponto_final(frase)
-
-
-def _frase_automatica_tecnologia(itens: list[dict]) -> str:
-    docentes = _formatar_docentes_referencia(itens)
-    aulas = _formatar_aulas_referencia(itens)
-    turmas = _formatar_turmas_referencia(itens)
-    frase = (
-        "Disponibilizacao e acompanhamento de recursos de tecnologia educacional, "
-        f"com suporte {docentes}{aulas}{turmas} durante as atividades planejadas"
+    texto = (
+        f"{professor_nome} ({disciplina}), com a turma {turma} na {aula}, "
+        f"com organização do uso de {recurso_agendado}"
     )
-    return _garantir_ponto_final(frase)
+
+    texto_acao_pcpi = _texto_limpo(item.get("texto_acao_pcpi"))
+    if texto_acao_pcpi:
+        texto += f" e {texto_acao_pcpi}"
+    return texto
 
 
-def _frase_automatica_audiovisual(itens: list[dict]) -> str:
-    destinatarios = _formatar_docentes_destinatarios(itens)
-    recursos = _formatar_recursos_referencia(itens)
-    turmas = _formatar_turmas_referencia(itens)
-    recursos_txt = f", com organizacao do uso de {recursos}" if recursos else ""
-    frase = (
-        "Entrega, organizacao e recolhimento de equipamentos audiovisuais "
-        f"{destinatarios}{turmas}{recursos_txt}, para atendimento das aulas do turno"
+def _frase_automatica_por_tipo(tipo_atividade: str, itens: list[dict]) -> str:
+    if tipo_atividade == "ste":
+        introducao = "Atendimento na Sala de Tecnologia Educacional (STE) aos professores:"
+        corpo = _formatar_lista_com_ponto_e_virgula(
+            [_item_texto_automatico_ste(item) for item in itens]
+        )
+        return _garantir_ponto_final(f"{introducao} {corpo}")
+
+    introducao = "Organização e recolhimento de equipamentos audiovisuais aos professores:"
+    corpo = _formatar_lista_com_ponto_e_virgula(
+        [_item_texto_automatico_equipamento(item) for item in itens]
     )
-    return _garantir_ponto_final(frase)
-
-
-def _frase_automatica_apoio(itens: list[dict]) -> str:
-    recursos = _formatar_recursos_referencia(itens)
-    turmas = _formatar_turmas_referencia(itens)
-    complemento_recursos = f", com organizacao do uso de {recursos}" if recursos else ""
-    frase = (
-        "Organizacao de recursos de apoio pedagogico no turno"
-        f"{turmas}{complemento_recursos}, garantindo atendimento as demandas apresentadas"
-    )
-    return _garantir_ponto_final(frase)
+    return _garantir_ponto_final(f"{introducao} {corpo}")
 
 
 def classificar_categoria_uso(recurso_nome: str, recurso_tipo: str) -> str:
@@ -358,11 +407,19 @@ def normalizar_agendamento_pcpi(
         "recurso_tipo": recurso_tipo,
         "professor_id": int(agendamento["usuario_id"]),
         "professor_nome": _texto_limpo(agendamento.get("professor_nome")),
+        "disciplina": _formatar_lista_pt_br(componentes),
         "componentes": componentes,
         "turma": _texto_limpo(agendamento.get("turma")),
         "tema_aula": _texto_limpo(agendamento.get("tema_aula")),
         "observacao": _texto_limpo(agendamento.get("observacao")),
         "categoria_uso": classificar_categoria_uso(recurso_nome, recurso_tipo),
+        "tipo_atividade": (
+            "ste"
+            if classificar_categoria_uso(recurso_nome, recurso_tipo) == GRUPO_AUTOMATICO_STE
+            else "equipamento"
+        ),
+        "recurso_agendado": recurso_nome,
+        "texto_acao_pcpi": "",
     }
 
 
@@ -383,18 +440,13 @@ def _montar_resumo_sugestoes(itens: list[dict]) -> dict:
 def gerar_frases_automaticas_pcpi(itens_automaticos: list[dict]) -> list[str]:
     grupos: dict[str, list[dict]] = defaultdict(list)
     for item in itens_automaticos or []:
-        categoria = _texto_limpo(item.get("categoria_uso")) or GRUPO_AUTOMATICO_APOIO
-        grupos[categoria].append(item)
+        grupos[_tipo_atividade_pcpi(item)].append(item)
 
     frases = []
-    if grupos[GRUPO_AUTOMATICO_STE]:
-        frases.append(_frase_automatica_ste(grupos[GRUPO_AUTOMATICO_STE]))
-    if grupos[GRUPO_AUTOMATICO_TECNOLOGIA]:
-        frases.append(_frase_automatica_tecnologia(grupos[GRUPO_AUTOMATICO_TECNOLOGIA]))
-    if grupos[GRUPO_AUTOMATICO_AUDIOVISUAL]:
-        frases.append(_frase_automatica_audiovisual(grupos[GRUPO_AUTOMATICO_AUDIOVISUAL]))
-    if grupos[GRUPO_AUTOMATICO_APOIO]:
-        frases.append(_frase_automatica_apoio(grupos[GRUPO_AUTOMATICO_APOIO]))
+    if grupos["ste"]:
+        frases.append(_frase_automatica_por_tipo("ste", grupos["ste"]))
+    if grupos["equipamento"]:
+        frases.append(_frase_automatica_por_tipo("equipamento", grupos["equipamento"]))
     return [frase for frase in frases if _texto_limpo(frase)]
 
 

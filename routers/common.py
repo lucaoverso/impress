@@ -25,7 +25,7 @@ CARGO_COORDENADOR = "COORDENADOR"
 MODULOS_POR_CARGO = {
     CARGO_ADMIN: ["impressao", "agendamento", "download", "gestao", "relatorios", "coordenacao", "horario", "apc", "pcpi", "preconselho"],
     CARGO_PROFESSOR: ["impressao", "agendamento", "download", "horario", "apc", "preconselho"],
-    CARGO_COORDENADOR: ["download", "relatorios", "coordenacao", "horario", "apc", "pcpi", "preconselho"],
+    CARGO_COORDENADOR: ["impressao", "download", "relatorios", "coordenacao", "horario", "apc", "pcpi", "preconselho"],
 }
 
 
@@ -222,7 +222,7 @@ def modulos_por_usuario(usuario: dict) -> list[str]:
 
 
 def usuario_pode_gerir_impressoes(usuario: dict) -> bool:
-    return usuario_eh_admin(usuario) or (
+    return usuario_eh_gestor(usuario) or (
         usuario_eh_professor(usuario) and usuario_tem_acesso_coordenacao(usuario)
     )
 
@@ -236,7 +236,7 @@ def usuario_eh_gestor(usuario: dict) -> bool:
 
 
 def usuario_tem_cota_ilimitada(usuario: dict) -> bool:
-    return usuario_eh_admin(usuario)
+    return usuario_eh_gestor(usuario)
 
 
 def exigir_admin(usuario):
