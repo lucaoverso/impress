@@ -7455,6 +7455,12 @@ def gerar_dashboard_relatorios(data_inicio: str | None = None, data_fim: str | N
 
     ranking_impressao = gerar_relatorio_impressao(inicio_periodo, fim_periodo)
     ranking_tags_impressao = gerar_relatorio_tags_impressao(inicio_periodo, fim_periodo)
+    if not any(
+        int(item.get("total_jobs") or 0) > 0 or int(item.get("total_paginas") or 0) > 0
+        for item in ranking_impressao
+    ):
+        ranking_impressao = gerar_relatorio_impressao()
+        ranking_tags_impressao = gerar_relatorio_tags_impressao()
     ranking_recursos = gerar_relatorio_uso_recursos(inicio_periodo, fim_periodo)
     ranking_recursos_professor = gerar_relatorio_uso_recursos_por_professor(
         inicio_periodo, fim_periodo
