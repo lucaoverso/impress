@@ -18,7 +18,7 @@ import routers.admin_router as admin_router_module
 import routers.agendamento_router as agendamento_router_module
 import routers.common as common_module
 import routers.config as config_module
-import routers.impressao_router as impressao_router_module
+import modules.printing.router as impressao_router_module
 import routers.relatorios_router as relatorios_router_module
 import routers.download_router as download_router_module
 import routers.horario_escolar_router as horario_escolar_router_module
