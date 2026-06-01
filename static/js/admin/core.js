@@ -279,10 +279,9 @@ function formatarDataBr(dataIso) {
 function formatarDataHora(dataHoraSql) {
     if (!dataHoraSql) return "NÃ£o informado";
     const texto = String(dataHoraSql).trim();
-    const match = texto.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?$/);
-    if (!match) return texto;
-    const [, ano, mes, dia, hora, minuto, segundo = "00"] = match;
-    return `${dia}/${mes}/${ano} ${hora}:${minuto}:${segundo}`;
+    const data = new Date(texto.replace(" ", "T") + "Z");
+    if (Number.isNaN(data.getTime())) return texto;
+    return data.toLocaleString("pt-BR");
 }
 
 function nomeTurno(turno) {

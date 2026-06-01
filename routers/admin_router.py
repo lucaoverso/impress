@@ -1,4 +1,5 @@
 import sqlite3
+from datetime import UTC, datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
@@ -102,6 +103,17 @@ from .professores_common import (
 )
 
 router = APIRouter()
+
+
+def _formatar_data_hora_local(valor: str | None) -> str:
+    texto = str(valor or "").strip()
+    if not texto:
+        return ""
+    try:
+        data_utc = datetime.strptime(texto, "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC)
+    except ValueError:
+        return texto
+    return data_utc.astimezone().strftime("%d/%m/%Y %H:%M:%S")
 
 
 def validar_payload_atribuicao_docente(payload: ProfessorTurmaDisciplinaCreateIn):
@@ -325,7 +337,11 @@ def historico_admin(
     usuario=Depends(get_usuario_logado),
 ):
     exigir_gestor(usuario)
-    return listar_historico(data_inicio, data_fim, usuario_id)
+    historico = listar_historico(data_inicio, data_fim, usuario_id)
+    for item in historico:
+        item["criado_em"] = _formatar_data_hora_local(item.get("criado_em"))
+        item["finalizado_em"] = _formatar_data_hora_local(item.get("finalizado_em"))
+    return historico
 
 
 @router.get("/admin/relatorio")

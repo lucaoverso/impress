@@ -108,22 +108,6 @@ DISCIPLINAS_PADRAO = [
 ]
 
 
-def _agora_sql_local() -> str:
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-
-def _formatar_data_hora_sql_br(valor: str | None) -> str:
-    texto = str(valor or "").strip()
-    if not texto:
-        return ""
-    for formato in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M:%S"):
-        try:
-            return datetime.strptime(texto, formato).strftime("%d/%m/%Y %H:%M:%S")
-        except ValueError:
-            continue
-    return texto
-
-
 def _normalizar_booleano_sql(valor) -> int:
     return 1 if bool(valor) else 0
 
@@ -201,7 +185,6 @@ def criar_job(
     cups_options: str = "{}",
     tags_json: str = "[]",
 ):
-    criado_em = _agora_sql_local()
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -211,7 +194,7 @@ def criar_job(
             usuario_id, arquivo, arquivo_path, copias, paginas_por_folha, duplex, orientacao,
             intervalo_paginas, cups_options, printer_name, paginas_totais, tags_json, status, prioridade, criado_em
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDENTE', 0, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDENTE', 0, datetime('now'))
     """,
         (
             usuario_id,
@@ -226,7 +209,6 @@ def criar_job(
             printer_name or None,
             paginas_totais,
             tags_json or "[]",
-            criado_em,
         ),
     )
 
@@ -289,14 +271,7 @@ def listar_historico(data_inicio=None, data_fim=None, usuario_id=None):
     rows = cursor.fetchall()
     conn.close()
 
-    historico = []
-    for row in rows:
-        item = dict(row)
-        item["criado_em"] = _formatar_data_hora_sql_br(item.get("criado_em"))
-        item["finalizado_em"] = _formatar_data_hora_sql_br(item.get("finalizado_em"))
-        historico.append(item)
-
-    return historico
+    return [dict(r) for r in rows]
 
 
 def listar_arquivo_paths_jobs_em_andamento():
@@ -343,11 +318,11 @@ def normalizar_jobs_impressao_pendentes(
     cursor.execute(
         """
         UPDATE jobs
-        SET criado_em = ?
+        SET criado_em = datetime('now')
         WHERE status = 'PENDENTE'
           AND datetime(criado_em) > datetime('now', ?)
     """,
-        (_agora_sql_local(), f"+{tolerancia} seconds"),
+        (f"+{tolerancia} seconds",),
     )
     datas_normalizadas = int(cursor.rowcount or 0)
 
@@ -6647,14 +6622,13 @@ def atualizar_status(job_id, status):
     cursor = conn.cursor()
 
     if status in (STATUS_CONCLUIDO, STATUS_FINALIZADO_LEGADO):
-        finalizado_em = _agora_sql_local()
         cursor.execute(
             """
             UPDATE jobs
-            SET status = ?, finalizado_em = ?, erro_mensagem = NULL
+            SET status = ?, finalizado_em = datetime('now'), erro_mensagem = NULL
             WHERE id = ?
         """,
-            (status, finalizado_em, job_id),
+            (status, job_id),
         )
     elif status == "ERRO":
         cursor.execute(
@@ -9392,7 +9366,6 @@ def criar_ocorrencia(
                 ids_regimento_norm
             )
 
-    agora_sql = _agora_sql_local()
     conn = get_connection()
     cursor = conn.cursor()
 
@@ -9416,7 +9389,7 @@ def criar_ocorrencia(
                 criado_em,
                 atualizado_em
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
         """,
             (
                 tipo_registro_limpo,
@@ -9432,8 +9405,6 @@ def criar_ocorrencia(
                 descricao_limpa,
                 acao_aplicada_limpa,
                 status_limpo,
-                agora_sql,
-                agora_sql,
             ),
         )
 
@@ -9680,8 +9651,7 @@ def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
     if not atualizacoes:
         return False
 
-    atualizacoes.append("atualizado_em = ?")
-    parametros.append(_agora_sql_local())
+    atualizacoes.append("atualizado_em = datetime('now')")
     parametros.append(int(ocorrencia_id))
 
     conn = get_connection()

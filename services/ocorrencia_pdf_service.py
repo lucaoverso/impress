@@ -3,7 +3,7 @@ from __future__ import annotations
 import io
 import re
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -309,7 +309,9 @@ def _formatar_data_hora_br(valor: str | None) -> str:
     if not texto:
         return "Nao informado"
     try:
-        return datetime.strptime(texto, "%Y-%m-%d %H:%M:%S").strftime("%d/%m/%Y as %H:%M")
+        data_utc = datetime.strptime(texto, "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC)
+        data_local = data_utc.astimezone()
+        return data_local.strftime("%d/%m/%Y as %H:%M")
     except ValueError:
         return texto
 
