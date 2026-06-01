@@ -16,6 +16,7 @@ from pcpi_router import router as pcpi_router
 from preconselho_router import router as preconselho_router
 import routers.admin_router as admin_router_module
 import routers.agendamento_router as agendamento_router_module
+import modules.scheduling.router as scheduling_router_module
 import routers.common as common_module
 import routers.config as config_module
 import modules.printing.router as impressao_router_module
@@ -53,6 +54,7 @@ relatorios_router_module = _reload_or_import(relatorios_router_module)
 download_router_module = _reload_or_import(download_router_module)
 horario_escolar_router_module = _reload_or_import(horario_escolar_router_module)
 apc_router_module = _reload_or_import(apc_router_module)
+scheduling_router_module = _reload_or_import(scheduling_router_module)
 agendamento_router_module = _reload_or_import(agendamento_router_module)
 professores_router_module = _reload_or_import(professores_router_module)
 admin_router_module = _reload_or_import(admin_router_module)
@@ -67,7 +69,7 @@ relatorios_router = relatorios_router_module.router
 download_router = download_router_module.router
 horario_escolar_router = horario_escolar_router_module.router
 apc_router = apc_router_module.router
-agendamento_router = agendamento_router_module.router
+agendamento_router = scheduling_router_module.router
 professores_router = professores_router_module.router
 admin_router = admin_router_module.router
 
@@ -101,12 +103,12 @@ prioridade = impressao_router_module.prioridade
 meus_jobs = impressao_router_module.meus_jobs
 minha_cota = impressao_router_module.minha_cota
 
-recursos_agendamento = agendamento_router_module.recursos_agendamento
-opcoes_agendamento = agendamento_router_module.opcoes_agendamento
-professores_agendamento = agendamento_router_module.professores_agendamento
-listar_reservas_agendamento = agendamento_router_module.listar_reservas_agendamento
-criar_reserva_agendamento = agendamento_router_module.criar_reserva_agendamento
-cancelar_reserva_agendamento = agendamento_router_module.cancelar_reserva_agendamento
+recursos_agendamento = scheduling_router_module.recursos_agendamento
+opcoes_agendamento = scheduling_router_module.opcoes_agendamento
+professores_agendamento = scheduling_router_module.professores_agendamento
+listar_reservas_agendamento = scheduling_router_module.listar_reservas_agendamento
+criar_reserva_agendamento = scheduling_router_module.criar_reserva_agendamento
+cancelar_reserva_agendamento = scheduling_router_module.cancelar_reserva_agendamento
 
 opcoes_professores_publico = professores_router_module.opcoes_professores_publico
 criar_professor_publico = professores_router_module.criar_professor_publico
