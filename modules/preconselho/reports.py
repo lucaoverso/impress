@@ -1,0 +1,397 @@
+"""Consolidated and report flows for pre-conselho."""
+
+from collections import Counter
+
+from fastapi import HTTPException
+
+from . import repository
+from .service import (
+    enrich_editable_records,
+    has_manager_access,
+    resolve_teacher,
+    validate_classroom,
+    validate_discipline,
+    validate_period,
+)
+from services.preconselho_service import (
+    gerar_texto_consolidado_pre_conselho,
+    listar_niveis_atencao_pre_conselho,
+)
+
+
+def build_preconselho_consolidated(
+    *,
+    periodo_id: int,
+    turma_id: int | None,
+    disciplina_id: int | None,
+    professor_id: int | None,
+    usuario: dict,
+    enrich_teachers_in_records,
+) -> dict:
+    if not has_manager_access(usuario):
+        raise HTTPException(403, "Acesso negado.")
+    periodo = validate_period(periodo_id)
+
+    turma = validate_classroom(turma_id) if turma_id is not None else None
+    disciplina = validate_discipline(disciplina_id) if disciplina_id is not None else None
+    professor = None
+    if professor_id is not None:
+        professor = resolve_teacher(usuario, professor_id, permitir_gestor=True)
+
+    itens = repository.list_records(
+        periodo_id=int(periodo["id"]),
+        turma_id=int(turma["id"]) if turma else None,
+        disciplina_id=int(disciplina["id"]) if disciplina else None,
+        professor_usuario_id=int(professor["id"]) if professor else None,
+    )
+    itens = enrich_editable_records(usuario, itens)
+    itens = enrich_teachers_in_records(itens)
+    consolidado = gerar_texto_consolidado_pre_conselho(
+        periodo_nome=str(periodo["nome"]),
+        turma_nome=str(turma["nome"]) if turma else "Todas as turmas",
+        disciplina_nome=str(disciplina["nome"]) if disciplina else "Todas as disciplinas",
+        registros=itens,
+        professor_nome=str(professor["nome"]) if professor else "",
+    )
+    return {
+        "periodo_id": int(periodo["id"]),
+        "periodo_nome": periodo["nome"],
+        "turma_id": int(turma["id"]) if turma else None,
+        "turma_nome": turma["nome"] if turma else "",
+        "disciplina_id": int(disciplina["id"]) if disciplina else None,
+        "disciplina_nome": disciplina["nome"] if disciplina else "",
+        "professor_id": int(professor["id"]) if professor else None,
+        "professor_nome": professor["nome"] if professor else "",
+        "total_registros": int(consolidado["total_registros"]),
+        "total_estudantes": int(consolidado["total_estudantes"]),
+        "motivos_frequentes": consolidado["motivos_frequentes"],
+        "texto": consolidado["texto"],
+        "itens_agrupados": consolidado["itens_agrupados"],
+        "itens": itens,
+    }
+
+
+def build_preconselho_report(
+    *,
+    periodo_id: int,
+    usuario: dict,
+    map_teaching_staff_by_classrooms,
+    group_students,
+    group_teachers,
+    collect_frequent_reasons,
+    build_report_item,
+    format_natural_list,
+    attention_level_label,
+) -> dict:
+    if not has_manager_access(usuario):
+        raise HTTPException(403, "Acesso negado.")
+    periodo = validate_period(periodo_id)
+
+    registros = enrich_editable_records(
+        usuario,
+        repository.list_records(periodo_id=int(periodo["id"])),
+    )
+
+    niveis_map = {
+        str(item.get("id") or "").strip(): str(item.get("nome") or "").strip()
+        for item in listar_niveis_atencao_pre_conselho()
+        if str(item.get("id") or "").strip()
+    }
+
+    turmas_base = {
+        int(item["id"]): {
+            "id": int(item["id"]),
+            "nome": str(item.get("nome") or "").strip(),
+            "turno": str(item.get("turno") or "").strip(),
+            "quantidade_estudantes": int(item.get("quantidade_estudantes") or 0),
+        }
+        for item in repository.list_active_classrooms()
+        if int(item.get("id") or 0) > 0
+    }
+    for registro in registros:
+        turma_id = int(registro.get("turma_id") or 0)
+        if turma_id <= 0:
+            continue
+        if turma_id not in turmas_base:
+            turmas_base[turma_id] = {
+                "id": turma_id,
+                "nome": str(registro.get("turma_nome") or "").strip(),
+                "turno": "",
+                "quantidade_estudantes": 0,
+            }
+            continue
+        if not turmas_base[turma_id].get("nome"):
+            turmas_base[turma_id]["nome"] = str(registro.get("turma_nome") or "").strip()
+
+    teaching_staff_by_classroom = map_teaching_staff_by_classrooms(
+        {
+            turma_id: str(item.get("nome") or "").strip()
+            for turma_id, item in turmas_base.items()
+            if str(item.get("nome") or "").strip()
+        }
+    )
+
+    estudantes_agrupados = sorted(
+        group_students(registros),
+        key=lambda item: (-int(item.get("total_registros") or 0), str(item.get("nome") or "").casefold()),
+    )
+    professores_agrupados = sorted(
+        group_teachers(registros),
+        key=lambda item: (-int(item.get("total_registros") or 0), str(item.get("nome") or "").casefold()),
+    )
+    motivos_frequentes = collect_frequent_reasons(registros, limite=5)
+
+    contagem_turmas = Counter(
+        int(item.get("turma_id") or 0) for item in registros if int(item.get("turma_id") or 0) > 0
+    )
+    estudantes_por_turma = Counter(
+        int(item.get("turma_id") or 0)
+        for item in estudantes_agrupados
+        if int(item.get("turma_id") or 0) > 0
+    )
+
+    turma_destaque = build_report_item()
+    if contagem_turmas:
+        turma_id_destaque, total_registros_turma = sorted(
+            contagem_turmas.items(),
+            key=lambda item: (
+                -int(item[1]),
+                str((turmas_base.get(int(item[0])) or {}).get("nome") or "").casefold(),
+            ),
+        )[0]
+        turma_info = turmas_base.get(int(turma_id_destaque), {})
+        turma_destaque = build_report_item(
+            item_id=int(turma_id_destaque),
+            nome=str(turma_info.get("nome") or "").strip(),
+            total_registros=int(total_registros_turma or 0),
+            extra=f"{int(estudantes_por_turma.get(int(turma_id_destaque), 0))} estudante(s) sinalizado(s)",
+        )
+
+    professor_destaque = build_report_item()
+    if professores_agrupados:
+        professor_topo = professores_agrupados[0]
+        professor_destaque = build_report_item(
+            item_id=int(professor_topo.get("id") or 0),
+            nome=str(professor_topo.get("nome") or "").strip(),
+            total_registros=int(professor_topo.get("total_registros") or 0),
+            extra=f"{len(professor_topo.get('turmas') or [])} turma(s) com registros",
+        )
+
+    estudantes_destaque = []
+    for item in estudantes_agrupados[:5]:
+        niveis = format_natural_list(
+            [
+                attention_level_label(nivel, niveis_map)
+                for nivel in item.get("niveis") or []
+                if str(nivel or "").strip()
+            ]
+        )
+        partes_extra = [
+            str(item.get("turma_nome") or "").strip(),
+            format_natural_list(item.get("disciplinas") or []),
+            f"Atenção {niveis}" if niveis else "",
+        ]
+        estudantes_destaque.append(
+            build_report_item(
+                item_id=int(item.get("id") or 0),
+                nome=str(item.get("nome") or "").strip(),
+                total_registros=int(item.get("total_registros") or 0),
+                extra=" • ".join(parte for parte in partes_extra if parte),
+            )
+        )
+
+    contador_niveis = Counter(
+        attention_level_label(item.get("nivel_atencao"), niveis_map)
+        for item in registros
+        if attention_level_label(item.get("nivel_atencao"), niveis_map)
+    )
+    pontos_criticos = []
+    if turma_destaque.get("nome"):
+        pontos_criticos.append(
+            f"Turma com maior volume de registros: {turma_destaque['nome']} ({turma_destaque['total_registros']})."
+        )
+    if professor_destaque.get("nome"):
+        pontos_criticos.append(
+            f"Professor com mais registros: {professor_destaque['nome']} ({professor_destaque['total_registros']})."
+        )
+    if motivos_frequentes:
+        pontos_criticos.append(
+            "Motivos mais frequentes: "
+            + ", ".join(f"{item['nome']} ({item['total_registros']})" for item in motivos_frequentes[:3])
+            + "."
+        )
+    if contador_niveis:
+        pontos_criticos.append(
+            "Níveis de atenção mais recorrentes: "
+            + ", ".join(f"{nivel} ({total})" for nivel, total in contador_niveis.most_common(3))
+            + "."
+        )
+    total_nao_recuperados = sum(
+        1 for item in registros if item.get("pos_preconselho_recuperado") is False
+    )
+    if total_nao_recuperados > 0:
+        pontos_criticos.append(
+            f"{total_nao_recuperados} registro(s) indicam manutenção do baixo rendimento após a recuperação paralela."
+        )
+    if not pontos_criticos:
+        pontos_criticos.append("Nenhum registro lançado no período selecionado.")
+
+    turmas_relatorio = []
+    turmas_ordenadas = sorted(
+        turmas_base.values(),
+        key=lambda item: (
+            -int(contagem_turmas.get(int(item.get("id") or 0), 0)),
+            str(item.get("nome") or "").casefold(),
+        ),
+    )
+
+    for turma in turmas_ordenadas:
+        turma_id = int(turma.get("id") or 0)
+        registros_turma = [item for item in registros if int(item.get("turma_id") or 0) == turma_id]
+        estudantes_turma = sorted(
+            group_students(registros_turma),
+            key=lambda item: (-int(item.get("total_registros") or 0), str(item.get("nome") or "").casefold()),
+        )
+        professores_turma = sorted(
+            group_teachers(registros_turma),
+            key=lambda item: (-int(item.get("total_registros") or 0), str(item.get("nome") or "").casefold()),
+        )
+        motivos_turma = collect_frequent_reasons(registros_turma, limite=5)
+        professor_destaque_turma = build_report_item()
+        if professores_turma:
+            topo_turma = professores_turma[0]
+            professor_destaque_turma = build_report_item(
+                item_id=int(topo_turma.get("id") or 0),
+                nome=str(topo_turma.get("nome") or "").strip(),
+                total_registros=int(topo_turma.get("total_registros") or 0),
+                extra=format_natural_list(topo_turma.get("disciplinas") or []),
+            )
+
+        estudantes_destaque_turma = []
+        for item in estudantes_turma[:5]:
+            niveis = format_natural_list(
+                [
+                    attention_level_label(nivel, niveis_map)
+                    for nivel in item.get("niveis") or []
+                    if str(nivel or "").strip()
+                ]
+            )
+            partes_extra = [
+                format_natural_list(item.get("disciplinas") or []),
+                f"Atenção {niveis}" if niveis else "",
+            ]
+            estudantes_destaque_turma.append(
+                build_report_item(
+                    item_id=int(item.get("id") or 0),
+                    nome=str(item.get("nome") or "").strip(),
+                    total_registros=int(item.get("total_registros") or 0),
+                    extra=" • ".join(parte for parte in partes_extra if parte),
+                )
+            )
+
+        contagem_professores_turma = {
+            str(item.get("nome") or "").strip(): int(item.get("total_registros") or 0)
+            for item in professores_turma
+        }
+        professores_relacionados = []
+        nomes_professores_relacionados = set()
+        for item in sorted(
+            (teaching_staff_by_classroom.get(turma_id) or {}).get("corpo_docente", []),
+            key=lambda entry: (
+                -int(contagem_professores_turma.get(str(entry.get("professor_nome") or "").strip(), 0)),
+                str(entry.get("professor_nome") or "").casefold(),
+            ),
+        ):
+            nome_professor = str(item.get("professor_nome") or "").strip()
+            if not nome_professor:
+                continue
+            nomes_professores_relacionados.add(nome_professor)
+            professores_relacionados.append(
+                build_report_item(
+                    nome=nome_professor,
+                    total_registros=int(contagem_professores_turma.get(nome_professor, 0)),
+                    extra=format_natural_list(item.get("disciplinas") or []),
+                )
+            )
+        for item in professores_turma:
+            nome_professor = str(item.get("nome") or "").strip()
+            if not nome_professor or nome_professor in nomes_professores_relacionados:
+                continue
+            professores_relacionados.append(
+                build_report_item(
+                    item_id=int(item.get("id") or 0),
+                    nome=nome_professor,
+                    total_registros=int(item.get("total_registros") or 0),
+                    extra=format_natural_list(item.get("disciplinas") or []),
+                )
+            )
+
+        contador_niveis_turma = Counter(
+            attention_level_label(item.get("nivel_atencao"), niveis_map)
+            for item in registros_turma
+            if attention_level_label(item.get("nivel_atencao"), niveis_map)
+        )
+        pontos_atencao = []
+        if motivos_turma:
+            pontos_atencao.append(
+                "Motivos mais frequentes: "
+                + ", ".join(f"{item['nome']} ({item['total_registros']})" for item in motivos_turma[:3])
+                + "."
+            )
+        estudantes_multiplos = [item for item in estudantes_turma if int(item.get("total_registros") or 0) > 1]
+        if estudantes_multiplos:
+            pontos_atencao.append(
+                "Estudantes com mais de um registro: "
+                + ", ".join(f"{item['nome']} ({item['total_registros']})" for item in estudantes_multiplos[:3])
+                + "."
+            )
+        if contador_niveis_turma:
+            pontos_atencao.append(
+                "Níveis de atenção em destaque: "
+                + ", ".join(f"{nivel} ({total})" for nivel, total in contador_niveis_turma.most_common(3))
+                + "."
+            )
+        total_nao_recuperados_turma = sum(
+            1 for item in registros_turma if item.get("pos_preconselho_recuperado") is False
+        )
+        if total_nao_recuperados_turma > 0:
+            pontos_atencao.append(
+                f"{total_nao_recuperados_turma} registro(s) mantiveram indicação de baixo rendimento após recuperação paralela."
+            )
+        if not pontos_atencao:
+            pontos_atencao.append(
+                "Nenhum registro lançado para esta turma no período selecionado."
+                if not registros_turma
+                else "Sem concentração crítica adicional além dos registros já lançados."
+            )
+
+        turmas_relatorio.append(
+            {
+                "turma_id": turma_id,
+                "turma_nome": str(turma.get("nome") or "").strip(),
+                "turno": str(turma.get("turno") or "").strip(),
+                "quantidade_estudantes": int(turma.get("quantidade_estudantes") or 0),
+                "total_registros": len(registros_turma),
+                "total_estudantes_sinalizados": len(estudantes_turma),
+                "professor_destaque": professor_destaque_turma,
+                "estudantes_destaque": estudantes_destaque_turma,
+                "professores_relacionados": professores_relacionados,
+                "motivos_frequentes": motivos_turma,
+                "pontos_atencao": pontos_atencao,
+            }
+        )
+
+    return {
+        "periodo_id": int(periodo["id"]),
+        "periodo_nome": str(periodo.get("nome") or ""),
+        "total_registros": len(registros),
+        "total_estudantes_sinalizados": len(estudantes_agrupados),
+        "total_turmas_com_registros": len(contagem_turmas),
+        "total_professores_com_registros": len(professores_agrupados),
+        "turma_destaque": turma_destaque,
+        "professor_destaque": professor_destaque,
+        "motivos_frequentes": motivos_frequentes,
+        "pontos_criticos": pontos_criticos,
+        "estudantes_destaque": estudantes_destaque,
+        "turmas": turmas_relatorio,
+    }

@@ -64,6 +64,39 @@ from models import (
     PreConselhoTurmaDisciplinaOut,
     PreConselhoTurmaOut,
 )
+from modules.preconselho.service import (
+    build_preconselho_context,
+    build_preconselho_consolidated,
+    build_preconselho_report,
+    build_legacy_teacher_scope,
+    build_teacher_scope,
+    delete_preconselho_record,
+    enrich_editable_records,
+    get_teacher_options,
+    get_user_id,
+    has_manager_access,
+    is_admin_user,
+    is_record_editable_for_user,
+    is_teacher_user,
+    list_my_classroom_disciplines,
+    list_panel_students,
+    list_active_valid_reasons,
+    normalize_user_role,
+    optional_text,
+    list_preconselho_records,
+    require_admin_access,
+    require_preconselho_access,
+    require_text,
+    resolve_teacher,
+    save_preconselho_record,
+    validate_classroom,
+    validate_discipline,
+    validate_iso_date,
+    validate_period,
+    validate_student_in_classroom,
+    validate_teacher_filters,
+    validate_teacher_scope,
+)
 from services.preconselho_service import (
     STATUS_PERIODO_PRE_CONSELHO_ABERTO,
     gerar_texto_consolidado_pre_conselho,
@@ -77,26 +110,21 @@ from services.preconselho_service import (
     validar_nivel_atencao_pre_conselho,
     validar_status_periodo_pre_conselho,
 )
-from routers.common import normalizar_cargo_usuario, usuario_tem_acesso_coordenacao
 
 
 router = APIRouter()
 
 
 def _normalizar_cargo(usuario: dict) -> str:
-    return normalizar_cargo_usuario(usuario)
+    return normalize_user_role(usuario)
 
 
 def _exigir_acesso_preconselho(usuario: dict):
-    if _normalizar_cargo(usuario) not in {"ADMIN", "COORDENADOR", "PROFESSOR"}:
-        raise HTTPException(403, "Acesso negado.")
-    return usuario
+    return require_preconselho_access(usuario)
 
 
 def _exigir_admin(usuario: dict):
-    if _normalizar_cargo(usuario) != "ADMIN":
-        raise HTTPException(403, "Acesso negado.")
-    return usuario
+    return require_admin_access(usuario)
 
 
 def _usuario_id(usuario: dict) -> int:
@@ -110,15 +138,15 @@ def _usuario_id(usuario: dict) -> int:
 
 
 def _usuario_eh_admin(usuario: dict) -> bool:
-    return _normalizar_cargo(usuario) == "ADMIN"
+    return is_admin_user(usuario)
 
 
 def _usuario_eh_gestor(usuario: dict) -> bool:
-    return usuario_tem_acesso_coordenacao(usuario)
+    return has_manager_access(usuario)
 
 
 def _usuario_eh_professor(usuario: dict) -> bool:
-    return _normalizar_cargo(usuario) == "PROFESSOR"
+    return is_teacher_user(usuario)
 
 
 def _texto_obrigatorio(valor: str, campo: str, *, max_len: int = 255) -> str:
@@ -385,6 +413,31 @@ def _registro_editavel_usuario(usuario: dict, registro: dict) -> bool:
 
 def _enriquecer_editavel(usuario: dict, itens: list[dict]) -> list[dict]:
     return [{**item, "editavel": _registro_editavel_usuario(usuario, item)} for item in itens]
+
+
+_normalizar_cargo = normalize_user_role
+_exigir_acesso_preconselho = require_preconselho_access
+_exigir_admin = require_admin_access
+_usuario_id = get_user_id
+_usuario_eh_admin = is_admin_user
+_usuario_eh_gestor = has_manager_access
+_usuario_eh_professor = is_teacher_user
+_texto_obrigatorio = require_text
+_texto_opcional = optional_text
+_validar_data_iso = validate_iso_date
+_validar_periodo = validate_period
+_validar_turma = validate_classroom
+_validar_disciplina = validate_discipline
+_validar_estudante_na_turma = validate_student_in_classroom
+_resolver_professor = resolve_teacher
+_escopo_professor_legado = build_legacy_teacher_scope
+_escopo_professor = build_teacher_scope
+_opcoes_professor = get_teacher_options
+_validar_escopo_professor = validate_teacher_scope
+_validar_filtros_professor = validate_teacher_filters
+_motivos_ativos_validos = list_active_valid_reasons
+_registro_editavel_usuario = is_record_editable_for_user
+_enriquecer_editavel = enrich_editable_records
 
 
 def _lista_texto_unica(valores) -> list[str]:
@@ -656,64 +709,7 @@ def _minhas_turmas_disciplinas(periodo_id: int, professor_id: int) -> list[dict]
 
 @router.get("/preconselho/contexto", response_model=PreConselhoContextoOut)
 def obter_contexto_preconselho_api(usuario=Depends(get_usuario_logado)):
-    _exigir_acesso_preconselho(usuario)
-    cargo = _normalizar_cargo(usuario)
-    usuario_id = _usuario_id(usuario)
-    turmas_professor, disciplinas_professor = (
-        _opcoes_professor(usuario_id) if _usuario_eh_professor(usuario) else ([], [])
-    )
-    periodos = listar_periodos_pre_conselho()
-    periodo_referencia = next(
-        (item for item in periodos if item.get("status") == STATUS_PERIODO_PRE_CONSELHO_ABERTO),
-        None,
-    )
-    minhas_turmas_disciplinas = (
-        _minhas_turmas_disciplinas(int(periodo_referencia["id"]), usuario_id)
-        if _usuario_eh_professor(usuario) and periodo_referencia
-        else []
-    )
-
-    return {
-        "cargo": cargo,
-        "pode_configurar": _usuario_eh_admin(usuario),
-        "pode_consolidar": _usuario_eh_gestor(usuario),
-        "pode_relatorio": _usuario_eh_gestor(usuario),
-        "pode_editar_periodo_fechado": _usuario_eh_admin(usuario),
-        "professor_id": usuario_id if _usuario_eh_professor(usuario) else None,
-        "professor_nome": str(usuario.get("nome") or "").strip()
-        if _usuario_eh_professor(usuario)
-        else "",
-        "periodos": [
-            {
-                **item,
-                "editavel": periodo_editavel_para_cargo(item.get("status"), cargo),
-            }
-            for item in periodos
-        ],
-        "turmas": turmas_professor if _usuario_eh_professor(usuario) else listar_turmas_ativas(),
-        "disciplinas": disciplinas_professor
-        if _usuario_eh_professor(usuario)
-        else listar_disciplinas_ativas(),
-        "motivos": listar_motivos_pre_conselho(incluir_inativos=_usuario_eh_admin(usuario)),
-        "professores": [
-            {
-                "id": int(item["id"]),
-                "nome": item["nome"],
-                "email": item.get("email", ""),
-                "label": (
-                    f"{item['nome']} ({item.get('email', '')})"
-                    if str(item.get("email", "")).strip()
-                    else item["nome"]
-                ),
-            }
-            for item in listar_professores_agendamento()
-        ]
-        if _usuario_eh_gestor(usuario)
-        else [],
-        "niveis_atencao": listar_niveis_atencao_pre_conselho(),
-        "motivos_pos_preconselho": listar_motivos_pos_pre_conselho(),
-        "minhas_turmas_disciplinas": minhas_turmas_disciplinas,
-    }
+    return build_preconselho_context(usuario)
 
 
 @router.get(
@@ -723,10 +719,7 @@ def listar_minhas_turmas_disciplinas_preconselho_api(
     periodo_id: int = Query(...),
     usuario=Depends(get_usuario_logado),
 ):
-    if not _usuario_eh_professor(usuario):
-        raise HTTPException(403, "Acesso negado.")
-    _validar_periodo(periodo_id)
-    return _minhas_turmas_disciplinas(int(periodo_id), _usuario_id(usuario))
+    return list_my_classroom_disciplines(periodo_id=periodo_id, usuario=usuario)
 
 
 @router.get("/preconselho/estudantes", response_model=list[PreConselhoEstudantePainelOut])
@@ -739,22 +732,15 @@ def listar_estudantes_preconselho_api(
     professor_id: int | None = Query(default=None),
     usuario=Depends(get_usuario_logado),
 ):
-    _exigir_acesso_preconselho(usuario)
-    periodo = _validar_periodo(periodo_id)
-    turma = _validar_turma(turma_id)
-    disciplina = _validar_disciplina(disciplina_id)
-    professor = _resolver_professor(usuario, professor_id, permitir_gestor=True)
-    _validar_escopo_professor(int(professor["id"]), int(turma["id"]), int(disciplina["id"]))
-
-    itens = listar_estudantes_pre_conselho_painel(
-        periodo_id=int(periodo["id"]),
-        turma_id=int(turma["id"]),
-        disciplina_id=int(disciplina["id"]),
-        professor_usuario_id=int(professor["id"]),
-        busca_nome=q,
+    return list_panel_students(
+        periodo_id=periodo_id,
+        turma_id=turma_id,
+        disciplina_id=disciplina_id,
+        q=q,
         status=status,
+        professor_id=professor_id,
+        usuario=usuario,
     )
-    return itens
 
 
 @router.post("/preconselho/texto/preview", response_model=PreConselhoTextoOut)
@@ -799,6 +785,8 @@ def salvar_registro_preconselho_api(
     payload: PreConselhoRegistroSaveIn,
     usuario=Depends(get_usuario_logado),
 ):
+    return save_preconselho_record(payload, usuario)
+
     _exigir_acesso_preconselho(usuario)
     periodo = _validar_periodo(payload.periodo_id)
     turma = _validar_turma(payload.turma_id)
@@ -897,6 +885,8 @@ def salvar_registro_preconselho_api(
 
 @router.delete("/preconselho/registros/{registro_id}")
 def excluir_registro_preconselho_api(registro_id: int, usuario=Depends(get_usuario_logado)):
+    return delete_preconselho_record(registro_id, usuario)
+
     _exigir_acesso_preconselho(usuario)
     registro = buscar_registro_pre_conselho_por_id(registro_id)
     if not registro:
@@ -920,6 +910,14 @@ def listar_registros_preconselho_api(
     professor_id: int | None = Query(default=None),
     usuario=Depends(get_usuario_logado),
 ):
+    return list_preconselho_records(
+        periodo_id=periodo_id,
+        turma_id=turma_id,
+        disciplina_id=disciplina_id,
+        professor_id=professor_id,
+        usuario=usuario,
+    )
+
     _exigir_acesso_preconselho(usuario)
     _validar_periodo(periodo_id)
 
@@ -950,6 +948,15 @@ def gerar_consolidado_preconselho_api(
     professor_id: int | None = Query(default=None),
     usuario=Depends(get_usuario_logado),
 ):
+    return build_preconselho_consolidated(
+        periodo_id=periodo_id,
+        turma_id=turma_id,
+        disciplina_id=disciplina_id,
+        professor_id=professor_id,
+        usuario=usuario,
+        enrich_teachers_in_records=_enriquecer_professores_turma_registros,
+    )
+
     if not _usuario_eh_gestor(usuario):
         raise HTTPException(403, "Acesso negado.")
     periodo = _validar_periodo(periodo_id)
@@ -998,6 +1005,18 @@ def gerar_relatorio_preconselho_api(
     periodo_id: int = Query(...),
     usuario=Depends(get_usuario_logado),
 ):
+    return build_preconselho_report(
+        periodo_id=periodo_id,
+        usuario=usuario,
+        map_teaching_staff_by_classrooms=_mapa_corpo_docente_por_turmas,
+        group_students=_agrupar_estudantes_relatorio,
+        group_teachers=_agrupar_professores_relatorio,
+        collect_frequent_reasons=_coletar_motivos_frequentes,
+        build_report_item=_montar_item_relatorio,
+        format_natural_list=_formatar_lista_natural,
+        attention_level_label=_rotulo_nivel_atencao_relatorio,
+    )
+
     if not _usuario_eh_gestor(usuario):
         raise HTTPException(403, "Acesso negado.")
     periodo = _validar_periodo(periodo_id)

@@ -6,7 +6,13 @@ from fastapi.responses import Response
 
 from auth import get_usuario_logado
 from modules.printing import repository
-from modules.printing.config import DEFAULT_PRINTER_NAME, FORMATOS_UPLOAD_DESCRICAO, SPOOL_DIR
+from modules.printing.config import (
+    DEFAULT_PRINTER_NAME,
+    FORMATOS_UPLOAD_DESCRICAO,
+    get_default_printer_name,
+    get_spool_dir,
+    get_upload_formats_description,
+)
 from modules.printing.dependencies import (
     buscar_usuario_por_id,
     require_print_manager,
@@ -38,7 +44,7 @@ logger = logging.getLogger(__name__)
 
 
 def _ensure_spool_dir() -> Path:
-    caminho_spool = Path(SPOOL_DIR)
+    caminho_spool = Path(get_spool_dir())
     caminho_spool.mkdir(parents=True, exist_ok=True)
     return caminho_spool
 

@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from modules.printing.config import DEFAULT_PRINTER_NAME, SPOOL_DIR
+from modules.printing.config import DEFAULT_PRINTER_NAME, get_default_printer_name, get_spool_dir
 from modules.printing.dependencies import user_can_manage_prints, user_has_unlimited_quota
 from modules.printing.repository import (
     cancel_job as cancelar_job,
@@ -53,7 +53,7 @@ def contar_paginas_intervalo(intervalo: str, total_paginas: int) -> int:
 
 
 def garantir_diretorio_spool() -> Path:
-    caminho_spool = Path(SPOOL_DIR)
+    caminho_spool = Path(get_spool_dir())
     caminho_spool.mkdir(parents=True, exist_ok=True)
     return caminho_spool
 
@@ -168,7 +168,7 @@ def criar_job_a_partir_pdf_pronto(
         validar_e_consumir_cota=validar_e_consumir_cota,
         usuario_tem_cota_ilimitada=user_has_unlimited_quota,
         criar_job=criar_job,
-        default_printer_name=DEFAULT_PRINTER_NAME,
+        default_printer_name=get_default_printer_name(),
         logger=logger,
         remover_arquivo_se_existir=remover_arquivo_se_existir,
     )
