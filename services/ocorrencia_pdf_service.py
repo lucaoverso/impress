@@ -1405,7 +1405,7 @@ class _RenderizadorRegistroOcorrencia:
             self.centro_x,
             self.direita - ((self.direita - self.esquerda) * 0.18),
         ]
-        titulos = ["Estudante", "Coordenação Pedagógica", "Direção"]
+        titulos = ["Responsável", "Coordenação Pedagógica", "Direção"]
         for centro, titulo in zip(centros, titulos):
             self._desenhar_linha_assinatura(int(centro), y_base + 54, 420, titulo)
         self._desenhar_emitido_em(y_base + 142)
