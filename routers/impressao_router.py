@@ -1,6 +1,8 @@
 import logging
 from pathlib import Path
 
+from fastapi.responses import Response
+
 from modules.printing.config import DEFAULT_PRINTER_NAME, get_default_printer_name, get_spool_dir
 from modules.printing.dependencies import user_can_manage_prints, user_has_unlimited_quota
 from modules.printing.repository import (
@@ -16,9 +18,7 @@ from modules.printing.router import (
     meus_jobs,
     minha_cota,
     preview_impressao,
-    preview_job_historico,
     prioridade,
-    reimprimir_job_historico,
     router,
     status_impressao,
     tags_impressao,
@@ -35,6 +35,8 @@ from modules.printing.service import (
     get_job_with_access,
     normalize_print_tags,
     print_job_can_be_reused,
+    read_reusable_job_pdf_content,
+    reprint_job_from_history,
     resolve_job_pdf_path,
     resolve_print_tags,
     sanitize_file_name,
@@ -168,6 +170,63 @@ def criar_job_a_partir_pdf_pronto(
         validar_e_consumir_cota=validar_e_consumir_cota,
         usuario_tem_cota_ilimitada=user_has_unlimited_quota,
         criar_job=criar_job,
+        default_printer_name=get_default_printer_name(),
+        logger=logger,
+        remover_arquivo_se_existir=remover_arquivo_se_existir,
+    )
+
+
+def preview_job_historico(job_id: int, usuario):
+    _job, _caminho_arquivo, conteudo_pdf = read_reusable_job_pdf_content(
+        job_id=job_id,
+        usuario=usuario,
+        spool_dir=garantir_diretorio_spool(),
+        buscar_job=buscar_job,
+        usuario_pode_gerir_impressoes=user_can_manage_prints,
+    )
+    return Response(
+        content=conteudo_pdf,
+        media_type="application/pdf",
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+def reimprimir_job_historico(
+    *,
+    job_id: int,
+    copias: int,
+    paginas_por_folha: int = 1,
+    duplex: bool = False,
+    orientacao: str = "retrato",
+    intervalo_paginas: str = "",
+    tags: list[str] | None = None,
+    professor_id: int | None = None,
+    usuario,
+):
+    from modules.printing.dependencies import resolve_print_teacher
+
+    usuario_responsavel = resolve_print_teacher(
+        usuario,
+        professor_id,
+        contexto="solicitante da reimpressão",
+        permitir_professor_com_acesso_coordenacao=True,
+    )
+
+    return reprint_job_from_history(
+        job_id=job_id,
+        copias=copias,
+        paginas_por_folha=paginas_por_folha,
+        duplex=duplex,
+        orientacao=orientacao,
+        intervalo_paginas=intervalo_paginas,
+        tags_impressao=tags,
+        usuario=usuario,
+        usuario_responsavel=usuario_responsavel,
+        spool_dir=garantir_diretorio_spool(),
+        contar_paginas_pdf=contar_paginas_pdf,
+        validar_e_consumir_cota=validar_e_consumir_cota,
+        usuario_pode_gerir_impressoes=user_can_manage_prints,
+        usuario_tem_cota_ilimitada=user_has_unlimited_quota,
         default_printer_name=get_default_printer_name(),
         logger=logger,
         remover_arquivo_se_existir=remover_arquivo_se_existir,
