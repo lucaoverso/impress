@@ -26,13 +26,14 @@ function renderResumoStatusImpressao(status) {
     const semPapel = Boolean(status?.sem_papel);
     const mensagem = String(status?.mensagem || "").trim();
     const atualizadoEm = String(status?.atualizado_em || "").trim();
+    const atualizadoEmFormatado = atualizadoEm ? formatarDataHora(atualizadoEm) : "agora";
 
     resumo.className = semPapel
         ? "admin-status-box is-warning"
         : "admin-status-box is-ok";
     resumo.innerHTML = semPapel
-        ? `<strong>Impressao bloqueada</strong><p>${mensagem || "Sem papel informado no painel administrativo."}</p><small>Atualizado em: ${atualizadoEm || "agora"}</small>`
-        : `<strong>Impressao liberada</strong><p>Nenhum bloqueio por falta de papel ativo no momento.</p><small>Atualizado em: ${atualizadoEm || "agora"}</small>`;
+        ? `<strong>Impressao bloqueada</strong><p>${mensagem || "Sem papel informado no painel administrativo."}</p><small>Atualizado em: ${atualizadoEmFormatado}</small>`
+        : `<strong>Impressao liberada</strong><p>Nenhum bloqueio por falta de papel ativo no momento.</p><small>Atualizado em: ${atualizadoEmFormatado}</small>`;
 }
 
 async function carregarStatusImpressaoAdmin() {
