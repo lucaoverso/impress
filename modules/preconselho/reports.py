@@ -5,6 +5,15 @@ from collections import Counter
 from fastapi import HTTPException
 
 from . import repository
+from .report_helpers import (
+    attention_level_label as default_attention_level_label,
+    build_report_item as default_build_report_item,
+    collect_frequent_reasons as default_collect_frequent_reasons,
+    format_natural_list as default_format_natural_list,
+    group_students as default_group_students,
+    group_teachers as default_group_teachers,
+    map_teaching_staff_by_classrooms as default_map_teaching_staff_by_classrooms,
+)
 from .service import (
     enrich_editable_records,
     has_manager_access,
@@ -26,7 +35,7 @@ def build_preconselho_consolidated(
     disciplina_id: int | None,
     professor_id: int | None,
     usuario: dict,
-    enrich_teachers_in_records,
+    enrich_teachers_in_records=None,
 ) -> dict:
     if not has_manager_access(usuario):
         raise HTTPException(403, "Acesso negado.")
@@ -45,6 +54,7 @@ def build_preconselho_consolidated(
         professor_usuario_id=int(professor["id"]) if professor else None,
     )
     itens = enrich_editable_records(usuario, itens)
+    enrich_teachers_in_records = enrich_teachers_in_records or repository_enrich_teachers_in_records
     itens = enrich_teachers_in_records(itens)
     consolidado = gerar_texto_consolidado_pre_conselho(
         periodo_nome=str(periodo["nome"]),
@@ -75,17 +85,27 @@ def build_preconselho_report(
     *,
     periodo_id: int,
     usuario: dict,
-    map_teaching_staff_by_classrooms,
-    group_students,
-    group_teachers,
-    collect_frequent_reasons,
-    build_report_item,
-    format_natural_list,
-    attention_level_label,
+    map_teaching_staff_by_classrooms=None,
+    group_students=None,
+    group_teachers=None,
+    collect_frequent_reasons=None,
+    build_report_item=None,
+    format_natural_list=None,
+    attention_level_label=None,
 ) -> dict:
     if not has_manager_access(usuario):
         raise HTTPException(403, "Acesso negado.")
     periodo = validate_period(periodo_id)
+
+    map_teaching_staff_by_classrooms = (
+        map_teaching_staff_by_classrooms or default_map_teaching_staff_by_classrooms
+    )
+    group_students = group_students or default_group_students
+    group_teachers = group_teachers or default_group_teachers
+    collect_frequent_reasons = collect_frequent_reasons or default_collect_frequent_reasons
+    build_report_item = build_report_item or default_build_report_item
+    format_natural_list = format_natural_list or default_format_natural_list
+    attention_level_label = attention_level_label or default_attention_level_label
 
     registros = enrich_editable_records(
         usuario,
@@ -395,3 +415,9 @@ def build_preconselho_report(
         "estudantes_destaque": estudantes_destaque,
         "turmas": turmas_relatorio,
     }
+
+
+def repository_enrich_teachers_in_records(records: list[dict]) -> list[dict]:
+    from .report_helpers import enrich_teachers_in_records
+
+    return enrich_teachers_in_records(records)

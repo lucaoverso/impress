@@ -13,7 +13,7 @@ from auth import router as auth_router
 from db.bootstrap import criar_tabelas, criar_usuario_se_nao_existir, seed_recursos_padrao
 from ocorrencias_router import router as ocorrencias_router
 from pcpi_router import router as pcpi_router
-from preconselho_router import router as preconselho_router
+import modules.preconselho.router as preconselho_router_module
 import routers.admin_router as admin_router_module
 import routers.agendamento_router as agendamento_router_module
 import modules.scheduling.router as scheduling_router_module
@@ -58,6 +58,7 @@ scheduling_router_module = _reload_or_import(scheduling_router_module)
 agendamento_router_module = _reload_or_import(agendamento_router_module)
 professores_router_module = _reload_or_import(professores_router_module)
 admin_router_module = _reload_or_import(admin_router_module)
+preconselho_router_module = _reload_or_import(preconselho_router_module)
 
 ENABLE_EMBEDDED_WORKER = config_module.ENABLE_EMBEDDED_WORKER
 STATIC_DIR = config_module.STATIC_DIR
@@ -72,6 +73,7 @@ apc_router = apc_router_module.router
 agendamento_router = scheduling_router_module.router
 professores_router = professores_router_module.router
 admin_router = admin_router_module.router
+preconselho_router = preconselho_router_module.router
 
 root = system_router_module.root
 health = system_router_module.health

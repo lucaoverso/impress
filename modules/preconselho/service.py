@@ -404,6 +404,60 @@ def list_panel_students(
     )
 
 
+def list_preconselho_periods(usuario: dict) -> list[dict]:
+    from .admin import list_preconselho_periods as _list_preconselho_periods
+
+    return _list_preconselho_periods(usuario)
+
+
+def create_preconselho_period(payload, usuario: dict) -> dict:
+    from .admin import create_preconselho_period as _create_preconselho_period
+
+    return _create_preconselho_period(payload, usuario)
+
+
+def update_preconselho_period(periodo_id: int, payload, usuario: dict) -> dict:
+    from .admin import update_preconselho_period as _update_preconselho_period
+
+    return _update_preconselho_period(periodo_id, payload, usuario)
+
+
+def update_preconselho_period_status(periodo_id: int, payload, usuario: dict) -> dict:
+    from .admin import update_preconselho_period_status as _update_preconselho_period_status
+
+    return _update_preconselho_period_status(periodo_id, payload, usuario)
+
+
+def list_preconselho_reasons(*, incluir_inativos: bool, usuario: dict) -> list[dict]:
+    from .admin import list_preconselho_reasons as _list_preconselho_reasons
+
+    return _list_preconselho_reasons(incluir_inativos=incluir_inativos, usuario=usuario)
+
+
+def create_preconselho_reason(payload, usuario: dict) -> dict:
+    from .admin import create_preconselho_reason as _create_preconselho_reason
+
+    return _create_preconselho_reason(payload, usuario)
+
+
+def update_preconselho_reason(motivo_id: int, payload, usuario: dict) -> dict:
+    from .admin import update_preconselho_reason as _update_preconselho_reason
+
+    return _update_preconselho_reason(motivo_id, payload, usuario)
+
+
+def update_preconselho_reason_status(motivo_id: int, payload, usuario: dict) -> dict:
+    from .admin import update_preconselho_reason_status as _update_preconselho_reason_status
+
+    return _update_preconselho_reason_status(motivo_id, payload, usuario)
+
+
+def list_preconselho_attention_levels(usuario: dict) -> list[dict]:
+    from .admin import list_preconselho_attention_levels as _list_preconselho_attention_levels
+
+    return _list_preconselho_attention_levels(usuario)
+
+
 def build_preconselho_consolidated(
     *,
     periodo_id: int,
@@ -411,7 +465,7 @@ def build_preconselho_consolidated(
     disciplina_id: int | None,
     professor_id: int | None,
     usuario: dict,
-    enrich_teachers_in_records,
+    enrich_teachers_in_records=None,
 ) -> dict:
     from .reports import build_preconselho_consolidated as _build_preconselho_consolidated
 
@@ -429,13 +483,13 @@ def build_preconselho_report(
     *,
     periodo_id: int,
     usuario: dict,
-    map_teaching_staff_by_classrooms,
-    group_students,
-    group_teachers,
-    collect_frequent_reasons,
-    build_report_item,
-    format_natural_list,
-    attention_level_label,
+    map_teaching_staff_by_classrooms=None,
+    group_students=None,
+    group_teachers=None,
+    collect_frequent_reasons=None,
+    build_report_item=None,
+    format_natural_list=None,
+    attention_level_label=None,
 ) -> dict:
     from .reports import build_preconselho_report as _build_preconselho_report
 
@@ -450,3 +504,72 @@ def build_preconselho_report(
         format_natural_list=format_natural_list,
         attention_level_label=attention_level_label,
     )
+
+
+def preview_preconselho_text(payload, usuario: dict) -> dict:
+    from .text_preview import preview_preconselho_text as _preview_preconselho_text
+
+    return _preview_preconselho_text(payload, usuario)
+
+
+def list_preconselho_periods(usuario: dict) -> list[dict]:
+    from .admin import list_preconselho_periods as _list_preconselho_periods
+
+    return _list_preconselho_periods(usuario)
+
+
+def create_preconselho_period(payload, usuario: dict) -> dict:
+    from .admin import create_preconselho_period as _create_preconselho_period
+
+    return _create_preconselho_period(payload, usuario)
+
+
+def update_preconselho_period(periodo_id: int, payload, usuario: dict) -> dict:
+    from .admin import update_preconselho_period as _update_preconselho_period
+
+    return _update_preconselho_period(periodo_id, payload, usuario)
+
+
+def update_preconselho_period_status(periodo_id: int, payload, usuario: dict) -> dict:
+    from .admin import (
+        update_preconselho_period_status as _update_preconselho_period_status,
+    )
+
+    return _update_preconselho_period_status(periodo_id, payload, usuario)
+
+
+def list_preconselho_reasons(*, incluir_inativos: bool, usuario: dict) -> list[dict]:
+    from .admin import list_preconselho_reasons as _list_preconselho_reasons
+
+    return _list_preconselho_reasons(
+        incluir_inativos=incluir_inativos,
+        usuario=usuario,
+    )
+
+
+def create_preconselho_reason(payload, usuario: dict) -> dict:
+    from .admin import create_preconselho_reason as _create_preconselho_reason
+
+    return _create_preconselho_reason(payload, usuario)
+
+
+def update_preconselho_reason(motivo_id: int, payload, usuario: dict) -> dict:
+    from .admin import update_preconselho_reason as _update_preconselho_reason
+
+    return _update_preconselho_reason(motivo_id, payload, usuario)
+
+
+def update_preconselho_reason_status(motivo_id: int, payload, usuario: dict) -> dict:
+    from .admin import (
+        update_preconselho_reason_status as _update_preconselho_reason_status,
+    )
+
+    return _update_preconselho_reason_status(motivo_id, payload, usuario)
+
+
+def list_preconselho_attention_levels(usuario: dict) -> list[dict]:
+    from .admin import (
+        list_preconselho_attention_levels as _list_preconselho_attention_levels,
+    )
+
+    return _list_preconselho_attention_levels(usuario)

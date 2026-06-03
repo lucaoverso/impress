@@ -9,7 +9,7 @@
 </head>
 
 <body class="professor-page">
-    <header class="app-topbar print-app-topbar">
+    <header class="app-topbar print-app-topbar print-shell-header">
         <div class="app-topbar-main">
             <div class="app-topbar-brand">
                 <span class="app-topbar-logo">Suite Escolar</span>
@@ -18,6 +18,7 @@
         </div>
         <div class="app-topbar-actions">
             <button id="btnVoltarServicos" type="button">Servicos</button>
+            <button id="btnAbrirHistoricoTopbar" type="button">Meus pedidos</button>
             <button id="btnSair" type="button">Sair</button>
         </div>
     </header>
@@ -30,157 +31,329 @@
         </div>
     </section>
 
-    <main class="print-ios-layout">
-        <section class="print-options-panel">
-            <header class="print-ios-topbar">
-                <div>
-                    <p class="auth-badge">Configuracao</p>
-                    <h2>Enviar arquivo</h2>
-                </div>
-            </header>
+    <main class="print-wizard-shell">
 
-            <article class="ios-group ios-group-file">
-                <label for="arquivo">Arquivo para impressao</label>
-                <input class="print-file-input-hidden" type="file" id="arquivo" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg">
-                <button
-                    id="arquivoDropzone"
-                    class="print-upload-dropzone"
-                    type="button"
-                    aria-controls="arquivo"
-                >
-                    <span class="print-upload-title">Clique para selecionar ou arraste o arquivo aqui</span>
-                    <span class="print-upload-subtitle">Voce tambem pode colar com Ctrl + V.</span>
-                    <span id="arquivoSelecionadoNome" class="print-upload-file">Nenhum arquivo selecionado.</span>
-                </button>
-                <p class="print-file-hint">Formatos aceitos: PDF, DOCX, DOC, PNG, JPG e JPEG.</p>
-            </article>
+        <section class="print-wizard-stage">
+            <section class="print-wizard-left">
+                <article id="etapaArquivo" class="print-step-card print-step-card-active">
+                    <header class="print-step-header">
+                        <div>
+                            <p class="print-step-kicker">Etapa 1</p>
+                            <h2>Escolha o arquivo</h2>
+                        </div>
+                    </header>
 
-            <article id="grupoProfessorSolicitante" class="ios-group" style="display: none;">
-                <div class="ios-row">
-                    <label for="professorSolicitante">Professor solicitante</label>
-                    <select id="professorSolicitante">
-                        <option value="">Selecione um professor</option>
-                    </select>
-                </div>
-                <p id="contextoProfessorImpressao" class="print-file-hint"></p>
-            </article>
+                    <input class="print-file-input-hidden" type="file" id="arquivo"
+                        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg">
+                    <button id="arquivoDropzone" class="print-upload-dropzone" type="button" aria-controls="arquivo">
+                        <span class="print-upload-title">Arraste o arquivo aqui</span>
+                        <span class="print-upload-subtitle">ou clique para selecionar. Também funciona com Ctrl +
+                            V.</span>
+                        <span id="arquivoSelecionadoNome" class="print-upload-file">Nenhum arquivo selecionado.</span>
+                    </button>
+                    <p class="print-file-hint">Formatos aceitos: PDF, DOCX, DOC, PNG, JPG e JPEG.</p>
 
-            <article class="ios-group">
-                <div class="ios-row">
-                    <label for="turmaImpressao">Turma</label>
-                    <select id="turmaImpressao">
-                        <option value="">Selecione uma turma</option>
-                    </select>
-                </div>
-                <p id="resumoTurmaImpressao" class="print-file-hint">
-                    Selecione uma turma para preencher as copias automaticamente.
-                </p>
-
-                <div class="ios-divider"></div>
-                <div class="ios-row">
-                    <label for="copias">Copias</label>
-                    <input type="number" id="copias" min="1" step="1" value="1">
-                </div>
-
-                <div class="ios-divider"></div>
-                <div class="ios-row">
-                    <label for="intervaloPaginas">Intervalo</label>
-                    <input type="text" id="intervaloPaginas" placeholder="1-5, 8, 10-14">
-                </div>
-
-                <div class="ios-divider"></div>
-                <div class="ios-row">
-                    <label for="paginasPorFolha">Layout</label>
-                    <select id="paginasPorFolha">
-                        <option value="1">1 pagina por folha</option>
-                        <option value="2">2 paginas por folha</option>
-                        <option value="4">4 paginas por folha</option>
-                    </select>
-                </div>
-
-                <div class="ios-divider"></div>
-                <div class="ios-row">
-                    <label for="orientacao">Orientacao</label>
-                    <select id="orientacao">
-                        <option value="retrato">Retrato</option>
-                        <option value="paisagem">Paisagem</option>
-                    </select>
-                </div>
-
-                <div class="ios-divider"></div>
-                <div class="ios-row ios-row-check">
-                    <label for="duplex">Frente e verso</label>
-                    <input class="print-check-input" type="checkbox" id="duplex">
-                </div>
-            </article>
-
-            <article class="ios-group">
-                <div class="ios-row print-tags-header">
-                    <span>Classificacao</span>
-                    <span class="print-tags-counter" id="contadorTagsImpressao">0 tag(s)</span>
-                </div>
-                <div id="tagsImpressao" class="print-tags-grid" aria-label="Tags da impressao"></div>
-                <p class="print-file-hint">Marque ao menos uma tag. Sem essa classificacao a impressao nao sera enviada.</p>
-            </article>
-
-            <button id="btnEnviar" class="btn-destaque print-send-btn" type="button">Imprimir</button>
-            <p id="estadoEnvio" class="print-submit-state" aria-live="polite"></p>
-
-            <div class="print-status">
-                <p id="msg" class="print-feedback"></p>
-                <p id="consumo" class="print-consumo"></p>
-                <p id="intervaloInfo" class="print-feedback-muted"></p>
-            </div>
-        </section>
-
-        <section class="print-preview-stage">
-            <header class="print-preview-header">
-                <p class="auth-badge">Pre-visualizacao</p>
-                <div class="print-pagination" role="group" aria-label="Navegacao da pre-visualizacao">
-                    <button id="btnAnterior" type="button" aria-label="Folha anterior">&#9664;</button>
-                    <span id="contadorFolha"></span>
-                    <button id="btnProxima" type="button" aria-label="Proxima folha">&#9654;</button>
-                </div>
-            </header>
-
-            <section class="print-preview-pane">
-                <div id="previewContainer"></div>
-            </section>
-        </section>
-
-        <aside class="print-meta-panel">
-            <header class="print-meta-header">
-                <p class="auth-badge">Cota e historico</p>
-            </header>
-
-            <div class="print-meta-compact">
-                <article class="print-meta-card">
-                    <h2 id="tituloCota">Sua cota</h2>
-                    <p id="cota">Carregando...</p>
+                    <div class="print-step-actions">
+                        <button id="btnContinuarArquivo" class="btn-destaque" type="button">Continuar</button>
+                    </div>
                 </article>
 
-                <article class="print-meta-card print-jobs-card">
-                    <h2 id="tituloJobs">Seus pedidos</h2>
-                    <p class="print-jobs-hint">
-                        A impressao inicia apos {{ cancel_window_seconds | default(15) }}s.
-                        Nesse periodo voce pode cancelar impressoes pendentes.
-                        Jobs concluidos podem ser abertos novamente no preview.
+                <article id="etapaSolicitacao" class="print-step-card" hidden>
+                    <header class="print-step-header">
+                        <div>
+                            <p class="print-step-kicker">Etapa 2</p>
+                            <h2>Dados da solicitação</h2>
+                        </div>
+                    </header>
+
+                    <p class="print-step-description">
+                        Informe para quem esta impressão sera registrada.
                     </p>
-                    <ul id="lista-jobs"></ul>
+
+                    <section class="print-config-section">
+                        <article id="grupoProfessorSolicitante" class="print-field-group" style="display: none;">
+                            <label for="professorSolicitante">Professor solicitante</label>
+                            <select id="professorSolicitante">
+                                <option value="">Selecione um professor</option>
+                            </select>
+                            <p id="contextoProfessorImpressao" class="print-file-hint"></p>
+                        </article>
+
+                        <article class="print-field-group">
+                            <label for="turmaImpressao">Turma</label>
+                            <select id="turmaImpressao">
+                                <option value="">Selecione uma turma</option>
+                            </select>
+                            <p id="resumoTurmaImpressao" class="print-file-hint">
+                                Selecione uma turma para preencher as cópias automaticamente.
+                            </p>
+                        </article>
+
+                        <article class="print-field-group">
+                            <label for="copias">Cópias sugeridas</label>
+                            <input type="number" id="copias" min="1" step="1" value="1">
+                            <p class="print-file-hint">Ao escolher uma turma, o sistema pode preencher a quantidade
+                                automaticamente.</p>
+                        </article>
+                    </section>
+
+                    <div class="print-step-actions">
+                        <button id="btnVoltarSolicitacao" class="print-secondary-btn" type="button">Voltar</button>
+                        <button id="btnContinuarSolicitacao" class="btn-destaque" type="button">Continuar</button>
+                    </div>
                 </article>
+
+                <article id="etapaConfiguracoes" class="print-step-card" hidden>
+                    <header class="print-step-header">
+                        <div>
+                            <p class="print-step-kicker">Etapa 3</p>
+                            <h2>Configurar impressão</h2>
+                        </div>
+                    </header>
+
+                    <p class="print-step-description">
+                        Escolha como o arquivo deve sair na folha.
+                    </p>
+
+                    <section class="print-config-section">
+                        <header>
+                            <h3>Páginas</h3>
+                        </header>
+
+                        <div class="print-choice-group" role="radiogroup" aria-label="Modo de paginas">
+                            <label class="print-choice-chip">
+                                <input type="radio" name="modoPaginas" value="all" checked>
+                                <span>Todas as páginas</span>
+                            </label>
+                            <label class="print-choice-chip">
+                                <input type="radio" name="modoPaginas" value="custom">
+                                <span>Personalizar intervalo</span>
+                            </label>
+                        </div>
+
+                        <article id="grupoIntervaloPaginas" class="print-field-group" hidden>
+                            <label for="intervaloPaginas">Intervalo de paginas</label>
+                            <input type="text" id="intervaloPaginas" placeholder="Ex.: 1-5, 8, 10-14">
+                        </article>
+
+                        <section class="print-config-section">
+                        <header>
+                            <h4>Layout</h4>
+                        </header>
+
+                        <div class="print-layout-choice-grid">
+                            <button class="print-choice-block is-selected" type="button" data-layout-choice="1">1 por
+                                folha</button>
+                            <button class="print-choice-block" type="button" data-layout-choice="2">2 por folha</button>
+                            <button class="print-choice-block" type="button" data-layout-choice="4">4 por folha</button>
+                        </div>
+                        <select id="paginasPorFolha" class="print-hidden-select" aria-hidden="true" tabindex="-1">
+                            <option value="1" selected>1 página por folha</option>
+                            <option value="2">2 páginas por folha</option>
+                            <option value="4">4 páginas por folha</option>
+                        </select>
+                    </section>
+
+                    <section class="print-config-section">
+                        <header>
+                            <h4>Orientação</h4>
+                        </header>
+
+                        <div class="print-layout-choice-grid print-layout-choice-grid-2">
+                            <button class="print-choice-block is-selected" type="button"
+                                data-orientation-choice="retrato">Retrato</button>
+                            <button class="print-choice-block" type="button"
+                                data-orientation-choice="paisagem">Paisagem</button>
+                        </div>
+                        <select id="orientacao" class="print-hidden-select" aria-hidden="true" tabindex="-1">
+                            <option value="retrato" selected>Retrato</option>
+                            <option value="paisagem">Paisagem</option>
+                        </select>
+                    </section>
+
+                    
+                    </section>
+
+                    <section class="print-config-section">
+                        <article class="print-toggle-row">
+                            <div>
+                                <strong>Frente e verso</strong>
+                            </div>
+                            <label class="print-switch" for="duplex">
+                                <input class="print-check-input" type="checkbox" id="duplex">
+                                <span>Ativar</span>
+                            </label>
+                        </article>
+                    </section>
+
+                    <div class="print-step-actions">
+                        <button id="btnVoltarConfiguracoes" class="print-secondary-btn" type="button">Voltar</button>
+                        <button id="btnContinuarConfiguracoes" class="btn-destaque" type="button">Continuar</button>
+                    </div>
+                </article>
+
+                <article id="etapaConferencia" class="print-step-card" hidden>
+                    <header class="print-step-header">
+                        <div>
+                            <p class="print-step-kicker">Etapa 4</p>
+                            <h2>Conferir solicitacao</h2>
+                        </div>
+                    </header>
+
+                    <p class="print-step-description">
+                        Revise os dados antes de enviar para impressao.
+                    </p>
+
+                    <section class="print-config-section">
+                        <header>
+                            <h3>Resumo da impressao</h3>
+                        </header>
+
+                        <dl class="print-summary-list print-summary-list-single">
+                            <div>
+                                <dt>Arquivo</dt>
+                                <dd id="resumoArquivo">Aguardando arquivo</dd>
+                            </div>
+                            <div>
+                                <dt>Professor</dt>
+                                <dd id="resumoProfessor">Sera preenchido automaticamente</dd>
+                            </div>
+                            <div>
+                                <dt>Turma</dt>
+                                <dd id="resumoTurma">Nao selecionada</dd>
+                            </div>
+                            <div>
+                                <dt>Copias</dt>
+                                <dd id="resumoCopias">1</dd>
+                            </div>
+                            <div>
+                                <dt>Paginas</dt>
+                                <dd id="resumoPaginas">Todas</dd>
+                            </div>
+                            <div>
+                                <dt>Layout</dt>
+                                <dd id="resumoLayout">1 pagina por folha</dd>
+                            </div>
+                            <div>
+                                <dt>Orientacao</dt>
+                                <dd id="resumoOrientacao">Retrato</dd>
+                            </div>
+                            <div>
+                                <dt>Frente e verso</dt>
+                                <dd id="resumoDuplex">Nao</dd>
+                            </div>
+                            <div>
+                                <dt>Total estimado</dt>
+                                <dd id="resumoPaginasEstimadas">Aguardando preview</dd>
+                            </div>
+                        </dl>
+                    </section>
+
+                    <section class="print-config-section">
+                        <header>
+                            <h3>Tipo de material</h3>
+                        </header>
+                        <div id="tagsImpressao" class="print-tags-grid" aria-label="Tags da impressao"></div>
+                    </section>
+
+                    <div class="print-step-actions">
+                        <button id="btnVoltarConferencia" class="print-secondary-btn" type="button">Voltar</button>
+                        <button id="btnEnviar" class="btn-destaque print-send-btn" type="button">Confirmar
+                            impressao</button>
+                    </div>
+                    <p id="estadoEnvio" class="print-submit-state" aria-live="polite"></p>
+                </article>
+            </section>
+
+            <aside class="print-wizard-right">
+                <section id="painelPreview" class="print-preview-stage">
+                    <header class="print-preview-header">
+                        <div>
+                            <p class="auth-badge">Pre-visualizacao</p>
+                            <h2>Confira o arquivo</h2>
+                        </div>
+                        <div class="print-preview-header-actions">
+                            <button id="btnFecharPreviewMobile" class="print-secondary-btn print-mobile-only"
+                                type="button">Fechar</button>
+                            <div class="print-pagination" role="group" aria-label="Navegacao da pre-visualizacao">
+                                <button id="btnAnterior" type="button" aria-label="Folha anterior">&#9664;</button>
+                                <span id="contadorFolha"></span>
+                                <button id="btnProxima" type="button" aria-label="Proxima folha">&#9654;</button>
+                            </div>
+                        </div>
+                    </header>
+
+                    <section class="print-preview-pane">
+                        <div id="previewContainer"></div>
+                    </section>
+                </section>
+            </aside>
+        </section>
+
+        <section id="painelJobRecente" class="print-inline-queue-card" hidden>
+            <div class="print-inline-queue-header">
+                <div>
+                    <p class="auth-badge">Pedido enviado</p>
+                    <h3>Seu arquivo entrou na fila</h3>
+                </div>
             </div>
-        </aside>
+            <p class="print-jobs-hint">
+                Enquanto o pedido estiver pendente, voce pode cancelar por aqui sem abrir o historico.
+            </p>
+            <ul id="lista-job-recente"></ul>
+        </section>
+
+        <section class="print-consumption-bar">
+            <div class="print-consumption-primary">
+                <span id="resumoArquivoBarra">Arquivo: -</span>
+            </div>
+            <div class="print-consumption-secondary">
+                <span id="consumo">Total estimado: -</span>
+                <span id="intervaloInfo" class="print-feedback-muted"></span>
+            </div>
+            <div class="print-consumption-status">
+                <span id="cota">Cota: carregando...</span>
+                <span id="msg" class="print-feedback"></span>
+            </div>
+            <button id="btnAbrirPreviewMobile" class="print-secondary-btn print-mobile-preview-trigger print-mobile-only"
+                type="button">
+                Abrir preview
+            </button>
+        </section>
     </main>
 
+    <aside id="painelHistoricoImpressao" class="print-history-drawer" aria-hidden="true">
+        <div class="print-history-backdrop" data-close-history="true"></div>
+        <section class="print-history-panel">
+            <header class="print-history-header">
+                <div>
+                    <p class="auth-badge">Cota e historico</p>
+                    <h2 id="tituloJobs">Seus pedidos</h2>
+                </div>
+                <button id="btnFecharHistorico" class="print-secondary-btn" type="button">Fechar</button>
+            </header>
+
+            <article class="print-meta-card">
+                <h3 id="tituloCota">Sua cota</h3>
+                <p class="print-jobs-hint">
+                    A impressao inicia apos {{ cancel_window_seconds | default(15) }}s.
+                    Nesse periodo voce pode cancelar impressoes pendentes.
+                    Jobs concluidos podem ser abertos novamente no preview.
+                </p>
+                <p class="print-history-quota" id="cotaPainelEspelho">Carregando...</p>
+            </article>
+
+            <article class="print-meta-card print-jobs-card">
+                <h3>Historico recente</h3>
+                <p class="print-jobs-hint">Abra um item concluido para reutilizar o mesmo arquivo no fluxo atual.</p>
+                <ul id="lista-jobs"></ul>
+            </article>
+        </section>
+    </aside>
+
     <section id="modalAlertaConsumoImpressao" class="print-alert-modal" hidden>
-        <article
-            id="painelAlertaConsumoImpressao"
-            class="print-alert-modal-card"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="tituloAlertaConsumoImpressao"
-            tabindex="-1"
-        >
+        <article id="painelAlertaConsumoImpressao" class="print-alert-modal-card" role="dialog" aria-modal="true"
+            aria-labelledby="tituloAlertaConsumoImpressao" tabindex="-1">
             <header class="print-alert-modal-header">
                 <div>
                     <p class="auth-badge">Alerta de consumo</p>
@@ -203,14 +376,8 @@
     </section>
 
     <section id="modalSemPapelImpressao" class="print-alert-modal" hidden>
-        <article
-            id="painelSemPapelImpressao"
-            class="print-alert-modal-card print-alert-modal-card-warning"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="tituloSemPapelImpressao"
-            tabindex="-1"
-        >
+        <article id="painelSemPapelImpressao" class="print-alert-modal-card print-alert-modal-card-warning"
+            role="dialog" aria-modal="true" aria-labelledby="tituloSemPapelImpressao" tabindex="-1">
             <header class="print-alert-modal-header">
                 <div>
                     <p class="auth-badge">Impressao indisponivel</p>
@@ -219,7 +386,8 @@
             </header>
             <div class="print-alert-modal-body">
                 <p id="textoSemPapelImpressao"></p>
-                <p class="print-alert-suggestion">Assim que o papel for reposto, a impressao sera liberada novamente pelo painel administrativo.</p>
+                <p class="print-alert-suggestion">Assim que o papel for reposto, a impressao sera liberada novamente
+                    pelo painel administrativo.</p>
             </div>
             <div class="print-alert-modal-actions">
                 <button id="btnFecharModalSemPapelImpressao" class="btn-destaque" type="button">
@@ -237,7 +405,14 @@
     <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
-    <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script
+        src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script
+        src="{{ request.url_for('static', path='js/printing/state.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script
+        src="{{ request.url_for('static', path='js/printing/workflow.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script
+        src="{{ request.url_for('static', path='js/printing/index.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/professor.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>
 
