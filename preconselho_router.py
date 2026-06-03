@@ -7,6 +7,8 @@ tests while the broader refactor is still in progress.
 
 import importlib
 
+from fastapi import HTTPException
+
 _module_router = importlib.import_module("modules.preconselho.router")
 
 router = _module_router.router
@@ -16,4 +18,4 @@ def __getattr__(name: str):
     return getattr(_module_router, name)
 
 
-__all__ = ["router"]
+__all__ = ["router", "HTTPException"]

@@ -54,8 +54,17 @@ def list_active_classrooms():
     return listar_turmas_ativas()
 
 
-def list_teacher_assignments(*, turma_id: int | None = None, incluir_inativos: bool = False):
-    return listar_atribuicoes_docentes(turma_id=turma_id, incluir_inativos=incluir_inativos)
+def list_teacher_assignments(
+    *,
+    turma_id: int | None = None,
+    classroom_id: int | None = None,
+    incluir_inativos: bool = False,
+):
+    turma_consulta = turma_id if turma_id is not None else classroom_id
+    return listar_atribuicoes_docentes(
+        turma_id=turma_consulta,
+        incluir_inativos=incluir_inativos,
+    )
 
 
 def list_teacher_assignments_by_user_ids(
@@ -66,8 +75,21 @@ def list_teacher_assignments_by_user_ids(
     )
 
 
-def list_admin_classroom_disciplines(*, turma_ids: list[int] | None = None):
-    return listar_turmas_disciplinas_admin(turma_ids=turma_ids)
+def list_admin_classroom_disciplines(
+    *,
+    turma_ids: list[int] | None = None,
+    classroom_id: int | None = None,
+    incluir_inativos: bool = False,
+):
+    turma_consulta = None
+    if turma_ids:
+        turma_consulta = int(turma_ids[0])
+    elif classroom_id is not None:
+        turma_consulta = int(classroom_id)
+    return listar_turmas_disciplinas_admin(
+        turma_id=turma_consulta,
+        incluir_inativos=incluir_inativos,
+    )
 
 
 def get_student(estudante_id: int):

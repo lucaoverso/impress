@@ -28,14 +28,18 @@ def format_natural_list(values) -> str:
 def build_report_item(
     *,
     name: str = "",
+    nome: str = "",
     total_records: int = 0,
+    total_registros: int | None = None,
     extra: str = "",
     item_id: int | None = None,
 ) -> dict:
+    item_name = str(nome or name or "").strip()
+    total_item = int(total_registros) if total_registros is not None else int(total_records or 0)
     return {
         "id": int(item_id) if item_id is not None else None,
-        "nome": str(name or "").strip(),
-        "total_registros": int(total_records or 0),
+        "nome": item_name,
+        "total_registros": total_item,
         "extra": str(extra or "").strip(),
     }
 
@@ -220,7 +224,13 @@ def group_teachers(records: list[dict]) -> list[dict]:
     return list(grouped.values())
 
 
-def collect_frequent_reasons(records: list[dict], *, limit: int = 5) -> list[dict]:
+def collect_frequent_reasons(
+    records: list[dict],
+    *,
+    limit: int = 5,
+    limite: int | None = None,
+) -> list[dict]:
+    limite_consulta = int(limite) if limite is not None else int(limit)
     counter = Counter()
     for record in records or []:
         for reason in record.get("motivos") or []:
@@ -230,7 +240,7 @@ def collect_frequent_reasons(records: list[dict], *, limit: int = 5) -> list[dic
 
     return [
         build_report_item(name=description, total_records=total)
-        for description, total in counter.most_common(limit)
+        for description, total in counter.most_common(limite_consulta)
     ]
 
 
