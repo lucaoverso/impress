@@ -9,18 +9,9 @@
 </head>
 
 <body>
-    <header class="app-topbar">
-        <div class="app-topbar-main">
-            <div class="app-topbar-brand">
-                <span class="app-topbar-logo">Suite Escolar</span>
-                <span class="app-topbar-context">Painel de gestao</span>
-            </div>
-        </div>
-        <div class="app-topbar-actions">
-            <button id="btnVoltarServicos" type="button">Servicos</button>
-            <button id="btnSair" type="button">Sair</button>
-        </div>
-    </header>
+    {% set navbar_context = "Painel de gestao" %}
+    {% set navbar_current = "gestao" %}
+    {% include "includes/app_navbar.html" %}
     <main class="admin-page">
         <header class="admin-header admin-header-shell">
             <div class="admin-header-main">
@@ -324,6 +315,7 @@
     <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/admin/core.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/admin/atribuicoes.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/admin/estrutura.js') }}?v={{ asset_version | default('1') }}"></script>

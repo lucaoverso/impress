@@ -118,7 +118,9 @@ function aplicarStatusImpressaoNaTela({ mostrarModal = false } = {}) {
             modalSemPapelExibido = true;
             window.requestAnimationFrame(() => el("painelSemPapelImpressao")?.focus());
         }
-        limparCardJobRecente();
+        if (!window.PrintingUI?.state?.getState?.()?.submit?.submitted) {
+            limparCardJobRecente();
+        }
         return [];
     }
 
@@ -789,21 +791,22 @@ function obterDimensoesMiniatura(tamanhoFolha, isMobile) {
     const pane = document.querySelector(".print-preview-pane");
 
     const larguraDisponivel = pane
-        ? Math.max(120, pane.clientWidth - RESERVA_BORDA_PREVIEW)
-        : Math.max(120, window.innerWidth - 56);
+        ? Math.max(180, pane.clientWidth - RESERVA_BORDA_PREVIEW)
+        : Math.max(180, window.innerWidth - 40);
     const alturaDisponivelBase = pane
-        ? Math.max(120, pane.clientHeight - RESERVA_BORDA_PREVIEW)
-        : Math.max(120, Math.floor(window.innerHeight * (isMobile ? 0.36 : 0.5)));
+        ? Math.max(220, pane.clientHeight - RESERVA_BORDA_PREVIEW)
+        : Math.max(220, Math.floor(window.innerHeight * (isMobile ? 0.62 : 0.5)));
 
     const alturaDisponivel = isMobile
-        ? Math.max(140, alturaDisponivelBase - LABEL_PREVIEW_RESERVA)
+        ? Math.max(260, alturaDisponivelBase - Math.max(12, LABEL_PREVIEW_RESERVA - 24))
         : alturaDisponivelBase;
     const larguraAlvo = isMobile
         ? Math.max(
-            112,
+            180,
             Math.min(
-                Math.floor((larguraDisponivel - 12) / (window.innerWidth <= 640 ? 1 : 2)),
-                window.innerWidth <= 640 ? 220 : 180
+                larguraDisponivel,
+                window.innerWidth - 28,
+                420
             )
         )
         : larguraDisponivel;
@@ -813,8 +816,8 @@ function obterDimensoesMiniatura(tamanhoFolha, isMobile) {
     );
 
     return {
-        largura: Math.max(96, Math.round(tamanhoFolha.largura * escala)),
-        altura: Math.max(130, Math.round(tamanhoFolha.altura * escala))
+        largura: Math.max(isMobile ? 180 : 96, Math.round(tamanhoFolha.largura * escala)),
+        altura: Math.max(isMobile ? 250 : 130, Math.round(tamanhoFolha.altura * escala))
     };
 }
 
@@ -982,11 +985,7 @@ function aplicarEstadoSelecaoWrapper(wrapper, paginaSelecionada, numeroPagina) {
 
     wrapper.classList.toggle("is-selected", paginaSelecionada);
     wrapper.classList.toggle("is-unchecked", !paginaSelecionada);
-
-    const marcador = wrapper.querySelector(".preview-page-tag");
-    if (marcador) {
-        marcador.innerText = `Pg ${numeroPagina}`;
-    }
+    wrapper.dataset.pageLabel = `Pg ${numeroPagina}`;
 }
 
 function atualizarEstadoVisualPagina(numeroPagina, paginaSelecionada) {
@@ -1206,36 +1205,175 @@ function atualizarDestaqueJobSelecionado() {
     });
 }
 
+function atualizarCabecalhoCardJobRecente({
+    badge = "Pedido enviado",
+    titulo = "Acompanhar pedido",
+    hint = "Enquanto o pedido estiver pendente, voce pode cancelar por aqui sem abrir o historico.",
+} = {}) {
+    definirTexto("painelJobRecenteBadge", badge);
+    definirTexto("painelJobRecenteTitulo", titulo);
+    definirTexto("painelJobRecenteHint", hint);
+}
+
+function jobEstaEmEstadoFinal(job) {
+    const statusNormalizado = normalizarStatusJob(job?.status);
+    return statusNormalizado === "CONCLUIDO"
+        || statusNormalizado === "FINALIZADO"
+        || statusNormalizado === "CANCELADO"
+        || statusNormalizado === "ERRO";
+}
+
+function obterJobAcompanhamentoAtivoId() {
+    const submitState = window.PrintingUI?.state?.getState?.()?.submit;
+    if (!submitState?.submitted) {
+        return 0;
+    }
+    return Number(submitState.activeJobId || 0);
+}
+
+function atualizarAcaoImprimirOutroArquivo(visivel = false) {
+    const botao = el("btnImprimirOutroArquivo");
+    if (!botao) {
+        return;
+    }
+    botao.hidden = !visivel;
+}
+
+function obterContextoAcompanhamentoJob(job) {
+    const statusNormalizado = normalizarStatusJob(job?.status);
+
+    if (statusNormalizado === "IMPRIMINDO") {
+        return {
+            badge: "Em andamento",
+            titulo: "A impressao ja esta em andamento",
+            hint: "O pedido saiu da fila e a impressora esta processando o arquivo agora.",
+            mostrarNovoArquivo: false,
+        };
+    }
+
+    if (statusNormalizado === "CONCLUIDO" || statusNormalizado === "FINALIZADO") {
+        return {
+            badge: "Concluido",
+            titulo: "Impressao concluida",
+            hint: "Tudo certo com este pedido. Quando quiser, voce pode iniciar outro arquivo.",
+            mostrarNovoArquivo: true,
+        };
+    }
+
+    if (statusNormalizado === "CANCELADO") {
+        return {
+            badge: "Cancelado",
+            titulo: "Pedido cancelado",
+            hint: "O pedido foi cancelado e a cota ja foi atualizada. Voce pode iniciar outro arquivo.",
+            mostrarNovoArquivo: true,
+        };
+    }
+
+    if (statusNormalizado === "ERRO") {
+        return {
+            badge: "Falha no pedido",
+            titulo: "O pedido encontrou um erro",
+            hint: String(job?.erro_mensagem || "Houve um problema na impressao. Voce pode iniciar outro arquivo."),
+            mostrarNovoArquivo: true,
+        };
+    }
+
+    return {
+        badge: "Pedido enviado",
+        titulo: "Seu arquivo entrou na fila",
+        hint: "Enquanto o pedido estiver pendente, voce pode cancelar por aqui sem abrir o historico.",
+        mostrarNovoArquivo: false,
+    };
+}
+
 function limparCardJobRecente() {
-    const painel = el("painelJobRecente");
     const lista = el("lista-job-recente");
     if (lista) {
         lista.innerHTML = "";
+        lista.hidden = true;
     }
-    if (painel) {
-        painel.hidden = true;
-    }
+    atualizarCabecalhoCardJobRecente();
+    atualizarAcaoImprimirOutroArquivo(false);
+}
+
+function aplicarEstadoVisualCardJobRecente(item, job) {
+    const statusNormalizado = normalizarStatusJob(job?.status);
+    const concluido = statusNormalizado === "CONCLUIDO" || statusNormalizado === "FINALIZADO";
+    const interrompido = statusNormalizado === "CANCELADO" || statusNormalizado === "ERRO";
+
+    item.classList.toggle("is-progress-complete", concluido);
+    item.classList.toggle("is-progress-stopped", interrompido);
 }
 
 function renderizarCardJobRecente(job) {
-    const painel = el("painelJobRecente");
     const lista = el("lista-job-recente");
-    if (!painel || !lista || !job) {
+    if (!lista || !job) {
         limparCardJobRecente();
         return;
     }
 
-    lista.innerHTML = "";
-    const item = criarItemJob(job);
-    item.classList.add("is-inline-queue-card-item");
-    lista.appendChild(item);
-    painel.hidden = false;
+    const contexto = obterContextoAcompanhamentoJob(job);
+    const jobId = Number(job?.id || 0);
+    const itemAtual = lista.querySelector("li.print-job-item");
+    const manterItemAtual = itemAtual && Number(itemAtual.dataset.jobId || 0) === jobId;
+
+    atualizarCabecalhoCardJobRecente(contexto);
+
+    if (manterItemAtual) {
+        preencherItemJob(itemAtual, job, { allowReuse: false });
+        itemAtual.classList.add("is-inline-queue-card-item");
+        aplicarEstadoVisualCardJobRecente(itemAtual, job);
+    } else {
+        lista.innerHTML = "";
+        const item = criarItemJob(job, { allowReuse: false });
+        item.classList.add("is-inline-queue-card-item");
+        aplicarEstadoVisualCardJobRecente(item, job);
+        lista.appendChild(item);
+    }
+
+    lista.hidden = false;
+    atualizarAcaoImprimirOutroArquivo(contexto.mostrarNovoArquivo);
+}
+
+function abrirEtapaAcompanhamentoJob(job) {
+    const jobId = Number(job?.id || 0);
+    if (jobId <= 0) {
+        return;
+    }
+
+    renderizarCardJobRecente(job);
+    window.PrintingUI?.ui?.setWizardState?.(5, {
+        submit: {
+            submitted: true,
+            activeJobId: jobId,
+        },
+    });
+}
+
+function encerrarEtapaAcompanhamentoJob() {
+    limparCardJobRecente();
+    window.PrintingUI?.ui?.setForcedStep?.(null);
+    window.PrintingUI?.ui?.setWizardState?.(1, {
+        submit: {
+            submitted: false,
+            activeJobId: null,
+        },
+    });
+}
+
+async function imprimirOutroArquivo() {
+    encerrarEtapaAcompanhamentoJob();
+    el("msg").innerText = "";
+    await carregarPreview(null);
+    window.requestAnimationFrame(() => {
+        window.PrintingUI?.ui?.goToStep?.(1);
+        el("arquivoDropzone")?.focus();
+    });
 }
 
 function sincronizarCardJobRecenteComFila(jobs) {
-    const painel = el("painelJobRecente");
-    const jobAtualId = Number(el("lista-job-recente")?.firstElementChild?.dataset?.jobId || 0);
-    if (!painel || painel.hidden || !jobAtualId) {
+    const jobAtualId = obterJobAcompanhamentoAtivoId();
+    if (!jobAtualId) {
         return;
     }
 
@@ -1244,7 +1382,6 @@ function sincronizarCardJobRecenteComFila(jobs) {
         : null;
 
     if (!jobAtualizado) {
-        limparCardJobRecente();
         return;
     }
 
@@ -1405,7 +1542,13 @@ async function enviarImpressao(confirmadoAlertaConsumo = false) {
             ? `${verbo}${sufixoDestino}! Cota ilimitada da gestao.`
             : `${verbo}${sufixoDestino}! Restam ${data.paginas_restantes} páginas`;
         const jobs = await carregarFila();
-        renderizarCardJobRecente(Array.isArray(jobs) ? jobs[0] : null);
+        const jobEnviadoId = Number(data?.job_id || data?.id || 0);
+        const jobRecente = Array.isArray(jobs)
+            ? (jobs.find((job) => Number(job?.id || 0) === jobEnviadoId) || jobs[0])
+            : null;
+        if (jobRecente) {
+            abrirEtapaAcompanhamentoJob(jobRecente);
+        }
         await carregarCota();
         calcularConsumo();
     } catch (err) {
@@ -1470,9 +1613,6 @@ async function cancelarJobProfessor(jobId, botaoCancelar) {
             await carregarCota();
         }
         await carregarFila();
-        if (Number(jobId) === Number(el("lista-job-recente")?.firstElementChild?.dataset?.jobId || 0)) {
-            limparCardJobRecente();
-        }
     } catch (err) {
         el("msg").innerText = err?.message || "Falha ao cancelar job.";
     } finally {
@@ -1601,11 +1741,15 @@ async function carregarJobHistoricoNoPreview(job) {
     }
 }
 
-function criarItemJob(job) {
-    const li = document.createElement("li");
-    li.classList.add("print-job-item");
+function preencherItemJob(li, job, { allowReuse = true } = {}) {
+    li.replaceChildren();
+    li.className = "print-job-item";
     li.dataset.jobId = String(job?.id || "");
-    li.classList.toggle("is-selected-source", jobHistoricoEstaSelecionado(job));
+    li.classList.toggle("is-selected-source", allowReuse && jobHistoricoEstaSelecionado(job));
+    li.removeAttribute("role");
+    li.removeAttribute("aria-label");
+    li.removeAttribute("title");
+    li.removeAttribute("tabindex");
 
     const topo = document.createElement("div");
     topo.classList.add("print-job-top");
@@ -1637,10 +1781,10 @@ function criarItemJob(job) {
         li.appendChild(tags);
     }
 
-    const podeReutilizar = jobPodeSerReutilizado(job);
+    const podeReutilizar = allowReuse && jobPodeSerReutilizado(job);
     if (podeReutilizar) {
         li.classList.add("is-reusable");
-        li.tabIndex = 0;
+        li.setAttribute("tabindex", "0");
         li.setAttribute("role", "button");
         li.setAttribute("aria-label", `Abrir novamente ${String(job?.arquivo || "este arquivo")} no preview`);
         li.title = "Clique para abrir este arquivo novamente no preview.";
@@ -1716,6 +1860,12 @@ function criarItemJob(job) {
     return li;
 }
 
+function criarItemJob(job, options) {
+    const li = document.createElement("li");
+    preencherItemJob(li, job, options);
+    return li;
+}
+
 async function carregarFila() {
     atualizarTitulosContextoImpressao();
 
@@ -1730,6 +1880,7 @@ async function carregarFila() {
     ul.innerHTML = "";
 
     if (!Array.isArray(jobs) || jobs.length === 0) {
+        sincronizarCardJobRecenteComFila([]);
         const professorSelecionado = obterProfessorSelecionado();
         renderFilaVazia(
             professorSelecionado
@@ -2087,6 +2238,7 @@ async function renderFolha() {
         const thumb = document.createElement("article");
         thumb.classList.add("print-sheet-thumb");
         thumb.dataset.folha = String(indiceFolha);
+        thumb.dataset.sheetLabel = `Folha ${indiceFolha} de ${totalFolhas}`;
         if (indiceFolha === folhaAtual) {
             thumb.classList.add("is-active");
         }
@@ -2106,11 +2258,6 @@ async function renderFolha() {
         folha.style.gridTemplateRows = `repeat(${configLayout.linhas}, minmax(0, 1fr))`;
 
         thumb.appendChild(folha);
-
-        const label = document.createElement("p");
-        label.classList.add("sheet-label");
-        label.innerText = `Folha ${indiceFolha} de ${totalFolhas}`;
-        thumb.appendChild(label);
 
         if (isMobile) {
             container.appendChild(thumb);
@@ -2137,6 +2284,7 @@ async function renderFolha() {
             const wrapper = document.createElement("div");
             wrapper.classList.add("preview-cell");
             wrapper.dataset.page = String(numeroPagina);
+            wrapper.dataset.pageLabel = `Pg ${numeroPagina}`;
 
             const paginaSelecionada = paginasSelecionadasSet.has(numeroPagina);
 
@@ -2149,11 +2297,6 @@ async function renderFolha() {
             canvas.style.height = `${Math.floor(viewport.height / dpr)}px`;
             canvas.style.maxWidth = "100%";
             canvas.style.maxHeight = "100%";
-
-            const marcador = document.createElement("span");
-            marcador.classList.add("preview-page-tag");
-            marcador.innerText = `Pg ${numeroPagina}`;
-            wrapper.appendChild(marcador);
             aplicarEstadoSelecaoWrapper(wrapper, paginaSelecionada, numeroPagina);
 
             wrapper.appendChild(canvas);
@@ -2540,11 +2683,9 @@ function obterEstadoValidacaoImpressao() {
     return { valido: true, mensagem: "Resumo pronto para confirmar a impressao." };
 }
 
-function atualizarResumoImpressaoPainel() {
+function atualizarResumoImpressaoPainel(resumoImpressao = calcularResumoImpressao()) {
     const arquivo = obterArquivoSelecionado();
-    const resumo = calcularResumoImpressao();
     const paginasPorFolha = Number(el("paginasPorFolha")?.value || 1);
-    const tagsSelecionadas = obterTagsImpressaoSelecionadas();
 
     if (!arquivo && !previewEmCarregamento) {
         definirTextoResumoPadrao();
@@ -2559,22 +2700,17 @@ function atualizarResumoImpressaoPainel() {
     definirTexto("resumoArquivoBarra", `Arquivo: ${arquivo?.name || "-"}`);
     definirTexto(
         "resumoPaginasEstimadas",
-        resumo
-            ? `${resumo.paginasImpressas} pagina(s) na impressao e ${resumo.consumo} folha(s) estimada(s)`
+        resumoImpressao
+            ? `${resumoImpressao.consumo} ${resumoImpressao.consumo === 1 ? "folha estimada" : "folhas estimadas"}`
             : (previewEmCarregamento ? "Calculando..." : "Aguardando preview")
     );
     definirTexto(
         "resumoLayout",
-        `${paginasPorFolha} ${paginasPorFolha === 1 ? "pagina" : "paginas"} por folha`
+        `${paginasPorFolha} ${paginasPorFolha === 1 ? "página" : "páginas"} por folha | ${el("orientacao")?.value || "retrato"} | ${el("duplex")?.checked ? "frente e verso" : "somente frente"}`
     );
     definirTexto(
         "resumoOrientacao",
         (el("orientacao")?.value || "retrato") === "paisagem" ? "Paisagem" : "Retrato"
-    );
-    definirTexto("resumoDuplex", el("duplex")?.checked ? "Sim" : "Nao");
-    definirTexto(
-        "resumoTags",
-        tagsSelecionadas.length > 0 ? tagsSelecionadas.join(", ") : "Nenhuma tag selecionada"
     );
 }
 
@@ -2609,8 +2745,8 @@ function sincronizarEstadoAcaoEnvio(mensagem = "") {
 }
 
 function atualizarEstadoFluxoImpressao() {
-    const validacao = obterEstadoValidacaoImpressao();
-    atualizarResumoImpressaoPainel();
+    const resumoImpressao = calcularResumoImpressao();
+    atualizarResumoImpressaoPainel(resumoImpressao);
     sincronizarEstadoAcaoEnvio(envioEmAndamento ? "Enviando..." : "");
     const btnAbrirPreviewMobile = el("btnAbrirPreviewMobile");
     if (btnAbrirPreviewMobile) {
@@ -2806,7 +2942,11 @@ registrarEventos = function registrarEventosRefatorado() {
     el("btnFecharHistorico")?.addEventListener("click", fecharPainelHistorico);
     document.querySelector("[data-close-history='true']")?.addEventListener("click", fecharPainelHistorico);
     el("btnAbrirPreviewMobile")?.addEventListener("click", abrirPreviewMobile);
-    el("btnFecharPreviewMobile")?.addEventListener("click", fecharPreviewMobile);
+    el("btnImprimirOutroArquivo")?.addEventListener("click", () => {
+        imprimirOutroArquivo().catch((err) => {
+            el("msg").innerText = err?.message || "Falha ao reiniciar o fluxo de impressao.";
+        });
+    });
 
     window.addEventListener("keydown", (event) => {
         if (event.key === "Escape" && document.body.classList.contains("print-history-open")) {

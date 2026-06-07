@@ -9,19 +9,13 @@
 </head>
 
 <body>
-    <header class="app-topbar">
-        <div class="app-topbar-main">
-            <div class="app-topbar-brand">
-                <span class="app-topbar-logo">Suite Escolar</span>
-                <span id="horarioTopbarContext" class="app-topbar-context">Gestão escolar</span>
-            </div>
-        </div>
-        <div class="app-topbar-actions">
-            <button id="btnIrAdmin" type="button" hidden>Painel de gestao</button>
-            <button id="btnVoltarServicos" type="button">Servicos</button>
-            <button id="btnSair" type="button">Sair</button>
-        </div>
-    </header>
+    {% set navbar_context = "Gestão escolar" %}
+    {% set navbar_context_id = "horarioTopbarContext" %}
+    {% set navbar_current = "horario" %}
+    {% set navbar_extra_actions = [
+        {"id": "btnIrAdmin", "label": "Painel de gestao", "hidden": true}
+    ] %}
+    {% include "includes/app_navbar.html" %}
     <main class="horario-page">
         <header class="admin-header admin-header-shell">
             <div class="admin-header-main">
@@ -209,6 +203,7 @@
     <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/horario_escolar.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>
 

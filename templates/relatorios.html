@@ -9,18 +9,9 @@
 </head>
 
 <body>
-    <header class="app-topbar">
-        <div class="app-topbar-main">
-            <div class="app-topbar-brand">
-                <span class="app-topbar-logo">Suite Escolar</span>
-                <span class="app-topbar-context">Gestao escolar</span>
-            </div>
-        </div>
-        <div class="app-topbar-actions">
-            <button id="btnVoltarServicos" type="button">Servicos</button>
-            <button id="btnSair" type="button">Sair</button>
-        </div>
-    </header>
+    {% set navbar_context = "Gestao escolar" %}
+    {% set navbar_current = "relatorios" %}
+    {% include "includes/app_navbar.html" %}
 
     <main class="page-shell page-shell--wide reports-page">
         <section class="page-header">
@@ -375,6 +366,7 @@
     <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js" referrerpolicy="no-referrer"></script>
     <script src="{{ request.url_for('static', path='js/relatorios.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>

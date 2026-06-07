@@ -1,24 +1,60 @@
 (() => {
     let lastRenderedStep = null;
+    let lastPreviewVisible = false;
+    const STEP_ENTER_CLASS = "is-step-enter";
 
     function isMobileWizardLayout() {
         return window.matchMedia("(max-width: 980px)").matches;
     }
 
+    function syncDesktopPreviewHeight() {
+        document.documentElement.style.removeProperty("--print-desktop-preview-height");
+    }
+
     function animateAndScrollToStep(article) {
-        if (!article || !isMobileWizardLayout()) {
+        if (!article) {
             return;
         }
 
-        article.classList.remove("is-mobile-step-enter");
+        article.classList.remove(STEP_ENTER_CLASS);
         void article.offsetWidth;
-        article.classList.add("is-mobile-step-enter");
+        article.classList.add(STEP_ENTER_CLASS);
+        article.addEventListener("animationend", () => {
+            article.classList.remove(STEP_ENTER_CLASS);
+        }, { once: true });
+    }
+
+    function scrollToWizardStart() {
+        const wizardLeft = document.querySelector(".print-wizard-left");
+        const activeArticle = document.querySelector(".print-wizard-left > .print-step-card:not([hidden])");
+        const anchor = document.getElementById("printWizardStartAnchor");
+        if (wizardLeft && typeof wizardLeft.scrollTo === "function") {
+            wizardLeft.scrollTo({
+                top: 0,
+                behavior: "smooth",
+            });
+        }
+        if (activeArticle) {
+            activeArticle.scrollTop = 0;
+        }
+        if (!anchor) {
+            return;
+        }
         window.requestAnimationFrame(() => {
-            article.scrollIntoView({
+            anchor.scrollIntoView({
                 behavior: "smooth",
                 block: "start",
                 inline: "nearest",
             });
+        });
+    }
+
+    function clearStepAnimations(stepArticles) {
+        Object.values(stepArticles).forEach((article) => {
+            if (!article) {
+                return;
+            }
+            article.classList.remove(STEP_ENTER_CLASS);
         });
     }
 
@@ -173,6 +209,7 @@
             2: document.getElementById("etapaSolicitacao"),
             3: document.getElementById("etapaConfiguracoes"),
             4: document.getElementById("etapaConferencia"),
+            5: document.getElementById("etapaAcompanhamento"),
         };
         const activeArticle = stepArticles[currentStep];
 
@@ -189,7 +226,7 @@
         }
 
         if (activeArticle) {
-            Object.values(stepArticles).forEach((article) => article?.classList.remove("is-mobile-step-enter"));
+            clearStepAnimations(stepArticles);
             if (lastRenderedStep !== null && lastRenderedStep !== currentStep) {
                 animateAndScrollToStep(activeArticle);
             }
@@ -200,6 +237,7 @@
             ["stepperSolicitacao", 2],
             ["stepperConfiguracoes", 3],
             ["stepperResumo", 4],
+            ["stepperAcompanhamento", 5],
         ].forEach(([id, step]) => {
             const item = document.getElementById(id);
             if (!item) {
@@ -212,15 +250,27 @@
 
         document.documentElement.dataset.printingCurrentStep = String(currentStep);
         lastRenderedStep = currentStep;
+        return currentStep;
     }
 
     function renderProgressiveFlow(state) {
         renderPageMode(state);
-        renderCurrentStep(state);
-        const currentStep = Number(state?.wizard?.currentStep || 1);
+        const currentStep = renderCurrentStep(state);
+        syncDesktopPreviewHeight();
         const shouldShowPreview = Boolean(state?.upload?.valid || state?.preview?.ready)
-            && (!isMobileWizardLayout() || currentStep > 1);
+            && currentStep > 1;
         document.documentElement.dataset.printingMobilePreview = String(shouldShowPreview);
+
+        if (shouldShowPreview && state?.preview?.ready && !lastPreviewVisible) {
+            window.requestAnimationFrame(() => {
+                window.requestAnimationFrame(() => {
+                    if (typeof window.atualizarPreview === "function") {
+                        window.atualizarPreview();
+                    }
+                });
+            });
+        }
+        lastPreviewVisible = shouldShowPreview;
 
         const btnContinuarArquivo = document.getElementById("btnContinuarArquivo");
         const btnContinuarSolicitacao = document.getElementById("btnContinuarSolicitacao");
@@ -268,13 +318,18 @@
             setForcedStep(null);
         }
 
-        const maxUnlocked = current.visibility.step4 ? 4 : current.visibility.step3 ? 3 : current.visibility.step2 ? 2 : 1;
+        const maxUnlocked = current.visibility.step5 ? 5 : current.visibility.step4 ? 4 : current.visibility.step3 ? 3 : current.visibility.step2 ? 2 : 1;
         const targetStep = Math.min(Math.max(step, 1), maxUnlocked);
+        const currentStep = Number(current?.wizard?.currentStep || document.documentElement.dataset.printingCurrentStep || 1);
+        const advancing = targetStep > currentStep;
         syncFromLegacyDom({
             wizard: {
                 currentStep: targetStep,
             },
         });
+        if (advancing) {
+            scrollToWizardStart();
+        }
     }
 
     function registerDomBindings() {
@@ -344,6 +399,10 @@
         registerDomBindings();
         window.PrintingUI.state.subscribe(renderProgressiveFlow);
         syncFromLegacyDom();
+        window.addEventListener("resize", () => {
+            window.requestAnimationFrame(syncDesktopPreviewHeight);
+        });
+        window.requestAnimationFrame(syncDesktopPreviewHeight);
         document.documentElement.dataset.printingUi = "ready";
     }
 

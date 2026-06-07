@@ -9,18 +9,9 @@
 </head>
 
 <body>
-    <header class="app-topbar">
-        <div class="app-topbar-main">
-            <div class="app-topbar-brand">
-                <span class="app-topbar-logo">Suite Escolar</span>
-                <span class="app-topbar-context">Area docente</span>
-            </div>
-        </div>
-        <div class="app-topbar-actions">
-            <button id="btnVoltarServicos" type="button">Servicos</button>
-            <button id="btnSair" type="button">Sair</button>
-        </div>
-    </header>
+    {% set navbar_context = "Area docente" %}
+    {% set navbar_current = "pcpi" %}
+    {% include "includes/app_navbar.html" %}
 
     <main class="pcpi-page page-shell">
         <header class="admin-header admin-header-shell page-header">
@@ -175,6 +166,8 @@
     <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
     <script
         src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script
+        src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/pcpi.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>
 

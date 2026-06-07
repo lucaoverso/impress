@@ -40,6 +40,8 @@
         submit: {
             canSubmit: false,
             sending: false,
+            submitted: false,
+            activeJobId: null,
         },
     });
 

@@ -3,12 +3,14 @@
         const uploadValid = Boolean(state?.upload?.valid);
         const requestValid = Boolean(state?.request?.valid);
         const settingsValid = Boolean(state?.settings?.valid);
+        const submitted = Boolean(state?.submit?.submitted);
 
         return {
             step1: true,
             step2: uploadValid,
             step3: uploadValid && requestValid,
             step4: uploadValid && requestValid && settingsValid,
+            step5: submitted,
         };
     }
 
@@ -28,13 +30,10 @@
 
     function resolveCurrentStep(state) {
         const visibility = computeVisibility(state);
-
-        if (!visibility.step2) return 1;
-        if (!visibility.step3) return 2;
-        if (!visibility.step4) return 3;
-
         const requestedStep = Number(state?.wizard?.currentStep || 1);
-        return Math.min(Math.max(requestedStep, 1), 4);
+        const maxUnlocked = visibility.step5 ? 5 : visibility.step4 ? 4 : visibility.step3 ? 3 : visibility.step2 ? 2 : 1;
+
+        return Math.min(Math.max(requestedStep, 1), maxUnlocked);
     }
 
     function applyWorkflowState(state) {

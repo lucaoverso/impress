@@ -9,18 +9,9 @@
 </head>
 
 <body>
-    <header class="app-topbar">
-        <div class="app-topbar-main">
-            <div class="app-topbar-brand">
-                <span class="app-topbar-logo">Suite Escolar</span>
-                <span class="app-topbar-context">Gestao escolar</span>
-            </div>
-        </div>
-        <div class="app-topbar-actions">
-            <button id="btnVoltarServicos" type="button">Servicos</button>
-            <button id="btnSair" type="button">Sair</button>
-        </div>
-    </header>
+    {% set navbar_context = "Gestao escolar" %}
+    {% set navbar_current = "coordenacao" %}
+    {% include "includes/app_navbar.html" %}
     <main class="coordenacao-page">
         <header class="admin-header admin-header-shell">
             <div class="admin-header-main">
@@ -869,6 +860,7 @@
     <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/coordenacao/core.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/coordenacao/ocorrencias.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/coordenacao/painel.js') }}?v={{ asset_version | default('1') }}"></script>

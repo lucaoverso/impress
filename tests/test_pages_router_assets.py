@@ -112,7 +112,8 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn("css/base.css?v=build-apc-321", html)
         self.assertIn("css/pages/apc.css?v=build-apc-321", html)
         self.assertIn("js/apc.js?v=build-apc-321", html)
-        self.assertIn("Voltar aos serviços", html)
+        self.assertIn('id="btnVoltarServicos"', html)
+        self.assertIn("Serviços", html)
         self.assertIn('id="apcUsuario"', html)
 
     def test_relatorios_injeta_asset_version_e_no_store(self):

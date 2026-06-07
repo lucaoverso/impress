@@ -9,17 +9,9 @@
 </head>
 
 <body>
-    <header class="app-topbar">
-        <div class="app-topbar-main">
-            <div class="app-topbar-brand">
-                <span class="app-topbar-logo">Suite Escolar</span>
-                <span class="app-topbar-context">Central de servicos</span>
-            </div>
-        </div>
-        <div class="app-topbar-actions">
-            <button id="btnSair" type="button">Sair</button>
-        </div>
-    </header>
+    {% set navbar_context = "Central de servicos" %}
+    {% set navbar_current = "servicos" %}
+    {% include "includes/app_navbar.html" %}
     <main class="services-page">
         <header class="services-header">
             <div class="logo">
@@ -131,6 +123,7 @@
     <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/servicos.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>
 

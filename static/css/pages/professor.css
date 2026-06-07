@@ -34,6 +34,9 @@
     --print-space-4: 16px;
     --print-space-5: 24px;
     --print-space-6: 32px;
+    --print-desktop-panel-height: clamp(680px, calc(100svh - 140px), 920px);
+    --print-preview-column-width: clamp(380px, 50vw, 700px);
+    --print-step-one-width: clamp(540px, 54vw, 760px);
 }
 
 .professor-page {
@@ -171,16 +174,64 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
 }
 
 .print-wizard-stage {
-    display: grid;
-    grid-template-columns: minmax(360px, 0.95fr) minmax(360px, 1.05fr);
+    display: flex;
+    justify-content: center;
     gap: var(--print-space-5);
-    align-items: start;
 }
 
 .print-wizard-left,
 .print-wizard-right {
     min-height: 0;
     min-width: 0;
+}
+
+.print-scroll-anchor {
+    display: block;
+    width: 0;
+    height: 0;
+    flex: 0 0 auto;
+}
+
+html[data-printing-current-step="1"] .print-wizard-right {
+    display: none;
+}
+
+.print-legacy-support {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border: 0;
+}
+
+html[data-printing-current-step="1"] #etapaArquivo {
+    justify-items: center;
+    text-align: center;
+}
+
+html[data-printing-current-step="1"] #etapaArquivo .print-step-header {
+    justify-content: center;
+}
+
+html[data-printing-current-step="1"] #etapaArquivo .print-step-header>div {
+    display: grid;
+    gap: 6px;
+    justify-items: center;
+}
+
+html[data-printing-current-step="1"] #etapaArquivo .print-file-hint {
+    max-width: 52ch;
+    margin: 0 auto;
+}
+
+html[data-printing-current-step="1"] #etapaArquivo .print-step-actions {
+    width: 100%;
+    justify-content: center;
 }
 
 @media (min-width: 981px) {
@@ -194,7 +245,7 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
         min-height: auto;
         height: auto;
         max-height: none;
-        align-items: start;
+        align-items: flex-start;
     }
 
     .print-wizard-left,
@@ -202,15 +253,64 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
         height: auto;
     }
 
-    .print-wizard-right {
+    .print-wizard-left {
+        flex: 1 1 0;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+    }
+
+    html[data-printing-current-step="1"] .print-wizard-left {
+        flex: 0 1 var(--print-step-one-width);
+        width: min(100%, var(--print-step-one-width));
+        margin-inline: auto;
         height: auto;
-        max-height: none;
+        justify-content: center;
+    }
+
+    .print-wizard-right {
+        flex: 0 0 var(--print-preview-column-width);
+        width: var(--print-preview-column-width);
+        max-width: var(--print-preview-column-width);
+        display: flex;
+        align-self: flex-start;
+        min-height: var(--print-desktop-panel-height);
+        height: var(--print-desktop-panel-height);
+        max-height: var(--print-desktop-panel-height);
+        overflow: hidden;
+    }
+
+    html:not([data-printing-current-step="1"]) .print-wizard-left>.print-step-card:not([hidden]) {
+        flex: 1 1 auto;
+        width: 100%;
+        margin-inline: auto;
+        min-height: var(--print-desktop-panel-height);
+        height: var(--print-desktop-panel-height);
+        max-height: var(--print-desktop-panel-height);
+        overflow-x: hidden;
+        overflow-y: auto;
+        scrollbar-gutter: stable;
+    }
+
+    html[data-printing-current-step="1"] .print-wizard-left>.print-step-card:not([hidden]) {
+        width: 100%;
+        margin-inline: auto;
+    }
+
+    html:not([data-printing-current-step="1"]) .print-wizard-right>.print-preview-stage {
+        flex: 1 1 auto;
+        width: 100%;
+        height: 100%;
+        min-height: 100%;
+        max-height: 100%;
+        overflow: hidden;
     }
 }
 
 .print-wizard-left .print-step-card,
-.print-wizard-right .print-preview-stage,
-.print-consumption-bar {
+.print-wizard-right .print-preview-stage {
     border-radius: var(--print-radius-xl);
     border: 1px solid var(--print-color-border);
     background: rgba(255, 255, 255, 0.96);
@@ -226,14 +326,14 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
     margin-bottom: var(--print-space-5);
 }
 
-.print-mobile-preview-trigger:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
+.print-options {
+    display: flex;
+    flex-direction: row;
+    gap: var(--print-space-4);
 }
 
 .print-wizard-left .print-step-card,
-.print-wizard-right .print-preview-stage,
-.print-consumption-bar {
+.print-wizard-right .print-preview-stage {
     padding: var(--print-space-5);
 }
 
@@ -258,18 +358,33 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
     padding-top: var(--print-space-2);
 }
 
-.print-step-card.is-mobile-step-enter {
-    animation: print-mobile-step-enter 240ms ease;
+.print-step-actions-end {
+    justify-content: flex-end;
 }
 
-@keyframes print-mobile-step-enter {
+#etapaAcompanhamento #lista-job-recente {
+    width: 100%;
+}
+
+.print-step-card.is-step-enter {
+    animation: print-step-enter 280ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@keyframes print-step-enter {
     from {
-        opacity: 0.72;
-        transform: translateY(10px);
+        opacity: 0;
+        transform: translateX(36px);
     }
+
     to {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateX(0);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .print-step-card.is-step-enter {
+        animation: none;
     }
 }
 
@@ -281,9 +396,6 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
 }
 
 .print-wizard-right .print-preview-stage {
-    min-height: min(720px, calc(100svh - 250px));
-    height: min(720px, calc(100svh - 250px));
-    max-height: min(720px, calc(100svh - 250px));
     overflow: hidden;
 }
 
@@ -296,8 +408,8 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
 }
 
 .print-layout-choice-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: var(--print-space-3);
 }
 
@@ -307,6 +419,7 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
 
 .print-choice-block {
     min-height: 44px;
+    min-width: 150px;
     border-radius: var(--print-radius-md);
     border: 1px solid var(--print-color-border);
     background: var(--print-color-surface);
@@ -327,16 +440,6 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
     grid-template-columns: 1fr;
 }
 
-.print-consumption-bar {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto auto;
-    gap: var(--print-space-4);
-    align-items: center;
-    position: relative;
-    z-index: 0;
-    margin-top: var(--print-space-1);
-}
-
 .print-inline-queue-card {
     border-radius: var(--print-radius-xl);
     border: 1px solid var(--print-color-border);
@@ -347,11 +450,56 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
     gap: var(--print-space-2);
 }
 
+
+
+
+.print-inline-queue-card[hidden] {
+    display: none !important;
+}
+
 .print-inline-queue-header {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
     gap: var(--print-space-3);
+}
+
+.print-inline-summary-list {
+    display: grid;
+    gap: var(--print-space-2);
+    margin: 0;
+}
+
+.print-inline-summary-item {
+    display: grid;
+    grid-template-columns: minmax(84px, auto) minmax(0, 1fr);
+    gap: var(--print-space-3);
+    align-items: start;
+    padding: 10px 12px;
+    border-radius: var(--print-radius-md);
+    border: 1px solid var(--print-color-border);
+    background: rgba(249, 251, 253, 0.92);
+}
+
+.print-inline-summary-item dt,
+.print-inline-summary-item dd {
+    margin: 0;
+}
+
+.print-inline-summary-item dt {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--print-color-text-muted);
+}
+
+.print-inline-summary-item dd {
+    min-width: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--print-color-text);
+    word-break: break-word;
 }
 
 #lista-job-recente {
@@ -361,24 +509,10 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
     gap: var(--print-space-2);
     margin: 0;
     padding: 0;
+
 }
 
-.print-consumption-primary,
-.print-consumption-secondary,
-.print-consumption-status {
-    display: flex;
-    align-items: center;
-    gap: var(--print-space-3);
-    flex-wrap: wrap;
-    min-width: 0;
-}
 
-.print-consumption-primary span,
-.print-consumption-secondary span,
-.print-consumption-status span {
-    min-width: 0;
-    overflow-wrap: anywhere;
-}
 
 .print-form-column,
 .print-review-column {
@@ -629,6 +763,29 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
     text-align: left;
 }
 
+.print-upload-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 4px;
+    background: rgba(13, 122, 111, 0.10);
+    color: var(--print-color-primary);
+    box-shadow: inset 0 0 0 1px rgba(13, 122, 111, 0.12);
+}
+
+.print-upload-icon svg {
+    width: 28px;
+    height: 28px;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+}
+
 .print-upload-dropzone:hover {
     border-color: rgba(13, 122, 111, 0.56);
 }
@@ -641,6 +798,11 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
 
 .print-upload-dropzone.has-file {
     border-style: solid;
+}
+
+html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
+    align-items: center;
+    text-align: center;
 }
 
 .print-upload-title {
@@ -679,7 +841,8 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
     border: 1px solid var(--print-color-border);
     background: #f9fbfd;
     padding: var(--print-space-4);
-    display: grid;
+    display: flex;
+    flex-direction: column;
     gap: var(--print-space-4);
 }
 
@@ -805,6 +968,7 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
 
 .print-tags-grid {
     display: flex;
+    flex-direction: column;
     flex-wrap: wrap;
     gap: var(--print-space-3);
 }
@@ -971,7 +1135,8 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
 
 @media (min-width: 981px) {
     .print-preview-pane {
-        overflow: hidden;
+        overflow-x: hidden;
+        overflow-y: auto;
     }
 }
 
@@ -1094,7 +1259,8 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
     box-shadow: 0 0 0 2px rgba(13, 122, 111, 0.18), var(--print-shadow-sm);
 }
 
-#previewContainer .sheet-label {
+#previewContainer .print-sheet-thumb::after {
+    content: attr(data-sheet-label);
     display: none;
     border-radius: var(--print-radius-sm);
     border: 1px solid var(--print-color-border);
@@ -1105,13 +1271,13 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
     padding: 6px 10px;
 }
 
-#previewContainer .print-sheet-thumb.is-active .sheet-label {
+#previewContainer .print-sheet-thumb.is-active::after {
     border-color: rgba(13, 122, 111, 0.28);
     background: var(--print-color-primary-light);
     color: var(--print-color-primary);
 }
 
-.print-preview-thumbs .sheet-label {
+.print-preview-thumbs .print-sheet-thumb::after {
     display: block;
     font-size: 11px;
     padding: 5px 8px;
@@ -1147,7 +1313,8 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
     border-color: var(--print-color-text-soft);
 }
 
-#previewContainer .preview-page-tag {
+#previewContainer .preview-cell::before {
+    content: attr(data-page-label);
     position: absolute;
     top: 6px;
     left: 6px;
@@ -1163,7 +1330,7 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
     pointer-events: none;
 }
 
-#previewContainer .preview-cell.is-selected .preview-page-tag {
+#previewContainer .preview-cell.is-selected::before {
     border-color: rgba(13, 122, 111, 0.35);
     background: rgba(230, 244, 242, 0.96);
     color: var(--print-color-primary);
@@ -1179,13 +1346,13 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
 }
 
 .print-summary-list {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    display: flex;
+    flex-direction: column;
     gap: var(--print-space-3);
     margin: 0;
 }
 
-.print-summary-list > div {
+.print-summary-list>div {
     border-radius: 16px;
     border: 1px solid var(--print-color-border);
     background: #f9fbfd;
@@ -1204,7 +1371,6 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
 .print-summary-list dd {
     margin: 0;
     color: var(--print-color-text);
-    font-weight: 700;
     word-break: break-word;
 }
 
@@ -1380,6 +1546,56 @@ html[data-printing-current-step="4"] .print-progress-steps::after {
     display: flex;
     flex-direction: column;
     gap: 8px;
+    background: var(--print-color-surface);
+}
+
+#lista-job-recente li.print-job-item {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+#lista-job-recente li.print-job-item::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 0;
+    z-index: 0;
+    border-top-left-radius: inherit;
+    border-bottom-left-radius: inherit;
+    background: linear-gradient(90deg, rgba(34, 197, 94, 0.18), rgba(74, 222, 128, 0.4));
+    animation: preencherFundo 15s linear forwards;
+}
+
+#lista-job-recente li.print-job-item > * {
+    position: relative;
+    z-index: 1;
+}
+
+#lista-job-recente li.print-job-item.is-progress-complete {
+    border-color: rgba(22, 163, 74, 0.4);
+    box-shadow: 0 0 0 1px rgba(34, 197, 94, 0.16);
+}
+
+#lista-job-recente li.print-job-item.is-progress-complete::before {
+    animation: none;
+    width: 100%;
+    background: linear-gradient(90deg, rgba(34, 197, 94, 0.26), rgba(74, 222, 128, 0.52));
+}
+
+#lista-job-recente li.print-job-item.is-progress-stopped::before {
+    animation-play-state: paused;
+}
+
+@keyframes preencherFundo {
+    from {
+        width: 0;
+    }
+    to {
+        width: 100%;
+    }
 }
 
 #lista-jobs li.print-job-item.is-reusable {
@@ -1684,6 +1900,43 @@ body.print-preview-modal-open {
         flex: 1 1 100%;
     }
 
+    #etapaConfiguracoes .print-options {
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    #etapaConfiguracoes .print-config-section,
+    #etapaConfiguracoes .print-layout-choice-grid,
+    #etapaConfiguracoes .print-layout-choice-grid-2 {
+        width: 100%;
+        min-width: 0;
+    }
+
+    #etapaConfiguracoes .print-choice-block {
+        width: 100%;
+        min-width: 0;
+        white-space: normal;
+        overflow-wrap: anywhere;
+    }
+
+    #etapaConferencia .print-options {
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    #etapaConferencia .print-config-section {
+        width: 100%;
+        min-width: 0;
+    }
+
+    #tagsConferencia {
+        order: 1;
+    }
+
+    #resumoConferencia {
+        order: 2;
+    }
+
     .print-wizard-left {
         height: auto;
         overflow-y: auto;
@@ -1703,20 +1956,21 @@ body.print-preview-modal-open {
     }
 
     .print-wizard-right {
-        position: sticky;
+        position: static;
         left: auto;
         right: auto;
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
-        overflow: hidden;
-        z-index: 2;
+        bottom: auto;
+        overflow: visible;
+        z-index: auto;
         margin-top: var(--print-space-2);
-        max-height: 30svh;
+        max-height: none;
+        width: 100%;
     }
 
     .print-preview-stage {
         min-height: 0;
-        height: clamp(136px, 22svh, 176px);
-        max-height: clamp(136px, 22svh, 176px);
+        height: auto;
+        max-height: none;
         overflow: hidden;
         padding: var(--print-space-2) var(--print-space-3);
         box-shadow: var(--print-shadow-lg);
@@ -1726,21 +1980,8 @@ body.print-preview-modal-open {
         display: none;
     }
 
-    html[data-printing-mobile-preview="false"] .print-wizard-left {
-        padding-bottom: var(--print-space-3);
-    }
-
-    .print-mobile-only {
-        display: inline-flex;
-    }
-
     #painelPreview {
         display: grid;
-    }
-
-    #btnFecharPreviewMobile,
-    .print-mobile-preview-trigger {
-        display: none !important;
     }
 
     body.print-preview-modal-open #painelPreview,
@@ -1777,21 +2018,37 @@ body.print-preview-modal-open {
     }
 
     .print-preview-pane {
-        padding: 0;
+        padding: var(--print-space-2);
         overflow-x: auto;
         overflow-y: hidden;
-        scroll-snap-type: x proximity;
-        min-height: 0;
+        scroll-snap-type: x mandatory;
+        min-height: clamp(320px, 58svh, 540px);
         -webkit-overflow-scrolling: touch;
     }
 
+    .print-step-card.is-step-enter {
+        animation: print-step-enter-mobile 180ms ease-out;
+    }
+
+    @keyframes print-step-enter-mobile {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
     #previewContainer {
-        gap: var(--print-space-2);
-        padding: 2px 2px var(--print-space-2);
+        gap: var(--print-space-3);
+        padding: 4px 4px var(--print-space-2);
     }
 
     #previewContainer.is-carousel {
         width: max-content;
+        min-width: 100%;
         display: flex;
         align-items: flex-start;
         justify-content: flex-start;
@@ -1800,7 +2057,7 @@ body.print-preview-modal-open {
     #previewContainer.is-carousel .print-sheet-thumb {
         width: auto;
         max-width: none;
-        scroll-snap-align: start;
+        scroll-snap-align: center;
         align-items: center;
         justify-self: auto;
         flex: 0 0 auto;
@@ -1815,15 +2072,16 @@ body.print-preview-modal-open {
         cursor: default;
     }
 
-    #previewContainer.is-carousel .sheet-label {
+    #previewContainer.is-carousel .print-sheet-thumb::after {
         display: block;
         font-size: 12px;
         padding: 5px 8px;
+        align-self: center;
     }
 
     .print-pagination {
         min-width: 0;
-        width: auto;
+        width: 100%;
         grid-template-columns: minmax(0, 1fr);
         padding: 4px 8px;
         border-color: #a9d7ca;
@@ -1841,31 +2099,6 @@ body.print-preview-modal-open {
         font-weight: 800;
     }
 
-    .print-consumption-bar {
-        grid-template-columns: 1fr;
-        align-items: start;
-        gap: var(--print-space-2);
-        width: 100%;
-        min-width: 0;
-        padding: var(--print-space-3) var(--print-space-4);
-        margin-top: var(--print-space-3);
-        margin-bottom: 0;
-    }
-
-    html[data-printing-mobile-preview="false"] .print-consumption-bar {
-        margin-bottom: 0;
-    }
-
-    .print-mobile-preview-trigger {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .print-consumption-primary,
-    .print-consumption-secondary,
-    .print-consumption-status {
-        width: 100%;
-    }
 }
 
 @media (max-width: 640px) {
@@ -1879,22 +2112,22 @@ body.print-preview-modal-open {
     }
 
     .print-wizard-right {
-        bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+        bottom: auto;
     }
 
     .print-preview-stage {
-        height: min(24svh, 180px);
-        max-height: min(24svh, 180px);
-        padding: var(--print-space-2);
+        height: auto;
+        max-height: none;
+        padding: var(--print-space-2) var(--print-space-2) var(--print-space-3);
     }
 
     .print-preview-header {
-        display:none;
-        padding-bottom: var(--print-space-1);
+        display: flex;
+        padding-bottom: var(--print-space-2);
     }
 
     .print-preview-header h2 {
-        display: none;
+        display: block;
         font-size: var(--print-font-sm);
     }
 
