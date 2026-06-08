@@ -730,6 +730,14 @@ function renderAulasAdicionaisAgendamento() {
         const chave = chaveAulaAgendamento(aula);
         const disponivel = aulaSuportaRecursosSelecionados(aula, recursosSelecionados);
         const selecionada = aulasAdicionaisAgendamento.has(chave);
+        const turma = textoPadraoDetalheReserva(
+            aula?.turma_nome || aula?.turmaNome,
+            "Turma não informada"
+        );
+        const turno = textoPadraoDetalheReserva(
+            aula?.turno_nome || aula?.turnoNome || nomeTurnoExibicao(aula?.turno),
+            "Turno não informado"
+        );
 
         const botao = document.createElement("button");
         botao.type = "button";
@@ -745,12 +753,20 @@ function renderAulasAdicionaisAgendamento() {
 
         const titulo = document.createElement("strong");
         titulo.innerText = obterTituloAulaAgendamento(aula);
+        titulo.className = "scheduler-extra-lesson-title";
+
+        const turmaInfo = document.createElement("span");
+        turmaInfo.className = "scheduler-extra-lesson-class";
+        turmaInfo.innerText = turma;
+
         const meta = document.createElement("span");
+        meta.className = "scheduler-extra-lesson-meta";
         meta.innerText = disponivel
-            ? obterResumoCurtoAulaAgendamento(aula)
-            : `${obterResumoCurtoAulaAgendamento(aula)} | Algum recurso já está ocupado`;
+            ? turno
+            : `${turno} | Algum recurso já está ocupado`;
 
         botao.appendChild(titulo);
+        botao.appendChild(turmaInfo);
         botao.appendChild(meta);
         botao.addEventListener("click", () => {
             if (!disponivel) {
