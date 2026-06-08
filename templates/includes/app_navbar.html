@@ -4,17 +4,25 @@
 {% set navbar_current = navbar_current | default("") %}
 {% set navbar_classes = navbar_classes | default("") %}
 {% set navbar_extra_actions = navbar_extra_actions | default([]) %}
+{% set navbar_home_href = navbar_home_href | default("/servicos") %}
+{% set navbar_logo_src = navbar_logo_src | default(request.url_for('static', path='img/logo_escola.png')) %}
+{% set navbar_logo_alt = navbar_logo_alt | default("Voltar para a tela de serviços") %}
 
 <header class="app-topbar{% if navbar_classes %} {{ navbar_classes }}{% endif %}" data-app-navbar
     data-navbar-current="{{ navbar_current }}">
     <div class="app-topbar-main">
         <div class="app-topbar-brand">
-            <span class="app-topbar-logo">{{ navbar_brand }}</span>
-            {% if navbar_context %}
-            <span class="app-topbar-context"{% if navbar_context_id %} id="{{ navbar_context_id }}"{% endif %}>
-                {{ navbar_context }}
-            </span>
-            {% endif %}
+            <a href="{{ navbar_home_href }}" class="app-topbar-home-link" aria-label="{{ navbar_logo_alt }}">
+                <img src="{{ navbar_logo_src }}" alt="{{ navbar_logo_alt }}" class="app-topbar-school-logo">
+            </a>
+            <div class="app-topbar-brand-copy">
+            
+                {% if navbar_context %}
+                <span class="app-topbar-context"{% if navbar_context_id %} id="{{ navbar_context_id }}"{% endif %}>
+                    {{ navbar_context }}
+                </span>
+                {% endif %}
+            </div>
         </div>
     </div>
     <div class="app-topbar-actions app-navbar-actions">

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-scheduler-current-step="1">
 
 <head>
     <meta charset="UTF-8">
@@ -11,41 +11,202 @@
 <body>
     {% set navbar_context = "Area docente" %}
     {% set navbar_current = "agendamento" %}
+    {% set navbar_extra_actions = [
+        {"id": "btnAbrirCalendarioGeralNavbar", "label": "Calendário geral"},
+        {"id": "btnAbrirMeusAgendamentosNavbar", "label": "Meus agendamentos"}
+    ] %}
     {% include "includes/app_navbar.html" %}
     <main class="scheduler-page">
-        <section class="scheduler-toolbar">
-            <p id="agendamentoUsuario" hidden></p>
+        <input id="dataReserva" type="hidden">
+        <p id="agendamentoUsuario" hidden></p>
 
-            <h3>Novo agendamento</h3>
-            <label for="recursoSelect">Recurso</label>
-            <select id="recursoSelect"></select>
-
-            <label for="dataReserva">Data</label>
-            <input id="dataReserva" type="date">
-
-            <label for="turmaReserva">Turma</label>
-            <select id="turmaReserva"></select>
-
-            <div id="grupoProfessorReserva" style="display: none;">
-                <label for="professorReserva">Professor solicitante</label>
-                <select id="professorReserva"></select>
+        <header class="scheduler-page-header">
+            <div class="scheduler-page-header-copy">
+                <p class="auth-badge">Agendamento de recursos</p>
+                <h1>Reserve recursos para a aula</h1>
+                <p class="scheduler-page-lead">
+                    Escolha a aula do dia, veja o que já está reservado e confirme a reserva em etapas.
+                </p>
             </div>
+        </header>
 
-            <label for="aulaReserva">Aula</label>
-            <select id="aulaReserva"></select>
+        <section class="scheduler-primary-column">
+            <article class="calendar-card scheduler-week-strip-card">
+                <header class="scheduler-week-header">
+                    <div>
+                        <p class="print-step-kicker">Etapa 1</p>
+                        <h2>Escolha a aula</h2>
+                        <p class="scheduler-week-copy">
+                            Navegue pela semana e clique na aula que vai receber o recurso.
+                        </p>
+                    </div>
+                    <div class="scheduler-week-nav">
+                        <button id="btnSemanaAnterior" type="button" aria-label="Semana anterior">◀</button>
+                        <h3 id="tituloSemanaAtual"></h3>
+                        <button id="btnSemanaProxima" type="button" aria-label="Próxima semana">▶</button>
+                        <button id="btnSemanaHoje" type="button">Hoje</button>
+                    </div>
+                </header>
+                <div id="agendaSemanaDias" class="scheduler-week-strip" aria-label="Dias disponíveis da semana"></div>
+            </article>
 
-            <label for="temaAulaReserva">Tema da aula</label>
-            <input id="temaAulaReserva" type="text" maxlength="160" required placeholder="Ex.: Revisão de frações e lista de exercícios">
+            <article class="calendar-card scheduler-day-lessons-card">
+                <header class="scheduler-day-lessons-header">
+                    <div>
+                        <p class="print-step-kicker">Agenda do dia</p>
+                        <h3>Aulas do dia</h3>
+                        <p id="subtituloAgendaDia"></p>
+                    </div>
+                    <div id="grupoProfessorAgendaFiltro" class="scheduler-day-professor-filter" hidden>
+                        <label for="professorAgendaFiltro">Professor</label>
+                        <select id="professorAgendaFiltro"></select>
+                    </div>
+                </header>
+                <div class="weekly-lessons-table-wrap">
+                    <table id="tabelaAgendaDia" class="weekly-lessons-table"></table>
+                </div>
+            </article>
 
-            <label for="observacaoReserva">Observação</label>
-            <textarea id="observacaoReserva" rows="3" placeholder="Se precisar que o PCPI deixe algum site aberto nos computadores, use este campo para descrever."></textarea>
-
-            <button id="btnAgendar" class="btn-destaque" type="button">Agendar recurso</button>
-            <p id="msgAgendamento"></p>
+            <section class="scheduler-feedback-panel scheduler-feedback-panel-inline" aria-live="polite">
+                <p id="msgAgendamento" class="scheduler-feedback-message"></p>
+            </section>
         </section>
 
-        <section class="scheduler-content">
-            <article class="calendar-card calendar-main-card">
+        <section class="scheduler-secondary-column">
+            <section class="scheduler-toolbar scheduler-wizard-shell">
+                <div id="schedulerWizardStartAnchor" class="print-scroll-anchor" aria-hidden="true"></div>
+
+                <div id="schedulerWizardFlow" hidden>
+                    <article id="etapaAgendamentoContexto" class="print-step-card print-step-card-active">
+                        <header class="print-step-header">
+                            <div>
+                                <p class="print-step-kicker">Etapa 2</p>
+                                <h2>Selecione os recursos</h2>
+                            </div>
+                            <p class="print-step-state">Aula confirmada</p>
+                        </header>
+                        <p class="print-step-description">
+                            Escolha os recursos disponíveis para esta aula.
+                        </p>
+
+                        <section class="print-config-section">
+                            <article class="scheduler-selected-lesson-card">
+                                <p class="print-step-kicker">Aula selecionada</p>
+                                <h3 id="tituloAulaSelecionada">Nenhuma aula selecionada</h3>
+                                <p id="resumoAulaSelecionada" class="print-file-hint"></p>
+                            </article>
+
+                            <article class="print-field-group">
+                                <label>Recursos</label>
+                                <div id="recursoButtons" class="scheduler-resource-button-grid" role="group"
+                                    aria-label="Recursos disponíveis para o agendamento"></div>
+                                <p id="resumoDisponibilidadeRecursos" class="print-file-hint">
+                                    Escolha uma aula para ver quais recursos ainda estão disponíveis e monte o agrupamento.
+                                </p>
+                            </article>
+                        </section>
+
+                        <div class="print-step-actions">
+                            <button id="btnTrocarAulaSelecionada" class="print-secondary-btn" type="button">Trocar aula</button>
+                            <button id="btnContinuarAgendamentoContexto" class="btn-destaque" type="button">Continuar</button>
+                        </div>
+                    </article>
+
+                    <article id="etapaAgendamentoDetalhes" class="print-step-card" hidden>
+                        <header class="print-step-header">
+                            <div>
+                                <p class="print-step-kicker">Etapa 3</p>
+                                <h2>Descreva a aula</h2>
+                            </div>
+                            <p class="print-step-state">Tema e observações</p>
+                        </header>
+                        <p class="print-step-description">
+                            Informe o tema da aula e, se precisar, deixe uma observação para o preparo.
+                        </p>
+
+                        <section class="print-config-section">
+                            <article class="scheduler-selected-lesson-card scheduler-selected-lesson-card-compact">
+                                <p class="print-step-kicker">Contexto da aula</p>
+                                <h3 id="tituloAulaSelecionadaDetalhes">Nenhuma aula selecionada</h3>
+                                <p id="resumoAulaSelecionadaDetalhes" class="print-file-hint"></p>
+                            </article>
+
+                            <article class="print-field-group">
+                                <label for="temaAulaReserva">Tema da aula</label>
+                                <input id="temaAulaReserva" type="text" maxlength="160" required
+                                    placeholder="Ex.: Revisão de frações e lista de exercícios">
+                            </article>
+
+                            <article class="print-field-group">
+                                <label for="observacaoReserva">Observação</label>
+                                <textarea id="observacaoReserva" rows="3"
+                                    placeholder="Se precisar que o PCPI deixe algum site aberto nos computadores, use este campo para descrever."></textarea>
+                            </article>
+                        </section>
+
+                        <div class="print-step-actions">
+                            <button id="btnVoltarAgendamentoDetalhes" class="print-secondary-btn" type="button">Voltar</button>
+                            <button id="btnContinuarAgendamentoDetalhes" class="btn-destaque" type="button">Continuar</button>
+                        </div>
+                    </article>
+
+                    <article id="etapaAgendamentoResumo" class="print-step-card" hidden>
+                        <header class="print-step-header">
+                            <div>
+                                <p class="print-step-kicker">Etapa 4</p>
+                                <h2>Confira o agendamento</h2>
+                            </div>
+                            <p class="print-step-state">Pronto para confirmar</p>
+                        </header>
+                        <p class="print-step-description">
+                            Revise os dados principais antes de confirmar a reserva.
+                        </p>
+
+                        <section class="print-config-section">
+                            <h3>Resumo da reserva</h3>
+                            <dl class="print-summary-list print-summary-list-single">
+                                <div>
+                                    <dt>Recursos</dt>
+                                    <dd id="resumoAgendamentoRecurso">Aguardando seleção</dd>
+                                </div>
+                                <div>
+                                    <dt>Turma</dt>
+                                    <dd id="resumoAgendamentoTurma">Aguardando turma</dd>
+                                </div>
+                                <div>
+                                    <dt>Tema</dt>
+                                    <dd id="resumoAgendamentoTema">Aguardando tema</dd>
+                                </div>
+                                <div>
+                                    <dt>Observação</dt>
+                                    <dd id="resumoAgendamentoObservacao">Sem observação adicional.</dd>
+                                </div>
+                            </dl>
+                        </section>
+
+                        <div class="print-step-actions">
+                            <button id="btnVoltarAgendamentoResumo" class="print-secondary-btn" type="button">Voltar</button>
+                            <button id="btnAgendar" class="btn-destaque" type="button">Confirmar reserva</button>
+                        </div>
+                    </article>
+                </div>
+            </section>
+        </section>
+    </main>
+
+    <aside id="painelCalendarioAgendamento" class="scheduler-side-drawer" aria-hidden="true">
+        <div class="scheduler-side-backdrop" data-close-scheduler-drawer="true"></div>
+        <section class="scheduler-side-panel scheduler-side-panel-wide">
+            <header class="scheduler-side-header">
+                <div>
+                    <p class="auth-badge">Calendário geral</p>
+                    <h2>Visão mensal do agendamento</h2>
+                    <p>Consulte o mês inteiro e acompanhe o que já está reservado em cada data.</p>
+                </div>
+                <button id="btnFecharCalendarioGeral" class="print-secondary-btn" type="button">Fechar</button>
+            </header>
+
+            <article class="calendar-card scheduler-calendar-card">
                 <header class="calendar-header">
                     <button id="btnMesAnterior" type="button">◀</button>
                     <h3 id="mesAtual"></h3>
@@ -55,25 +216,7 @@
                 <div id="calendarioGrid" class="calendar-grid"></div>
             </article>
 
-            <article class="calendar-card weekly-lessons-card">
-                <header class="weekly-lessons-header">
-                    <div>
-                        <h3>Agenda do dia por aula</h3>
-                        <p id="subtituloAgendaDia"></p>
-                    </div>
-                    <div class="agenda-day-controls">
-                        <div id="agendaDiaFiltroRecursos" class="booking-sort-controls agenda-day-filter-controls">
-                            <button id="btnAgendaDiaAgruparRecurso" type="button" class="agenda-day-group-btn">Agrupar por recurso</button>
-                        </div>
-                        
-                    </div>
-                </header>
-                <div class="weekly-lessons-table-wrap">
-                    <table id="tabelaAgendaDia" class="weekly-lessons-table"></table>
-                </div>
-            </article>
-
-            <article class="calendar-card day-bookings-card">
+            <article class="calendar-card scheduler-drawer-bookings-card">
                 <header class="booking-card-header">
                     <h3 id="tituloDia">Reservas do dia</h3>
                     <div class="booking-sort-controls" data-sort-target="dia">
@@ -86,8 +229,22 @@
                 </header>
                 <ul id="listaReservasDia"></ul>
             </article>
+        </section>
+    </aside>
 
-            <article class="calendar-card my-bookings-card">
+    <aside id="painelMinhasReservasAgendamento" class="scheduler-side-drawer" aria-hidden="true">
+        <div class="scheduler-side-backdrop" data-close-scheduler-drawer="true"></div>
+        <section class="scheduler-side-panel">
+            <header class="scheduler-side-header">
+                <div>
+                    <p class="auth-badge">Meus agendamentos</p>
+                    <h2>Painel pessoal</h2>
+                    <p>Veja suas reservas mais recentes e acompanhe os horários já confirmados.</p>
+                </div>
+                <button id="btnFecharMinhasReservas" class="print-secondary-btn" type="button">Fechar</button>
+            </header>
+
+            <article class="calendar-card scheduler-drawer-bookings-card">
                 <header class="booking-card-header">
                     <h3>Meus agendamentos</h3>
                     <div class="booking-sort-controls" data-sort-target="minhas">
@@ -102,7 +259,7 @@
                 <ul id="listaMinhasReservas"></ul>
             </article>
         </section>
-    </main>
+    </aside>
 
     <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
