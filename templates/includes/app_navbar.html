@@ -5,7 +5,7 @@
 {% set navbar_classes = navbar_classes | default("") %}
 {% set navbar_extra_actions = navbar_extra_actions | default([]) %}
 {% set navbar_home_href = navbar_home_href | default("/servicos") %}
-{% set navbar_logo_src = navbar_logo_src | default(request.url_for('static', path='/static/img/logo_escola.PNG')) %}
+{% set navbar_logo_src = navbar_logo_src | default(request.url_for('static', path='img/logo_escola.PNG')) %}
 {% set navbar_logo_alt = navbar_logo_alt | default("Voltar para a tela de serviços") %}
 
 <header class="app-topbar{% if navbar_classes %} {{ navbar_classes }}{% endif %}" data-app-navbar
