@@ -3,6 +3,7 @@
     const CARGO_PROFESSOR = "PROFESSOR";
     const CARGO_COORDENADOR = "COORDENADOR";
     const SENHA_FORTE_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
+    const USUARIO_CACHE_KEY = "usuario_atual";
 
     function obterToken() {
         return localStorage.getItem("token") || "";
@@ -19,6 +20,7 @@
     function limparSessaoLocal() {
         localStorage.removeItem("token");
         localStorage.removeItem("token_expira_em");
+        sessionStorage.removeItem(USUARIO_CACHE_KEY);
     }
 
     function encerrarSessao() {
@@ -115,6 +117,49 @@
         return expiraData.getTime() > Date.now();
     }
 
+    function lerUsuarioCache() {
+        const bruto = sessionStorage.getItem(USUARIO_CACHE_KEY);
+        if (!bruto) {
+            return null;
+        }
+
+        try {
+            return JSON.parse(bruto);
+        } catch (_erro) {
+            sessionStorage.removeItem(USUARIO_CACHE_KEY);
+            return null;
+        }
+    }
+
+    function salvarUsuarioCache(usuario = null) {
+        if (!usuario) {
+            sessionStorage.removeItem(USUARIO_CACHE_KEY);
+            return null;
+        }
+
+        sessionStorage.setItem(USUARIO_CACHE_KEY, JSON.stringify(usuario));
+        return usuario;
+    }
+
+    async function carregarUsuarioAtual({ forcar = false } = {}) {
+        if (!forcar) {
+            const usuarioCache = lerUsuarioCache();
+            if (usuarioCache) {
+                return usuarioCache;
+            }
+        }
+
+        const token = obterToken();
+        if (!token || !window.AppApi?.fetchJson) {
+            return null;
+        }
+
+        const usuario = await window.AppApi.fetchJson("/me", {
+            headers: criarHeadersAuth(token),
+        });
+        return salvarUsuarioCache(usuario);
+    }
+
     function validarSenhaForte(senha) {
         return SENHA_FORTE_REGEX.test(senha || "");
     }
@@ -134,5 +179,8 @@
         parseDataSqlUtc,
         sessaoLocalValida,
         validarSenhaForte,
+        lerUsuarioCache,
+        salvarUsuarioCache,
+        carregarUsuarioAtual,
     });
 })(window);

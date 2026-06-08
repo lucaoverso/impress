@@ -143,6 +143,13 @@
         metaEl.innerText = `${cargo} • ${modulos.size} módulo(s) disponível(is)`;
     }
 
+    function definirUsuario(usuario = null) {
+        state.user = usuario || null;
+        if (state.initialized) {
+            aplicarUsuario(state.user);
+        }
+    }
+
     function criarLinkModulo(item, currentKey) {
         const link = document.createElement("a");
         link.className = "app-navbar-link";
@@ -335,11 +342,33 @@
             return state.userPromise;
         }
 
-        if (!window.AppAuth?.garantirToken || !window.AppAuth?.criarHeadersAuth || !window.AppApi?.fetchJson) {
+        if (window.AppAuth?.carregarUsuarioAtual) {
+            state.userPromise = window.AppAuth.carregarUsuarioAtual()
+                .then((usuario) => {
+                    state.user = usuario;
+                    state.userPromise = null;
+                    if (usuario) {
+                        document.dispatchEvent(new CustomEvent("app-navbar:user-loaded", {
+                            detail: usuario,
+                        }));
+                    }
+                    return usuario;
+                })
+                .catch((erro) => {
+                    state.userPromise = null;
+                    throw erro;
+                });
+            return state.userPromise;
+        }
+
+        if (!window.AppAuth?.obterToken || !window.AppAuth?.criarHeadersAuth || !window.AppApi?.fetchJson) {
             return Promise.resolve(null);
         }
 
-        const token = window.AppAuth.garantirToken();
+        const token = window.AppAuth.obterToken();
+        if (!token) {
+            return Promise.resolve(null);
+        }
         const headers = window.AppAuth.criarHeadersAuth(token);
 
         state.userPromise = window.AppApi.fetchJson("/me", { headers })
@@ -379,11 +408,14 @@
         fecharMenu();
         registrarEventosGlobais();
         observarAcoesRapidas();
+        document.addEventListener("app:user-loaded", (event) => {
+            definirUsuario(event.detail || null);
+        });
         aplicarUsuario(null);
 
         carregarUsuarioNavbar()
             .then((usuario) => {
-                aplicarUsuario(usuario);
+                definirUsuario(usuario);
             })
             .catch(() => {
                 aplicarUsuario(null);
@@ -395,6 +427,7 @@
         fecharMenu,
         abrirMenu,
         aplicarUsuario,
+        definirUsuario,
         obterUsuarioAtual: () => state.user,
     });
 
