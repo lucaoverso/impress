@@ -10,6 +10,7 @@ const token = garantirToken();
 const headers = criarHeadersAuth(token);
 
 function modulosPermitidos(usuario = {}) {
+    usuario = usuario && typeof usuario === "object" ? usuario : {};
     if (Array.isArray(usuario.modulos) && usuario.modulos.length > 0) {
         return new Set(usuario.modulos.map((item) => String(item).trim().toLowerCase()));
     }

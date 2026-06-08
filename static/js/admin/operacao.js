@@ -506,6 +506,16 @@ async function carregarRecursos() {
         const linha = document.createElement("div");
         linha.className = "admin-inline";
 
+        detalhe.innerText = `${recurso.descricao || "Sem descrição"} | Quantidade: ${recurso.quantidade_itens ?? 1} | Status: ${recurso.ativo ? "Ativo" : "Inativo"} | ${recurso.imagem_capa ? "Com capa" : "Sem capa"}`;
+
+        if (recurso.imagem_capa) {
+            const preview = document.createElement("div");
+            preview.className = "admin-resource-image-preview is-listing";
+            preview.style.backgroundImage = `linear-gradient(180deg, rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0.55)), url("${recurso.imagem_capa}")`;
+            preview.innerHTML = "<span>Capa atual</span>";
+            li.appendChild(preview);
+        }
+
         const inputQuantidadeItens = document.createElement("input");
         inputQuantidadeItens.type = "number";
         inputQuantidadeItens.min = "1";
@@ -524,7 +534,8 @@ async function carregarRecursos() {
                         nome: recurso.nome,
                         tipo: recurso.tipo,
                         descricao: recurso.descricao || "",
-                        quantidade_itens: Number(inputQuantidadeItens.value)
+                        quantidade_itens: Number(inputQuantidadeItens.value),
+                        imagem_capa: recurso.imagem_capa || ""
                     })
                 });
                 setMensagem("msgRecurso", `Quantidade atualizada para ${recurso.nome}.`);
@@ -569,13 +580,52 @@ async function carregarRecursos() {
     });
 }
 
+async function uploadImagemRecurso() {
+    const inputArquivo = el("recursoImagemArquivo");
+    const arquivo = inputArquivo?.files?.[0];
+    if (!arquivo) {
+        setMensagem("msgRecurso", "Escolha uma imagem antes de enviar.", true);
+        return;
+    }
+
+    const formData = new FormData();
+    formData.append("arquivo", arquivo);
+
+    try {
+        const response = await fetch("/admin/recursos/upload-imagem", {
+            method: "POST",
+            headers,
+            body: formData
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload?.detail || payload?.mensagem || "Nao foi possivel enviar a imagem.");
+        }
+
+        atualizarPreviewImagemRecurso(payload.imagem_capa || "");
+        inputArquivo.value = "";
+        setMensagem("msgRecurso", "Imagem enviada com sucesso.");
+    } catch (err) {
+        setMensagem("msgRecurso", err.message, true);
+    }
+}
+
+function removerImagemRecursoSelecionada() {
+    atualizarPreviewImagemRecurso("");
+    const inputArquivo = el("recursoImagemArquivo");
+    if (inputArquivo) {
+        inputArquivo.value = "";
+    }
+}
+
 async function cadastrarRecurso(event) {
     event.preventDefault();
     const payload = {
         nome: el("recursoNome").value.trim(),
         tipo: el("recursoTipo").value.trim(),
         descricao: el("recursoDescricao").value.trim(),
-        quantidade_itens: Number(el("recursoQuantidadeItens").value)
+        quantidade_itens: Number(el("recursoQuantidadeItens").value),
+        imagem_capa: el("recursoImagemCapa").value.trim()
     };
 
     try {

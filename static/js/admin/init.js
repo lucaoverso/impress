@@ -4,6 +4,8 @@ function registrarEventos() {
     el("formDisciplina").addEventListener("submit", cadastrarDisciplina);
     el("formRecurso").addEventListener("submit", cadastrarRecurso);
     el("btnCancelarEdicaoRecurso").addEventListener("click", limparFormularioRecurso);
+    el("btnUploadImagemRecurso").addEventListener("click", uploadImagemRecurso);
+    el("btnRemoverImagemRecurso").addEventListener("click", removerImagemRecursoSelecionada);
 
     el("btnGerarRelatorios").addEventListener("click", carregarRelatorios);
     el("btnBuscarHistorico").addEventListener("click", buscarHistorico);

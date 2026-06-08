@@ -1,5 +1,8 @@
 import sqlite3
 from datetime import UTC, datetime
+from pathlib import Path
+import re
+from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
@@ -96,6 +99,7 @@ from .common import (
     validar_numero_nao_negativo,
     validar_turno,
 )
+from . import config as router_config
 from .professores_common import (
     validar_payload_atualizacao_professor,
     validar_payload_cadastro_coordenador,
@@ -103,17 +107,39 @@ from .professores_common import (
 )
 
 router = APIRouter()
+STATIC_DIR = getattr(router_config, "STATIC_DIR", Path(__file__).resolve().parent.parent / "static")
+RESOURCE_IMAGE_DIR = STATIC_DIR / "img" / "resources"
+RESOURCE_IMAGE_EXTENSIONS = {
+    ".jpg": ".jpg",
+    ".jpeg": ".jpg",
+    ".png": ".png",
+    ".webp": ".webp",
+}
+RESOURCE_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
+RESOURCE_IMAGE_MAX_BYTES = 5 * 1024 * 1024
 
 
 def _formatar_data_hora_local(valor: str | None) -> str:
     texto = str(valor or "").strip()
     if not texto:
         return ""
+
     try:
         data_utc = datetime.strptime(texto, "%Y-%m-%d %H:%M:%S").replace(tzinfo=UTC)
     except ValueError:
         return texto
     return data_utc.astimezone().strftime("%d/%m/%Y %H:%M:%S")
+
+
+def _normalizar_nome_arquivo_recurso(nome_arquivo: str) -> tuple[str, str]:
+    nome_limpo = Path(str(nome_arquivo or "").strip()).name
+    extensao = Path(nome_limpo).suffix.lower()
+    extensao_normalizada = RESOURCE_IMAGE_EXTENSIONS.get(extensao)
+    if not extensao_normalizada:
+        raise HTTPException(400, "Use uma imagem JPG, PNG ou WEBP.")
+
+    stem = re.sub(r"[^a-z0-9]+", "-", Path(nome_limpo).stem.lower()).strip("-")
+    return (stem or "recurso", extensao_normalizada)
 
 
 def validar_payload_atribuicao_docente(payload: ProfessorTurmaDisciplinaCreateIn):
@@ -948,6 +974,34 @@ def listar_recursos_admin_api(
     return listar_recursos(incluir_inativos=incluir_inativos)
 
 
+@router.post("/admin/recursos/upload-imagem")
+def upload_imagem_recurso_admin(
+    arquivo: UploadFile = File(...),
+    usuario=Depends(get_usuario_logado),
+):
+    exigir_gestor(usuario)
+    if not arquivo or not arquivo.filename:
+        raise HTTPException(400, "Imagem nao enviada.")
+
+    if getattr(arquivo, "content_type", "") not in RESOURCE_IMAGE_MIME_TYPES:
+        raise HTTPException(400, "Use uma imagem JPG, PNG ou WEBP.")
+
+    stem, extensao = _normalizar_nome_arquivo_recurso(arquivo.filename)
+    conteudo = arquivo.file.read()
+    if not conteudo:
+        raise HTTPException(400, "A imagem enviada esta vazia.")
+    if len(conteudo) > RESOURCE_IMAGE_MAX_BYTES:
+        raise HTTPException(400, "A imagem deve ter no maximo 5 MB.")
+
+    RESOURCE_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+    nome_arquivo = f"{stem}-{uuid4().hex[:10]}{extensao}"
+    destino = RESOURCE_IMAGE_DIR / nome_arquivo
+    destino.write_bytes(conteudo)
+    caminho_publico = f"/static/img/resources/{nome_arquivo}"
+
+    return {"mensagem": "Imagem enviada com sucesso.", "imagem_capa": caminho_publico}
+
+
 @router.post("/admin/recursos")
 def criar_recurso_admin(
     payload: RecursoCreateIn,
@@ -958,6 +1012,7 @@ def criar_recurso_admin(
     tipo = payload.tipo.strip()
     descricao = (payload.descricao or "").strip()
     quantidade_itens = validar_numero_nao_negativo(payload.quantidade_itens, "Quantidade de itens")
+    imagem_capa = str(payload.imagem_capa or "").strip()
 
     if not nome:
         raise HTTPException(400, "Nome do recurso é obrigatório.")
@@ -972,6 +1027,7 @@ def criar_recurso_admin(
             tipo=tipo,
             descricao=descricao,
             quantidade_itens=quantidade_itens,
+            imagem_capa=imagem_capa,
         )
     except sqlite3.IntegrityError as exc:
         raise HTTPException(409, "Já existe um recurso com este nome.") from exc
@@ -990,6 +1046,7 @@ def atualizar_recurso_admin(
     tipo = payload.tipo.strip()
     descricao = (payload.descricao or "").strip()
     quantidade_itens = validar_numero_nao_negativo(payload.quantidade_itens, "Quantidade de itens")
+    imagem_capa = str(payload.imagem_capa or "").strip()
     if not nome:
         raise HTTPException(400, "Nome do recurso é obrigatório.")
     if not tipo:
@@ -1004,6 +1061,7 @@ def atualizar_recurso_admin(
             tipo=tipo,
             descricao=descricao,
             quantidade_itens=quantidade_itens,
+            imagem_capa=imagem_capa,
         )
     except sqlite3.IntegrityError as exc:
         raise HTTPException(409, "Já existe um recurso com este nome.") from exc

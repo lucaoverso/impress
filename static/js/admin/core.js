@@ -448,9 +448,32 @@ function aplicarModoFormularioRecurso(edicao = false) {
     btnCancelar.style.display = "none";
 }
 
+function atualizarPreviewImagemRecurso(caminhoImagem = "") {
+    const preview = el("recursoImagemPreview");
+    const input = el("recursoImagemCapa");
+    if (!preview || !input) {
+        return;
+    }
+
+    const caminho = String(caminhoImagem || "").trim();
+    input.value = caminho;
+
+    if (!caminho) {
+        preview.hidden = true;
+        preview.style.backgroundImage = "";
+        preview.innerHTML = "";
+        return;
+    }
+
+    preview.hidden = false;
+    preview.style.backgroundImage = `linear-gradient(180deg, rgba(15, 23, 42, 0.08), rgba(15, 23, 42, 0.55)), url("${caminho}")`;
+    preview.innerHTML = "<span>Previa da capa</span>";
+}
+
 function limparFormularioRecurso() {
     el("formRecurso").reset();
     el("recursoQuantidadeItens").value = "1";
+    atualizarPreviewImagemRecurso("");
     recursoEmEdicaoId = null;
     aplicarModoFormularioRecurso(false);
 }
@@ -461,6 +484,7 @@ function iniciarEdicaoRecurso(recurso) {
     el("recursoTipo").value = recurso.tipo || "";
     el("recursoDescricao").value = recurso.descricao || "";
     el("recursoQuantidadeItens").value = String(recurso.quantidade_itens ?? 1);
+    atualizarPreviewImagemRecurso(recurso.imagem_capa || "");
     aplicarModoFormularioRecurso(true);
     ativarAbaAdmin("recursos");
     el("formRecurso").scrollIntoView({ behavior: "smooth", block: "center" });

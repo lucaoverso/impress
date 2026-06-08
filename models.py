@@ -687,6 +687,7 @@ class RecursoCreateIn(BaseModel):
     tipo: str
     descricao: str = ""
     quantidade_itens: int = 1
+    imagem_capa: str = ""
 
 
 class RecursoUpdateIn(BaseModel):
@@ -694,6 +695,7 @@ class RecursoUpdateIn(BaseModel):
     tipo: str
     descricao: str = ""
     quantidade_itens: int = 1
+    imagem_capa: str = ""
 
 
 class RecursoStatusIn(BaseModel):

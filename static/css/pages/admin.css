@@ -221,6 +221,31 @@
     background: transparent;
 }
 
+.admin-resource-image-field small {
+    font-size: 12px;
+    color: var(--text-muted);
+}
+
+.admin-resource-image-preview {
+    min-height: 148px;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--line-soft);
+    background-color: var(--surface-0);
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    display: flex;
+    align-items: flex-end;
+    padding: 12px;
+    color: #fff;
+    font-weight: 700;
+    overflow: hidden;
+}
+
+.admin-resource-image-preview.is-listing {
+    min-height: 112px;
+}
+
 .admin-form input,
 .admin-form select,
 .admin-form button {

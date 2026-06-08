@@ -12,7 +12,7 @@
     {% set navbar_context = "Area docente" %}
     {% set navbar_current = "agendamento" %}
     {% set navbar_extra_actions = [
-        {"id": "btnAbrirCalendarioGeralNavbar", "label": "Calendário geral"},
+        {"id": "btnAbrirCalendarioGeralNavbar", "label": "Calendario geral"},
         {"id": "btnAbrirMeusAgendamentosNavbar", "label": "Meus agendamentos"}
     ] %}
     {% include "includes/app_navbar.html" %}
@@ -24,7 +24,7 @@
             <div class="scheduler-page-header-copy">
                 <p class="auth-badge">Agendamento de recursos</p>
                 <h1><span class="scheduler-mobile-hidden">Reserve recursos para a aula</span><span class="scheduler-mobile-only">Reserve recursos</span></h1>
-                <p class="scheduler-page-lead"><span class="scheduler-mobile-hidden">Escolha o dia e selecione um horário disponível para reservar o recurso em etapas.</span><span class="scheduler-mobile-only">Escolha o dia e o horário.</span></p>
+                <p class="scheduler-page-lead"><span class="scheduler-mobile-hidden">Escolha o dia e selecione um horario disponivel para reservar o recurso em etapas.</span><span class="scheduler-mobile-only">Escolha o dia e o horario.</span></p>
             </div>
         </header>
 
@@ -33,19 +33,19 @@
                 <header class="scheduler-week-header">
                     <div>
                         <p class="print-step-kicker">Etapa 1</p>
-                        <h2>Escolha o dia e o horário</h2>
+                        <h2>Escolha o dia e o horario</h2>
                         <p class="scheduler-week-copy">
-                            Navegue pela semana e selecione uma aula disponível para reservar o recurso.
+                            Navegue pela semana e selecione uma aula disponivel para reservar o recurso.
                         </p>
                     </div>
                     <div class="scheduler-week-nav">
-                        <button id="btnSemanaAnterior" type="button" aria-label="Semana anterior">◀</button>
+                        <button id="btnSemanaAnterior" type="button" aria-label="Semana anterior">&#9664;</button>
                         <h3 id="tituloSemanaAtual"></h3>
-                        <button id="btnSemanaProxima" type="button" aria-label="Próxima semana">▶</button>
+                        <button id="btnSemanaProxima" type="button" aria-label="Proxima semana">&#9654;</button>
                         <button id="btnSemanaHoje" type="button">Hoje</button>
                     </div>
                 </header>
-                <div id="agendaSemanaDias" class="scheduler-week-strip" aria-label="Dias disponíveis da semana"></div>
+                <div id="agendaSemanaDias" class="scheduler-week-strip" aria-label="Dias disponiveis da semana"></div>
             </article>
 
             <article class="calendar-card scheduler-day-lessons-card">
@@ -83,7 +83,7 @@
                             <p class="print-step-state">Aula confirmada</p>
                         </header>
                         <p class="print-step-description">
-                            Escolha os recursos disponíveis para esta aula.
+                            Escolha os recursos disponiveis para esta aula.
                         </p>
 
                         <section class="print-config-section">
@@ -96,9 +96,9 @@
                             <article class="print-field-group">
                                 <label>Recursos</label>
                                 <div id="recursoButtons" class="scheduler-resource-button-grid" role="group"
-                                    aria-label="Recursos disponíveis para o agendamento"></div>
+                                    aria-label="Recursos disponiveis para o agendamento"></div>
                                 <p id="resumoDisponibilidadeRecursos" class="print-file-hint">
-                                    Escolha uma aula para ver quais recursos ainda estão disponíveis e monte o agrupamento.
+                                    Escolha uma aula para ver quais recursos ainda estao disponiveis e monte o agrupamento.
                                 </p>
                             </article>
                         </section>
@@ -109,35 +109,59 @@
                         </div>
                     </article>
 
-                    <article id="etapaAgendamentoDetalhes" class="print-step-card" hidden>
+                    <article id="etapaAgendamentoRepeticao" class="print-step-card" hidden>
                         <header class="print-step-header">
                             <div>
                                 <p class="print-step-kicker">Etapa 3</p>
-                                <h2>Descreva a aula</h2>
+                                <h2>Deseja repetir em outras aulas?</h2>
                             </div>
                         </header>
                         <p class="print-step-description">
-                            Informe o tema da aula e, se precisar, deixe uma observação para o preparo.
+                            Se quiser, selecione outras aulas do mesmo professor neste dia para reservar os mesmos recursos.
                         </p>
 
                         <section class="print-config-section">
                             <article class="scheduler-selected-lesson-card scheduler-selected-lesson-card-compact">
-                                <p class="print-step-kicker">Contexto da aula</p>
+                                <p class="print-step-kicker">Aula principal</p>
+                                <h3 id="tituloAulaSelecionadaRepeticao">Nenhuma aula selecionada</h3>
+                                <p id="resumoAulaSelecionadaRepeticao" class="print-file-hint"></p>
+                            </article>
+
+                            <article class="print-field-group">
+                                <label>Outras aulas do dia</label>
+                                <div id="aulasAdicionaisAgendamento" class="scheduler-extra-lessons-list" role="group"
+                                    aria-label="Outras aulas do dia para repetir os mesmos recursos"></div>
+                                <p id="resumoAulasAdicionaisAgendamento" class="print-file-hint">
+                                    Voce pode seguir apenas com a aula principal ou selecionar outras aulas compativeis.
+                                </p>
+                            </article>
+                        </section>
+
+                        <div class="print-step-actions">
+                            <button id="btnVoltarAgendamentoRepeticao" class="print-secondary-btn" type="button">Voltar</button>
+                            <button id="btnContinuarAgendamentoRepeticao" class="btn-destaque" type="button">Continuar</button>
+                        </div>
+                    </article>
+
+                    <article id="etapaAgendamentoDetalhes" class="print-step-card" hidden>
+                        <header class="print-step-header">
+                            <div>
+                                <p class="print-step-kicker">Etapa 4</p>
+                                <h2>Descreva as aulas</h2>
+                            </div>
+                        </header>
+                        <p class="print-step-description">
+                            Informe o tema da aula e, se precisar, deixe observacoes para cada aula selecionada.
+                        </p>
+
+                        <section class="print-config-section">
+                            <article class="scheduler-selected-lesson-card scheduler-selected-lesson-card-compact">
+                                <p class="print-step-kicker">Aulas selecionadas</p>
                                 <h3 id="tituloAulaSelecionadaDetalhes">Nenhuma aula selecionada</h3>
                                 <p id="resumoAulaSelecionadaDetalhes" class="print-file-hint"></p>
                             </article>
 
-                            <article class="print-field-group">
-                                <label for="temaAulaReserva">Tema da aula</label>
-                                <input id="temaAulaReserva" type="text" maxlength="160" required
-                                    placeholder="Ex.: Revisão de frações e lista de exercícios">
-                            </article>
-
-                            <article class="print-field-group">
-                                <label for="observacaoReserva">Observação</label>
-                                <textarea id="observacaoReserva" rows="3"
-                                    placeholder="Se precisar que o PCPI deixe algum site aberto nos computadores, use este campo para descrever."></textarea>
-                            </article>
+                            <div id="listaDetalhesAulasAgendamento" class="scheduler-lesson-details-list"></div>
                         </section>
 
                         <div class="print-step-actions">
@@ -149,7 +173,7 @@
                     <article id="etapaAgendamentoResumo" class="print-step-card" hidden>
                         <header class="print-step-header">
                             <div>
-                                <p class="print-step-kicker">Etapa 4</p>
+                                <p class="print-step-kicker">Etapa 5</p>
                                 <h2>Confira o agendamento</h2>
                             </div>
                             <p class="print-step-state">Pronto para confirmar</p>
@@ -160,21 +184,22 @@
                             <dl class="print-summary-list print-summary-list-single">
                                 <div>
                                     <dt>Recursos</dt>
-                                    <dd id="resumoAgendamentoRecurso">Aguardando seleção</dd>
+                                    <dd id="resumoAgendamentoRecurso">Aguardando selecao</dd>
                                 </div>
                                 <div>
-                                    <dt>Turma</dt>
+                                    <dt>Turma base</dt>
                                     <dd id="resumoAgendamentoTurma">Aguardando turma</dd>
                                 </div>
                                 <div>
-                                    <dt>Tema</dt>
-                                    <dd id="resumoAgendamentoTema">Aguardando tema</dd>
+                                    <dt>Professor</dt>
+                                    <dd id="resumoAgendamentoProfessor">Aguardando professor</dd>
                                 </div>
                                 <div>
-                                    <dt>Observação</dt>
-                                    <dd id="resumoAgendamentoObservacao">Sem observação adicional.</dd>
+                                    <dt>Aulas selecionadas</dt>
+                                    <dd id="resumoAgendamentoAulasQuantidade">Aguardando selecao</dd>
                                 </div>
                             </dl>
+                            <div id="resumoAgendamentoAulasLista" class="scheduler-summary-lessons-list"></div>
                         </section>
 
                         <div class="print-step-actions">
@@ -192,18 +217,18 @@
         <section class="scheduler-side-panel scheduler-side-panel-wide">
             <header class="scheduler-side-header">
                 <div>
-                    <p class="auth-badge">Calendário geral</p>
-                    <h2>Visão mensal do agendamento</h2>
-                    <p>Consulte o mês inteiro e acompanhe o que já está reservado em cada data.</p>
+                    <p class="auth-badge">Calendario geral</p>
+                    <h2>Visao mensal do agendamento</h2>
+                    <p>Consulte o mes inteiro e acompanhe o que ja esta reservado em cada data.</p>
                 </div>
                 <button id="btnFecharCalendarioGeral" class="print-secondary-btn" type="button">Fechar</button>
             </header>
 
             <article class="calendar-card scheduler-calendar-card">
                 <header class="calendar-header">
-                    <button id="btnMesAnterior" type="button">◀</button>
+                    <button id="btnMesAnterior" type="button">&#9664;</button>
                     <h3 id="mesAtual"></h3>
-                    <button id="btnMesProximo" type="button">▶</button>
+                    <button id="btnMesProximo" type="button">&#9654;</button>
                     <button id="btnMesHoje" type="button">Hoje</button>
                 </header>
                 <div id="calendarioGrid" class="calendar-grid"></div>
@@ -216,7 +241,7 @@
                         <button type="button" class="booking-sort-field" data-sort-target="dia" data-sort-field="aula">Aula</button>
                         <button type="button" class="booking-sort-field" data-sort-target="dia" data-sort-field="turno">Turno</button>
                         <button type="button" class="booking-sort-field" data-sort-target="dia" data-sort-field="recurso">Recurso</button>
-                        <button type="button" class="booking-sort-order" data-sort-target="dia">1º → último</button>
+                        <button type="button" class="booking-sort-order" data-sort-target="dia">1o -> ultimo</button>
                         <button type="button" class="booking-sort-group" data-sort-target="dia">Agrupar por recurso</button>
                     </div>
                 </header>
@@ -232,7 +257,7 @@
                 <div>
                     <p class="auth-badge">Meus agendamentos</p>
                     <h2>Painel pessoal</h2>
-                    <p>Veja suas reservas mais recentes e acompanhe os horários já confirmados.</p>
+                    <p>Veja suas reservas mais recentes e acompanhe os horarios ja confirmados.</p>
                 </div>
                 <button id="btnFecharMinhasReservas" class="print-secondary-btn" type="button">Fechar</button>
             </header>
@@ -245,7 +270,7 @@
                         <button type="button" class="booking-sort-field" data-sort-target="minhas" data-sort-field="aula">Aula</button>
                         <button type="button" class="booking-sort-field" data-sort-target="minhas" data-sort-field="turno">Turno</button>
                         <button type="button" class="booking-sort-field" data-sort-target="minhas" data-sort-field="recurso">Recurso</button>
-                        <button type="button" class="booking-sort-order" data-sort-target="minhas">1º → último</button>
+                        <button type="button" class="booking-sort-order" data-sort-target="minhas">1o -> ultimo</button>
                         <button type="button" class="booking-sort-group" data-sort-target="minhas">Agrupar por recurso</button>
                     </div>
                 </header>
@@ -261,7 +286,7 @@
                 <div>
                     <p class="auth-badge">Detalhes da reserva</p>
                     <h2>Agendamento confirmado</h2>
-                    <p>Consulte os dados da reserva e, se permitido, cancele com confirmação.</p>
+                    <p>Consulte os dados da reserva e, se permitido, cancele com confirmacao.</p>
                 </div>
                 <button id="btnFecharDetalhesReserva" class="print-secondary-btn" type="button">Fechar</button>
             </header>
@@ -293,12 +318,12 @@
                         <dd id="detalheReservaTema">-</dd>
                     </div>
                     <div>
-                        <dt>Observação</dt>
-                        <dd id="detalheReservaObservacao">Sem observação.</dd>
+                        <dt>Observacao</dt>
+                        <dd id="detalheReservaObservacao">Sem observacao.</dd>
                     </div>
                     <div>
                         <dt>Criado por</dt>
-                        <dd id="detalheReservaCriadoPor">Não informado</dd>
+                        <dd id="detalheReservaCriadoPor">Nao informado</dd>
                     </div>
                     <div>
                         <dt>Status</dt>
@@ -329,7 +354,7 @@
             aria-labelledby="tituloDialogCancelarReserva">
             <div class="scheduler-confirm-dialog-copy">
                 <h2 id="tituloDialogCancelarReserva">Cancelar agendamento?</h2>
-                <p>Você está prestes a cancelar esta reserva. Essa ação não poderá ser desfeita.</p>
+                <p>Voce esta prestes a cancelar esta reserva. Essa acao nao podera ser desfeita.</p>
             </div>
             <div class="scheduler-confirm-dialog-actions">
                 <button id="btnFecharConfirmacaoCancelamento" class="print-secondary-btn" type="button">Voltar</button>

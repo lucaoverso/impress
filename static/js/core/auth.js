@@ -5,6 +5,10 @@
     const SENHA_FORTE_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$/;
     const USUARIO_CACHE_KEY = "usuario_atual";
 
+    function normalizarUsuario(usuario) {
+        return usuario && typeof usuario === "object" ? usuario : {};
+    }
+
     function obterToken() {
         return localStorage.getItem("token") || "";
     }
@@ -41,6 +45,7 @@
     }
 
     function normalizarCargoUsuario(usuario = {}) {
+        usuario = normalizarUsuario(usuario);
         const cargo = String(usuario.cargo || "").trim().toUpperCase();
         if (cargo) {
             return cargo;
@@ -53,6 +58,7 @@
     }
 
     function usuarioEhProfessor(usuario = {}) {
+        usuario = normalizarUsuario(usuario);
         if (typeof usuario.eh_professor === "boolean") {
             return usuario.eh_professor;
         }
@@ -60,6 +66,7 @@
     }
 
     function usuarioTemAcessoCoordenacao(usuario = {}) {
+        usuario = normalizarUsuario(usuario);
         if (typeof usuario.tem_acesso_coordenacao === "boolean") {
             return usuario.tem_acesso_coordenacao;
         }
@@ -71,6 +78,7 @@
     }
 
     function usuarioPodeGerirImpressoes(usuario = {}) {
+        usuario = normalizarUsuario(usuario);
         if (typeof usuario.pode_gerir_impressoes === "boolean") {
             return usuario.pode_gerir_impressoes;
         }
@@ -81,6 +89,7 @@
     }
 
     function modulosPermitidos(usuario = {}) {
+        usuario = normalizarUsuario(usuario);
         if (Array.isArray(usuario.modulos) && usuario.modulos.length > 0) {
             return new Set(usuario.modulos.map((item) => String(item).trim().toLowerCase()));
         }

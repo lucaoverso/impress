@@ -1615,6 +1615,10 @@ def _garantir_colunas_recursos(cursor):
         cursor.execute(
             "ALTER TABLE recursos ADD COLUMN quantidade_itens INTEGER NOT NULL DEFAULT 1"
         )
+    if "imagem_capa" not in colunas:
+        cursor.execute(
+            "ALTER TABLE recursos ADD COLUMN imagem_capa TEXT NOT NULL DEFAULT ''"
+        )
 
     cursor.execute("""
         UPDATE recursos
@@ -7857,6 +7861,7 @@ def listar_recursos(incluir_inativos: bool = False):
             tipo,
             COALESCE(descricao, '') AS descricao,
             CASE WHEN COALESCE(quantidade_itens, 1) < 1 THEN 1 ELSE quantidade_itens END AS quantidade_itens,
+            COALESCE(imagem_capa, '') AS imagem_capa,
             ativo
         FROM recursos
     """
@@ -7872,17 +7877,23 @@ def listar_recursos(incluir_inativos: bool = False):
     return [dict(row) for row in rows]
 
 
-def criar_recurso(nome: str, tipo: str, descricao: str = "", quantidade_itens: int = 1):
+def criar_recurso(
+    nome: str,
+    tipo: str,
+    descricao: str = "",
+    quantidade_itens: int = 1,
+    imagem_capa: str = "",
+):
     quantidade_itens_valor = max(int(quantidade_itens or 0), 1)
     conn = get_connection()
     cursor = conn.cursor()
 
     cursor.execute(
         """
-        INSERT INTO recursos (nome, tipo, descricao, quantidade_itens, ativo)
-        VALUES (?, ?, ?, ?, 1)
+        INSERT INTO recursos (nome, tipo, descricao, quantidade_itens, imagem_capa, ativo)
+        VALUES (?, ?, ?, ?, ?, 1)
     """,
-        (nome, tipo, descricao, quantidade_itens_valor),
+        (nome, tipo, descricao, quantidade_itens_valor, imagem_capa),
     )
 
     recurso_id = cursor.lastrowid
@@ -7892,7 +7903,12 @@ def criar_recurso(nome: str, tipo: str, descricao: str = "", quantidade_itens: i
 
 
 def atualizar_recurso_dados(
-    recurso_id: int, nome: str, tipo: str, descricao: str = "", quantidade_itens: int = 1
+    recurso_id: int,
+    nome: str,
+    tipo: str,
+    descricao: str = "",
+    quantidade_itens: int = 1,
+    imagem_capa: str = "",
 ):
     quantidade_itens_valor = max(int(quantidade_itens or 0), 1)
     conn = get_connection()
@@ -7901,10 +7917,10 @@ def atualizar_recurso_dados(
     cursor.execute(
         """
         UPDATE recursos
-        SET nome = ?, tipo = ?, descricao = ?, quantidade_itens = ?
+        SET nome = ?, tipo = ?, descricao = ?, quantidade_itens = ?, imagem_capa = ?
         WHERE id = ?
     """,
-        (nome, tipo, descricao, quantidade_itens_valor, recurso_id),
+        (nome, tipo, descricao, quantidade_itens_valor, imagem_capa, recurso_id),
     )
 
     alterados = cursor.rowcount
@@ -7964,6 +7980,7 @@ def buscar_recurso_por_id(recurso_id: int):
             tipo,
             COALESCE(descricao, '') AS descricao,
             CASE WHEN COALESCE(quantidade_itens, 1) < 1 THEN 1 ELSE quantidade_itens END AS quantidade_itens,
+            COALESCE(imagem_capa, '') AS imagem_capa,
             ativo
         FROM recursos
         WHERE id = ?
