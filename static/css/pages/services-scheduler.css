@@ -871,19 +871,30 @@ body.scheduler-drawer-open {
     gap: 12px;
 }
 
-.scheduler-extra-lesson-option {
+.scheduler-toolbar button.scheduler-extra-lesson-option {
+    appearance: none;
+    -webkit-appearance: none;
     display: grid;
+    align-content: start;
+    justify-items: start;
     gap: 6px;
     width: 100%;
+    height: auto;
+    min-height: 0;
+    box-sizing: border-box;
     text-align: left;
     border: 1px solid var(--line-soft);
     border-radius: 14px;
     background: #fff;
     padding: 14px 16px;
+    font: inherit;
+    line-height: 1.35;
+    color: inherit;
+    white-space: normal;
     transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
 }
 
-.scheduler-extra-lesson-option strong,
+.scheduler-toolbar button.scheduler-extra-lesson-option strong,
 .scheduler-summary-lesson-card h4,
 .scheduler-lesson-detail-header h3 {
     margin: 0;
@@ -891,12 +902,18 @@ body.scheduler-drawer-open {
     color: var(--text-main);
 }
 
-.scheduler-extra-lesson-option span,
+.scheduler-toolbar button.scheduler-extra-lesson-option span,
 .scheduler-summary-lesson-card p,
 .scheduler-lesson-detail-header p {
     margin: 0;
     font-size: 13px;
     color: var(--text-muted);
+}
+
+.scheduler-toolbar button.scheduler-extra-lesson-option strong,
+.scheduler-toolbar button.scheduler-extra-lesson-option span {
+    display: block;
+    width: 100%;
 }
 
 .scheduler-extra-lesson-title {
@@ -912,18 +929,18 @@ body.scheduler-drawer-open {
     line-height: 1.35;
 }
 
-.scheduler-extra-lesson-option:hover:not(:disabled) {
+.scheduler-toolbar button.scheduler-extra-lesson-option:hover:not(:disabled) {
     border-color: rgba(15, 118, 110, 0.28);
     box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
     transform: translateY(-1px);
 }
 
-.scheduler-extra-lesson-option.is-selected {
+.scheduler-toolbar button.scheduler-extra-lesson-option.is-selected {
     border-color: rgba(15, 118, 110, 0.34);
     background: linear-gradient(180deg, #f4fcfa 0%, #eef8f5 100%);
 }
 
-.scheduler-extra-lesson-option.is-disabled {
+.scheduler-toolbar button.scheduler-extra-lesson-option.is-disabled {
     opacity: 0.65;
     cursor: not-allowed;
 }
@@ -2374,6 +2391,58 @@ body.scheduler-drawer-open {
 .scheduler-booking-resource-detail-actions {
     display: flex;
     justify-content: flex-start;
+}
+
+@media (min-width: 1000px) and (max-width: 1500px) {
+    .scheduler-week-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1.25fr) minmax(420px, 0.95fr);
+        align-items: start;
+        gap: 18px;
+    }
+
+    .scheduler-week-copy {
+        max-width: 44ch;
+    }
+
+    .scheduler-week-nav {
+        width: 100%;
+        display: grid;
+        grid-template-columns: 42px minmax(0, 1fr) 42px auto;
+        align-items: center;
+        gap: 10px;
+        justify-content: stretch;
+    }
+
+    .scheduler-week-nav h3 {
+        min-width: 0;
+        font-size: 15px;
+        line-height: 1.25;
+    }
+
+    .scheduler-week-nav button {
+        min-height: 40px;
+        padding: 0 12px;
+    }
+
+    .scheduler-week-strip {
+        grid-template-columns: repeat(7, minmax(0, 1fr));
+        gap: 8px;
+    }
+
+    .scheduler-week-day {
+        min-height: 84px;
+        padding: 10px;
+    }
+
+    .scheduler-week-day-number {
+        font-size: 18px;
+    }
+
+    .scheduler-week-day-state {
+        font-size: 11px;
+        line-height: 1.25;
+    }
 }
 
 .scheduler-danger-link {
