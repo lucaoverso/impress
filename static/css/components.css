@@ -745,7 +745,7 @@ body.is-app-navbar-open {
 
     .app-topbar {
         padding: 12px 14px;
-        border-radius: 16px;
+        border-radius: 0 0 12px 12px;
     }
 
     .app-topbar[data-app-navbar] .app-topbar-actions button {
@@ -757,7 +757,9 @@ body.is-app-navbar-open {
     }
 
     .app-topbar-school-logo {
-        height: 100px;
+        height: 45px;
+        width: 45px;
+        object-fit: cover;
     }
 
     .app-navbar-panel {

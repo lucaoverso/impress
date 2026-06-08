@@ -584,7 +584,7 @@ html[data-printing-current-step="1"] #etapaArquivo .print-step-actions {
     background: var(--print-color-surface);
     color: var(--print-color-text);
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 400;
     padding: 0 16px;
     box-shadow: var(--print-shadow-sm);
 }

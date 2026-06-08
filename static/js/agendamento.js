@@ -48,6 +48,8 @@ let professoresAgendamento = [];
 let mesAtual = new Date();
 let dataSelecionada = paraIso(new Date());
 let semanaVisivelInicio = null;
+let reservaDetalheAtual = null;
+let reservaCancelamentoPendenteId = 0;
 const PREFERENCIAS_ORDENACAO_STORAGE_KEY = "agendamento_sort_preferences_v1";
 const CAMPOS_ORDENACAO_VALIDOS = {
     dia: new Set(["aula", "turno", "recurso"]),
@@ -92,6 +94,30 @@ const selecaoAulaAgendamento = {
 };
 const recursosSelecionadosAgendamento = new Set();
 let aulasProfessorDia = [];
+
+function textoPadraoDetalheReserva(valor, fallback = "-") {
+    const texto = String(valor || "").trim();
+    return texto || fallback;
+}
+
+function normalizarGrupoReservasDetalhe(reservaOuGrupo) {
+    if (Array.isArray(reservaOuGrupo)) {
+        return reservaOuGrupo.filter(Boolean);
+    }
+    return reservaOuGrupo ? [reservaOuGrupo] : [];
+}
+
+function formatarTituloRecursosGrupo(grupoReservas = []) {
+    const nomes = Array.from(
+        new Set(
+            normalizarGrupoReservasDetalhe(grupoReservas)
+                .map((reserva) => textoPadraoDetalheReserva(reserva.recurso_nome, "").trim())
+                .filter(Boolean)
+        )
+    );
+
+    return nomes.length > 0 ? nomes.join(", ") : "Recurso não informado";
+}
 
 function normalizarTurnoId(turnoId) {
     return String(turnoId || "").trim().toUpperCase();
@@ -337,8 +363,13 @@ function formatarTituloSemana(dataInicio) {
     const fim = somarDiasDataLocal(inicio, 6);
     const mesmoMes = inicio.getMonth() === fim.getMonth() && inicio.getFullYear() === fim.getFullYear();
     const opcoesCurta = { day: "2-digit", month: "short" };
+    const tituloCompactoMobile = window.innerWidth <= 640;
 
     if (mesmoMes) {
+        if (tituloCompactoMobile) {
+            const mesTextoCurto = inicio.toLocaleDateString("pt-BR", { month: "short" }).replace(".", "");
+            return `${inicio.getDate()} a ${fim.getDate()} ${mesTextoCurto} ${inicio.getFullYear()}`;
+        }
         const mesTexto = inicio.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
         return `${inicio.getDate()} a ${fim.getDate()} de ${mesTexto}`;
     }
@@ -1336,23 +1367,17 @@ function sincronizarSelecaoAulaComAgendaAtual() {
 }
 
 function renderEstadoAulasDia(texto) {
-    const tabela = el("tabelaAgendaDia");
-    if (!tabela) {
+    const lista = el("agendaDiaLista");
+    if (!lista) {
         return;
     }
 
-    tabela.innerHTML = "";
+    lista.innerHTML = "";
 
-    const tbody = document.createElement("tbody");
-    const linha = document.createElement("tr");
-    const celula = document.createElement("td");
-    celula.colSpan = 2;
-    celula.className = "weekly-table-empty";
-    celula.innerText = texto;
-
-    linha.appendChild(celula);
-    tbody.appendChild(linha);
-    tabela.appendChild(tbody);
+    const estado = document.createElement("div");
+    estado.className = "weekly-table-empty";
+    estado.innerText = texto;
+    lista.appendChild(estado);
 }
 
 async function carregarAulasProfessorDia() {
@@ -1959,6 +1984,493 @@ function renderAgendaDiaAulas() {
     tabela.appendChild(tbody);
 }
 
+function abrirDetalhesReserva(reservaOuGrupo) {
+    const grupoReservas = normalizarGrupoReservasDetalhe(reservaOuGrupo);
+    const reserva = grupoReservas[0];
+
+    if (!reserva) {
+        return;
+    }
+
+    reservaDetalheAtual = {
+        grupo: grupoReservas,
+        principal: reserva
+    };
+    reservaCancelamentoPendenteId = 0;
+
+    el("detalheReservaRecurso") && (el("detalheReservaRecurso").innerText = formatarTituloRecursosGrupo(grupoReservas));
+    el("detalheReservaData") && (el("detalheReservaData").innerText = textoPadraoDetalheReserva(paraDataBr(reserva.data)));
+    el("detalheReservaAula") && (el("detalheReservaAula").innerText = textoPadraoDetalheReserva(aulaLabel(numeroAulaReserva(reserva))));
+    el("detalheReservaTurma") && (el("detalheReservaTurma").innerText = textoPadraoDetalheReserva(reserva.turma, "Turma não informada"));
+    el("detalheReservaProfessor") && (el("detalheReservaProfessor").innerText = textoPadraoDetalheReserva(reserva.professor_nome, "Professor não informado"));
+    el("detalheReservaTema") && (el("detalheReservaTema").innerText = textoPadraoDetalheReserva(reserva.tema_aula, "Tema não informado"));
+    el("detalheReservaObservacao") && (el("detalheReservaObservacao").innerText = textoPadraoDetalheReserva(reserva.observacao, "Sem observação."));
+    el("detalheReservaCriadoPor") && (el("detalheReservaCriadoPor").innerText = textoPadraoDetalheReserva(reserva.professor_nome, "Não informado"));
+    el("detalheReservaStatus") && (el("detalheReservaStatus").innerText = String(reserva.status || "ATIVO").trim().toUpperCase() === "CANCELADO" ? "Cancelado" : "Ativo");
+
+    const btnCancelar = el("btnAbrirConfirmacaoCancelamento");
+    const algumCancelavel = grupoReservas.some((item) => reservaPodeSerCancelada(item));
+    if (btnCancelar) {
+        btnCancelar.hidden = true;
+        btnCancelar.disabled = true;
+        btnCancelar.dataset.reservaId = "";
+    }
+
+    const listaRecursos = el("detalheReservaRecursosLista");
+    const secaoRecursos = el("detalheReservaRecursosSecao");
+    if (listaRecursos && secaoRecursos) {
+        listaRecursos.innerHTML = "";
+
+        grupoReservas.forEach((item) => {
+            const card = document.createElement("article");
+            card.className = "scheduler-booking-resource-detail-card";
+
+            const topo = document.createElement("div");
+            topo.className = "scheduler-booking-resource-detail-top";
+
+            const titulo = document.createElement("p");
+            titulo.className = "scheduler-booking-resource-detail-title";
+            titulo.innerText = textoPadraoDetalheReserva(item.recurso_nome, "Recurso não informado");
+            topo.appendChild(titulo);
+
+            const meta = document.createElement("p");
+            meta.className = "scheduler-booking-resource-detail-meta";
+            meta.innerText = `${nomeTurno(item.turno) || "Turno não informado"} | ${aulaLabel(numeroAulaReserva(item))}`;
+
+            card.appendChild(topo);
+            card.appendChild(meta);
+
+            if (reservaPodeSerCancelada(item)) {
+                const acoes = document.createElement("div");
+                acoes.className = "scheduler-booking-resource-detail-actions";
+
+                const botaoCancelar = document.createElement("button");
+                botaoCancelar.type = "button";
+                botaoCancelar.className = "scheduler-danger-link";
+                botaoCancelar.innerText = "Cancelar este recurso";
+                botaoCancelar.addEventListener("click", () => abrirConfirmacaoCancelamentoReserva(item.id));
+                acoes.appendChild(botaoCancelar);
+
+                card.appendChild(acoes);
+            }
+
+            listaRecursos.appendChild(card);
+        });
+
+        secaoRecursos.hidden = grupoReservas.length <= 1 && !algumCancelavel;
+    }
+
+    abrirPainelLateralAgendamento("painelDetalhesReservaAgendamento");
+}
+
+function abrirConfirmacaoCancelamentoReserva(reservaId) {
+    const id = Number(reservaId || reservaDetalheAtual?.principal?.id || 0);
+    if (!id) {
+        return;
+    }
+
+    reservaCancelamentoPendenteId = id;
+    const dialog = el("dialogCancelarReservaAgendamento");
+    if (!dialog) {
+        return;
+    }
+
+    dialog.hidden = false;
+    document.body.classList.add("scheduler-dialog-open");
+}
+
+function fecharConfirmacaoCancelamentoReserva() {
+    reservaCancelamentoPendenteId = 0;
+    const dialog = el("dialogCancelarReservaAgendamento");
+    if (!dialog) {
+        return;
+    }
+
+    dialog.hidden = true;
+    document.body.classList.remove("scheduler-dialog-open");
+}
+
+function criarTagStatusAgenda({
+    selecionada = false,
+    podeSelecionar = false,
+    possuiReserva = false,
+    possuiAula = false
+} = {}) {
+    const status = document.createElement("span");
+    status.className = "scheduler-availability-badge";
+
+    if (selecionada) {
+        status.dataset.variant = "selected";
+        status.innerText = "Selecionado";
+    } else if (!possuiAula) {
+        status.dataset.variant = "muted";
+        status.innerText = "Sem aula";
+    } else if (!podeSelecionar) {
+        status.dataset.variant = "muted";
+        status.innerText = possuiReserva ? "Ocupado" : "Indisponível";
+    } else {
+        status.dataset.variant = "available";
+        status.innerText = "✓ Livre";
+    }
+
+    return status;
+}
+
+function criarBotaoReservarAgenda(aulaPrincipal, { selecionada = false, podeSelecionar = false } = {}) {
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.className = "print-secondary-btn scheduler-outline-action";
+    botao.disabled = !podeSelecionar;
+    botao.innerText = selecionada ? "Selecionado" : "Reservar";
+    botao.addEventListener("click", () => {
+        if (!podeSelecionar || !aulaPrincipal) {
+            return;
+        }
+        selecionarAulaParaAgendamento(aulaPrincipal);
+    });
+    return botao;
+}
+
+function criarObservacaoAgendaCompacta(texto) {
+    const nota = document.createElement("p");
+    nota.className = "scheduler-slot-helper-text";
+    nota.innerText = texto;
+    return nota;
+}
+
+function criarCardReservaAgendaDia(reservaOuGrupo) {
+    const grupoReservas = normalizarGrupoReservasDetalhe(reservaOuGrupo);
+    const reserva = grupoReservas[0];
+    if (!reserva) {
+        return document.createElement("div");
+    }
+
+    const card = document.createElement("article");
+    card.className = "scheduler-booking-card";
+
+    const titulo = document.createElement("h4");
+    titulo.className = "scheduler-booking-card-title";
+    titulo.innerText = formatarTituloRecursosGrupo(grupoReservas);
+    card.appendChild(titulo);
+
+    const contexto = document.createElement("p");
+    contexto.className = "scheduler-booking-card-meta";
+    contexto.innerText = [
+        textoPadraoDetalheReserva(reserva.turma, "Turma não informada"),
+        textoPadraoDetalheReserva(`${reserva.professor_nome.split(" ")[0]}`, "Professor não informado")
+    ].join(" | ");
+    card.appendChild(contexto);
+
+    const tema = document.createElement("p");
+    tema.className = "scheduler-booking-card-theme";
+    tema.innerText = textoPadraoDetalheReserva(`Tema da aula: ${reserva.tema_aula}`, "Tema não informado");
+    card.appendChild(tema);
+
+    const acoes = document.createElement("div");
+    acoes.className = "scheduler-booking-card-actions";
+
+    const botaoDetalhes = document.createElement("button");
+    botaoDetalhes.type = "button";
+    botaoDetalhes.className = "print-secondary-btn scheduler-inline-details-btn";
+    botaoDetalhes.innerText = "Ver detalhes";
+    botaoDetalhes.addEventListener("click", () => abrirDetalhesReserva(grupoReservas));
+    acoes.appendChild(botaoDetalhes);
+
+    card.appendChild(acoes);
+
+    return card;
+}
+
+function criarLinhaAgendaCompacta({
+    professor = null,
+    aulaPrincipal = null,
+    reservasCelula = []
+} = {}) {
+    const linha = document.createElement("div");
+    linha.className = "scheduler-slot-compact-line";
+
+    const recursosDisponiveis = aulaPrincipal
+        ? obterRecursosDisponiveisParaSelecao({
+            data: aulaPrincipal.data,
+            faixaGlobal: Number(aulaPrincipal.faixa_global || 0)
+        })
+        : [];
+    const selecionada = aulaPrincipal
+        && selecaoAulaAgendamento.chave
+        && chaveAulaAgendamento(aulaPrincipal) === selecaoAulaAgendamento.chave;
+    const possuiAula = Boolean(aulaPrincipal);
+    let podeSelecionar = Boolean(professor && possuiAula && recursos.length > 0 && recursosDisponiveis.length > 0);
+    let statusTexto = "Livre";
+
+    if (!Array.isArray(aulasProfessorDia) || aulasProfessorDia.length === 0) {
+        podeSelecionar = false;
+    }
+
+    if (!professor) {
+        statusTexto = "Selecione um professor";
+    } else if (!Array.isArray(aulasProfessorDia) || aulasProfessorDia.length === 0) {
+        statusTexto = "Sem aula registrada";
+    } else if (!possuiAula) {
+        statusTexto = "Sem aula registrada";
+    } else if (recursos.length === 0) {
+        statusTexto = "Indisponível";
+    } else if (recursosDisponiveis.length === 0) {
+        statusTexto = "Ocupado";
+    }
+
+    const ocultarLinhaCompacta = reservasCelula.length > 0
+        && professor
+        && possuiAula
+        && recursos.length > 0
+        && recursosDisponiveis.length === 0;
+    if (ocultarLinhaCompacta) {
+        return null;
+    }
+
+    const copy = document.createElement("div");
+    copy.className = "scheduler-slot-compact-copy";
+    copy.appendChild(criarTagStatusAgenda({
+        selecionada,
+        podeSelecionar,
+        possuiReserva: reservasCelula.length > 0,
+        possuiAula
+    }));
+
+    if (!professor) {
+        copy.appendChild(criarObservacaoAgendaCompacta("Selecione um professor para ver a agenda."));
+    } else if (!Array.isArray(aulasProfessorDia) || aulasProfessorDia.length === 0) {
+        copy.appendChild(criarObservacaoAgendaCompacta("Sem aula."));
+    } else if (!possuiAula) {
+        copy.appendChild(criarObservacaoAgendaCompacta("Sem aula."));
+    } else if (recursos.length === 0) {
+        copy.appendChild(criarObservacaoAgendaCompacta("Nenhum recurso ativo cadastrado."));
+    } else if (recursosDisponiveis.length === 0) {
+        copy.appendChild(criarObservacaoAgendaCompacta("Sem recursos livres neste horário."));
+    } else if (reservasCelula.length > 0) {
+        copy.appendChild(criarObservacaoAgendaCompacta(`${recursosDisponiveis.length} recurso(s) ainda livre(s) neste horário.`));
+    }
+
+    copy.textContent = "";
+    const statusCompacto = criarTagStatusAgenda({
+        selecionada,
+        podeSelecionar,
+        possuiReserva: reservasCelula.length > 0,
+        possuiAula
+    });
+    statusCompacto.innerText = selecionada ? "Selecionado" : statusTexto;
+    copy.appendChild(statusCompacto);
+
+    linha.appendChild(copy);
+    linha.appendChild(criarBotaoReservarAgenda(aulaPrincipal, { selecionada, podeSelecionar }));
+
+    return linha;
+}
+
+function criarLinhaAgendaDia({
+    professor = null,
+    linhaGrade,
+    aulasCelula = [],
+    reservasCelula = []
+} = {}) {
+    const linha = document.createElement("article");
+    linha.className = "scheduler-day-slot-row";
+    const aulaPrincipal = obterAulaPrincipalAgendamentoHorario(aulasCelula);
+    const selecionada = aulaPrincipal
+        && selecaoAulaAgendamento.chave
+        && chaveAulaAgendamento(aulaPrincipal) === selecaoAulaAgendamento.chave;
+    if (selecionada) {
+        linha.classList.add("is-selected");
+    }
+
+    const cabecalho = document.createElement("div");
+    cabecalho.className = "scheduler-day-slot-label";
+
+    const titulo = document.createElement("span");
+    titulo.className = "scheduler-day-slot-title";
+    titulo.innerText = aulaLabel(linhaGrade.aula);
+    cabecalho.appendChild(titulo);
+
+    const subtitulo = document.createElement("small");
+    subtitulo.className = "scheduler-day-slot-subtitle";
+    subtitulo.innerText = linhaGrade.turnoNome;
+    cabecalho.appendChild(subtitulo);
+    linha.appendChild(cabecalho);
+
+    const conteudo = document.createElement("div");
+    conteudo.className = "scheduler-day-slot-content";
+
+    if (reservasCelula.length > 0) {
+        const listaCards = document.createElement("div");
+        listaCards.className = "scheduler-booking-card-list";
+        agruparReservasSemanaisPorAula(reservasCelula).forEach((grupoReservas) => {
+            listaCards.appendChild(criarCardReservaAgendaDia(grupoReservas));
+        });
+        conteudo.appendChild(listaCards);
+    }
+
+    const linhaCompacta = criarLinhaAgendaCompacta({
+        professor,
+        aulaPrincipal,
+        reservasCelula
+    });
+    if (linhaCompacta) {
+        conteudo.appendChild(linhaCompacta);
+    }
+
+    linha.appendChild(conteudo);
+    return linha;
+}
+
+function renderAgendaDiaAulas() {
+    const lista = el("agendaDiaLista");
+    const subtitulo = el("subtituloAgendaDia");
+
+    if (!lista || !subtitulo) {
+        return;
+    }
+
+    const professor = obterProfessorAgendaAtivo();
+    const diaSemana = obterDiaSemanaApiPorData(dataSelecionada);
+    const nomeProfessor = professor?.nome || (usuarioEhAdmin() ? "Selecione um professor" : "Professor");
+    const subtituloPartes = [paraDataBr(dataSelecionada), nomeProfessor];
+    if (professor && (!Array.isArray(aulasProfessorDia) || aulasProfessorDia.length === 0)) {
+        subtituloPartes.push("sem aulas registradas");
+    }
+    subtitulo.innerText = subtituloPartes.join(" | ");
+
+    if (!["SEGUNDA", "TERCA", "QUARTA", "QUINTA", "SEXTA"].includes(diaSemana)) {
+        renderEstadoAulasDia("A agenda por aula está disponível apenas para dias letivos.");
+        return;
+    }
+
+    const reservasPorCelula = mapearReservasDiaPorCelula();
+    const aulasPorCelula = mapearAulasProfessorDiaPorCelula();
+    const grade = obterLinhasAulasGradeSemanal();
+    lista.innerHTML = "";
+
+    let turnoAtual = "";
+    let corpoTurno = null;
+
+    grade.forEach((linhaGrade) => {
+        if (linhaGrade.turnoId !== turnoAtual) {
+            turnoAtual = linhaGrade.turnoId;
+
+            const secao = document.createElement("section");
+            secao.className = "scheduler-shift-section";
+
+            const cabecalhoTurno = document.createElement("header");
+            cabecalhoTurno.className = "scheduler-shift-header";
+
+            const tituloTurno = document.createElement("h4");
+            tituloTurno.innerText = linhaGrade.turnoNome.toUpperCase();
+            cabecalhoTurno.appendChild(tituloTurno);
+            secao.appendChild(cabecalhoTurno);
+
+            corpoTurno = document.createElement("div");
+            corpoTurno.className = "scheduler-shift-slots";
+            secao.appendChild(corpoTurno);
+
+            lista.appendChild(secao);
+        }
+
+        const chave = chaveCelulaAgendaDia(linhaGrade.turnoId, linhaGrade.aula);
+        corpoTurno?.appendChild(criarLinhaAgendaDia({
+            professor,
+            linhaGrade,
+            aulasCelula: aulasPorCelula.get(chave) || [],
+            reservasCelula: reservasPorCelula.get(chave) || []
+        }));
+    });
+}
+
+function criarItemReserva(
+    reserva,
+    {
+        permitirCancelar = false,
+        exibirProfessor = true,
+        exibirData = false
+    } = {}
+) {
+    const li = document.createElement("li");
+    li.className = "booking-item";
+
+    const aulaExibicao = numeroAulaReserva(reserva);
+    const titulo = document.createElement("p");
+    titulo.innerText = `${textoPadraoDetalheReserva(reserva.recurso_nome, "Recurso não informado")} | ${aulaLabel(aulaExibicao || reserva.aula)}`;
+    li.appendChild(titulo);
+
+    if (exibirProfessor) {
+        const professor = document.createElement("p");
+        professor.className = "booking-professor";
+        professor.innerText = `Professor(a): ${textoPadraoDetalheReserva(reserva.professor_nome, "Não informado")}`;
+        li.appendChild(professor);
+    }
+
+    const detalheTurma = document.createElement("p");
+    detalheTurma.className = "booking-detail";
+    detalheTurma.innerText = `Turma: ${textoPadraoDetalheReserva(reserva.turma, "Não informada")} | ${nomeTurno(reserva.turno) || "Turno não informado"}`;
+    li.appendChild(detalheTurma);
+
+    const temaAula = String(reserva.tema_aula || "").trim();
+    if (temaAula) {
+        const detalheTema = document.createElement("p");
+        detalheTema.className = "booking-theme";
+        detalheTema.innerText = `Tema: ${temaAula}`;
+        li.appendChild(detalheTema);
+    }
+
+    if (exibirData) {
+        const detalheData = document.createElement("p");
+        detalheData.className = "booking-detail";
+        detalheData.innerText = `Data: ${paraDataBr(reserva.data)}`;
+        li.appendChild(detalheData);
+    }
+
+    const acoes = document.createElement("div");
+    acoes.className = "booking-item-actions";
+
+    const btnDetalhes = document.createElement("button");
+    btnDetalhes.type = "button";
+    btnDetalhes.className = "print-secondary-btn booking-details-btn";
+    btnDetalhes.innerText = "Ver detalhes";
+    btnDetalhes.addEventListener("click", () => abrirDetalhesReserva(reserva));
+    acoes.appendChild(btnDetalhes);
+
+    if (permitirCancelar) {
+        const nota = document.createElement("span");
+        nota.className = "booking-item-action-note";
+        nota.innerText = "Cancelamento disponível nos detalhes.";
+        acoes.appendChild(nota);
+    }
+
+    li.appendChild(acoes);
+    return li;
+}
+
+async function cancelarReserva(idReserva = 0) {
+    const id = Number(idReserva || reservaCancelamentoPendenteId || 0);
+    if (!id) {
+        return;
+    }
+
+    const res = await fetchComAuth(`/agendamento/reservas/${id}/cancelar`, {
+        method: "POST",
+        headers
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+        setMensagem(data.detail || "Não foi possível cancelar.", "erro");
+        return;
+    }
+
+    fecharConfirmacaoCancelamentoReserva();
+    fecharPainelLateralAgendamento("painelDetalhesReservaAgendamento");
+    reservaDetalheAtual = null;
+    setMensagem("Reserva cancelada com sucesso.");
+    await atualizarTelaAgendamento();
+}
+
 async function selecionarDataAgendamento(dataIso, { fecharCalendarioAoFinal = false } = {}) {
     const dataTexto = String(dataIso || "").trim();
     if (!dataTexto) {
@@ -2044,7 +2556,7 @@ function renderSemanaAgendamento() {
             ? "Selecionado"
             : dataIso === hojeIso
                 ? "Hoje"
-                : "Abrir";
+                : "Ver agenda";
 
         botao.appendChild(diaSemana);
         botao.appendChild(numero);
@@ -2461,10 +2973,27 @@ function registrarEventos() {
     el("btnFecharMinhasReservas")?.addEventListener("click", () => {
         fecharPainelLateralAgendamento("painelMinhasReservasAgendamento");
     });
+    el("btnFecharDetalhesReserva")?.addEventListener("click", () => {
+        fecharPainelLateralAgendamento("painelDetalhesReservaAgendamento");
+    });
     document.querySelectorAll("[data-close-scheduler-drawer='true']").forEach((elemento) => {
         elemento.addEventListener("click", () => {
             fecharPainelLateralAgendamento();
         });
+    });
+    el("btnAbrirConfirmacaoCancelamento")?.addEventListener("click", () => {
+        abrirConfirmacaoCancelamentoReserva(el("btnAbrirConfirmacaoCancelamento")?.dataset.reservaId);
+    });
+    el("btnFecharConfirmacaoCancelamento")?.addEventListener("click", () => {
+        fecharConfirmacaoCancelamentoReserva();
+    });
+    el("btnConfirmarCancelamentoReserva")?.addEventListener("click", () => {
+        cancelarReserva();
+    });
+    el("dialogCancelarReservaAgendamento")?.addEventListener("click", (event) => {
+        if (event.target === el("dialogCancelarReservaAgendamento") || event.target === el("dialogCancelarReservaAgendamento")?.firstElementChild) {
+            fecharConfirmacaoCancelamentoReserva();
+        }
     });
 
     el("btnMesAnterior").addEventListener("click", async () => {
@@ -2553,9 +3082,102 @@ function registrarEventos() {
 
     window.addEventListener("keydown", (event) => {
         if (event.key === "Escape") {
+            fecharConfirmacaoCancelamentoReserva();
             fecharPainelLateralAgendamento();
         }
     });
+
+    window.addEventListener("resize", () => {
+        renderSemanaAgendamento();
+    });
+}
+
+function criarItemReserva(
+    reserva,
+    {
+        permitirCancelar = false,
+        exibirProfessor = true,
+        exibirData = false
+    } = {}
+) {
+    const li = document.createElement("li");
+    li.className = "booking-item";
+
+    const aulaExibicao = numeroAulaReserva(reserva);
+    const titulo = document.createElement("p");
+    titulo.innerText = `${textoPadraoDetalheReserva(reserva.recurso_nome, "Recurso não informado")} | ${aulaLabel(aulaExibicao || reserva.aula)}`;
+    li.appendChild(titulo);
+
+    if (exibirProfessor) {
+        const professor = document.createElement("p");
+        professor.className = "booking-professor";
+        professor.innerText = `Professor(a): ${textoPadraoDetalheReserva(reserva.professor_nome, "Não informado")}`;
+        li.appendChild(professor);
+    }
+
+    const detalheTurma = document.createElement("p");
+    detalheTurma.className = "booking-detail";
+    detalheTurma.innerText = `Turma: ${textoPadraoDetalheReserva(reserva.turma, "Não informada")} | ${nomeTurno(reserva.turno) || "Turno não informado"}`;
+    li.appendChild(detalheTurma);
+
+    const temaAula = String(reserva.tema_aula || "").trim();
+    if (temaAula) {
+        const detalheTema = document.createElement("p");
+        detalheTema.className = "booking-theme";
+        detalheTema.innerText = `Tema: ${temaAula}`;
+        li.appendChild(detalheTema);
+    }
+
+    if (exibirData) {
+        const detalheData = document.createElement("p");
+        detalheData.className = "booking-detail";
+        detalheData.innerText = `Data: ${paraDataBr(reserva.data)}`;
+        li.appendChild(detalheData);
+    }
+
+    const acoes = document.createElement("div");
+    acoes.className = "booking-item-actions";
+
+    const btnDetalhes = document.createElement("button");
+    btnDetalhes.type = "button";
+    btnDetalhes.className = "print-secondary-btn booking-details-btn";
+    btnDetalhes.innerText = "Ver detalhes";
+    btnDetalhes.addEventListener("click", () => abrirDetalhesReserva(reserva));
+    acoes.appendChild(btnDetalhes);
+
+    if (permitirCancelar) {
+        const nota = document.createElement("span");
+        nota.className = "booking-item-action-note";
+        nota.innerText = "Cancelamento disponível nos detalhes.";
+        acoes.appendChild(nota);
+    }
+
+    li.appendChild(acoes);
+    return li;
+}
+
+async function cancelarReserva(idReserva = 0) {
+    const id = Number(idReserva || reservaCancelamentoPendenteId || 0);
+    if (!id) {
+        return;
+    }
+
+    const res = await fetchComAuth(`/agendamento/reservas/${id}/cancelar`, {
+        method: "POST",
+        headers
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+        setMensagem(data.detail || "Não foi possível cancelar.", "erro");
+        return;
+    }
+
+    fecharConfirmacaoCancelamentoReserva();
+    fecharPainelLateralAgendamento("painelDetalhesReservaAgendamento");
+    reservaDetalheAtual = null;
+    setMensagem("Reserva cancelada com sucesso.");
+    await atualizarTelaAgendamento();
 }
 
 async function init() {
