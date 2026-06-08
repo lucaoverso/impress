@@ -38,6 +38,7 @@ const RESERVA_BORDA_PREVIEW = 24;
 const BREAKPOINT_MOBILE_PREVIEW = 980;
 const FILA_POLLING_MS = 6000;
 const LIMITE_ALERTA_IMPRESSAO_PAGINAS = 30;
+const LIMIAR_RE_RENDER_PREVIEW_MOBILE_PX = 24;
 const EXTENSOES_SUPORTADAS = new Set(["pdf", "doc", "docx", "png", "jpg", "jpeg"]);
 const STATUS_JOB_LABEL = {
     PENDENTE: "Na fila",
@@ -51,6 +52,12 @@ const STATUS_JOB_LABEL = {
 const TAMANHO_FOLHA = {
     retrato: { largura: 794, altura: 1123 },
     paisagem: { largura: 1123, altura: 794 }
+};
+
+let ultimaGeometriaPreview = {
+    larguraJanela: window.innerWidth || 0,
+    alturaJanela: window.innerHeight || 0,
+    mobile: (window.innerWidth || 0) <= BREAKPOINT_MOBILE_PREVIEW,
 };
 
 function impressaoBloqueadaSemPapel() {
@@ -878,11 +885,28 @@ function centralizarFolhaAtiva(suave = true) {
     if (!isMobile) {
         return;
     }
-    folhaAtiva.scrollIntoView({
-        behavior: suave ? "smooth" : "auto",
-        block: isMobile ? "nearest" : "start",
-        inline: isMobile ? "center" : "nearest"
-    });
+    const previewPane = document.querySelector(".print-preview-pane");
+    if (!previewPane) {
+        return;
+    }
+
+    const scrollAlvo = Math.max(
+        0,
+        Math.min(
+            folhaAtiva.offsetLeft - ((previewPane.clientWidth - folhaAtiva.offsetWidth) / 2),
+            previewPane.scrollWidth - previewPane.clientWidth
+        )
+    );
+
+    if (typeof previewPane.scrollTo === "function") {
+        previewPane.scrollTo({
+            left: scrollAlvo,
+            behavior: suave ? "smooth" : "auto",
+        });
+        return;
+    }
+
+    previewPane.scrollLeft = scrollAlvo;
 }
 
 function obterOrientacaoPreview() {
@@ -2382,7 +2406,30 @@ function reagendarRenderAposResize() {
         clearTimeout(resizeTimer);
     }
     resizeTimer = setTimeout(() => {
+        const larguraAtual = window.innerWidth || 0;
+        const alturaAtual = window.innerHeight || 0;
+        const mobileAtual = isPreviewMobile();
+        const breakpointMudou = mobileAtual !== ultimaGeometriaPreview.mobile;
+        const larguraMudou = mobileAtual
+            ? Math.abs(larguraAtual - ultimaGeometriaPreview.larguraJanela) >= LIMIAR_RE_RENDER_PREVIEW_MOBILE_PX
+            : larguraAtual !== ultimaGeometriaPreview.larguraJanela;
+        const alturaMudou = mobileAtual
+            ? Math.abs(alturaAtual - ultimaGeometriaPreview.alturaJanela) >= LIMIAR_RE_RENDER_PREVIEW_MOBILE_PX
+            : alturaAtual !== ultimaGeometriaPreview.alturaJanela;
+
+        ultimaGeometriaPreview = {
+            larguraJanela: larguraAtual,
+            alturaJanela: alturaAtual,
+            mobile: mobileAtual,
+        };
+
         ajustarPosicaoPainelMeta();
+
+        const deveRenderizarPreview = breakpointMudou || (mobileAtual ? larguraMudou : (larguraMudou || alturaMudou));
+        if (!deveRenderizarPreview) {
+            return;
+        }
+
         if (!pdfDoc) {
             mostrarPreviewVazio(obterMensagemPreviewVazio());
             return;
