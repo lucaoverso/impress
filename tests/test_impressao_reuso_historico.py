@@ -76,7 +76,7 @@ class ImpressaoReusoHistoricoTest(unittest.TestCase):
             arquivo_path=str(caminho_pdf),
             copias=1,
             paginas_totais=4,
-            tags_json='["Prova Bimestral"]',
+            tags_json='["Simulado"]',
         )
         database.atualizar_status(job_id, "CONCLUIDO")
         return admin, job_id, caminho_pdf
@@ -128,7 +128,7 @@ class ImpressaoReusoHistoricoTest(unittest.TestCase):
             novo_job = next(job for job in jobs if int(job["id"]) != int(job_id))
             self.assertEqual(novo_job["arquivo"], "atividade.docx")
             self.assertEqual(novo_job["status"], "PENDENTE")
-            self.assertEqual(novo_job["tags_json"], '["Prova Bimestral"]')
+            self.assertEqual(novo_job["tags_json"], '["Simulado"]')
 
             caminho_novo = Path(str(novo_job["arquivo_path"]))
             self.assertTrue(caminho_novo.exists())
@@ -209,7 +209,7 @@ class ImpressaoReusoHistoricoTest(unittest.TestCase):
             jobs = impressao_router.meus_jobs(professor_id=None, usuario=admin)
 
             self.assertEqual(len(jobs), 1)
-            self.assertEqual(jobs[0]["tags"], ["Prova Bimestral"])
+            self.assertEqual(jobs[0]["tags"], ["Simulado"])
 
     def test_criar_job_pdf_invalido_retorna_http_500_controlado(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -237,7 +237,7 @@ class ImpressaoReusoHistoricoTest(unittest.TestCase):
                         duplex=False,
                         orientacao="retrato",
                         intervalo_paginas="",
-                        tags_impressao=["Prova Bimestral"],
+                        tags_impressao=["Simulado"],
                         usuario_responsavel=admin,
                     )
             finally:
@@ -273,7 +273,7 @@ class ImpressaoReusoHistoricoTest(unittest.TestCase):
                         duplex=False,
                         orientacao="retrato",
                         intervalo_paginas="",
-                        tags_impressao=["Prova Bimestral"],
+                        tags_impressao=["Simulado"],
                         usuario_responsavel=admin,
                     )
             finally:
