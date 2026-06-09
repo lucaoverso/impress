@@ -6,14 +6,15 @@ from pathlib import Path
 from fastapi import HTTPException
 
 TAGS_IMPRESSAO_DISPONIVEIS = (
-    "Atividade",
     "Prova bimestral",
     "Trabalho avaliativo",
     "Lista de exercicios",
-    "Recuperacao",
+    "Recuperação",
     "Simulado",
     "Material de apoio",
     "Comunicado",
+    "Registro",
+    "CAED",
 )
 
 
