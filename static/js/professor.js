@@ -190,7 +190,7 @@ function obterProfessorSelecionado() {
 }
 
 function professorSolicitanteEhObrigatorio() {
-    return usuarioPodeSelecionarProfessorImpressao();
+    return false;
 }
 
 function professorSolicitantePendente() {
@@ -237,8 +237,8 @@ function atualizarTitulosContextoImpressao() {
 
     const professor = obterProfessorSelecionado();
     if (!professor) {
-        IDS_TITULOS_COTA_IMPRESSAO.forEach((id) => definirTexto(id, "Cota do professor"));
-        IDS_TITULOS_JOBS_IMPRESSAO.forEach((id) => definirTexto(id, "Pedidos do professor"));
+        IDS_TITULOS_COTA_IMPRESSAO.forEach((id) => definirTexto(id, "Sua cota"));
+        IDS_TITULOS_JOBS_IMPRESSAO.forEach((id) => definirTexto(id, "Seus pedidos"));
         if (contexto) {
             contexto.innerText = obterMensagemSelecaoProfessorImpressao();
         }
@@ -340,7 +340,7 @@ async function carregarProfessoresImpressaoAdmin() {
         painel.hidden = false;
     }
     grupo.style.display = "block";
-    select.dataset.required = "true";
+    select.dataset.required = "false";
     const res = await fetchComAuth("/agendamento/professores", { headers });
     if (!res.ok) {
         throw new Error("Não foi possível carregar os professores para impressão.");
