@@ -106,6 +106,23 @@ Windows (PowerShell):
 
 Use `python -m uvicorn` em vez de `uvicorn ...` para evitar depender diretamente do `uvicorn.exe`.
 
+Se voce quiser que mudancas em `.js` e `.css` aparecam no navegador sem reiniciar a API, habilite o versionamento dinamico dos assets no ambiente local:
+
+Linux/macOS:
+
+```bash
+STATIC_ASSET_VERSION=dynamic .venv/bin/python -m uvicorn main:app --host 127.0.0.1 --port 8010 --reload
+```
+
+Windows (PowerShell):
+
+```powershell
+$env:STATIC_ASSET_VERSION = "dynamic"
+.\.venv\Scripts\python.exe -m uvicorn main:app --host 127.0.0.1 --port 8010 --reload
+```
+
+No Linux/macOS, voce tambem pode usar `make dev`.
+
 ### 8. Confira se o sistema subiu
 
 Abra no navegador:

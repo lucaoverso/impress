@@ -40,6 +40,10 @@ const FILA_POLLING_MS = 6000;
 const LIMITE_ALERTA_IMPRESSAO_PAGINAS = 30;
 const LIMIAR_RE_RENDER_PREVIEW_MOBILE_PX = 24;
 const EXTENSOES_SUPORTADAS = new Set(["pdf", "doc", "docx", "png", "jpg", "jpeg"]);
+const IDS_LISTAS_JOBS_IMPRESSAO = ["lista-jobs", "lista-jobs-etapa-arquivo"];
+const IDS_ESPELHOS_COTA_IMPRESSAO = ["cotaPainelEspelho", "cotaPainelEtapaArquivo"];
+const IDS_TITULOS_COTA_IMPRESSAO = ["tituloCota", "tituloCotaEtapaArquivo"];
+const IDS_TITULOS_JOBS_IMPRESSAO = ["tituloJobs", "tituloJobsEtapaArquivo"];
 const STATUS_JOB_LABEL = {
     PENDENTE: "Na fila",
     IMPRIMINDO: "Imprimindo",
@@ -185,6 +189,30 @@ function obterProfessorSelecionado() {
     return professoresImpressao.find((professor) => Number(professor.id) === professorId) || null;
 }
 
+function professorSolicitanteEhObrigatorio() {
+    return usuarioPodeSelecionarProfessorImpressao();
+}
+
+function professorSolicitantePendente() {
+    return professorSolicitanteEhObrigatorio() && obterProfessorSolicitanteSelecionadoId() <= 0;
+}
+
+function obterMensagemSelecaoProfessorImpressao() {
+    return "Selecione um professor para consultar a cota, o historico e reaproveitar arquivos em nome dele.";
+}
+
+function obterListasJobsImpressao() {
+    return IDS_LISTAS_JOBS_IMPRESSAO
+        .map((id) => el(id))
+        .filter(Boolean);
+}
+
+function atualizarEspelhosCotaImpressao(texto) {
+    IDS_ESPELHOS_COTA_IMPRESSAO.forEach((id) => {
+        definirTexto(id, texto);
+    });
+}
+
 function montarUrlConsultaImpressao(urlBase) {
     const professorId = obterProfessorSolicitanteSelecionadoId();
     if (!(usuarioPodeSelecionarProfessorImpressao() && professorId > 0)) {
@@ -196,17 +224,11 @@ function montarUrlConsultaImpressao(urlBase) {
 }
 
 function atualizarTitulosContextoImpressao() {
-    const tituloCota = el("tituloCota");
-    const tituloJobs = el("tituloJobs");
     const contexto = el("contextoProfessorImpressao");
 
-    if (!tituloCota || !tituloJobs) {
-        return;
-    }
-
     if (!usuarioPodeSelecionarProfessorImpressao()) {
-        tituloCota.innerText = "Sua cota";
-        tituloJobs.innerText = "Seus pedidos";
+        IDS_TITULOS_COTA_IMPRESSAO.forEach((id) => definirTexto(id, "Sua cota"));
+        IDS_TITULOS_JOBS_IMPRESSAO.forEach((id) => definirTexto(id, "Seus pedidos"));
         if (contexto) {
             contexto.innerText = "";
         }
@@ -215,19 +237,16 @@ function atualizarTitulosContextoImpressao() {
 
     const professor = obterProfessorSelecionado();
     if (!professor) {
-        tituloCota.innerText = usuarioEhGestor() ? "Cota da gestao" : "Sua cota";
-        tituloJobs.innerText = usuarioEhGestor() ? "Pedidos da gestao" : "Seus pedidos";
+        IDS_TITULOS_COTA_IMPRESSAO.forEach((id) => definirTexto(id, "Cota do professor"));
+        IDS_TITULOS_JOBS_IMPRESSAO.forEach((id) => definirTexto(id, "Pedidos do professor"));
         if (contexto) {
-            contexto.innerText = usuarioEhGestor()
-                ? "Sem professor selecionado, a impressao usa a cota ilimitada da gestao."
-                : "Sem professor selecionado, a impressao usa a sua propria cota.";
+            contexto.innerText = obterMensagemSelecaoProfessorImpressao();
         }
         return;
     }
 
-    tituloCota.innerText = `Cota de ${professor.nome}`;
-    tituloJobs.innerText = `Pedidos de ${professor.nome}`;
-
+    IDS_TITULOS_COTA_IMPRESSAO.forEach((id) => definirTexto(id, `Cota de ${professor.nome}`));
+    IDS_TITULOS_JOBS_IMPRESSAO.forEach((id) => definirTexto(id, `Pedidos de ${professor.nome}`));
     if (contexto) {
         contexto.innerText = `A impressao sera contabilizada para ${professor.nome}.`;
     }
@@ -262,16 +281,13 @@ function atualizarTopbarUsuario() {
 }
 
 function renderFilaVazia(texto) {
-    const ul = el("lista-jobs");
-    if (!ul) {
-        return;
-    }
-
-    ul.innerHTML = "";
-    const li = document.createElement("li");
-    li.classList.add("print-job-empty");
-    li.innerText = texto;
-    ul.appendChild(li);
+    obterListasJobsImpressao().forEach((ul) => {
+        ul.innerHTML = "";
+        const li = document.createElement("li");
+        li.classList.add("print-job-empty");
+        li.innerText = texto;
+        ul.appendChild(li);
+    });
 }
 
 async function carregarUsuario() {
@@ -298,6 +314,7 @@ async function carregarStatusImpressao(mostrarModal = false) {
 }
 
 async function carregarProfessoresImpressaoAdmin() {
+    const painel = el("painelProfessorEtapaArquivo");
     const grupo = el("grupoProfessorSolicitante");
     const select = el("professorSolicitante");
 
@@ -306,14 +323,24 @@ async function carregarProfessoresImpressaoAdmin() {
     }
 
     if (!usuarioPodeSelecionarProfessorImpressao()) {
+        if (painel) {
+            painel.hidden = true;
+        }
         grupo.style.display = "none";
         professoresImpressao = [];
+        select.dataset.required = "false";
+        select.dataset.previousProfessorId = "0";
         select.innerHTML = "";
         atualizarTitulosContextoImpressao();
+        window.PrintingUI?.ui?.syncFromLegacyDom?.();
         return;
     }
 
+    if (painel) {
+        painel.hidden = false;
+    }
     grupo.style.display = "block";
+    select.dataset.required = "true";
     const res = await fetchComAuth("/agendamento/professores", { headers });
     if (!res.ok) {
         throw new Error("Não foi possível carregar os professores para impressão.");
@@ -335,7 +362,9 @@ async function carregarProfessoresImpressaoAdmin() {
 
     if (!Array.isArray(professoresImpressao) || professoresImpressao.length === 0) {
         select.disabled = true;
+        select.dataset.previousProfessorId = "0";
         atualizarTitulosContextoImpressao();
+        window.PrintingUI?.ui?.syncFromLegacyDom?.();
         return;
     }
 
@@ -346,7 +375,9 @@ async function carregarProfessoresImpressaoAdmin() {
         select.appendChild(option);
     });
     select.disabled = false;
+    select.dataset.previousProfessorId = String(obterProfessorSolicitanteSelecionadoId() || 0);
     atualizarTitulosContextoImpressao();
+    window.PrintingUI?.ui?.syncFromLegacyDom?.();
 }
 
 function obterTurmaImpressaoSelecionadaId() {
@@ -1210,7 +1241,9 @@ function jobHistoricoEstaSelecionado(job) {
 }
 
 function atualizarDestaqueJobSelecionado() {
-    const items = document.querySelectorAll("#lista-jobs .print-job-item[data-job-id]");
+    const items = document.querySelectorAll(
+        "#lista-jobs .print-job-item[data-job-id], #lista-jobs-etapa-arquivo .print-job-item[data-job-id]"
+    );
     items.forEach((item) => {
         const selecionado = Number(item.dataset.jobId || 0) === Number(jobHistoricoSelecionadoAtual?.id || 0);
         item.classList.toggle("is-selected-source", selecionado);
@@ -1460,6 +1493,11 @@ async function enviarImpressao(confirmadoAlertaConsumo = false) {
     const professorSolicitanteId = obterProfessorSolicitanteSelecionadoId();
     const usaHistorico = jobHistoricoId > 0;
 
+    if (professorSolicitantePendente()) {
+        el("msg").innerText = "Selecione o professor solicitante antes de continuar a impressao.";
+        return;
+    }
+
     if ((!arquivo && !usaHistorico) || !copias || copias < 1) {
         el("msg").innerText = "Selecione um arquivo e informe uma quantidade válida de cópias.";
         return;
@@ -1511,16 +1549,11 @@ async function enviarImpressao(confirmadoAlertaConsumo = false) {
     }
 
     envioEmAndamento = true;
-    const cotaIlimitadaGestao = usuarioEhGestor() && !professorSolicitanteId;
     atualizarEstadoEnvio(
         true,
         usaHistorico
             ? "Reenviando arquivo do histórico para a fila..."
-            : (
-                cotaIlimitadaGestao
-                    ? "Enviando para fila com cota ilimitada da gestao..."
-                    : "Enviando para fila e validando consumo da cota..."
-            )
+            : "Enviando para fila e validando consumo da cota..."
     );
     el("msg").innerText = "";
 
@@ -1585,6 +1618,11 @@ async function enviarImpressao(confirmadoAlertaConsumo = false) {
 
 async function carregarCota() {
     atualizarTitulosContextoImpressao();
+
+    if (professorSolicitantePendente()) {
+        el("cota").innerText = "Selecione um professor para consultar a cota.";
+        return;
+    }
 
     const res = await fetchComAuth(montarUrlConsultaImpressao("/minha-cota"), { headers });
     if (!res.ok) {
@@ -1890,8 +1928,23 @@ function criarItemJob(job, options) {
     return li;
 }
 
+function renderizarJobsHistorico(jobs = []) {
+    obterListasJobsImpressao().forEach((ul) => {
+        ul.innerHTML = "";
+        jobs.forEach((job) => {
+            ul.appendChild(criarItemJob(job));
+        });
+    });
+}
+
 async function carregarFila() {
     atualizarTitulosContextoImpressao();
+
+    if (professorSolicitantePendente()) {
+        sincronizarCardJobRecenteComFila([]);
+        renderFilaVazia(obterMensagemSelecaoProfessorImpressao());
+        return [];
+    }
 
     const res = await fetchComAuth(montarUrlConsultaImpressao("/meus-jobs"), { headers });
     if (!res.ok) {
@@ -1899,9 +1952,6 @@ async function carregarFila() {
     }
 
     const jobs = await lerJsonResposta(res, "Não foi possível carregar os pedidos de impressão.");
-
-    const ul = el("lista-jobs");
-    ul.innerHTML = "";
 
     if (!Array.isArray(jobs) || jobs.length === 0) {
         sincronizarCardJobRecenteComFila([]);
@@ -1914,9 +1964,7 @@ async function carregarFila() {
         return;
     }
 
-    jobs.forEach((job) => {
-        ul.appendChild(criarItemJob(job));
-    });
+    renderizarJobsHistorico(jobs);
     atualizarDestaqueJobSelecionado();
     sincronizarCardJobRecenteComFila(jobs);
     return jobs;
@@ -2586,10 +2634,19 @@ function registrarEventos() {
     const professorSolicitante = el("professorSolicitante");
     if (professorSolicitante) {
         professorSolicitante.addEventListener("change", async () => {
+            const professorAnteriorId = Number(professorSolicitante.dataset.previousProfessorId || 0);
+            const professorAtualId = obterProfessorSolicitanteSelecionadoId();
+            professorSolicitante.dataset.previousProfessorId = String(professorAtualId || 0);
             atualizarTitulosContextoImpressao();
             el("msg").innerText = "";
 
             try {
+                if (
+                    professorAnteriorId !== professorAtualId
+                    && Number(jobHistoricoSelecionadoAtual?.id || 0) > 0
+                ) {
+                    await carregarPreview(null);
+                }
                 await carregarCota();
                 await carregarFila();
             } catch (err) {
@@ -2695,6 +2752,10 @@ function obterEstadoValidacaoImpressao() {
     const usaHistorico = Number(jobHistoricoSelecionadoAtual?.id || 0) > 0;
     const copias = Number(el("copias")?.value || 0);
     const tagsSelecionadas = obterTagsImpressaoSelecionadas();
+
+    if (professorSolicitantePendente()) {
+        return { valido: false, mensagem: "Selecione o professor solicitante para liberar as proximas etapas." };
+    }
 
     if ((!arquivo && !usaHistorico) || copias < 1) {
         return { valido: false, mensagem: "Selecione um arquivo e informe uma quantidade valida de copias." };
@@ -2925,8 +2986,8 @@ const carregarJobHistoricoNoPreviewOriginal = carregarJobHistoricoNoPreview;
 carregarJobHistoricoNoPreview = async function carregarJobHistoricoNoPreviewRefatorado(job) {
     const deveAvancarNoMobile = isPreviewMobile();
     reusoHistoricoEmCarregamento = true;
+    fecharPainelHistorico();
     if (deveAvancarNoMobile) {
-        fecharPainelHistorico();
         window.PrintingUI?.ui?.setForcedStep?.(2);
         window.PrintingUI?.ui?.setWizardState?.(2, {
             upload: {
@@ -2940,7 +3001,7 @@ carregarJobHistoricoNoPreview = async function carregarJobHistoricoNoPreviewRefa
     try {
         await carregarJobHistoricoNoPreviewOriginal(job);
         atualizarEstadoFluxoImpressao();
-        if (pdfDoc && deveAvancarNoMobile) {
+        if (pdfDoc) {
             window.requestAnimationFrame(() => {
                 window.PrintingUI?.ui?.setWizardState?.(2, {
                     upload: {
@@ -2964,7 +3025,7 @@ carregarJobHistoricoNoPreview = async function carregarJobHistoricoNoPreviewRefa
 const carregarCotaOriginal = carregarCota;
 carregarCota = async function carregarCotaRefatorado() {
     await carregarCotaOriginal();
-    definirTexto("cotaPainelEspelho", el("cota")?.innerText || "Carregando...");
+    atualizarEspelhosCotaImpressao(el("cota")?.innerText || "Carregando...");
     atualizarEstadoFluxoImpressao();
 };
 

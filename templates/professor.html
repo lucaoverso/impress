@@ -42,7 +42,7 @@
                     <header class="print-step-header">
                         <div>
                             <p class="print-step-kicker">Etapa 1</p>
-                            <h2>Escolha o arquivo</h2>
+                            <h2>Professor e arquivo</h2>
                         </div>
                     </header>
 
@@ -65,7 +65,30 @@
                     <div class="print-step-actions">
                         <button id="btnContinuarArquivo" class="btn-destaque" type="button">Continuar</button>
                     </div>
+                    <section id="painelProfessorEtapaArquivo" class="print-config-section print-step-history-grid" hidden>
+                        <article id="grupoProfessorSolicitante" class="print-field-group" style="display: none;">
+                            <label for="professorSolicitante">Professor solicitante</label>
+                            <select id="professorSolicitante">
+                                <option value="">Selecione um professor</option>
+                            </select>
+                            <p id="contextoProfessorImpressao" class="print-file-hint"></p>
+                        </article>
 
+                        <div class="print-step-history-panel">
+                            <article class="print-meta-card">
+                                <h3 id="tituloCotaEtapaArquivo">Sua cota</h3>
+                                <p class="print-history-quota" id="cotaPainelEtapaArquivo">Carregando...</p>
+                            </article>
+
+                            <article class="print-meta-card print-jobs-card">
+                                <h3 id="tituloJobsEtapaArquivo">Seus pedidos</h3>
+                                <p class="print-jobs-hint">
+                                    Abra um item concluido para reutilizar o mesmo arquivo no fluxo atual.
+                                </p>
+                                <ul id="lista-jobs-etapa-arquivo"></ul>
+                            </article>
+                        </div>
+                    </section>
                 </article>
 
                 <article id="etapaSolicitacao" class="print-step-card" hidden>
@@ -77,14 +100,6 @@
                     </header>
 
                     <section class="print-config-section">
-                        <article id="grupoProfessorSolicitante" class="print-field-group" style="display: none;">
-                            <label for="professorSolicitante">Professor solicitante</label>
-                            <select id="professorSolicitante">
-                                <option value="">Selecione um professor</option>
-                            </select>
-                            <p id="contextoProfessorImpressao" class="print-file-hint"></p>
-                        </article>
-
                         <article class="print-field-group">
                             <label for="turmaImpressao">Turma</label>
                             <select id="turmaImpressao">

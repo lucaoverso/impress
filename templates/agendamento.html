@@ -24,45 +24,71 @@
             <div class="scheduler-page-header-copy">
                 <p class="auth-badge">Agendamento de recursos</p>
                 <h1><span class="scheduler-mobile-hidden">Reserve recursos para a aula</span><span class="scheduler-mobile-only">Reserve recursos</span></h1>
-                <p class="scheduler-page-lead"><span class="scheduler-mobile-hidden">Escolha o dia e selecione um horario disponivel para reservar o recurso em etapas.</span><span class="scheduler-mobile-only">Escolha o dia e o horario.</span></p>
+                <p class="scheduler-page-lead"><span class="scheduler-mobile-hidden">Escolha primeiro os recursos e depois selecione a aula compativel para concluir a reserva em etapas.</span><span class="scheduler-mobile-only">Escolha os recursos e a aula.</span></p>
             </div>
         </header>
 
         <section class="scheduler-primary-column">
-            <article class="calendar-card scheduler-week-strip-card">
+            <article class="calendar-card scheduler-resource-stage-card">
                 <header class="scheduler-week-header">
                     <div>
                         <p class="print-step-kicker">Etapa 1</p>
-                        <h2>Escolha o dia e o horario</h2>
+                        <h2>Escolha os recursos</h2>
                         <p class="scheduler-week-copy">
-                            Navegue pela semana e selecione uma aula disponivel para reservar o recurso.
+                            Selecione um ou mais recursos da escola para liberar a agenda de aulas.
                         </p>
                     </div>
-                    <div class="scheduler-week-nav">
-                        <button id="btnSemanaAnterior" type="button" aria-label="Semana anterior">&#9664;</button>
-                        <h3 id="tituloSemanaAtual"></h3>
-                        <button id="btnSemanaProxima" type="button" aria-label="Proxima semana">&#9654;</button>
-                        <button id="btnSemanaHoje" type="button">Hoje</button>
-                    </div>
                 </header>
-                <div id="agendaSemanaDias" class="scheduler-week-strip" aria-label="Dias disponiveis da semana"></div>
+                <div id="recursoCardsEtapaInicial" class="scheduler-resource-stage-grid" role="group"
+                    aria-label="Recursos disponiveis da escola"></div>
+                <p id="resumoRecursosEtapaInicial" class="scheduler-step-note"></p>
+                <div class="scheduler-primary-stage-actions">
+                    <button id="btnVerAgendaEtapaRecursos" class="print-secondary-btn" type="button">
+                        Ver agenda
+                    </button>
+                    <button id="btnContinuarEtapaRecursos" class="btn-destaque" type="button" disabled>
+                        Continuar
+                    </button>
+                </div>
             </article>
 
-            <article class="calendar-card scheduler-day-lessons-card">
-                <header class="scheduler-day-lessons-header">
-                    <div class="scheduler-day-lessons-heading">
-                        <h4>Agenda do dia</h4>
-                        <p id="subtituloAgendaDia"></p>
-                    </div>
-                    <div id="grupoProfessorAgendaFiltro" class="scheduler-day-filters" hidden>
-                        <div class="scheduler-day-professor-filter">
-                            <label for="professorAgendaFiltro">Professor</label>
-                            <select id="professorAgendaFiltro"></select>
+            <div id="schedulerLessonStage" class="scheduler-lesson-stage" hidden>
+                <article class="calendar-card scheduler-week-strip-card">
+                    <header class="scheduler-week-header">
+                        <div>
+                            <p class="print-step-kicker">Etapa 2</p>
+                            <h2 id="schedulerLessonStageTitle">Escolha o dia e o horario</h2>
+                            <p id="schedulerLessonStageCopy" class="scheduler-week-copy">
+                                Navegue pela semana e selecione uma aula compativel com os recursos escolhidos.
+                            </p>
+                            <p id="resumoRecursosSelecionadosAgenda" class="scheduler-step-note"></p>
                         </div>
-                    </div>
-                </header>
-                <div id="agendaDiaLista" class="scheduler-day-agenda-list" aria-live="polite"></div>
-            </article>
+                        <div class="scheduler-week-nav">
+                            <button id="btnSemanaAnterior" type="button" aria-label="Semana anterior">&#9664;</button>
+                            <h3 id="tituloSemanaAtual"></h3>
+                            <button id="btnSemanaProxima" type="button" aria-label="Proxima semana">&#9654;</button>
+                            <button id="btnSemanaHoje" type="button">Hoje</button>
+                        </div>
+                    </header>
+                    <div id="agendaSemanaDias" class="scheduler-week-strip" aria-label="Dias disponiveis da semana"></div>
+                </article>
+
+                <article class="calendar-card scheduler-day-lessons-card">
+                    <header class="scheduler-day-lessons-header">
+                        <div class="scheduler-day-lessons-heading">
+                            <h4>Agenda do dia</h4>
+                            <p id="subtituloAgendaDia"></p>
+                        </div>
+                        <div id="grupoProfessorAgendaFiltro" class="scheduler-day-filters" hidden>
+                            <div class="scheduler-day-professor-filter">
+                                <label for="professorAgendaFiltro">Professor</label>
+                                <select id="professorAgendaFiltro"></select>
+                            </div>
+                        </div>
+                    </header>
+                    <div id="agendaDiaLista" class="scheduler-day-agenda-list" aria-live="polite"></div>
+                </article>
+            </div>
 
             <section class="scheduler-feedback-panel scheduler-feedback-panel-inline" aria-live="polite">
                 <p id="msgAgendamento" class="scheduler-feedback-message"></p>
@@ -74,41 +100,6 @@
                 <div id="schedulerWizardStartAnchor" class="print-scroll-anchor" aria-hidden="true"></div>
 
                 <div id="schedulerWizardFlow" hidden>
-                    <article id="etapaAgendamentoContexto" class="print-step-card print-step-card-active">
-                        <header class="print-step-header">
-                            <div>
-                                <p class="print-step-kicker">Etapa 2</p>
-                                <h2>Selecione os recursos</h2>
-                            </div>
-                            <p class="print-step-state">Aula confirmada</p>
-                        </header>
-                        <p class="print-step-description">
-                            Escolha os recursos disponiveis para esta aula.
-                        </p>
-
-                        <section class="print-config-section">
-                            <article class="scheduler-selected-lesson-card">
-                                <p class="print-step-kicker">Aula selecionada</p>
-                                <h3 id="tituloAulaSelecionada">Nenhuma aula selecionada</h3>
-                                <p id="resumoAulaSelecionada" class="print-file-hint"></p>
-                            </article>
-
-                            <article class="print-field-group">
-                                <label>Recursos</label>
-                                <div id="recursoButtons" class="scheduler-resource-button-grid" role="group"
-                                    aria-label="Recursos disponiveis para o agendamento"></div>
-                                <p id="resumoDisponibilidadeRecursos" class="print-file-hint">
-                                    Escolha uma aula para ver quais recursos ainda estao disponiveis e monte o agrupamento.
-                                </p>
-                            </article>
-                        </section>
-
-                        <div class="print-step-actions">
-                            <button id="btnTrocarAulaSelecionada" class="print-secondary-btn" type="button">Trocar aula</button>
-                            <button id="btnContinuarAgendamentoContexto" class="btn-destaque" type="button">Continuar</button>
-                        </div>
-                    </article>
-
                     <article id="etapaAgendamentoRepeticao" class="print-step-card" hidden>
                         <header class="print-step-header">
                             <div>
@@ -138,7 +129,7 @@
                         </section>
 
                         <div class="print-step-actions">
-                            <button id="btnVoltarAgendamentoRepeticao" class="print-secondary-btn" type="button">Voltar</button>
+                            <button id="btnVoltarAgendamentoRepeticao" class="print-secondary-btn" type="button">Trocar aula</button>
                             <button id="btnContinuarAgendamentoRepeticao" class="btn-destaque" type="button">Continuar</button>
                         </div>
                     </article>

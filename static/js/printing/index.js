@@ -141,6 +141,9 @@
         const intervalo = intervaloInput?.value?.trim() || "";
         const turmaId = turmaInput?.value ? Number(turmaInput.value) : null;
         const copias = Math.max(1, Number(copiasInput?.value || 1));
+        const professorRequired = professorInput?.dataset.required === "true";
+        const professorId = professorInput?.value ? Number(professorInput.value) : null;
+        const professorValid = !professorRequired || Boolean(professorId);
 
         return {
             upload: {
@@ -151,10 +154,11 @@
                 error: overrides?.upload?.error || "",
             },
             request: {
-                professorId: professorInput?.value ? Number(professorInput.value) : null,
+                professorId,
+                ownerValid: professorValid,
                 turmaId,
                 copias,
-                valid: Boolean(turmaId && copias >= 1),
+                valid: Boolean(professorValid && turmaId && copias >= 1),
             },
             settings: {
                 pageMode,

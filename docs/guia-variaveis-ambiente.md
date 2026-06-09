@@ -54,7 +54,7 @@ Por isso, no servidor, vale a pena manter um arquivo `/opt/sistema-impress/.env`
 | `LOG_LEVEL` | `app_logging.py` | `INFO` | Aceita niveis do `logging`, como `DEBUG`, `INFO`, `WARNING` e `ERROR`. |
 | `TOKEN_TTL_DIAS` | `database.py`, `services/auth_service.py` | `7` | So aceita `7` ou `15`. Qualquer outro valor volta para `7`. |
 | `PRINT_CANCEL_WINDOW_SECONDS` | `routers/config.py`, `services/worker.py` | `15` | Janela de cancelamento antes do worker despachar o job. Valores invalidos voltam para `15`. |
-| `STATIC_ASSET_VERSION` | `routers/config.py`, `routers/pages_router.py` | timestamp do boot | Opcional. Se vazio, muda a cada restart. No deploy automatizado, a workflow atualiza esse valor com o SHA do commit para invalidar cache de CSS e JS a cada publicacao. |
+| `STATIC_ASSET_VERSION` | `routers/config.py`, `routers/pages_router.py` | timestamp do boot | Opcional. Se vazio, muda a cada restart. Se definido como `dynamic`, gera uma versao nova a cada resposta e evita precisar reiniciar a API para enxergar mudancas de CSS e JS no desenvolvimento local. No deploy automatizado, a workflow atualiza esse valor com o SHA do commit para invalidar cache de CSS e JS a cada publicacao. |
 | `RADIUS_INTERNAL_SECRET` | `routers/config.py`, `routers/system_router.py` | vazio | Protege o endpoint interno `/internal/radius/ensure-nt-hash`. Se vazio, a integracao fica efetivamente desativada. |
 | `CUPS_LP_COMMAND` | `services/printer.py` | `lp` | Nome do comando ou caminho absoluto. Em servidor Linux, usar `/usr/bin/lp` pode deixar o ambiente mais previsivel. |
 | `CUPS_LP_TIMEOUT_SECONDS` | `services/printer.py` | `30` | Deve ser inteiro valido. Diferente de outras variaveis numericas, aqui um valor invalido pode quebrar a inicializacao do processo. |
@@ -90,6 +90,7 @@ LIBREOFFICE_COMMAND=/usr/bin/soffice
 - Preencha `RADIUS_INTERNAL_SECRET` apenas se a integracao com FreeRADIUS estiver ativa.
 - Se a impressao de `DOC` e `DOCX` for necessaria, instale o LibreOffice e configure `LIBREOFFICE_COMMAND` de forma explicita.
 - No deploy automatizado, a workflow sobrescreve `STATIC_ASSET_VERSION` com o SHA do commit publicado.
+- No desenvolvimento local, use `STATIC_ASSET_VERSION=dynamic` para forcar recarga imediata dos assets ao atualizar a pagina.
 - Use `TOKEN_TTL_DIAS=7` como padrao mais conservador.
 
 ## Operacao segura do arquivo `.env`

@@ -1,15 +1,20 @@
 import importlib
 import os
+import re
 import sys
 import unittest
+from unittest.mock import patch
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 from starlette.requests import Request
 
 
-def _reload_modulos(asset_version: str):
-    os.environ["STATIC_ASSET_VERSION"] = asset_version
+def _reload_modulos(asset_version: str | None):
+    if asset_version is None:
+        os.environ.pop("STATIC_ASSET_VERSION", None)
+    else:
+        os.environ["STATIC_ASSET_VERSION"] = asset_version
 
     for nome_modulo in ("routers.config", "routers.pages_router"):
         if nome_modulo in sys.modules:
@@ -133,6 +138,26 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn('id="relatoriosCards"', html)
         self.assertIn('id="anexosResumo"', html)
         self.assertIn("Insights da Gestao", html)
+
+    def test_login_page_gera_asset_version_dinamico_quando_configurado(self):
+        config, pages_router = _reload_modulos("dynamic")
+        app = FastAPI()
+        app.mount("/static", StaticFiles(directory=str(config.STATIC_DIR)), name="static")
+
+        with patch("routers.config.time.time_ns", side_effect=[111111, 222222]):
+            resposta_a = pages_router.login_page(_criar_request(app, "/login-page"))
+            resposta_b = pages_router.login_page(_criar_request(app, "/login-page"))
+
+        html_a = resposta_a.body.decode("utf-8")
+        html_b = resposta_b.body.decode("utf-8")
+
+        versao_a = re.search(r"js/app\.js\?v=(\d+)", html_a)
+        versao_b = re.search(r"js/app\.js\?v=(\d+)", html_b)
+
+        self.assertIsNotNone(versao_a)
+        self.assertIsNotNone(versao_b)
+        self.assertEqual(versao_a.group(1), "111111")
+        self.assertEqual(versao_b.group(1), "222222")
 
 
 if __name__ == "__main__":

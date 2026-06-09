@@ -1,4 +1,5 @@
 import os
+import time
 from datetime import datetime
 from pathlib import Path
 
@@ -27,6 +28,12 @@ def _resolver_asset_version() -> str:
 
 
 ASSET_VERSION = _resolver_asset_version()
+
+
+def get_asset_version() -> str:
+    if ASSET_VERSION.lower() == "dynamic":
+        return str(time.time_ns())
+    return ASSET_VERSION
 
 
 def _resolver_janela_cancelamento() -> int:
@@ -60,6 +67,7 @@ def render_template_response(
     context = {"request": request}
     if extra_context:
         context.update(extra_context)
+    context["asset_version"] = get_asset_version()
 
     response = templates.TemplateResponse(request, template_name, context)
     response.charset = "utf-8"

@@ -1,13 +1,14 @@
 (() => {
     function computeVisibility(state) {
         const uploadValid = Boolean(state?.upload?.valid);
+        const ownerValid = Boolean(state?.request?.ownerValid ?? true);
         const requestValid = Boolean(state?.request?.valid);
         const settingsValid = Boolean(state?.settings?.valid);
         const submitted = Boolean(state?.submit?.submitted);
 
         return {
             step1: true,
-            step2: uploadValid,
+            step2: uploadValid && ownerValid,
             step3: uploadValid && requestValid,
             step4: uploadValid && requestValid && settingsValid,
             step5: submitted,

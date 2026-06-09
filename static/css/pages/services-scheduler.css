@@ -164,7 +164,16 @@ html[data-scheduler-current-step="1"] .scheduler-page {
     max-width: 1080px;
 }
 
+html[data-scheduler-current-step="2"] .scheduler-page {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 1080px;
+}
+
 html[data-scheduler-current-step="1"] .scheduler-secondary-column {
+    display: none;
+}
+
+html[data-scheduler-current-step="2"] .scheduler-secondary-column {
     display: none;
 }
 
@@ -577,6 +586,158 @@ body.scheduler-drawer-open {
 .scheduler-step-note {
     margin: 0;
     flex: 1 1 auto;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+.scheduler-resource-stage-card,
+.scheduler-lesson-stage {
+    display: grid;
+    gap: 20px;
+}
+
+.scheduler-lesson-stage[hidden] {
+    display: none !important;
+}
+
+.scheduler-resource-stage-grid {
+    display: flex;
+    gap: 14px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 4px 2px 12px;
+    margin: 0 -2px;
+    scroll-snap-type: x proximity;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    cursor: grab;
+}
+
+.scheduler-resource-stage-grid::-webkit-scrollbar {
+    height: 10px;
+}
+
+.scheduler-resource-stage-grid::-webkit-scrollbar-thumb {
+    background: rgba(15, 118, 110, 0.22);
+    border-radius: 999px;
+}
+
+.scheduler-resource-stage-grid.is-dragging {
+    cursor: grabbing;
+    scroll-snap-type: none;
+    user-select: none;
+}
+
+.scheduler-resource-stage-grid .scheduler-resource-stage-button {
+    flex: 0 0 216px;
+    scroll-snap-align: start;
+}
+
+.scheduler-resource-stage-grid .scheduler-resource-empty {
+    flex: 1 0 100%;
+}
+
+.scheduler-primary-stage-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.scheduler-primary-stage-actions .btn-destaque,
+.scheduler-primary-stage-actions .print-secondary-btn {
+    width: auto;
+    min-width: 160px;
+}
+
+.scheduler-resource-stage-button {
+    border: 1px solid var(--line-soft);
+    border-radius: 22px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbfa 100%);
+    min-height: 220px;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    text-align: left;
+    overflow: hidden;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    transition: border-color 140ms ease, box-shadow 140ms ease, transform 120ms ease, background 140ms ease;
+}
+
+.scheduler-resource-stage-button:hover {
+    border-color: rgba(15, 118, 110, 0.24);
+    transform: translateY(-1px);
+    box-shadow: 0 16px 30px rgba(15, 23, 42, 0.08);
+}
+
+.scheduler-resource-stage-button.is-selected {
+    border-color: rgba(15, 118, 110, 0.36);
+    background: linear-gradient(180deg, #f4fffc 0%, #e9f7f2 100%);
+    box-shadow: 0 0 0 1px rgba(15, 118, 110, 0.10), 0 18px 32px rgba(15, 23, 42, 0.10);
+}
+
+.scheduler-resource-stage-cover {
+    min-height: 116px;
+    background-color: #d8efe8;
+    background-image:
+        linear-gradient(180deg, rgba(15, 23, 42, 0.08) 0%, rgba(15, 23, 42, 0.28) 100%),
+        var(--resource-cover-image, linear-gradient(135deg, #d7efe8 0%, #eef7f4 100%));
+    background-position: center;
+    background-repeat: no-repeat;
+    background-size: cover;
+}
+
+.scheduler-resource-stage-copy {
+    padding: 16px;
+    display: grid;
+    gap: 10px;
+    flex: 1 1 auto;
+}
+
+.scheduler-resource-stage-copy p {
+    margin: 0;
+}
+
+.scheduler-resource-stage-kicker {
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #0f766e;
+}
+
+.scheduler-resource-stage-title {
+    font-size: 16px;
+    line-height: 1.2;
+    color: var(--text-main);
+}
+
+.scheduler-resource-stage-description {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--text-muted);
+}
+
+.scheduler-resource-stage-capacity {
+    margin-top: auto;
+    font-size: 12px;
+    font-weight: 700;
+    color: #274c77;
+}
+
+@media (max-width: 640px) {
+    .scheduler-resource-stage-grid .scheduler-resource-stage-button {
+        flex-basis: min(280px, calc(100vw - 210px));
+        width: min(280px, calc(100vw - 72px));
+    }
+
+    .print-config-section {
+        padding: 0;
+        border:none;
+        background: none;
+    }
 }
 
 .scheduler-week-strip-card {
@@ -2019,7 +2180,11 @@ body.scheduler-drawer-open {
 
 @media (max-width: 640px) {
     .scheduler-page {
-        padding: 16px;
+        padding: 4px;
+    }
+
+    .scheduler-primary-stage-actions {
+        justify-content: space-between;
     }
 
     .scheduler-page-header,
@@ -2146,8 +2311,16 @@ body.scheduler-drawer-open {
 
 .scheduler-slot-compact-copy {
     min-width: 0;
-    display: flex;
-    align-items: center;
+    display: grid;
+    gap: 6px;
+    align-content: start;
+}
+
+.scheduler-slot-helper-text {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--text-muted);
 }
 
 .scheduler-availability-badge {
@@ -2200,7 +2373,9 @@ body.scheduler-drawer-open {
 }
 
 .scheduler-booking-card {
-    display: grid;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     gap: 6px;
     padding: 12px;
     border: 1px solid var(--line-soft);
@@ -2209,6 +2384,13 @@ body.scheduler-drawer-open {
     box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
     overflow: hidden;
     position: relative;
+}
+
+.scheduler-booking-card-content {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
 }
 
 .scheduler-booking-card.has-cover {

@@ -704,7 +704,7 @@ html[data-printing-current-step="1"] #etapaArquivo .print-step-actions {
 }
 
 .print-step-kicker {
-    margin: 0;
+    margin: 8px 0;
     font-size: 12px;
     font-weight: 800;
     letter-spacing: 0.08em;
@@ -1510,6 +1510,17 @@ html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
     font-size: 18px;
 }
 
+.print-step-history-grid {
+    gap: var(--print-space-4);
+    margin-bottom: var(--print-space-4);
+}
+
+.print-step-history-panel {
+    display: grid;
+    gap: var(--print-space-3);
+    min-width: 0;
+}
+
 .print-history-quota {
     margin: 0;
     font-weight: 800;
@@ -1522,6 +1533,7 @@ html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
 }
 
 #lista-jobs,
+#lista-jobs-etapa-arquivo,
 #lista-job-recente {
     list-style: none;
     display: flex;
@@ -1532,6 +1544,7 @@ html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
 }
 
 #lista-jobs li,
+#lista-jobs-etapa-arquivo li,
 #lista-job-recente li {
     border-radius: var(--print-radius-md);
     border: 1px solid var(--print-color-border);
@@ -1542,11 +1555,18 @@ html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
 }
 
 #lista-jobs li.print-job-item,
+#lista-jobs-etapa-arquivo li.print-job-item,
 #lista-job-recente li.print-job-item {
     display: flex;
     flex-direction: column;
     gap: 8px;
     background: var(--print-color-surface);
+}
+
+#lista-jobs-etapa-arquivo {
+    max-height: min(280px, 42vh);
+    overflow: auto;
+    padding-right: 4px;
 }
 
 #lista-job-recente li.print-job-item {
@@ -1598,20 +1618,30 @@ html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
     }
 }
 
-#lista-jobs li.print-job-item.is-reusable {
+#lista-jobs li.print-job-item.is-reusable,
+#lista-jobs-etapa-arquivo li.print-job-item.is-reusable {
     cursor: pointer;
     transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
 }
 
-#lista-jobs li.print-job-item.is-reusable:hover {
+#lista-jobs li.print-job-item.is-reusable:hover,
+#lista-jobs-etapa-arquivo li.print-job-item.is-reusable:hover {
     border-color: rgba(13, 122, 111, 0.25);
     background: #f5faf9;
 }
 
-#lista-jobs li.print-job-item.is-selected-source {
+#lista-jobs li.print-job-item.is-selected-source,
+#lista-jobs-etapa-arquivo li.print-job-item.is-selected-source {
     border-color: rgba(13, 122, 111, 0.28);
     background: var(--print-color-primary-light);
     box-shadow: 0 0 0 1px rgba(13, 122, 111, 0.18);
+}
+
+@media (min-width: 981px) {
+    .print-step-history-grid {
+        grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.25fr);
+        align-items: start;
+    }
 }
 
 .print-job-top {
