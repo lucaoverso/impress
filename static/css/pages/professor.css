@@ -1541,6 +1541,7 @@ html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
     gap: var(--print-space-2);
     margin: 0;
     padding: 0;
+    text-align: left;
 }
 
 #lista-jobs li,

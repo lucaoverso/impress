@@ -1910,7 +1910,7 @@ async function carregarProfessoresAgendamentoAdmin() {
     (Array.isArray(professoresAgendamento) ? professoresAgendamento : []).forEach((professor) => {
         const option = document.createElement("option");
         option.value = String(professor.id);
-        option.innerText = `${professor.nome} (${professor.email})`;
+        option.innerText = `${professor.nome}`;
         select.appendChild(option);
     });
     select.disabled = !Array.isArray(professoresAgendamento) || professoresAgendamento.length === 0;

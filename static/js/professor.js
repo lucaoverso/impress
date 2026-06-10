@@ -371,7 +371,7 @@ async function carregarProfessoresImpressaoAdmin() {
     professoresImpressao.forEach((professor) => {
         const option = document.createElement("option");
         option.value = String(professor.id);
-        option.innerText = `${professor.nome} (${professor.email})`;
+        option.innerText = `${professor.nome}`;
         select.appendChild(option);
     });
     select.disabled = false;
