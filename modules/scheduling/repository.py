@@ -8,9 +8,11 @@ from db.agendamento import (
 from db.catalogos import buscar_recurso_por_id, listar_recursos_ativos, listar_turmas_ativas
 from db.usuarios import listar_professores_agendamento
 
+from modules.scheduling.models import SchedulingReservation, SchedulingResource
+
 
 def get_reservation(agendamento_id: int):
-    return buscar_agendamento_por_id(agendamento_id)
+    return SchedulingReservation.from_dict(buscar_agendamento_por_id(agendamento_id))
 
 
 def cancel_reservation(agendamento_id: int):
@@ -54,21 +56,27 @@ def list_reservations(
     usuario_id: int | None = None,
     incluir_cancelados: bool = False,
 ):
-    return listar_agendamentos(
-        data_inicio=data_inicio,
-        data_fim=data_fim,
-        recurso_id=recurso_id,
-        usuario_id=usuario_id,
-        incluir_cancelados=incluir_cancelados,
-    )
+    return [
+        SchedulingReservation.from_dict(item)
+        for item in listar_agendamentos(
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            recurso_id=recurso_id,
+            usuario_id=usuario_id,
+            incluir_cancelados=incluir_cancelados,
+        )
+    ]
 
 
 def get_resource(recurso_id: int):
-    return buscar_recurso_por_id(recurso_id)
+    return SchedulingResource.from_dict(buscar_recurso_por_id(recurso_id))
 
 
 def list_active_resources():
-    return listar_recursos_ativos()
+    return [
+        SchedulingResource.from_dict(item)
+        for item in listar_recursos_ativos()
+    ]
 
 
 def list_active_classes():

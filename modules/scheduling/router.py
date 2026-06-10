@@ -19,7 +19,15 @@ from modules.scheduling.repository import (
     list_reservations as listar_agendamentos,
     list_scheduling_teachers as listar_professores_agendamento,
 )
-from modules.scheduling.schemas import SchedulingReservationCreate
+from modules.scheduling.schemas import (
+    SchedulingOperationResponse,
+    SchedulingOptionsOut,
+    SchedulingReservationCreate,
+    SchedulingReservationOut,
+    SchedulingReservationResponse,
+    SchedulingResourceOption,
+    SchedulingTeacherOut,
+)
 from modules.scheduling.service import (
     build_scheduling_options,
     cancel_scheduling_reservation,
@@ -30,24 +38,24 @@ from modules.scheduling.service import (
 router = APIRouter()
 
 
-@router.get("/agendamento/recursos")
+@router.get("/agendamento/recursos", response_model=list[SchedulingResourceOption])
 def recursos_agendamento(_usuario=Depends(get_usuario_logado)):
     return listar_recursos_ativos()
 
 
-@router.get("/agendamento/opcoes")
+@router.get("/agendamento/opcoes", response_model=SchedulingOptionsOut)
 def opcoes_agendamento(_usuario=Depends(get_usuario_logado)):
     return build_scheduling_options(TURNOS_CONFIG, listar_turmas_ativas())
 
 
-@router.get("/agendamento/professores")
+@router.get("/agendamento/professores", response_model=list[SchedulingTeacherOut])
 def professores_agendamento(usuario=Depends(get_usuario_logado)):
     if not user_can_manage_scheduling(usuario):
         require_admin_for_scheduling(usuario)
     return listar_professores_agendamento()
 
 
-@router.get("/agendamento/reservas")
+@router.get("/agendamento/reservas", response_model=list[SchedulingReservationOut])
 def listar_reservas_agendamento(
     data_inicio: str = None,
     data_fim: str = None,
@@ -63,7 +71,7 @@ def listar_reservas_agendamento(
     )
 
 
-@router.post("/agendamento/reservas")
+@router.post("/agendamento/reservas", response_model=SchedulingReservationResponse)
 def criar_reserva_agendamento(
     payload: SchedulingReservationCreate,
     usuario=Depends(get_usuario_logado),
@@ -81,7 +89,7 @@ def criar_reserva_agendamento(
     )
 
 
-@router.post("/agendamento/reservas/{agendamento_id}/cancelar")
+@router.post("/agendamento/reservas/{agendamento_id}/cancelar", response_model=SchedulingOperationResponse)
 def cancelar_reserva_agendamento(
     agendamento_id: int,
     usuario=Depends(get_usuario_logado),

@@ -3,6 +3,13 @@ from datetime import datetime
 from fastapi import HTTPException
 
 from modules.scheduling import repository
+from modules.scheduling.models import SchedulingResource, SchedulingReservation
+
+
+def _get_entity_value(entity, field, default=None):
+    if isinstance(entity, dict):
+        return entity.get(field, default)
+    return getattr(entity, field, default)
 
 
 def build_scheduling_options(turnos_config: dict, turmas_ativas: list[dict]):
@@ -46,8 +53,9 @@ def validate_scheduling_period(
     }
 
 
-def ensure_resource_is_active(recurso: dict | None):
-    if not recurso or recurso["ativo"] != 1:
+def ensure_resource_is_active(recurso: SchedulingResource | dict | None):
+    ativo = _get_entity_value(recurso, "ativo")
+    if not recurso or ativo != 1 and ativo is not True:
         raise HTTPException(404, "Recurso não encontrado.")
     return recurso
 
@@ -62,8 +70,8 @@ def ensure_class_shift_is_configured(turma: dict, turnos_config: dict):
     return turno
 
 
-def ensure_slot_has_capacity(recurso: dict, reservas_ativas_faixa: int):
-    capacidade_recurso = max(int(recurso.get("quantidade_itens") or 1), 1)
+def ensure_slot_has_capacity(recurso: SchedulingResource | dict, reservas_ativas_faixa: int):
+    capacidade_recurso = max(int(_get_entity_value(recurso, "quantidade_itens", 1) or 1), 1)
     if reservas_ativas_faixa >= capacidade_recurso:
         raise HTTPException(
             409,
@@ -116,25 +124,27 @@ def build_reservation_creation_payload(
 
 def ensure_reservation_can_be_cancelled(
     *,
-    agendamento: dict | None,
+    agendamento: SchedulingReservation | dict | None,
     usuario: dict,
     usuario_eh_admin,
 ):
     if not agendamento:
         raise HTTPException(404, "Agendamento não encontrado.")
 
-    if agendamento["status"] != "ATIVO":
+    if _get_entity_value(agendamento, "status") != "ATIVO":
         raise HTTPException(400, "Este agendamento já foi cancelado.")
 
     try:
-        data_reserva = datetime.strptime(str(agendamento["data"]), "%Y-%m-%d").date()
+        data_reserva = datetime.strptime(
+            str(_get_entity_value(agendamento, "data")), "%Y-%m-%d"
+        ).date()
     except ValueError as exc:
         raise HTTPException(400, "Data do agendamento inválida.") from exc
 
     if data_reserva < datetime.now().date():
         raise HTTPException(409, "Não é possível cancelar agendamentos de datas passadas.")
 
-    dono_reserva = agendamento["usuario_id"] == usuario["id"]
+    dono_reserva = _get_entity_value(agendamento, "usuario_id") == usuario["id"]
     if not dono_reserva and not usuario_eh_admin(usuario):
         raise HTTPException(403, "Você não pode cancelar este agendamento.")
 
