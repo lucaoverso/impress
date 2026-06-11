@@ -2998,27 +2998,30 @@ carregarJobHistoricoNoPreview = async function carregarJobHistoricoNoPreviewRefa
             },
         });
     }
+
+    let historicoCarregado = false;
     try {
         await carregarJobHistoricoNoPreviewOriginal(job);
-        atualizarEstadoFluxoImpressao();
-        if (pdfDoc) {
-            window.requestAnimationFrame(() => {
-                window.PrintingUI?.ui?.setWizardState?.(2, {
-                    upload: {
-                        fileName: String(job?.arquivo || obterArquivoSelecionado()?.name || ""),
-                        valid: true,
-                        source: "history",
-                        loading: false,
-                    },
-                });
-                window.PrintingUI?.ui?.goToStep?.(2);
-            });
-        }
+        historicoCarregado = Boolean(
+            pdfDoc
+            && Number(jobHistoricoSelecionadoAtual?.id || 0) === Number(job?.id || 0)
+        );
     } finally {
-        if (!pdfDoc) {
-            window.PrintingUI?.ui?.setForcedStep?.(null);
-        }
         reusoHistoricoEmCarregamento = false;
+        window.PrintingUI?.ui?.setForcedStep?.(null);
+        atualizarEstadoFluxoImpressao();
+    }
+
+    if (historicoCarregado) {
+        window.PrintingUI?.ui?.setWizardState?.(2, {
+            upload: {
+                fileName: String(job?.arquivo || obterArquivoSelecionado()?.name || ""),
+                valid: true,
+                source: "history",
+                loading: false,
+            },
+        });
+        window.PrintingUI?.ui?.goToStep?.(2);
     }
 };
 
