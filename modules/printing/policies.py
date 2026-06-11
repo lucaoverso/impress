@@ -182,9 +182,27 @@ def validate_required_tags(tags: list[str] | None):
     raise HTTPException(400, "Selecione ao menos uma tag para identificar a impressao.")
 
 
-def serialize_print_job(job: dict) -> dict:
+def serialize_print_job(job: dict, spool_dir: Path | None = None) -> dict:
     payload = dict(job)
     payload["tags"] = extract_job_tags(job)
+    payload["pode_reutilizar"] = False
+    payload["motivo_reuso_indisponivel"] = ""
+
+    if not print_job_can_be_reused(job):
+        payload["motivo_reuso_indisponivel"] = "Apenas impressoes concluidas podem ser reutilizadas."
+        return payload
+
+    if spool_dir is None:
+        payload["pode_reutilizar"] = True
+        return payload
+
+    try:
+        resolve_job_pdf_path(job, spool_dir)
+    except HTTPException as exc:
+        payload["motivo_reuso_indisponivel"] = str(exc.detail)
+    else:
+        payload["pode_reutilizar"] = True
+
     return payload
 
 

@@ -427,12 +427,12 @@ function renderTabelaOcorrencias() {
         const linhaAcoes = document.createElement("div");
         linhaAcoes.className = "coordenacao-inline";
 
-        const btnVer = document.createElement("button");
-        btnVer.type = "button";
-        btnVer.innerText = "Ver";
-        btnVer.addEventListener("click", (event) => {
+        const btnPdf = document.createElement("button");
+        btnPdf.type = "button";
+        btnPdf.innerText = "PDF";
+        btnPdf.addEventListener("click", (event) => {
             event.stopPropagation();
-            selecionarOcorrencia(ocorrencia);
+            abrirPdfOcorrencia(ocorrencia);
         });
 
         const btnEditar = document.createElement("button");
@@ -453,7 +453,7 @@ function renderTabelaOcorrencias() {
             excluirOcorrencia(ocorrencia);
         });
 
-        linhaAcoes.appendChild(btnVer);
+        linhaAcoes.appendChild(btnPdf);
         linhaAcoes.appendChild(btnEditar);
         linhaAcoes.appendChild(btnExcluir);
         tr.appendChild(criarCelulaTabela("Acoes", linhaAcoes));

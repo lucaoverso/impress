@@ -59,6 +59,123 @@
     grid-column: span 2;
 }
 
+.coordenacao-professor-pre-page,
+.coordenacao-pre-management-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.85fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.coordenacao-professor-pre-page[hidden],
+.coordenacao-tab-panels[hidden],
+.coordenacao-tabs[hidden] {
+    display: none !important;
+}
+
+.coordenacao-pre-registration-form {
+    display: grid;
+    gap: 16px;
+    margin-top: 18px;
+}
+
+.coordenacao-pre-registration-form input,
+.coordenacao-pre-registration-form select {
+    width: 100%;
+    min-width: 0;
+}
+
+.coordenacao-contact-choice {
+    display: grid;
+    gap: 9px;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.coordenacao-contact-choice legend {
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.coordenacao-contact-choice label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 11px 12px;
+    border: 1px solid #dfe8f3;
+    border-radius: var(--radius-md);
+    background: #fff;
+    cursor: pointer;
+}
+
+.coordenacao-contact-choice input {
+    width: auto;
+    flex: 0 0 auto;
+}
+
+.coordenacao-pre-registration-list,
+.coordenacao-reason-list {
+    display: grid;
+    gap: 12px;
+    margin-top: 14px;
+}
+
+.coordenacao-pre-registration-item {
+    display: grid;
+    gap: 12px;
+    min-width: 0;
+    padding: 14px;
+    border: 1px solid #dfe8f3;
+    border-radius: var(--radius-md);
+    background: #fff;
+}
+
+.coordenacao-pre-registration-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.coordenacao-pre-registration-item-header strong {
+    overflow-wrap: anywhere;
+}
+
+.coordenacao-pre-registration-meta {
+    display: grid;
+    gap: 4px;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.coordenacao-pre-registration-item .btn-destaque {
+    justify-self: start;
+}
+
+.coordenacao-reason-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    padding: 11px 12px;
+    border: 1px solid #dfe8f3;
+    border-radius: var(--radius-md);
+    background: #fff;
+}
+
+.coordenacao-reason-item strong {
+    overflow-wrap: anywhere;
+}
+
+.coordenacao-reason-item.is-inactive {
+    opacity: 0.62;
+    background: #f5f7fa;
+}
+
 .coordenacao-ocorrencias-stack {
     gap: 18px;
 }
@@ -138,10 +255,7 @@
 }
 
 .coordenacao-ocorrencias-board {
-    display: grid;
-    grid-template-columns: minmax(0, 1.6fr) minmax(320px, 0.92fr);
-    gap: 14px;
-    align-items: start;
+    display: block;
 }
 
 .coordenacao-panel-header {
@@ -256,28 +370,154 @@
     color: #5b6b7f;
 }
 
-.coordenacao-form-shell {
-    border-style: dashed;
-    border-color: #bfd7d2;
-    background: linear-gradient(180deg, #ffffff 0%, #f8fcfb 100%);
+.coordenacao-occurrence-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1400;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+}
+
+.coordenacao-occurrence-modal[hidden] {
+    display: none !important;
+}
+
+.coordenacao-occurrence-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.72);
+    backdrop-filter: blur(5px);
+}
+
+.coordenacao-occurrence-modal-panel {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-rows: auto auto minmax(0, 1fr);
+    gap: 14px;
+    width: min(1460px, 96vw);
+    height: min(920px, 94vh);
+    padding: 20px;
+    border: 1px solid var(--line-soft);
+    border-radius: 22px;
+    background: #ffffff;
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.34);
+    outline: none;
+    overflow: hidden;
+}
+
+body.coordenacao-modal-open {
+    overflow: hidden;
+}
+
+.coordenacao-modal-close {
+    min-height: 40px;
+    padding: 0 14px;
+}
+
+.coordenacao-form-steps {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    max-width: 860px;
+}
+
+.coordenacao-form-step {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 48px;
+    padding: 8px 12px;
+    border: 1px solid #d7e2ee;
+    border-radius: var(--radius-md);
+    background: #ffffff;
+    color: #526277;
+    text-align: left;
+    min-width: 0;
+}
+
+.coordenacao-form-step span {
+    display: inline-grid;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 999px;
+    background: #edf2f7;
+    font-weight: 800;
+    flex: 0 0 auto;
+}
+
+.coordenacao-form-step strong {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.coordenacao-form-step.is-active {
+    border-color: #8fc8bd;
+    background: var(--color-primary-light, #e6f4f2);
+    color: #0b655b;
+}
+
+.coordenacao-form-step.is-active span {
+    background: var(--color-primary, #0d7a6f);
+    color: #ffffff;
+}
+
+.coordenacao-mobile-editor-switch {
+    display: none;
+}
+
+.coordenacao-form-step-panel {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    grid-column: 1 / -1;
+    min-width: 0;
+}
+
+.coordenacao-form-step-panel[hidden] {
+    display: none !important;
+}
+
+.coordenacao-description-stage {
+    align-content: start;
+    min-height: 100%;
+}
+
+.coordenacao-description-stage .coordenacao-rich-editor-area {
+    min-height: clamp(320px, 50vh, 560px);
+}
+
+.coordenacao-form-navigation {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    padding-top: 4px;
+    border-top: 1px solid #e6ebf1;
 }
 
 .coordenacao-ocorrencia-workspace {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(430px, 0.98fr);
     gap: 18px;
-    align-items: start;
+    min-height: 0;
+    overflow: hidden;
 }
 
 .coordenacao-ocorrencia-form-panel {
     min-width: 0;
+    overflow: auto;
+    padding-right: 6px;
 }
 
 .coordenacao-preview-shell {
-    position: sticky;
-    top: 16px;
+    position: static;
     display: grid;
     gap: 12px;
+    min-height: 0;
+    overflow: auto;
     padding: 14px;
     border: 1px solid #d6e3ef;
     border-radius: 20px;
@@ -610,10 +850,6 @@
     font-weight: 600;
 }
 
-.coordenacao-form-shell[hidden] {
-    display: none !important;
-}
-
 .coordenacao-form,
 .coordenacao-filter-grid {
     display: grid;
@@ -636,6 +872,17 @@
 .coordenacao-field {
     display: grid;
     gap: 6px;
+    min-width: 0;
+}
+
+.coordenacao-field input:not([type="color"]),
+.coordenacao-field select,
+.coordenacao-field textarea,
+.coordenacao-rich-editor,
+.coordenacao-rich-editor-area {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
 }
 
 .coordenacao-autocomplete-shell {
@@ -774,6 +1021,8 @@
     border: 1px solid #d7e2ee;
     border-radius: 14px;
     background: #f8fbff;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .coordenacao-rich-editor-toolbar button,
@@ -1238,12 +1487,8 @@
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    .coordenacao-ocorrencia-workspace {
-        grid-template-columns: 1fr;
-    }
-
-    .coordenacao-preview-shell {
-        position: static;
+    .coordenacao-occurrence-modal-panel {
+        width: min(1180px, 96vw);
     }
 }
 
@@ -1411,6 +1656,25 @@
         padding: 14px 10px 20px;
     }
 
+    .coordenacao-professor-pre-page,
+    .coordenacao-pre-management-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .coordenacao-pre-registration-item-header,
+    .coordenacao-reason-item {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .coordenacao-pre-registration-item .btn-destaque,
+    .coordenacao-pre-registration-form > button,
+    .coordenacao-reason-item button,
+    #btnAtualizarPreRegistros {
+        width: 100%;
+        justify-self: stretch;
+    }
+
     .coordenacao-hero-top,
     .coordenacao-section-header {
         flex-direction: column;
@@ -1439,5 +1703,123 @@
     #msgEstudantes,
     #msgRelatorios {
         text-align: left;
+    }
+
+    .coordenacao-occurrence-modal {
+        padding: 0;
+    }
+
+    .coordenacao-occurrence-modal-panel {
+        grid-template-rows: auto auto auto minmax(0, 1fr);
+        width: 100%;
+        height: 100%;
+        max-height: none;
+        padding: 14px;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .coordenacao-editor-header {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .coordenacao-editor-header > div {
+        min-width: 0;
+    }
+
+    .coordenacao-editor-header p:last-child {
+        display: none;
+    }
+
+    #btnFecharPainelOcorrencia {
+        width: auto;
+    }
+
+    .coordenacao-form-step {
+        min-height: 44px;
+        padding: 7px 9px;
+        font-size: 13px;
+    }
+
+    .coordenacao-form-steps {
+        gap: 6px;
+    }
+
+    .coordenacao-form-step {
+        display: grid;
+        justify-items: center;
+        align-content: start;
+        text-align: center;
+    }
+
+    .coordenacao-form-step strong {
+        font-size: 11px;
+        line-height: 1.25;
+    }
+
+    .coordenacao-mobile-editor-switch {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+        padding: 4px;
+        border-radius: var(--radius-md);
+        background: #edf2f7;
+    }
+
+    .coordenacao-mobile-editor-switch button {
+        min-height: 40px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: #526277;
+        font-weight: 700;
+    }
+
+    .coordenacao-mobile-editor-switch button.is-active {
+        background: #ffffff;
+        color: #0b655b;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+    }
+
+    .coordenacao-ocorrencia-workspace {
+        display: block;
+        overflow: auto;
+    }
+
+    .coordenacao-ocorrencia-form-panel {
+        padding-right: 0;
+        overflow: visible;
+    }
+
+    .coordenacao-preview-shell {
+        display: none;
+        overflow: visible;
+    }
+
+    .coordenacao-ocorrencia-workspace.is-preview-mobile .coordenacao-ocorrencia-form-panel {
+        display: none;
+    }
+
+    .coordenacao-ocorrencia-workspace.is-preview-mobile .coordenacao-preview-shell {
+        display: grid;
+    }
+
+    .coordenacao-form-navigation {
+        position: sticky;
+        bottom: 0;
+        z-index: 10;
+        margin: 4px -4px -4px;
+        padding: 10px 4px 4px;
+        background: rgba(255, 255, 255, 0.96);
+    }
+
+    .coordenacao-form-navigation button {
+        flex: 1 1 140px;
+        min-height: 44px;
+    }
+
+    .coordenacao-description-stage .coordenacao-rich-editor-area {
+        min-height: clamp(300px, 52vh, 520px);
     }
 }

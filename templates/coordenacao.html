@@ -20,6 +20,56 @@
             </div>
         </header>
 
+        <section id="painelProfessorPreRegistro" class="coordenacao-professor-pre-page" hidden>
+            <article class="coordenacao-card coordenacao-pre-registration-card">
+                <div class="coordenacao-panel-header">
+                    <div>
+                        <span class="coordenacao-panel-tag">Registro rapido</span>
+                        <h2>Informar uma situacao a coordenacao</h2>
+                        <p>Selecione o estudante, informe o motivo e indique se a familia precisa ser contatada.</p>
+                    </div>
+                </div>
+                <form id="formPreRegistroProfessor" class="coordenacao-pre-registration-form">
+                    <label class="coordenacao-field" for="preRegistroBuscaEstudante">
+                        <span>Estudante</span>
+                        <div class="coordenacao-autocomplete-shell">
+                            <input id="preRegistroBuscaEstudante" type="text" autocomplete="off"
+                                placeholder="Buscar estudante por nome ou turma" required>
+                            <div id="listaPreRegistroEstudantes" class="coordenacao-autocomplete-list" hidden></div>
+                        </div>
+                    </label>
+                    <input id="preRegistroEstudanteId" type="hidden">
+                    <label class="coordenacao-field" for="preRegistroMotivoId">
+                        <span>O que aconteceu?</span>
+                        <select id="preRegistroMotivoId" required>
+                            <option value="">Selecione um motivo cadastrado</option>
+                        </select>
+                    </label>
+                    <fieldset class="coordenacao-contact-choice">
+                        <legend>Contato com o responsavel</legend>
+                        <label><input type="radio" name="preRegistroContatoResponsavel" value="none" checked>
+                            <span>Nao solicitar contato</span></label>
+                        <label><input type="radio" name="preRegistroContatoResponsavel" value="communicate">
+                            <span>Comunicar o responsavel</span></label>
+                        <label><input type="radio" name="preRegistroContatoResponsavel" value="summon">
+                            <span>Convocar o responsavel</span></label>
+                    </fieldset>
+                    <button class="btn-destaque" type="submit">Enviar para a coordenacao</button>
+                    <p id="msgPreRegistroProfessor" class="coordenacao-status-copy" role="status"></p>
+                </form>
+            </article>
+            <article class="coordenacao-card">
+                <div class="coordenacao-panel-header">
+                    <div>
+                        <span class="coordenacao-panel-tag">Meus envios</span>
+                        <h2>Pre-registros enviados</h2>
+                        <p>Acompanhe os registros rapidos encaminhados a coordenacao.</p>
+                    </div>
+                </div>
+                <div id="listaMeusPreRegistros" class="coordenacao-pre-registration-list"></div>
+            </article>
+        </section>
+
         <nav class="admin-tabs coordenacao-tabs" aria-label="Abas do módulo de coordenação">
             <button class="admin-tab-btn is-active" data-coord-tab-trigger="ocorrencias"
                 aria-controls="coord-tab-ocorrencias" aria-selected="true" type="button">
@@ -36,6 +86,10 @@
             <button class="admin-tab-btn" data-coord-tab-trigger="regimento" aria-controls="coord-tab-regimento"
                 aria-selected="false" type="button">
                 Base legal
+            </button>
+            <button class="admin-tab-btn" data-coord-tab-trigger="pre-registros"
+                aria-controls="coord-tab-pre-registros" aria-selected="false" type="button">
+                Pre-registros
             </button>
         </nav>
 
@@ -147,35 +201,53 @@
                                 </table>
                             </div>
                         </article>
-
-                        <article class="coordenacao-card coordenacao-ocorrencias-detail-card">
-                            <div class="coordenacao-panel-header">
-                                <div>
-                                    <span class="coordenacao-panel-tag">Acompanhamento</span>
-                                    <h2>Ficha do registro</h2>
-                                    <p>Selecione um item da tabela para ver os dados completos, a base legal vinculada e o atalho para o PDF.</p>
-                                </div>
-                            </div>
-                            <div id="detalhesOcorrencia" class="coordenacao-details">
-                                Selecione um registro para visualizar os detalhes.
-                            </div>
-                        </article>
                     </section>
 
-                    <article id="painelFormOcorrencia"
-                        class="coordenacao-card coordenacao-form-shell coordenacao-ocorrencias-editor" hidden>
+                    <section id="painelFormOcorrencia" class="coordenacao-occurrence-modal" hidden>
+                        <div class="header-registro">
+
+                        </div>
+                        <div class="coordenacao-occurrence-modal-backdrop" data-fechar-modal-ocorrencia></div>
+                        <article class="coordenacao-occurrence-modal-panel" role="dialog" aria-modal="true"
+                            aria-labelledby="tituloFormOcorrencia" tabindex="-1">
                         <div class="coordenacao-section-header coordenacao-editor-header">
                             <div>
                                 <p class="coordenacao-panel-tag">Cadastro e impressao</p>
                                 <h2 id="tituloFormOcorrencia">Novo registro</h2>
-                                <p>Escolha o tipo de registro e preencha o documento sem sair da consulta principal. O preview ao lado acompanha a impressao em tempo real.</p>
+                                <p>Preencha as tres etapas. O documento ao lado acompanha as alteracoes em tempo real.</p>
                             </div>
-                            <button id="btnFecharPainelOcorrencia" type="button">Fechar formulario</button>
+                            <button id="btnFecharPainelOcorrencia" class="coordenacao-modal-close" type="button"
+                                aria-label="Fechar formulario">Fechar</button>
+                        </div>
+
+                        <nav class="coordenacao-form-steps" aria-label="Etapas do registro">
+                            <button class="coordenacao-form-step is-active" type="button"
+                                data-ocorrencia-step-trigger="1" aria-current="step">
+                                <span>1</span>
+                                <strong>Identificacao</strong>
+                            </button>
+                            <button class="coordenacao-form-step" type="button"
+                                data-ocorrencia-step-trigger="2">
+                                <span>2</span>
+                                <strong>Descricao</strong>
+                            </button>
+                            <button class="coordenacao-form-step" type="button"
+                                data-ocorrencia-step-trigger="3">
+                                <span>3</span>
+                                <strong>Base legal e encaminhamento</strong>
+                            </button>
+                        </nav>
+
+                        <div class="coordenacao-mobile-editor-switch" aria-label="Visualizacao do editor">
+                            <button class="is-active" type="button" data-ocorrencia-view="form">Formulario</button>
+                            <button type="button" data-ocorrencia-view="preview">Preview do PDF</button>
                         </div>
 
                         <div class="coordenacao-ocorrencia-workspace">
                             <div class="coordenacao-ocorrencia-form-panel">
                                 <form id="formOcorrencia" class="coordenacao-form coordenacao-form-grid">
+                                    <section class="coordenacao-form-step-panel coordenacao-form-grid is-active"
+                                        data-ocorrencia-step-panel="1">
                                     <label class="coordenacao-field" for="ocorrenciaTipoRegistro">
                                         <span>Tipo de registro</span>
                                         <select id="ocorrenciaTipoRegistro" required></select>
@@ -219,20 +291,13 @@
                                     </div>
                                     <input id="ocorrenciaProfessorRequerenteId" type="hidden">
 
-                                    <label id="ocorrenciaFieldGeral" class="coordenacao-field coordenacao-field-wide"
-                                        for="ocorrenciaTituloGeral" hidden>
-                                        <span>Titulo ou referencia</span>
-                                        <input id="ocorrenciaTituloGeral" type="text"
-                                            placeholder="Ex: Orientacoes gerais para o 2o bimestre" maxlength="255">
-                                    </label>
-
                                     <select id="ocorrenciaTurmaId" hidden></select>
 
-                                    <label class="coordenacao-field" for="ocorrenciaDisciplina">
+                                    <label class="coordenacao-field coordenacao-field-wide" for="ocorrenciaDisciplina">
                                         <span id="ocorrenciaDisciplinaLabel">Disciplina</span>
                                         <div class="coordenacao-autocomplete-shell">
                                             <input id="ocorrenciaDisciplina" type="text" autocomplete="off"
-                                                placeholder="Buscar disciplina cadastrada ou digitar nome">
+                                                placeholder="Buscar disciplina cadastrada ou digitar nome" required>
                                             <div id="listaDisciplinasBusca" class="coordenacao-autocomplete-list"
                                                 hidden></div>
                                         </div>
@@ -253,9 +318,15 @@
                                         <input id="ocorrenciaHorario" type="text" placeholder="Horario (ex: 07:30)"
                                             maxlength="30" required>
                                     </label>
+                                    </section>
 
-                                    <div class="coordenacao-field coordenacao-field-wide">
+                                    <section class="coordenacao-form-step-panel coordenacao-form-grid"
+                                        data-ocorrencia-step-panel="2" hidden>
+                                    <div class="coordenacao-field coordenacao-field-wide coordenacao-description-stage">
                                         <span id="ocorrenciaDescricaoLabel">Descricao</span>
+                                        <p class="coordenacao-field-hint">
+                                            Registre os fatos com clareza, incluindo contexto, envolvidos e encaminhamentos realizados.
+                                        </p>
                                         <div class="coordenacao-rich-editor" data-rich-editor>
                                             <div class="coordenacao-rich-editor-toolbar"
                                                 aria-label="Formatacao da descricao">
@@ -283,9 +354,12 @@
                                             <input id="ocorrenciaDescricaoFormatada" type="hidden">
                                         </div>
                                     </div>
+                                    </section>
 
+                                    <section class="coordenacao-form-step-panel coordenacao-form-grid"
+                                        data-ocorrencia-step-panel="3" hidden>
                                     <div id="ocorrenciaFieldRegimento" class="coordenacao-field coordenacao-field-wide">
-                                        <span>Base legal vinculada</span>
+                                        <span id="ocorrenciaRegimentoLabel">Base legal vinculada</span>
                                         <div id="ocorrenciaRegimentoItens" class="coordenacao-regimento-selector">
                                             <div class="coordenacao-autocomplete-shell">
                                                 <input id="ocorrenciaBuscaRegimento" type="text" autocomplete="off"
@@ -317,9 +391,14 @@
                                         <span>Status</span>
                                         <select id="ocorrenciaStatus" required></select>
                                     </label>
+                                    </section>
 
-                                    <div class="coordenacao-inline coordenacao-form-actions coordenacao-field-wide">
-                                        <button class="btn-destaque" type="submit">Salvar registro</button>
+                                    <div class="coordenacao-form-navigation coordenacao-field-wide">
+                                        <button id="btnVoltarEtapaOcorrencia" type="button" hidden>Voltar</button>
+                                        <button id="btnContinuarEtapaOcorrencia" class="btn-destaque"
+                                            type="button">Continuar</button>
+                                        <button id="btnSalvarOcorrencia" class="btn-destaque" type="submit"
+                                            hidden>Salvar registro</button>
                                         <button id="btnCancelarEdicaoOcorrencia" type="button"
                                             style="display: none;">Cancelar edicao</button>
                                     </div>
@@ -415,7 +494,8 @@
                                 </div>
                             </aside>
                         </div>
-                    </article>
+                        </article>
+                    </section>
                 </section>
             </section>
 
@@ -853,6 +933,43 @@
                     </article>
                 </section>
             </section>
+
+            <section id="coord-tab-pre-registros" class="coordenacao-tab-panel"
+                data-coord-tab-panel="pre-registros" hidden>
+                <section class="coordenacao-pre-management-layout">
+                    <article class="coordenacao-card coordenacao-card-wide">
+                        <div class="coordenacao-section-header">
+                            <div>
+                                <p class="coordenacao-eyebrow">Fila da coordenacao</p>
+                                <h2>Pre-registros pendentes</h2>
+                                <p>Revise os envios dos professores e continue o registro completo.</p>
+                            </div>
+                            <button id="btnAtualizarPreRegistros" type="button">Atualizar</button>
+                        </div>
+                        <p id="msgPreRegistrosGestao" class="coordenacao-status-copy" role="status"></p>
+                        <div id="listaPreRegistrosGestao" class="coordenacao-pre-registration-list"></div>
+                    </article>
+
+                    <article class="coordenacao-card">
+                        <div class="coordenacao-section-header">
+                            <div>
+                                <p class="coordenacao-eyebrow">Catalogo</p>
+                                <h2>Motivos do pre-registro</h2>
+                                <p>Cadastre opcoes curtas e objetivas para o professor selecionar.</p>
+                            </div>
+                        </div>
+                        <form id="formMotivoPreRegistro" class="coordenacao-form">
+                            <label class="coordenacao-field" for="motivoPreRegistroNome">
+                                <span>Novo motivo</span>
+                                <input id="motivoPreRegistroNome" type="text" maxlength="180"
+                                    placeholder="Ex: uso de celular durante a aula" required>
+                            </label>
+                            <button class="btn-destaque" type="submit">Cadastrar motivo</button>
+                        </form>
+                        <div id="listaMotivosPreRegistro" class="coordenacao-reason-list"></div>
+                    </article>
+                </section>
+            </section>
         </section>
     </main>
 
@@ -866,6 +983,7 @@
     <script src="{{ request.url_for('static', path='js/coordenacao/painel.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/coordenacao/base-legal.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/coordenacao/cadastros.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/coordenacao/pre-registros.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/coordenacao/init.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/coordenacao.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>

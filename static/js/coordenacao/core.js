@@ -46,6 +46,10 @@ let opcoesOcorrencias = {
     regimento_itens: [],
     status_padrao: "registrado"
 };
+let etapaFormularioOcorrencia = 1;
+let visualizacaoMobileOcorrencia = "form";
+let usuarioCoordenacaoAtual = null;
+let preRegistroEmComplementacaoId = null;
 const MAX_AULAS_EXIBICAO = 5;
 const TURNO_OFFSET_FAIXA = {
     MATUTINO: 0,
@@ -448,6 +452,76 @@ function painelFormularioOcorrenciaAberto() {
     return Boolean(painel) && !painel.hidden;
 }
 
+function ativarEtapaFormularioOcorrencia(etapa, { focar = false } = {}) {
+    const etapaNumero = Number(etapa);
+    const etapaNormalizada = [1, 2, 3].includes(etapaNumero) ? etapaNumero : 1;
+    etapaFormularioOcorrencia = etapaNormalizada;
+
+    document.querySelectorAll("[data-ocorrencia-step-trigger]").forEach((botao) => {
+        const ativo = Number(botao.dataset.ocorrenciaStepTrigger) === etapaNormalizada;
+        botao.classList.toggle("is-active", ativo);
+        if (ativo) {
+            botao.setAttribute("aria-current", "step");
+        } else {
+            botao.removeAttribute("aria-current");
+        }
+    });
+    document.querySelectorAll("[data-ocorrencia-step-panel]").forEach((painel) => {
+        const ativo = Number(painel.dataset.ocorrenciaStepPanel) === etapaNormalizada;
+        painel.hidden = !ativo;
+        painel.classList.toggle("is-active", ativo);
+    });
+
+    el("btnVoltarEtapaOcorrencia").hidden = etapaNormalizada === 1;
+    el("btnContinuarEtapaOcorrencia").hidden = etapaNormalizada === 3;
+    el("btnSalvarOcorrencia").hidden = etapaNormalizada !== 3;
+
+    if (focar) {
+        const painelAtivo = document.querySelector(`[data-ocorrencia-step-panel="${etapaNormalizada}"]`);
+        painelAtivo?.querySelector("input:not([type='hidden']), select, textarea, [contenteditable='true']")?.focus();
+    }
+}
+
+function validarCamposEtapaOcorrencia(etapa) {
+    const painel = document.querySelector(`[data-ocorrencia-step-panel="${etapa}"]`);
+    const campos = Array.from(painel?.querySelectorAll("input, select, textarea") || [])
+        .filter((campo) => !campo.disabled && campo.type !== "hidden");
+    const campoInvalido = campos.find((campo) => !campo.checkValidity());
+    if (!campoInvalido) return true;
+    campoInvalido.reportValidity();
+    campoInvalido.focus();
+    return false;
+}
+
+function validarEtapaFormularioOcorrencia(etapa) {
+    if (!validarCamposEtapaOcorrencia(etapa)) return false;
+    if (Number(etapa) !== 2) return true;
+
+    sincronizarDescricaoEditor();
+    if (String(el("ocorrenciaDescricao")?.value || "").trim()) return true;
+
+    setMensagemOcorrencias("Descreva a ocorrencia antes de continuar.", true);
+    obterEditorDescricao()?.focus();
+    return false;
+}
+
+function podeAcessarEtapaFormularioOcorrencia(etapa) {
+    const destino = Number(etapa);
+    if (destino <= 1) return true;
+    if (!validarEtapaFormularioOcorrencia(1)) return false;
+    if (destino === 2) return true;
+    return validarEtapaFormularioOcorrencia(2);
+}
+
+function alternarVisualizacaoMobileOcorrencia(visualizacao) {
+    visualizacaoMobileOcorrencia = visualizacao === "preview" ? "preview" : "form";
+    const workspace = document.querySelector(".coordenacao-ocorrencia-workspace");
+    workspace?.classList.toggle("is-preview-mobile", visualizacaoMobileOcorrencia === "preview");
+    document.querySelectorAll("[data-ocorrencia-view]").forEach((botao) => {
+        botao.classList.toggle("is-active", botao.dataset.ocorrenciaView === visualizacaoMobileOcorrencia);
+    });
+}
+
 function atualizarBotaoNovaOcorrencia() {
     const botao = el("btnNovaOcorrencia");
     if (!botao) return;
@@ -468,17 +542,20 @@ function mostrarPainelFormularioOcorrencia({ scroll = false } = {}) {
     const painel = el("painelFormOcorrencia");
     if (!painel) return;
     painel.hidden = false;
+    document.body.classList.add("coordenacao-modal-open");
+    ativarEtapaFormularioOcorrencia(1);
+    alternarVisualizacaoMobileOcorrencia("form");
     atualizarBotaoNovaOcorrencia();
-    if (scroll) {
-        painel.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
+    painel.querySelector("[role='dialog']")?.focus();
 }
 
 function ocultarPainelFormularioOcorrencia() {
     const painel = el("painelFormOcorrencia");
     if (!painel) return;
     painel.hidden = true;
+    document.body.classList.remove("coordenacao-modal-open");
     atualizarBotaoNovaOcorrencia();
+    el("btnNovaOcorrencia")?.focus();
 }
 
 function preencherSelect(selectId, opcoes, {

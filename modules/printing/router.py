@@ -257,7 +257,10 @@ def meus_jobs(
         contexto="na impressão",
         permitir_professor_com_acesso_coordenacao=True,
     )
-    return list_serialized_jobs_for_user(usuario_consulta["id"])
+    return list_serialized_jobs_for_user(
+        usuario_consulta["id"],
+        spool_dir=_ensure_spool_dir(),
+    )
 
 
 @router.get("/minha-cota")

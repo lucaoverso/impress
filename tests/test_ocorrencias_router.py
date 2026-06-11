@@ -143,7 +143,7 @@ class OcorrenciasRouterTest(unittest.TestCase):
                 [professor["nome"]],
             )
 
-    def test_criar_registro_de_professor_ignora_base_legal_enviada(self):
+    def test_criar_registro_de_professor_preserva_base_legal_opcional(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")
             database, ocorrencias_router = _reload_modulos(db_path)
@@ -182,7 +182,10 @@ class OcorrenciasRouterTest(unittest.TestCase):
                 usuario={"cargo": "ADMIN"},
             )
 
-            self.assertEqual(resposta["regimento_itens"], [])
+            self.assertEqual(
+                [item["regimento_item_id"] for item in resposta["regimento_itens"]],
+                [item_id],
+            )
             conn = database.get_connection()
             cursor = conn.cursor()
             cursor.execute(
@@ -193,7 +196,7 @@ class OcorrenciasRouterTest(unittest.TestCase):
                 """,
                 (int(resposta["id"]),),
             )
-            self.assertEqual(int(cursor.fetchone()["total"]), 0)
+            self.assertEqual(int(cursor.fetchone()["total"]), 1)
             conn.close()
 
     def test_criar_registro_de_estudante_com_multiplos_vinculados(self):
@@ -323,6 +326,11 @@ class OcorrenciasRouterTest(unittest.TestCase):
             db_path = os.path.join(tmp_dir, "impressao.db")
             database, ocorrencias_router = _reload_modulos(db_path)
             database.criar_tabelas()
+            item_id = database.criar_regimento_item(
+                lei_nome="Regimento Interno",
+                artigo_numero="12",
+                artigo_descricao="Das orientacoes institucionais ao corpo docente.",
+            )
 
             payload = ocorrencias_router.OcorrenciaCreateIn(
                 tipo_registro="geral",
@@ -336,7 +344,7 @@ class OcorrenciasRouterTest(unittest.TestCase):
                 aula=None,
                 horario_ocorrencia="17:30",
                 descricao="Registro geral para alinhamento com todo o corpo docente.",
-                regimento_item_ids=[],
+                regimento_item_ids=[item_id],
                 acao_aplicada="orientacao_geral_docentes",
                 status="registrado",
             )
@@ -355,7 +363,10 @@ class OcorrenciasRouterTest(unittest.TestCase):
             self.assertIsNone(resposta["professor_requerente_id"])
             self.assertIsNone(resposta["turma_id"])
             self.assertEqual(resposta["aula"], "")
-            self.assertEqual(resposta["regimento_itens"], [])
+            self.assertEqual(
+                [item["regimento_item_id"] for item in resposta["regimento_itens"]],
+                [item_id],
+            )
 
     def test_criar_ocorrencia_exige_base_legal(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -452,7 +463,7 @@ class OcorrenciasRouterTest(unittest.TestCase):
             self.assertEqual([row["regimento_item_id"] for row in cursor.fetchall()], [item_id])
             conn.close()
 
-    def test_atualizar_tipo_para_professor_remove_base_legal_existente(self):
+    def test_atualizar_tipo_para_professor_preserva_base_legal_existente(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")
             database, ocorrencias_router = _reload_modulos(db_path)
@@ -509,7 +520,10 @@ class OcorrenciasRouterTest(unittest.TestCase):
             )
 
             self.assertEqual(atualizada["tipo_registro"], "professor")
-            self.assertEqual(atualizada["regimento_itens"], [])
+            self.assertEqual(
+                [item["regimento_item_id"] for item in atualizada["regimento_itens"]],
+                [item_id],
+            )
             conn = database.get_connection()
             cursor = conn.cursor()
             cursor.execute(
@@ -520,7 +534,7 @@ class OcorrenciasRouterTest(unittest.TestCase):
                 """,
                 (int(resposta["id"]),),
             )
-            self.assertEqual(int(cursor.fetchone()["total"]), 0)
+            self.assertEqual(int(cursor.fetchone()["total"]), 1)
             conn.close()
 
 

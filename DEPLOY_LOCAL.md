@@ -95,7 +95,7 @@ Ajuste recomendado para o módulo de downloads do YouTube:
 
 Ajuste opcional para diagnostico controlado no spool:
 - `KEEP_SPOOL_FILES=true`
-- `SPOOL_RETENTION_DAYS=7`
+- `SPOOL_RETENTION_DAYS=0` para preservar a reimpressao de todo o historico
 
 Ajuste recomendado para integração FreeRADIUS:
 - `RADIUS_INTERNAL_SECRET=<segredo-forte-aleatorio>` (usado no endpoint interno de migração silenciosa de `nt_hash`)

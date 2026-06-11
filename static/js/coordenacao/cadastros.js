@@ -242,7 +242,7 @@ function montarPayloadOcorrencia() {
     const professoresVinculados = obterProfessoresVinculadosFormulario();
     const textoProfessor = el("ocorrenciaBuscaProfessor").value.trim();
     const itemProfessor = obterItemSugestaoPorTexto(mapaBuscaProfessores, textoProfessor, opcoesOcorrencias.professores || []);
-    const tituloGeral = String(el("ocorrenciaTituloGeral")?.value || "").trim();
+    const assuntoOuPauta = String(el("ocorrenciaDisciplina")?.value || "").trim();
 
     const professorIdSelecionado = Number(el("ocorrenciaProfessorRequerenteId").value || 0);
     const professorSelecionado = professorIdSelecionado > 0
@@ -252,9 +252,10 @@ function montarPayloadOcorrencia() {
     const primeiroProfessor = professoresVinculados[0] || null;
 
     return {
+        pre_registration_id: preRegistroEmComplementacaoId || null,
         tipo_registro: tipoRegistro,
         nome_estudante: tipoRegistro === "geral"
-            ? (tituloGeral || null)
+            ? (assuntoOuPauta || null)
             : (tipoRegistro === "estudante" ? (resumoNomesVinculados(estudantesVinculados) || null) : null),
         estudante_id: tipoRegistro === "estudante" && Number(primeiroEstudante?.estudante_id || 0) > 0
             ? Number(primeiroEstudante.estudante_id)
@@ -283,7 +284,7 @@ function montarPayloadOcorrencia() {
         aula: tipoRegistro === "estudante" ? String(el("ocorrenciaAula").value || "").trim() : null,
         horario_ocorrencia: el("ocorrenciaHorario").value.trim(),
         descricao: el("ocorrenciaDescricao").value.trim(),
-        regimento_item_ids: tipoRegistro === "estudante" ? obterIdsRegimentoSelecionadosFormulario() : [],
+        regimento_item_ids: obterIdsRegimentoSelecionadosFormulario(),
         acao_aplicada: el("ocorrenciaAcaoAplicada").value,
         status: el("ocorrenciaStatus").value || opcoesOcorrencias.status_padrao || "registrado"
     };
@@ -296,7 +297,7 @@ async function salvarOcorrencia(event) {
         return;
     }
     const idsRegimentoSelecionados = validarBaseLegalSelecionadaAntesSalvar();
-    if (idsRegimentoSelecionados.length === 0) {
+    if (registroExigeBaseLegal() && idsRegimentoSelecionados.length === 0) {
         return;
     }
     const payload = montarPayloadOcorrencia();
@@ -332,6 +333,9 @@ async function salvarOcorrencia(event) {
             (item) => Number(item.id) === Number(ocorrencia?.id)
         ) || ocorrencia;
         selecionarOcorrencia(ocorrenciaAtualizada);
+        if (typeof carregarPreRegistros === "function") {
+            await carregarPreRegistros({ manager: true });
+        }
     } catch (err) {
         setMensagemOcorrencias(err.message, true);
     }

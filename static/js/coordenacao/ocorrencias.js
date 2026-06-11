@@ -265,7 +265,7 @@ function obterReferenciaFormularioPorTipo(tipoRegistro = obterTipoRegistroFormul
             || String(el("ocorrenciaBuscaProfessor")?.value || "").trim();
     }
     if (tipoRegistro === "geral") {
-        return String(el("ocorrenciaTituloGeral")?.value || "").trim();
+        return String(el("ocorrenciaDisciplina")?.value || "").trim();
     }
     return resumoNomesVinculados(obterEstudantesVinculadosFormulario())
         || String(el("ocorrenciaBuscaEstudante")?.value || "").trim();
@@ -364,9 +364,8 @@ function atualizarModoFormularioRegistro({ limparCamposOcultos = false } = {}) {
 
     definirVisibilidadeCampoRegistro("ocorrenciaFieldEstudante", ehEstudante);
     definirVisibilidadeCampoRegistro("ocorrenciaFieldProfessor", ehEstudante || ehProfessor);
-    definirVisibilidadeCampoRegistro("ocorrenciaFieldGeral", ehGeral);
     definirVisibilidadeCampoRegistro("ocorrenciaFieldAula", ehEstudante);
-    definirVisibilidadeCampoRegistro("ocorrenciaFieldRegimento", ehEstudante);
+    definirVisibilidadeCampoRegistro("ocorrenciaFieldRegimento", true);
     definirVisibilidadeCampoRegistro("ocorrenciaProfessoresSelecionados", ehProfessor);
     definirVisibilidadeCampoRegistro("ocorrenciaProfessorHint", ehProfessor);
 
@@ -382,14 +381,15 @@ function atualizarModoFormularioRegistro({ limparCamposOcultos = false } = {}) {
 
     const disciplinaLabel = el("ocorrenciaDisciplinaLabel");
     if (disciplinaLabel) {
-        disciplinaLabel.innerText = ehGeral ? "Tema ou pauta" : (ehProfessor ? "Assunto ou pauta" : "Disciplina");
+        disciplinaLabel.innerText = ehEstudante ? "Disciplina" : "Assunto ou pauta";
     }
 
     const disciplinaInput = el("ocorrenciaDisciplina");
     if (disciplinaInput) {
         disciplinaInput.placeholder = ehGeral
-            ? "Digite o tema da orientacao geral"
+            ? "Ex: orientacoes gerais para o fechamento do bimestre"
             : (ehProfessor ? "Ex: alinhamento pedagogico, acompanhamento, pauta" : "Buscar disciplina cadastrada ou digitar nome");
+        disciplinaInput.required = true;
     }
 
     const professorInput = el("ocorrenciaBuscaProfessor");
@@ -420,13 +420,6 @@ function atualizarModoFormularioRegistro({ limparCamposOcultos = false } = {}) {
             el("ocorrenciaProfessorRequerenteId").value = "";
             professoresVinculadosSelecionados = [];
             renderSelecionadorProfessoresVinculados([]);
-        }
-        if (!ehGeral) {
-            el("ocorrenciaTituloGeral").value = "";
-        }
-        if (!ehEstudante) {
-            el("ocorrenciaBuscaRegimento").value = "";
-            renderSelecionadorRegimento([]);
         }
     }
 
@@ -1247,17 +1240,8 @@ function renderizarBaseLegalPreview(itens) {
     const section = el("previewBaseLegalSection");
     if (!container) return;
 
-    const tipoRegistro = obterTipoRegistroFormulario();
-    if (!registroExigeBaseLegal(tipoRegistro)) {
-        if (section) {
-            section.hidden = true;
-        }
-        container.innerHTML = "";
-        return;
-    }
-
     const itensNorm = Array.isArray(itens) ? itens : [];
-    const mostrarSecao = true;
+    const mostrarSecao = registroExigeBaseLegal() || itensNorm.length > 0;
     if (section) {
         section.hidden = !mostrarSecao;
     }
@@ -1515,9 +1499,9 @@ function limparFormularioOcorrencia({ manterAberto = false } = {}) {
     el("formOcorrencia").reset();
     definirDescricaoEditor();
     ocorrenciaEmEdicaoId = null;
+    preRegistroEmComplementacaoId = null;
     el("ocorrenciaEstudanteId").value = "";
     el("ocorrenciaProfessorRequerenteId").value = "";
-    el("ocorrenciaTituloGeral").value = "";
     estudantesVinculadosSelecionados = [];
     professoresVinculadosSelecionados = [];
     ocultarTodasSugestoes();
@@ -1554,7 +1538,6 @@ function preencherFormularioOcorrencia(ocorrencia) {
     const tipoRegistro = String(ocorrencia.tipo_registro || "estudante").trim() || "estudante";
     el("ocorrenciaTipoRegistro").value = tipoRegistro;
     el("ocorrenciaBuscaEstudante").value = "";
-    el("ocorrenciaTituloGeral").value = tipoRegistro === "geral" ? (ocorrencia.nome_estudante || "") : "";
     el("ocorrenciaEstudanteId").value = "";
     el("ocorrenciaBuscaRegimento").value = "";
     renderSelecionadorEstudantesVinculados(ocorrencia.estudantes_vinculados || []);
@@ -1591,7 +1574,9 @@ function preencherFormularioOcorrencia(ocorrencia) {
         }
     }
 
-    el("ocorrenciaDisciplina").value = ocorrencia.disciplina || "";
+    el("ocorrenciaDisciplina").value = ocorrencia.disciplina
+        || (tipoRegistro === "geral" ? ocorrencia.nome_estudante : "")
+        || "";
     el("ocorrenciaData").value = ocorrencia.data_ocorrencia || "";
     el("ocorrenciaHorario").value = ocorrencia.horario_ocorrencia || "";
     definirDescricaoEditor({
@@ -1683,10 +1668,6 @@ async function abrirPdfOcorrencia(ocorrencia) {
 }
 
 function criarBlocoDetalhesRegimento(ocorrencia) {
-    if (!registroExigeBaseLegal(ocorrencia?.tipo_registro)) {
-        return null;
-    }
-
     const wrapper = document.createElement("div");
     wrapper.className = "coordenacao-detail-block";
 
@@ -1802,3 +1783,9 @@ function renderDetalhesOcorrencia(ocorrencia) {
         container.appendChild(blocoRegimento);
     }
 }
+    const regimentoLabel = el("ocorrenciaRegimentoLabel");
+    if (regimentoLabel) {
+        regimentoLabel.innerText = registroExigeBaseLegal(tipoRegistro)
+            ? "Base legal vinculada"
+            : "Base legal vinculada (opcional)";
+    }

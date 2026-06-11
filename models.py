@@ -927,6 +927,7 @@ class OcorrenciaProfessorVinculadoOut(BaseModel):
 
 
 class OcorrenciaCreateIn(BaseModel):
+    pre_registration_id: int | None = None
     tipo_registro: TipoRegistroOcorrencia = "estudante"
     nome_estudante: str | None = None
     estudante_id: int | None = None

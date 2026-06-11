@@ -9,12 +9,21 @@
 </head>
 
 <body>
-    {% set navbar_context = "Area docente" %}
+    {% set navbar_context = "Central de anexos" %}
     {% set navbar_current = "apc" %}
     {% include "includes/app_navbar.html" %}
     <main class="scheduler-page apc-page">
         <section class="apc-topbar">
-            <p id="apcUsuario" class="apc-topbar-user"></p>
+            <div class="apc-topbar-main">
+                <div class="apc-topbar-copy">
+                    <p class="apc-eyebrow">Servicos escolares</p>
+                    <h1>Central de Anexos</h1>
+                    <p class="apc-topbar-description">
+                        Consulte entregas, envie arquivos e acompanhe solicitacoes em um unico lugar.
+                    </p>
+                </div>
+                <p id="apcUsuario" class="apc-topbar-user"></p>
+            </div>
 
             <div class="apc-topbar-grid">
                 <div class="apc-field">
@@ -23,50 +32,47 @@
                 </div>
 
                 <div id="apcResumoMes" class="apc-toolbar-note">
-                    Selecione uma data no calendario para ver ou configurar as entregas.
+                    Carregando as entregas deste mes...
                 </div>
+
+                <button id="btnAlternarCalendarioApc" class="apc-calendar-toggle" type="button"
+                    aria-controls="apcCalendarDrawer" aria-expanded="false">
+                    Ver calendario
+                </button>
             </div>
 
-            <nav id="apcModeTabs" class="admin-tabs apc-mode-tabs" aria-label="Abas principais da central de anexos"
-                hidden>
-                <button id="apcTabModoDocente" class="admin-tab-btn is-active" data-apc-mode-trigger="docente"
-                    aria-selected="true" type="button">
-                    Minhas entregas
-                </button>
-                <button id="apcTabModoGestao" class="admin-tab-btn" data-apc-mode-trigger="gestao"
-                    aria-selected="false" type="button">
-                    Gestao
-                </button>
-            </nav>
-
-            <p id="msgApc" class="apc-toolbar-message"></p>
+            <p id="msgApc" class="apc-toolbar-message" role="status" aria-live="polite"></p>
         </section>
 
         <section class="scheduler-content apc-content">
-            <article class="calendar-card apc-overview-card">
-                <header class="booking-card-header">
-                    <h3 id="apcTituloPainel">Painel da data selecionada</h3>
-                    <p id="apcSubtituloPainel">Escolha uma data no calendario para continuar.</p>
-                </header>
-
-                <div id="apcResumoPainel"></div>
-            </article>
-
-            <article class="calendar-card apc-calendar-card">
-                <header class="calendar-header">
-                    <button id="btnApcMesAnterior" type="button" aria-label="Mes anterior">&#9664;</button>
-                    <h3 id="apcMesAtual"></h3>
-                    <button id="btnApcMesProximo" type="button" aria-label="Proximo mes">&#9654;</button>
-                    <button id="btnApcMesHoje" type="button">Hoje</button>
-                </header>
-                <div id="apcCalendarioGrid" class="calendar-grid"></div>
-            </article>
+            <div id="apcCalendarDrawer" class="apc-calendar-drawer" hidden>
+                <div class="apc-calendar-backdrop" data-apc-calendar-close="true"></div>
+                <article id="apcCalendarCard" class="calendar-card apc-calendar-card" role="dialog"
+                    aria-modal="true" aria-labelledby="apcCalendarDrawerTitle" tabindex="-1">
+                    <header class="apc-calendar-drawer-header">
+                        <div>
+                            <p class="apc-section-eyebrow">Consulta mensal</p>
+                            <h2 id="apcCalendarDrawerTitle">Calendario de entregas</h2>
+                        </div>
+                        <button id="btnFecharCalendarioApc" type="button" data-apc-calendar-close="true">
+                            Fechar
+                        </button>
+                    </header>
+                    <div class="calendar-header">
+                        <button id="btnApcMesAnterior" type="button" aria-label="Mes anterior">&#9664;</button>
+                        <h2 id="apcMesAtual"></h2>
+                        <button id="btnApcMesProximo" type="button" aria-label="Proximo mes">&#9654;</button>
+                        <button id="btnApcMesHoje" type="button">Hoje</button>
+                    </div>
+                    <div id="apcCalendarioGrid" class="calendar-grid"></div>
+                </article>
+            </div>
 
             <article class="calendar-card apc-detail-card">
                 <div id="apcGestaoActions" class="apc-gestao-actions" hidden>
                     <div class="apc-gestao-actions-copy">
-                        <h3>Solicitacoes da data</h3>
-                        <p>Abra o modal para cadastrar uma nova solicitacao ou editar a selecionada.</p>
+                        <h3>Demandas de entrega</h3>
+                        <p>Acompanhe as solicitacoes e abra uma demanda para analisar os professores.</p>
                     </div>
                     <div class="apc-inline-actions">
                         <button id="btnAbrirNovaApc" class="btn-destaque" type="button">Nova solicitacao</button>
@@ -74,35 +80,89 @@
                     </div>
                 </div>
 
-                <div id="apcSolicitacoesData" class="apc-solicitacoes-data">
-                    <div class="booking-empty">Nenhuma solicitacao nesta data.</div>
+                <section id="apcGestaoFiltros" class="apc-gestao-filtros" hidden aria-label="Filtros das demandas">
+                    <div class="apc-field apc-gestao-busca">
+                        <label for="apcFiltroBusca">Buscar demanda</label>
+                        <input id="apcFiltroBusca" type="search" placeholder="Titulo, professor, disciplina ou turma">
+                    </div>
+                    <div class="apc-field">
+                        <label for="apcFiltroProfessor">Professor</label>
+                        <select id="apcFiltroProfessor">
+                            <option value="">Todos</option>
+                        </select>
+                    </div>
+                    <div class="apc-field">
+                        <label for="apcFiltroDisciplina">Disciplina</label>
+                        <select id="apcFiltroDisciplina">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div class="apc-field">
+                        <label for="apcFiltroTurma">Turma</label>
+                        <select id="apcFiltroTurma">
+                            <option value="">Todas</option>
+                        </select>
+                    </div>
+                    <div class="apc-field">
+                        <label for="apcFiltroStatus">Status</label>
+                        <select id="apcFiltroStatus">
+                            <option value="">Todos</option>
+                            <option value="pendente">Com pendencias</option>
+                            <option value="concluida">Concluidas</option>
+                            <option value="atrasada">Prazo encerrado</option>
+                        </select>
+                    </div>
+                    <div class="apc-field">
+                        <label for="apcOrdenacaoGestao">Ordenar por</label>
+                        <select id="apcOrdenacaoGestao">
+                            <option value="prazo">Prazo mais proximo</option>
+                            <option value="recentes">Demandas mais recentes</option>
+                            <option value="antigas">Demandas mais antigas</option>
+                            <option value="envios_recentes">Envios mais recentes</option>
+                            <option value="envios_antigos">Envios mais antigos</option>
+                            <option value="pendencias">Mais pendencias</option>
+                        </select>
+                    </div>
+                </section>
+
+                <div class="apc-docente-workspace">
+                    <section class="apc-solicitacoes-column" aria-labelledby="apcSolicitacoesTitulo">
+                        <header class="apc-column-header">
+                            <div>
+                                <p class="apc-section-eyebrow">Solicitacoes</p>
+                                <h2 id="apcSolicitacoesTitulo">Entregas do mes</h2>
+                                <p id="apcSolicitacoesDescricao">
+                                    As pendencias aparecem primeiro e a mais urgente ja fica aberta.
+                                </p>
+                            </div>
+                        </header>
+
+                        <div id="apcSolicitacoesData" class="apc-solicitacoes-data">
+                            <div class="booking-empty">Nenhuma solicitacao encontrada.</div>
+                        </div>
+                    </section>
+
+                    <aside id="apcDocenteDetalhe" class="apc-docente-detalhe" aria-live="polite">
+                        <div class="booking-empty">
+                            Carregando os anexos da demanda mais urgente...
+                        </div>
+                    </aside>
+
+                    <aside id="apcGestaoDetalhe" class="apc-gestao-detalhe" hidden aria-live="polite">
+                        <header class="apc-gestao-detalhe-header">
+                            <div>
+                                <p class="apc-section-eyebrow">Analise por professor</p>
+                                <h2 id="apcGestaoDetalheTitulo">Selecione uma demanda</h2>
+                                <p id="apcGestaoDetalheDescricao">
+                                    Os professores e anexos da solicitacao aparecerao aqui.
+                                </p>
+                            </div>
+                        </header>
+                        <div id="apcListaPainel" class="apc-lista-painel">
+                            <div class="booking-empty">Nenhuma solicitacao selecionada.</div>
+                        </div>
+                    </aside>
                 </div>
-
-                <nav id="apcGestaoTabs" class="admin-tabs apc-gestao-tabs" aria-label="Abas da gestao de anexos" hidden>
-                    <button id="apcTabBtnProfessores" class="admin-tab-btn is-active"
-                        data-apc-gestao-tab-trigger="professores" aria-controls="apc-tab-professores"
-                        aria-selected="true" type="button">
-                        Por professor
-                    </button>
-                    <button id="apcTabBtnArquivos" class="admin-tab-btn" data-apc-gestao-tab-trigger="arquivos"
-                        aria-controls="apc-tab-arquivos" aria-selected="false" type="button">
-                        Arquivos
-                    </button>
-                </nav>
-
-                <section id="apc-tab-professores" class="admin-tab-panel apc-gestao-panel is-active"
-                    data-apc-gestao-tab-panel="professores">
-                    <div id="apcListaPainel" class="apc-lista-painel">
-                        <div class="booking-empty">Nenhuma solicitacao selecionada.</div>
-                    </div>
-                </section>
-
-                <section id="apc-tab-arquivos" class="admin-tab-panel apc-gestao-panel"
-                    data-apc-gestao-tab-panel="arquivos" hidden>
-                    <div id="apcArquivosLista" class="apc-arquivos-lista">
-                        <div class="booking-empty">Nenhum arquivo enviado ainda.</div>
-                    </div>
-                </section>
             </article>
         </section>
     </main>
@@ -166,6 +226,124 @@
                 </div>
             </form>
         </section>
+    </div>
+
+    <div id="apcArquivoPreviewModal" class="apc-file-preview-modal" hidden>
+        <section id="apcArquivoPreviewPanel" class="apc-file-preview-panel" role="dialog" aria-modal="true"
+            aria-labelledby="apcArquivoPreviewTitulo" tabindex="-1">
+            <header class="apc-file-preview-header">
+                <div id="apcArquivoPreviewMeta" class="apc-arquivo-preview-meta">
+                    <p class="apc-section-eyebrow">Visualizacao do anexo</p>
+                    <h2 id="apcArquivoPreviewTitulo">Arquivo enviado</h2>
+                </div>
+                <div class="apc-inline-actions">
+                    <button id="btnApcImprimirArquivo" class="btn-destaque" type="button" hidden>Imprimir</button>
+                    <button id="btnApcBaixarArquivo" type="button" hidden>Baixar arquivo</button>
+                    <button id="btnFecharPreviewApc" type="button">Fechar</button>
+                </div>
+            </header>
+
+            <div class="apc-file-preview-content">
+                <div id="apcArquivoPreviewState" class="apc-arquivo-preview-state">
+                    <div class="booking-empty">Carregando arquivo...</div>
+                </div>
+                <iframe id="apcArquivoPreviewFrame" class="apc-arquivo-preview-frame"
+                    title="Visualizacao do arquivo enviado" hidden></iframe>
+                <img id="apcArquivoPreviewImage" class="apc-arquivo-preview-image"
+                    alt="Visualizacao do arquivo enviado" hidden>
+                <pre id="apcArquivoPreviewText" class="apc-arquivo-preview-text" hidden></pre>
+            </div>
+        </section>
+        <div class="apc-file-preview-backdrop" data-apc-preview-close="true"></div>
+    </div>
+
+    <div id="apcPrintWizardModal" class="apc-print-wizard-modal" hidden>
+        <section id="apcPrintWizardPanel" class="apc-print-wizard-panel" role="dialog" aria-modal="true"
+            aria-labelledby="apcPrintWizardTitle" tabindex="-1">
+            <header class="apc-print-wizard-header">
+                <div>
+                    <p class="apc-section-eyebrow">Impressao do anexo</p>
+                    <h2 id="apcPrintWizardTitle">Configurar impressao</h2>
+                    <p id="apcPrintWizardArquivo">Arquivo selecionado</p>
+                </div>
+                <button id="btnFecharPrintWizardApc" type="button">Fechar</button>
+            </header>
+
+            <ol class="apc-print-stepper" aria-label="Etapas da impressao">
+                <li data-apc-print-stepper="1" class="is-current">1. Dados</li>
+                <li data-apc-print-stepper="2">2. Impressao</li>
+                <li data-apc-print-stepper="3">3. Conferir</li>
+            </ol>
+
+            <form id="formApcImpressao" class="apc-print-wizard-form">
+                <section data-apc-print-step="1" class="apc-print-step">
+                    <header>
+                        <h3>Dados da solicitacao</h3>
+                        <p>Defina a quantidade de copias para este anexo.</p>
+                    </header>
+                    <label for="apcPrintCopias">Copias</label>
+                    <input id="apcPrintCopias" type="number" min="1" max="999" value="1" required>
+                </section>
+
+                <section data-apc-print-step="2" class="apc-print-step" hidden>
+                    <header>
+                        <h3>Configuracoes de impressao</h3>
+                        <p>Escolha paginas, layout, orientacao e tipo de material.</p>
+                    </header>
+
+                    <label for="apcPrintIntervalo">Paginas</label>
+                    <input id="apcPrintIntervalo" type="text" placeholder="Todas ou ex.: 1-5, 8">
+                    <p class="apc-inline-hint">Deixe vazio para imprimir todas as paginas.</p>
+
+                    <div class="apc-print-config-grid">
+                        <div class="apc-field">
+                            <label for="apcPrintPaginasFolha">Layout</label>
+                            <select id="apcPrintPaginasFolha">
+                                <option value="1">1 pagina por folha</option>
+                                <option value="2">2 paginas por folha</option>
+                                <option value="4">4 paginas por folha</option>
+                            </select>
+                        </div>
+                        <div class="apc-field">
+                            <label for="apcPrintOrientacao">Orientacao</label>
+                            <select id="apcPrintOrientacao">
+                                <option value="retrato">Retrato</option>
+                                <option value="paisagem">Paisagem</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <label class="apc-print-checkbox">
+                        <input id="apcPrintDuplex" type="checkbox">
+                        <span>Imprimir frente e verso</span>
+                    </label>
+
+                    <fieldset class="apc-print-tags-fieldset">
+                        <legend>Tipo de material</legend>
+                        <div id="apcPrintTags" class="apc-print-tags-grid"></div>
+                    </fieldset>
+                </section>
+
+                <section data-apc-print-step="3" class="apc-print-step" hidden>
+                    <header>
+                        <h3>Conferir impressao</h3>
+                        <p>Revise as configuracoes antes de enviar para a fila.</p>
+                    </header>
+                    <dl id="apcPrintResumo" class="apc-print-summary"></dl>
+                </section>
+
+                <p id="apcPrintMensagem" class="apc-toolbar-message" role="status" aria-live="polite"></p>
+
+                <footer class="apc-print-wizard-actions">
+                    <button id="btnApcPrintVoltar" type="button" hidden>Voltar</button>
+                    <button id="btnApcPrintContinuar" class="btn-destaque" type="button">Continuar</button>
+                    <button id="btnApcPrintConfirmar" class="btn-destaque" type="submit" hidden>
+                        Confirmar impressao
+                    </button>
+                </footer>
+            </form>
+        </section>
+        <div class="apc-print-wizard-backdrop" data-apc-print-close="true"></div>
     </div>
 
     <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>

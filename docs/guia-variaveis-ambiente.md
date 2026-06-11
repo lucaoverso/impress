@@ -70,7 +70,7 @@ SPOOL_DIR=/var/spool/sistema-impress
 CUPS_PRINTER=HP_LaserJet
 ENABLE_EMBEDDED_WORKER=false
 KEEP_SPOOL_FILES=true
-SPOOL_RETENTION_DAYS=7
+SPOOL_RETENTION_DAYS=0
 LOG_LEVEL=INFO
 TOKEN_TTL_DIAS=7
 PRINT_CANCEL_WINDOW_SECONDS=15
@@ -86,7 +86,7 @@ LIBREOFFICE_COMMAND=/usr/bin/soffice
 - Use caminhos absolutos em todas as variaveis de caminho.
 - Mantenha `ENABLE_EMBEDDED_WORKER=false` e rode o worker em servico separado.
 - Deixe `KEEP_SPOOL_FILES=true` para preservar preview e reimpressao do historico.
-- Configure `SPOOL_RETENTION_DAYS` com um prazo curto, como `7`, para evitar crescimento indefinido do spool.
+- Use `SPOOL_RETENTION_DAYS=0` quando todo o historico precisar continuar reutilizavel. Um valor maior que zero economiza espaco, mas torna jobs antigos indisponiveis para preview e reimpressao.
 - Preencha `RADIUS_INTERNAL_SECRET` apenas se a integracao com FreeRADIUS estiver ativa.
 - Se a impressao de `DOC` e `DOCX` for necessaria, instale o LibreOffice e configure `LIBREOFFICE_COMMAND` de forma explicita.
 - No deploy automatizado, a workflow sobrescreve `STATIC_ASSET_VERSION` com o SHA do commit publicado.

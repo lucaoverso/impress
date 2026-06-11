@@ -279,7 +279,7 @@ class OcorrenciaPdfServiceTest(unittest.TestCase):
         reader = PdfReader(io.BytesIO(pdf_bytes))
         self.assertGreaterEqual(len(reader.pages), 1)
 
-    def test_pdf_de_professor_nao_renderiza_secao_de_base_legal(self):
+    def test_pdf_de_professor_renderiza_base_legal_quando_informada(self):
         ocorrencia = _ocorrencia_base("Descricao de orientacao ao professor.")
         ocorrencia["tipo_registro"] = "professor"
         ocorrencia["acao_aplicada"] = "orientacao_professor"
@@ -300,7 +300,7 @@ class OcorrenciaPdfServiceTest(unittest.TestCase):
         texto = "\n".join((pagina.extract_text() or "") for pagina in reader.pages)
 
         if texto.strip():
-            self.assertNotIn("BASE LEGAL", texto.upper())
+            self.assertIn("BASE LEGAL", texto.upper())
 
     def test_paginas_adicionais_quando_descricao_ultrapassa_uma_folha(self):
         descricao_longa = " ".join(

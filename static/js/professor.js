@@ -1232,6 +1232,10 @@ function jobPodeSerCancelado(job) {
 }
 
 function jobPodeSerReutilizado(job) {
+    if (typeof job?.pode_reutilizar === "boolean") {
+        return job.pode_reutilizar;
+    }
+
     const statusNormalizado = normalizarStatusJob(job?.status);
     return statusNormalizado === "CONCLUIDO" || statusNormalizado === "FINALIZADO";
 }
@@ -1877,6 +1881,19 @@ function preencherItemJob(li, job, { allowReuse = true } = {}) {
             event.preventDefault();
             abrirNovamente();
         });
+    }
+
+    const motivoReusoIndisponivel = String(job?.motivo_reuso_indisponivel || "").trim();
+    if (
+        allowReuse
+        && !podeReutilizar
+        && motivoReusoIndisponivel
+        && ["CONCLUIDO", "FINALIZADO"].includes(normalizarStatusJob(job?.status))
+    ) {
+        const dicaIndisponivel = document.createElement("p");
+        dicaIndisponivel.classList.add("print-job-hint", "is-unavailable");
+        dicaIndisponivel.innerText = motivoReusoIndisponivel;
+        li.appendChild(dicaIndisponivel);
     }
 
     if (job?.erro_mensagem) {

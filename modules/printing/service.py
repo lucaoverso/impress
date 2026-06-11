@@ -150,8 +150,11 @@ def get_formatted_print_status():
     return build_print_status_alert(repository.get_print_status())
 
 
-def list_serialized_jobs_for_user(usuario_id: int):
-    return [serialize_print_job(job) for job in repository.list_jobs_by_user(usuario_id)]
+def list_serialized_jobs_for_user(usuario_id: int, spool_dir: Path | None = None):
+    return [
+        serialize_print_job(job, spool_dir=spool_dir)
+        for job in repository.list_jobs_by_user(usuario_id)
+    ]
 
 
 def get_print_quota_response(usuario_consulta: dict, obter_cota_atual, usuario_tem_cota_ilimitada):

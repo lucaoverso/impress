@@ -3,7 +3,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 
 from auth import get_usuario_logado
 from db.apc import (
@@ -25,6 +25,7 @@ from db.docencia import listar_atribuicoes_docentes
 from db.horario_escolar import listar_anos_letivos_horario_escolar, listar_horarios_escolares
 from db.usuarios import listar_professores_agendamento
 from models import ApcEnvioOut, ApcPeriodoIn, ApcPeriodoOut, ApcPeriodoUpdateIn
+from modules.printing.attachment_printing import imprimir_anexo_pdf
 from services.apc_service import (
     APC_PUBLICO_ALVO_HORARIO_DIA,
     APC_PUBLICO_ALVO_PROFESSORES_SELECIONADOS,
@@ -54,6 +55,7 @@ from services.apc_service import (
     APC_TIPO_ENTREGA_GERAL,
     APC_TIPO_ENTREGA_PROVA_BIMESTRAL,
 )
+from services.apc_preview_service import gerar_preview_pdf_apc
 from services.file_service import arquivo_suportado
 from services.horario_escolar_service import validar_ano_letivo
 
@@ -390,6 +392,44 @@ def _montar_resumo_calendario_para_usuario(periodo: dict, usuario: dict, visao: 
     }
 
 
+def _montar_resumo_gestao_apc(periodo: dict) -> dict:
+    painel = montar_painel_periodo_apc(
+        enriquecer_periodo_apc(periodo),
+        _obter_elegiveis_periodo(periodo),
+        listar_apc_envios(periodo_id=int(periodo["id"])),
+    )
+    itens = list(painel.get("itens") or [])
+    envios = [
+        item["envio"]
+        for item in itens
+        if isinstance(item.get("envio"), dict)
+    ]
+
+    def valores_unicos(campo: str) -> list[str]:
+        return sorted(
+            {
+                str(item.get(campo) or "").strip()
+                for item in itens
+                if str(item.get(campo) or "").strip()
+            },
+            key=str.casefold,
+        )
+
+    return {
+        **painel["periodo"],
+        "total_elegiveis": painel["total_elegiveis"],
+        "total_enviados": painel["total_enviados"],
+        "total_pendentes": painel["total_pendentes"],
+        "professores": valores_unicos("professor_nome"),
+        "disciplinas": valores_unicos("disciplina_nome"),
+        "turmas": valores_unicos("turma_nome"),
+        "ultimo_envio_em": max(
+            (str(envio.get("enviado_em") or "") for envio in envios),
+            default="",
+        ),
+    }
+
+
 @router.get("/apc/contexto")
 def obter_contexto_apc_api(usuario=Depends(get_usuario_logado)):
     anos_existentes = sorted(
@@ -515,6 +555,29 @@ def listar_calendario_apc_api(
         "mes": mes_norm,
         "ano_letivo": int(ano_letivo) if ano_letivo is not None else None,
         "periodos": itens,
+    }
+
+
+@router.get("/apc/solicitacoes")
+def listar_solicitacoes_gestao_apc_api(
+    ano_letivo: int,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestao_apc(usuario)
+    try:
+        ano_validado = validar_ano_letivo(int(ano_letivo))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    periodos = ordenar_periodos_apc(
+        listar_apc_periodos(ano_letivo=int(ano_validado))
+    )
+    return {
+        "ano_letivo": int(ano_validado),
+        "periodos": [
+            _montar_resumo_gestao_apc(periodo)
+            for periodo in periodos
+        ],
     }
 
 
@@ -800,3 +863,74 @@ def baixar_arquivo_apc_api(envio_id: int, usuario=Depends(get_usuario_logado)):
         filename=str(envio.get("arquivo_nome_original") or caminho.name),
         media_type=media_type,
     )
+
+
+@router.get("/apc/envios/{envio_id}/preview")
+def visualizar_arquivo_apc_api(envio_id: int, usuario=Depends(get_usuario_logado)):
+    envio = buscar_apc_envio_por_id(envio_id)
+    if not envio:
+        raise HTTPException(404, "Envio nao encontrado.")
+
+    professor_id = int(envio.get("professor_id") or 0)
+    if not _pode_gerir_apc(usuario) and int(usuario["id"]) != professor_id:
+        raise HTTPException(403, "Voce nao pode acessar este arquivo.")
+
+    caminho = _resolver_caminho_envio_seguro(envio.get("arquivo_path"))
+    nome_arquivo = str(envio.get("arquivo_nome_original") or caminho.name)
+    try:
+        conteudo_pdf = gerar_preview_pdf_apc(caminho, nome_arquivo)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(500, "Nao foi possivel preparar a visualizacao do anexo.") from exc
+
+    return Response(
+        content=conteudo_pdf,
+        media_type="application/pdf",
+        headers={"Cache-Control": "no-store"},
+    )
+
+
+@router.post("/apc/envios/{envio_id}/imprimir")
+def imprimir_arquivo_apc_api(
+    envio_id: int,
+    copias: int = Form(...),
+    paginas_por_folha: int = Form(1),
+    duplex: bool = Form(False),
+    orientacao: str = Form("retrato"),
+    intervalo_paginas: str = Form(""),
+    tags: list[str] = Form(default=[]),
+    professor_id: int | None = Form(None),
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestao_apc(usuario)
+    envio = buscar_apc_envio_por_id(envio_id)
+    if not envio:
+        raise HTTPException(404, "Envio nao encontrado.")
+
+    caminho = _resolver_caminho_envio_seguro(envio.get("arquivo_path"))
+    nome_arquivo = str(envio.get("arquivo_nome_original") or caminho.name)
+    try:
+        conteudo_pdf = gerar_preview_pdf_apc(caminho, nome_arquivo)
+        return imprimir_anexo_pdf(
+            conteudo_pdf=conteudo_pdf,
+            nome_arquivo=nome_arquivo,
+            copias=copias,
+            paginas_por_folha=paginas_por_folha,
+            duplex=duplex,
+            orientacao=orientacao,
+            intervalo_paginas=intervalo_paginas,
+            tags=tags,
+            professor_id=professor_id,
+            usuario=usuario,
+        )
+    except HTTPException:
+        raise
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(500, "Nao foi possivel preparar o anexo para impressao.") from exc

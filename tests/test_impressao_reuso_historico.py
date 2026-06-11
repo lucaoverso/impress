@@ -210,6 +210,27 @@ class ImpressaoReusoHistoricoTest(unittest.TestCase):
 
             self.assertEqual(len(jobs), 1)
             self.assertEqual(jobs[0]["tags"], ["Simulado"])
+            self.assertTrue(jobs[0]["pode_reutilizar"])
+            self.assertEqual(jobs[0]["motivo_reuso_indisponivel"], "")
+
+    def test_meus_jobs_informa_quando_arquivo_do_historico_foi_removido(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            spool_dir = Path(tmp_dir) / "spool"
+            spool_dir.mkdir(parents=True, exist_ok=True)
+
+            database, impressao_router = _reload_modulos(db_path, str(spool_dir))
+            admin, _job_id, caminho_pdf = self._criar_cenario_base(database, spool_dir)
+            caminho_pdf.unlink()
+
+            jobs = impressao_router.meus_jobs(professor_id=None, usuario=admin)
+
+            self.assertEqual(len(jobs), 1)
+            self.assertFalse(jobs[0]["pode_reutilizar"])
+            self.assertIn(
+                "nao esta mais disponivel",
+                jobs[0]["motivo_reuso_indisponivel"],
+            )
 
     def test_criar_job_pdf_invalido_retorna_http_500_controlado(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

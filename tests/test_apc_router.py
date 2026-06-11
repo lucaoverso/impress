@@ -5,6 +5,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi import HTTPException, UploadFile
 from starlette.datastructures import Headers
@@ -907,6 +908,182 @@ class ApcRouterTest(unittest.TestCase):
             )
             self.assertEqual(int(detalhe_final["total_enviadas"]), 1)
             self.assertEqual(int(detalhe_final["total_pendentes"]), 0)
+
+    def test_preview_docx_reutiliza_conversao_para_pdf(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            apc_dir = os.path.join(tmp_dir, "apc")
+            _database, _models, apc_router = _reload_modules(db_path, apc_dir)
+
+            caminho_docx = Path(apc_dir) / "atividade.docx"
+            caminho_docx.parent.mkdir(parents=True, exist_ok=True)
+            caminho_docx.write_bytes(b"conteudo docx")
+            envio = {
+                "id": 91,
+                "professor_id": 44,
+                "arquivo_path": str(caminho_docx),
+                "arquivo_nome_original": "Atividade - Professor - 2035-11-14.docx",
+                "arquivo_tipo": (
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                ),
+            }
+
+            with (
+                patch.object(apc_router, "buscar_apc_envio_por_id", return_value=envio),
+                patch.object(
+                    apc_router,
+                    "gerar_preview_pdf_apc",
+                    return_value=b"%PDF-preview",
+                ) as gerar_preview,
+            ):
+                resposta = apc_router.visualizar_arquivo_apc_api(
+                    envio_id=91,
+                    usuario=self._usuario_professor(44),
+                )
+
+            self.assertEqual(resposta.media_type, "application/pdf")
+            self.assertEqual(resposta.body, b"%PDF-preview")
+            self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
+            gerar_preview.assert_called_once_with(
+                caminho_docx.resolve(),
+                "Atividade - Professor - 2035-11-14.docx",
+            )
+
+    def test_coordenador_imprime_anexo_usando_fluxo_de_impressao(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            apc_dir = os.path.join(tmp_dir, "apc")
+            _database, _models, apc_router = _reload_modules(db_path, apc_dir)
+
+            caminho_pdf = Path(apc_dir) / "prova.pdf"
+            caminho_pdf.parent.mkdir(parents=True, exist_ok=True)
+            caminho_pdf.write_bytes(b"%PDF-anexo")
+            envio = {
+                "id": 92,
+                "professor_id": 44,
+                "arquivo_path": str(caminho_pdf),
+                "arquivo_nome_original": "Prova bimestral.pdf",
+                "arquivo_tipo": "application/pdf",
+            }
+            resultado = {"mensagem": "Impressao enviada", "job_id": 123}
+
+            with (
+                patch.object(apc_router, "buscar_apc_envio_por_id", return_value=envio),
+                patch.object(
+                    apc_router,
+                    "gerar_preview_pdf_apc",
+                    return_value=b"%PDF-normalizado",
+                ) as gerar_pdf,
+                patch.object(
+                    apc_router,
+                    "imprimir_anexo_pdf",
+                    return_value=resultado,
+                ) as imprimir,
+            ):
+                resposta = apc_router.imprimir_arquivo_apc_api(
+                    envio_id=92,
+                    copias=3,
+                    paginas_por_folha=2,
+                    duplex=True,
+                    orientacao="paisagem",
+                    intervalo_paginas="1-4",
+                    tags=["PROVA"],
+                    professor_id=None,
+                    usuario=self._usuario_coord(),
+                )
+
+            self.assertEqual(resposta, resultado)
+            gerar_pdf.assert_called_once_with(
+                caminho_pdf.resolve(),
+                "Prova bimestral.pdf",
+            )
+            imprimir.assert_called_once_with(
+                conteudo_pdf=b"%PDF-normalizado",
+                nome_arquivo="Prova bimestral.pdf",
+                copias=3,
+                paginas_por_folha=2,
+                duplex=True,
+                orientacao="paisagem",
+                intervalo_paginas="1-4",
+                tags=["PROVA"],
+                professor_id=None,
+                usuario=self._usuario_coord(),
+            )
+
+    def test_professor_nao_pode_imprimir_anexo_pela_gestao(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            apc_dir = os.path.join(tmp_dir, "apc")
+            _database, _models, apc_router = _reload_modules(db_path, apc_dir)
+
+            with self.assertRaises(HTTPException) as contexto:
+                apc_router.imprimir_arquivo_apc_api(
+                    envio_id=92,
+                    copias=1,
+                    paginas_por_folha=1,
+                    duplex=False,
+                    orientacao="retrato",
+                    intervalo_paginas="",
+                    tags=["ATIVIDADE"],
+                    professor_id=None,
+                    usuario=self._usuario_professor(44),
+                )
+
+            self.assertEqual(contexto.exception.status_code, 403)
+
+    def test_listagem_anual_da_gestao_traz_dimensoes_para_filtros(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            apc_dir = os.path.join(tmp_dir, "apc")
+            _database, _models, apc_router = _reload_modules(db_path, apc_dir)
+            periodo = {
+                "id": 77,
+                "ano_letivo": 2035,
+                "data_referencia": "2035-08-20",
+                "prazo_envio": "2035-08-19 18:00:00",
+                "titulo": "Prova bimestral",
+                "publico_alvo": "TODOS_PROFESSORES",
+                "tipo_entrega": "PROVA_BIMESTRAL",
+            }
+            painel = {
+                "periodo": {**periodo, "prazo_expirado": False},
+                "total_elegiveis": 2,
+                "total_enviados": 1,
+                "total_pendentes": 1,
+                "itens": [
+                    {
+                        "professor_nome": "Ana",
+                        "disciplina_nome": "Matematica",
+                        "turma_nome": "9A",
+                        "envio": {"enviado_em": "2035-08-18 10:00:00"},
+                    },
+                    {
+                        "professor_nome": "Bruno",
+                        "disciplina_nome": "Ciencias",
+                        "turma_nome": "9B",
+                        "envio": None,
+                    },
+                ],
+            }
+
+            with (
+                patch.object(apc_router, "listar_apc_periodos", return_value=[periodo]),
+                patch.object(apc_router, "_obter_elegiveis_periodo", return_value=[]),
+                patch.object(apc_router, "listar_apc_envios", return_value=[]),
+                patch.object(apc_router, "montar_painel_periodo_apc", return_value=painel),
+            ):
+                resposta = apc_router.listar_solicitacoes_gestao_apc_api(
+                    ano_letivo=2035,
+                    usuario=self._usuario_coord(),
+                )
+
+            self.assertEqual(resposta["ano_letivo"], 2035)
+            self.assertEqual(len(resposta["periodos"]), 1)
+            resumo = resposta["periodos"][0]
+            self.assertEqual(resumo["professores"], ["Ana", "Bruno"])
+            self.assertEqual(resumo["disciplinas"], ["Ciencias", "Matematica"])
+            self.assertEqual(resumo["turmas"], ["9A", "9B"])
+            self.assertEqual(resumo["ultimo_envio_em"], "2035-08-18 10:00:00")
 
 
 if __name__ == "__main__":

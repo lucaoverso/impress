@@ -1487,11 +1487,11 @@ class _RenderizadorRegistroOcorrencia:
         self._adicionar_titulo_secao(SECAO_DESCRICAO)
         self._adicionar_paragrafos(descricao, fonte=self.fontes.corpo)
         self._desenhar_linha()
-        if tipo_registro == TIPO_REGISTRO_ESTUDANTE and regimento_itens:
+        if regimento_itens:
             self._adicionar_secao_regimento(regimento_itens)
         elif tipo_registro == TIPO_REGISTRO_ESTUDANTE:
             self._adicionar_area_regimento_em_branco()
-        if tipo_registro == TIPO_REGISTRO_ESTUDANTE:
+        if tipo_registro == TIPO_REGISTRO_ESTUDANTE or regimento_itens:
             self._desenhar_linha()
 
         self._adicionar_paragrafos(

@@ -5,6 +5,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 
 from auth import get_usuario_logado
+from modules.occurrences import service as occurrence_pre_registration_service
 from db.catalogos import (
     buscar_turma_por_id,
     listar_disciplinas_ativas,
@@ -608,7 +609,7 @@ def _resolver_contexto_registro(
     return {
         "nome_estudante": _texto_obrigatorio(
             nome_estudante,
-            "Titulo do registro geral",
+            "Assunto ou pauta",
             max_len=255,
         ),
         "estudante_id": None,
@@ -925,8 +926,6 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
     regimento_item_ids = _normalizar_regimento_item_ids(payload.regimento_item_ids)
     if _registro_exige_base_legal(tipo_registro):
         regimento_item_ids = _exigir_regimento_item_ids(regimento_item_ids)
-    else:
-        regimento_item_ids = []
     regimento_itens = (
         buscar_regimento_itens_por_ids(regimento_item_ids) if regimento_item_ids else []
     )
@@ -954,6 +953,14 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
         if tipo_registro == TIPO_REGISTRO_ESTUDANTE
         else (_texto_opcional(payload.disciplina, max_len=255) or "")
     )
+    if payload.pre_registration_id is not None:
+        if tipo_registro != TIPO_REGISTRO_ESTUDANTE:
+            raise HTTPException(400, "Pre-registros so podem gerar ocorrencias de estudante.")
+        occurrence_pre_registration_service.validate_pre_registration_completion(
+            usuario,
+            payload.pre_registration_id,
+            contexto["estudante_id"],
+        )
 
     try:
         ocorrencia_id = criar_ocorrencia(
@@ -976,6 +983,12 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
+    if payload.pre_registration_id is not None:
+        occurrence_pre_registration_service.complete_pre_registration(
+            usuario,
+            payload.pre_registration_id,
+            ocorrencia_id,
+        )
     return _montar_resposta_ocorrencia(ocorrencia_id)
 
 
@@ -1199,10 +1212,6 @@ def atualizar_ocorrencia_parcial_api(
         )
         if _registro_exige_base_legal(tipo_registro_merge):
             regimento_item_ids_validados = _exigir_regimento_item_ids(regimento_item_ids_validados)
-        else:
-            regimento_item_ids_validados = []
-    elif "tipo_registro" in dados_brutos and not _registro_exige_base_legal(tipo_registro_merge):
-        regimento_item_ids_validados = []
     if "acao_aplicada" in dados_brutos:
         dados_validados["acao_aplicada"] = _validar_acao_aplicada_para_tipo(
             dados_brutos["acao_aplicada"],

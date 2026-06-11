@@ -13,6 +13,7 @@ from db.bootstrap import criar_tabelas, criar_usuario_se_nao_existir, seed_recur
 from ocorrencias_router import router as ocorrencias_router
 from pcpi_router import router as pcpi_router
 import modules.preconselho.router as preconselho_router_module
+import modules.occurrences.router as occurrences_router_module
 import routers.admin_router as admin_router_module
 import modules.scheduling.router as scheduling_router_module
 import routers.common as common_module
@@ -72,6 +73,7 @@ agendamento_router = scheduling_router_module.router
 professores_router = professores_router_module.router
 admin_router = admin_router_module.router
 preconselho_router = preconselho_router_module.router
+occurrences_router = occurrences_router_module.router
 
 root = system_router_module.root
 health = system_router_module.health
@@ -193,6 +195,7 @@ app.include_router(agendamento_router)
 app.include_router(professores_router)
 app.include_router(admin_router)
 app.include_router(ocorrencias_router)
+app.include_router(occurrences_router)
 app.include_router(pcpi_router)
 app.include_router(preconselho_router)
 

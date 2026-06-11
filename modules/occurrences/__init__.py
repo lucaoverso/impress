@@ -1,0 +1,1 @@
+"""Occurrences domain module."""

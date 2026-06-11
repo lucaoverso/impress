@@ -1,9 +1,9 @@
 .apc-page {
     grid-template-columns: minmax(0, 1fr);
-    width: min(1440px, 100%);
+    width: min(1280px, 100%);
     margin: 0 auto;
-    padding: 18px;
-    gap: 16px;
+    padding: 24px;
+    gap: 24px;
 }
 
 .apc-page [hidden],
@@ -13,15 +13,14 @@
 }
 
 .apc-topbar {
-    background:
-        linear-gradient(135deg, rgba(19, 53, 88, 0.98), rgba(25, 84, 126, 0.94)),
-        #12324d;
-    color: #ffffff;
-    border-radius: 24px;
-    padding: 22px 24px 20px;
-    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.18);
+    background: var(--surface-0);
+    color: var(--text-main);
+    border: 1px solid var(--line-soft);
+    border-radius: 18px;
+    padding: 24px;
+    box-shadow: var(--shadow-card);
     display: grid;
-    gap: 18px;
+    gap: 20px;
 }
 
 .apc-topbar-main {
@@ -33,28 +32,44 @@
 
 .apc-topbar-copy {
     display: grid;
-    gap: 8px;
+    gap: 6px;
+    max-width: 760px;
 }
 
 .apc-eyebrow {
     margin: 0;
-    font-size: 0.78rem;
+    width: fit-content;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background: var(--brand-soft);
+    color: var(--brand-strong);
+    font-size: 11px;
     font-weight: 800;
-    letter-spacing: 0.12em;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: rgba(255, 255, 255, 0.72);
 }
 
 .apc-topbar h1 {
     margin: 0;
-    font-size: clamp(1.8rem, 2.1vw, 2.35rem);
+    font-size: clamp(1.75rem, 2.4vw, 2rem);
     line-height: 1.08;
+}
+
+.apc-topbar-description {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 14px;
 }
 
 .apc-topbar-user {
     margin: 0;
-    color: rgba(255, 255, 255, 0.84);
-    display: block;
+    padding: 8px 12px;
+    border: 1px solid var(--line-soft);
+    border-radius: 999px;
+    background: var(--surface-1);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .apc-topbar-actions {
@@ -82,7 +97,7 @@
 
 .apc-topbar-grid {
     display: grid;
-    grid-template-columns: minmax(190px, 230px) minmax(0, 1fr);
+    grid-template-columns: minmax(190px, 230px) minmax(0, 1fr) auto;
     gap: 12px 16px;
     align-items: end;
 }
@@ -93,93 +108,234 @@
 }
 
 .apc-field label {
-    font-size: 0.82rem;
+    font-size: 14px;
     font-weight: 700;
-    color: rgba(255, 255, 255, 0.84);
+    color: var(--text-main);
 }
 
 .apc-field select {
     height: 44px;
-    border-radius: 14px;
-    border: 1px solid rgba(255, 255, 255, 0.24);
-    background: rgba(255, 255, 255, 0.98);
-    color: #143454;
+    border-radius: 12px;
+    border: 1px solid var(--line);
+    background: var(--surface-0);
+    color: var(--text-main);
     padding: 0 12px;
 }
 
 .apc-toolbar-note {
     min-height: 44px;
-    border-radius: 16px;
+    border-radius: 12px;
     padding: 12px 14px;
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.88);
+    background: var(--brand-soft);
+    border: 1px solid rgba(15, 118, 110, 0.16);
+    color: var(--brand-strong);
     display: flex;
     align-items: center;
+    font-size: 14px;
 }
 
 .apc-toolbar-message {
-    min-height: 20px;
+    min-height: 0;
     margin: 0;
-    font-size: 0.94rem;
-    color: #d9f99d;
+    padding: 0;
+    border-radius: 12px;
+    font-size: 14px;
+    color: var(--text-muted);
 }
 
-.apc-mode-tabs {
-    margin-top: 2px;
+.apc-toolbar-message:not(:empty) {
+    min-height: 44px;
+    padding: 11px 14px;
+    border: 1px solid var(--line-soft);
+    background: var(--surface-1);
+}
+
+.apc-toolbar-message.is-success {
+    border-color: #bbf7d0;
+    background: #dcfce7;
+    color: #166534;
+}
+
+.apc-toolbar-message.is-error {
+    border-color: #fecaca;
+    background: #fee2e2;
+    color: #991b1b;
+}
+
+.apc-calendar-toggle {
+    min-height: 44px;
+    padding: 0 16px;
+    border-color: var(--brand);
+    background: var(--surface-0);
+    color: var(--brand-strong);
+}
+
+.apc-calendar-toggle:hover {
+    background: var(--brand-soft);
+    border-color: var(--brand-strong);
 }
 
 .apc-content {
-    grid-template-columns: minmax(0, 1.55fr) minmax(290px, 0.78fr);
+    grid-template-columns: minmax(0, 1fr);
     align-items: start;
+    gap: 24px;
 }
 
-.apc-overview-card {
-    grid-column: 1;
-    grid-row: 1;
-    display: grid;
-    gap: 12px;
-}
-
-.apc-calendar-card {
-    grid-column: 2;
-    grid-row: 1;
-    align-self: start;
-}
-
-.apc-detail-card {
-    grid-column: 1 / span 2;
+.apc-calendar-drawer {
+    grid-column: 1 / -1;
     grid-row: 2;
 }
 
+.apc-calendar-card {
+    align-self: start;
+    padding: 20px;
+}
+
+.apc-detail-card {
+    grid-column: 1 / -1;
+    grid-row: 1;
+    padding: 24px;
+}
+
+.apc-section-eyebrow {
+    margin: 0 0 4px;
+    color: var(--brand);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.apc-calendar-card h2 {
+    margin: 0;
+    font-size: 18px;
+}
+
 .apc-page.is-professor .apc-content {
-    grid-template-columns: minmax(0, 1.55fr) minmax(290px, 0.78fr);
+    grid-template-columns: minmax(0, 1fr);
 }
 
 .apc-page.is-professor .apc-calendar-card,
-.apc-page.is-professor .apc-overview-card,
 .apc-page.is-professor .apc-detail-card {
     position: static;
 }
 
-.apc-page.is-professor .apc-overview-card {
-    grid-column: 1;
-    grid-row: 1;
-}
-
-.apc-page.is-professor .apc-calendar-card {
-    grid-column: 2;
-    grid-row: 1;
+.apc-page.is-professor .apc-calendar-drawer {
+    grid-column: 1 / -1;
+    grid-row: 2;
 }
 
 .apc-page.is-professor .apc-detail-card {
-    grid-column: 1 / span 2;
-    grid-row: 2;
+    grid-column: 1 / -1;
+    grid-row: 1;
 }
 
 .apc-calendar-card .calendar-day {
     min-height: 68px;
     padding: 6px;
+}
+
+body.apc-calendar-drawer-open {
+    overflow: hidden;
+}
+
+.apc-page.is-docente-mode .apc-calendar-drawer {
+    position: fixed;
+    inset: 0;
+    z-index: 1250;
+    display: grid;
+    justify-items: end;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+}
+
+.apc-page.is-docente-mode .apc-calendar-drawer[hidden] {
+    display: none !important;
+}
+
+.apc-page.is-docente-mode .apc-calendar-drawer.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.apc-calendar-backdrop {
+    display: none;
+}
+
+.apc-page.is-docente-mode .apc-calendar-backdrop {
+    position: absolute;
+    inset: 0;
+    display: block;
+    background: rgba(15, 23, 42, 0.42);
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    transition: opacity 0.22s ease;
+}
+
+.apc-page.is-docente-mode .apc-calendar-card {
+    position: relative;
+    width: min(520px, 100%);
+    height: 100%;
+    border-radius: 0;
+    border-top: 0;
+    border-right: 0;
+    border-bottom: 0;
+    overflow-y: auto;
+    outline: none;
+    opacity: 0;
+    transform: translateX(32px);
+    box-shadow: -24px 0 48px rgba(15, 23, 42, 0.18);
+    transition: transform 0.26s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.22s ease;
+}
+
+.apc-page.is-docente-mode .apc-calendar-drawer.is-visible .apc-calendar-backdrop,
+.apc-page.is-docente-mode .apc-calendar-drawer.is-visible .apc-calendar-card {
+    opacity: 1;
+}
+
+.apc-page.is-docente-mode .apc-calendar-drawer.is-visible .apc-calendar-card {
+    transform: translateX(0);
+}
+
+.apc-calendar-drawer-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.apc-calendar-drawer-header h2,
+.apc-calendar-drawer-header p {
+    margin: 0;
+}
+
+.apc-calendar-drawer-header button {
+    min-height: 40px;
+    padding: 0 14px;
+}
+
+.apc-page.is-gestao-mode .apc-calendar-drawer-header {
+    display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .apc-page.is-docente-mode .apc-calendar-drawer,
+    .apc-page.is-docente-mode .apc-calendar-backdrop,
+    .apc-page.is-docente-mode .apc-calendar-card {
+        transition: none;
+    }
+}
+
+.apc-calendar-card .calendar-day.is-readonly {
+    cursor: default;
+}
+
+.apc-calendar-card .calendar-day.is-readonly:hover {
+    border-color: var(--line-soft);
+    box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+    transform: none;
 }
 
 .apc-calendar-card .calendar-header {
@@ -298,9 +454,180 @@
     margin: 0;
 }
 
+.apc-gestao-actions .btn-destaque {
+    min-height: 46px;
+    padding-inline: 20px;
+}
+
+.apc-gestao-filtros {
+    padding: 16px;
+    border: 1px solid var(--line-soft);
+    border-radius: 18px;
+    background: var(--surface-1);
+    display: grid;
+    grid-template-columns: minmax(220px, 1.4fr) repeat(5, minmax(140px, 1fr));
+    gap: 12px;
+    align-items: end;
+}
+
+.apc-gestao-filtros .apc-field input,
+.apc-gestao-filtros .apc-field select {
+    width: 100%;
+    min-height: 44px;
+}
+
 .apc-detail-card {
     display: grid;
+    gap: 20px;
+}
+
+.apc-docente-workspace {
+    display: grid;
+    grid-template-columns: minmax(280px, 0.78fr) minmax(0, 1.22fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.apc-page.is-gestao-mode .apc-docente-workspace {
+    grid-template-columns: minmax(300px, 0.78fr) minmax(0, 1.22fr);
+}
+
+.apc-solicitacoes-column,
+.apc-docente-detalhe,
+.apc-gestao-detalhe {
+    min-width: 0;
+    border: 1px solid var(--line-soft);
+    border-radius: 18px;
+    background: var(--surface-0);
+}
+
+.apc-solicitacoes-column {
+    padding: 18px;
+    display: grid;
+    gap: 16px;
+}
+
+.apc-column-header h2,
+.apc-column-header p,
+.apc-docente-detalhe-header h2,
+.apc-docente-detalhe-header p {
+    margin: 0;
+}
+
+.apc-column-header h2,
+.apc-docente-detalhe-header h2 {
+    font-size: 18px;
+}
+
+.apc-column-header p:last-child,
+.apc-docente-detalhe-header p:last-child {
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.apc-docente-detalhe,
+.apc-gestao-detalhe {
+    position: sticky;
+    top: 16px;
+    min-height: 280px;
+    padding: 20px;
+    display: grid;
+    gap: 16px;
+}
+
+.apc-docente-detalhe-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+}
+
+.apc-gestao-detalhe-header h2,
+.apc-gestao-detalhe-header p {
+    margin: 0;
+}
+
+.apc-gestao-detalhe-header h2 {
+    font-size: 18px;
+}
+
+.apc-gestao-detalhe-header p:last-child {
+    margin-top: 4px;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.apc-docente-detalhe > .apc-accordion-body {
+    border-top: 1px solid var(--line-soft);
+    padding: 16px 0 0;
+    background: transparent;
+}
+
+.apc-pendencia-card {
+    padding: 16px;
+    border: 1px solid var(--line-soft);
+    border-radius: 16px;
+    background: var(--surface-0);
+    display: grid;
     gap: 14px;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+}
+
+.apc-pendencia-card:hover {
+    border-color: var(--line-strong);
+    box-shadow: var(--shadow-sm, 0 2px 6px rgba(15, 23, 42, 0.06));
+}
+
+.apc-pendencia-card.is-selected {
+    border-color: rgba(15, 118, 110, 0.34);
+    background: var(--brand-soft);
+    box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.08);
+}
+
+.apc-pendencia-card-topo {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.apc-pendencia-card-copy {
+    display: grid;
+    gap: 5px;
+    min-width: 0;
+}
+
+.apc-pendencia-card-copy h3,
+.apc-pendencia-card-copy p {
+    margin: 0;
+}
+
+.apc-pendencia-card-copy h3 {
+    font-size: 16px;
+}
+
+.apc-pendencia-card-copy p,
+.apc-pendencia-card-meta {
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.apc-pendencia-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+}
+
+.apc-pendencia-card > button {
+    min-height: 44px;
+    padding: 0 14px;
+}
+
+.apc-demanda-dimensoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
 body.apc-modal-open {
@@ -439,19 +766,6 @@ body.apc-modal-open {
     flex-shrink: 0;
 }
 
-.apc-solicitacao-chevron {
-    width: 34px;
-    height: 34px;
-    border-radius: 999px;
-    background: rgba(19, 53, 88, 0.08);
-    color: #21446b;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.94rem;
-    font-weight: 800;
-}
-
 .apc-solicitacao-item[open] .apc-solicitacao-chevron {
     transform: rotate(180deg);
 }
@@ -478,24 +792,28 @@ body.apc-modal-open {
     background: rgba(255, 255, 255, 0.88);
 }
 
-.apc-resumo-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 10px;
-    margin-bottom: 14px;
+.apc-resumo-compacto {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
-.apc-resumo-item {
+.apc-resumo-compacto-item {
+    min-height: 34px;
+    padding: 6px 10px;
     border: 1px solid var(--line-soft);
-    border-radius: 14px;
-    padding: 12px;
+    border-radius: 999px;
     background: var(--surface-1);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-muted);
+    font-size: 12px;
 }
 
-.apc-resumo-item strong {
-    display: block;
-    font-size: 1.2rem;
-    margin-top: 4px;
+.apc-resumo-compacto-item strong {
+    color: var(--text-main);
+    font-size: 13px;
 }
 
 .apc-lista-painel {
@@ -671,6 +989,99 @@ body.apc-modal-open {
     color: var(--ink-soft);
 }
 
+body.apc-file-preview-open {
+    overflow: hidden;
+}
+
+body.apc-print-wizard-open {
+    overflow: hidden;
+}
+
+.apc-file-preview-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1300;
+    padding: 24px;
+    display: grid;
+    place-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+}
+
+.apc-file-preview-modal[hidden] {
+    display: none !important;
+}
+
+.apc-file-preview-modal [hidden] {
+    display: none !important;
+}
+
+.apc-file-preview-modal.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.apc-file-preview-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: rgba(15, 23, 42, 0.72);
+    backdrop-filter: blur(5px);
+}
+
+.apc-file-preview-panel {
+    position: relative;
+    z-index: 2;
+    width: min(1440px, 96vw);
+    height: min(920px, 94vh);
+    padding: 20px;
+    border: 1px solid var(--line-soft);
+    border-radius: 20px;
+    background: var(--surface-0);
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.32);
+    display: flex;
+    
+    gap: 16px;
+    outline: none;
+    transform: translateY(12px) scale(0.99);
+    transition: transform 0.22s ease;
+}
+
+.apc-file-preview-modal.is-visible .apc-file-preview-panel {
+    transform: translateY(0) scale(1);
+}
+
+.apc-file-preview-header {
+    display: flex;
+    flex-direction: column; 
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+
+}
+
+.apc-file-preview-header .apc-arquivo-preview-meta {
+    min-width: 0;
+}
+
+.apc-file-preview-header h2 {
+    margin: 0;
+    font-size: 20px;
+    overflow-wrap: anywhere;
+}
+
+.apc-file-preview-content {
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid var(--line-soft);
+    border-radius: 16px;
+    background: var(--surface-2);
+    display: grid;
+    place-items: stretch;
+    width: 100%;
+}
+
 .apc-arquivo-preview-card {
     min-height: 520px;
     display: grid;
@@ -688,19 +1099,23 @@ body.apc-modal-open {
 }
 
 .apc-arquivo-preview-state {
+    height: 100%;
     border: 1px dashed rgba(19, 53, 88, 0.18);
     border-radius: 14px;
     padding: 14px;
     background: rgba(255, 255, 255, 0.8);
+    display: grid;
+    place-items: center;
 }
 
 .apc-arquivo-preview-frame,
 .apc-arquivo-preview-image,
 .apc-arquivo-preview-text {
     width: 100%;
-    min-height: 420px;
-    border: 1px solid var(--line-soft);
-    border-radius: 14px;
+    height: 100%;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
     background: #ffffff;
 }
 
@@ -710,7 +1125,7 @@ body.apc-modal-open {
 
 .apc-arquivo-preview-image {
     object-fit: contain;
-    padding: 12px;
+    padding: 20px;
 }
 
 .apc-arquivo-preview-text {
@@ -720,6 +1135,234 @@ body.apc-modal-open {
     white-space: pre-wrap;
     font-family: "Courier New", monospace;
     font-size: 0.88rem;
+}
+
+.apc-print-wizard-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1350;
+    padding: 24px;
+    display: grid;
+    place-items: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.22s ease;
+}
+
+.apc-print-wizard-modal[hidden],
+.apc-print-wizard-modal [hidden] {
+    display: none !important;
+}
+
+.apc-print-wizard-modal.is-visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.apc-print-wizard-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    background: rgba(15, 23, 42, 0.72);
+    backdrop-filter: blur(5px);
+}
+
+.apc-print-wizard-panel {
+    position: relative;
+    z-index: 2;
+    width: min(860px, 96vw);
+    max-height: 94vh;
+    overflow: auto;
+    padding: 24px;
+    border: 1px solid var(--line-soft);
+    border-radius: 20px;
+    background: var(--surface-0);
+    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.32);
+    outline: none;
+    transform: translateY(12px) scale(0.99);
+    transition: transform 0.22s ease;
+}
+
+.apc-print-wizard-modal.is-visible .apc-print-wizard-panel {
+    transform: translateY(0) scale(1);
+}
+
+.apc-print-wizard-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.apc-print-wizard-header h2,
+.apc-print-wizard-header p {
+    margin: 0;
+}
+
+.apc-print-wizard-header #apcPrintWizardArquivo {
+    margin-top: 5px;
+    color: var(--ink-soft);
+    overflow-wrap: anywhere;
+}
+
+.apc-print-stepper {
+    margin: 22px 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+}
+
+.apc-print-stepper li {
+    padding: 10px 12px;
+    border: 1px solid var(--line-soft);
+    border-radius: 12px;
+    color: var(--ink-soft);
+    background: var(--surface-2);
+    font-size: 0.88rem;
+    font-weight: 700;
+}
+
+.apc-print-stepper li.is-current {
+    border-color: rgba(19, 53, 88, 0.32);
+    color: var(--brand-strong);
+    background: rgba(19, 53, 88, 0.08);
+}
+
+.apc-print-stepper li.is-complete {
+    border-color: rgba(15, 118, 110, 0.28);
+    color: #0f766e;
+    background: rgba(15, 118, 110, 0.08);
+}
+
+.apc-print-wizard-form,
+.apc-print-step {
+    display: grid;
+    gap: 14px;
+}
+
+.apc-print-step {
+    min-height: 250px;
+    align-content: start;
+    padding: 20px;
+    border: 1px solid var(--line-soft);
+    border-radius: 16px;
+    background: #ffffff;
+}
+
+.apc-print-step header h3,
+.apc-print-step header p {
+    margin: 0;
+}
+
+.apc-print-step header p,
+.apc-inline-hint {
+    color: var(--ink-soft);
+}
+
+.apc-inline-hint {
+    margin: -8px 0 0;
+    font-size: 0.84rem;
+}
+
+.apc-print-config-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.apc-print-checkbox,
+.apc-print-tag {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    cursor: pointer;
+}
+
+.apc-print-checkbox input,
+.apc-print-tag input {
+    width: 18px;
+    height: 18px;
+    margin: 0;
+}
+
+.apc-print-tags-fieldset {
+    margin: 0;
+    padding: 14px;
+    border: 1px solid var(--line-soft);
+    border-radius: 14px;
+}
+
+.apc-print-tags-fieldset legend {
+    padding: 0 6px;
+    font-weight: 700;
+}
+
+.apc-print-tags-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 9px;
+}
+
+.apc-print-tag {
+    padding: 9px 12px;
+    border: 1px solid var(--line-soft);
+    border-radius: 999px;
+    background: var(--surface-2);
+    font-size: 0.9rem;
+}
+
+.apc-print-tag:has(input:checked) {
+    border-color: rgba(19, 53, 88, 0.32);
+    color: var(--brand-strong);
+    background: rgba(19, 53, 88, 0.08);
+}
+
+.apc-print-summary {
+    margin: 0;
+    display: grid;
+    grid-template-columns: minmax(130px, 0.35fr) minmax(0, 1fr);
+    gap: 0;
+    border: 1px solid var(--line-soft);
+    border-radius: 14px;
+    overflow: hidden;
+}
+
+.apc-print-summary dt,
+.apc-print-summary dd {
+    margin: 0;
+    padding: 11px 13px;
+    border-bottom: 1px solid var(--line-soft);
+}
+
+.apc-print-summary dt {
+    font-weight: 700;
+    background: var(--surface-2);
+}
+
+.apc-print-summary dd {
+    overflow-wrap: anywhere;
+}
+
+.apc-print-summary dt:last-of-type,
+.apc-print-summary dd:last-of-type {
+    border-bottom: 0;
+}
+
+.apc-print-wizard-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .apc-file-preview-modal,
+    .apc-file-preview-panel,
+    .apc-print-wizard-modal,
+    .apc-print-wizard-panel {
+        transition: none;
+    }
 }
 
 .apc-arquivo-preview-actions {
@@ -910,23 +1553,40 @@ body.apc-modal-open {
         grid-template-columns: 1fr;
     }
 
-    .apc-overview-card,
     .apc-calendar-card,
     .apc-detail-card {
         grid-column: 1;
         grid-row: auto;
         position: static;
     }
+
+    .apc-docente-workspace {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .apc-docente-detalhe,
+    .apc-gestao-detalhe {
+        position: static;
+    }
+
+    .apc-gestao-filtros {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .apc-gestao-busca {
+        grid-column: span 2;
+    }
 }
 
 @media (max-width: 780px) {
     .apc-page {
-        padding: 12px;
+        padding: 16px;
+        gap: 16px;
     }
 
     .apc-topbar {
-        padding: 18px 16px;
-        border-radius: 20px;
+        padding: 20px 16px;
+        border-radius: 18px;
     }
 
     .apc-topbar-main {
@@ -944,6 +1604,132 @@ body.apc-modal-open {
 
     .apc-topbar-grid {
         grid-template-columns: 1fr;
+    }
+
+    .apc-calendar-toggle {
+        width: 100%;
+    }
+
+    .apc-topbar-user {
+        width: fit-content;
+        border-radius: 12px;
+    }
+
+    .apc-calendar-card,
+    .apc-detail-card {
+        padding: 16px;
+    }
+
+    .apc-solicitacoes-column,
+    .apc-docente-detalhe,
+    .apc-gestao-detalhe {
+        padding: 16px;
+        border-radius: 16px;
+    }
+
+    .apc-gestao-filtros {
+        grid-template-columns: 1fr;
+    }
+
+    .apc-gestao-busca {
+        grid-column: auto;
+    }
+
+    .apc-docente-detalhe-header,
+    .apc-pendencia-card-topo {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+
+    .apc-professor-card-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .apc-calendar-card .calendar-grid {
+        gap: 4px;
+    }
+
+    .apc-calendar-card .calendar-header {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+    }
+
+    .apc-calendar-card .calendar-header h2 {
+        text-align: center;
+    }
+
+    .apc-calendar-card #btnApcMesHoje {
+        grid-column: 1 / -1;
+        width: 100%;
+    }
+
+    .apc-calendar-card .calendar-day {
+        min-height: 52px;
+        padding: 5px;
+    }
+
+    .apc-calendar-card .apc-calendar-flag {
+        display: none;
+    }
+
+    .apc-calendar-card .calendar-count {
+        font-size: 9px;
+    }
+
+    .apc-file-preview-modal {
+        padding: 0;
+    }
+
+    .apc-file-preview-panel {
+        width: 100%;
+        height: 100%;
+        padding: 14px;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .apc-file-preview-header {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+
+    .apc-file-preview-header .apc-inline-actions {
+        width: 100%;
+    }
+
+    .apc-file-preview-header .apc-inline-actions button {
+        flex: 1 1 0;
+        min-height: 44px;
+    }
+
+    .apc-print-wizard-modal {
+        padding: 12px;
+    }
+
+    .apc-print-wizard-panel {
+        width: 100%;
+        max-height: calc(100vh - 24px);
+        padding: 18px;
+    }
+
+    .apc-print-wizard-header {
+        display: grid;
+        grid-template-columns: 1fr auto;
+    }
+
+    .apc-print-stepper li {
+        padding: 9px 7px;
+        font-size: 0.78rem;
+        text-align: center;
+    }
+
+    .apc-print-config-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .apc-print-wizard-actions button {
+        flex: 1 1 0;
     }
 
     .apc-gestao-actions,
@@ -974,5 +1760,33 @@ body.apc-modal-open {
 @media (max-width: 640px) {
     .apc-solicitacao-summary {
         flex-direction: column;
+    }
+
+    .apc-print-wizard-modal {
+        padding: 0;
+    }
+
+    .apc-print-wizard-panel {
+        min-height: 100%;
+        max-height: 100%;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .apc-print-step {
+        padding: 15px;
+    }
+
+    .apc-print-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .apc-print-summary dt {
+        border-bottom: 0;
+        padding-bottom: 3px;
+    }
+
+    .apc-print-summary dd {
+        padding-top: 3px;
     }
 }

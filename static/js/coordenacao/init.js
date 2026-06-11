@@ -1,11 +1,11 @@
 async function validarAcessoGestao() {
     const usuario = await fetchJson("/me", { headers });
-    const ehGestor = window.AppAuth.modulosPermitidos(usuario).has("coordenacao");
-    if (!ehGestor) {
+    const temAcesso = window.AppAuth.modulosPermitidos(usuario).has("coordenacao");
+    if (!temAcesso) {
         window.location.href = "/servicos";
-        return false;
+        return null;
     }
-    return true;
+    return usuario;
 }
 
 function registrarEventosAbas() {
@@ -39,20 +39,22 @@ function registrarEventosEditorDescricao() {
 
 function registrarEventosOcorrencias() {
     el("formFiltrosOcorrencias").addEventListener("submit", filtrarOcorrencias);
-    el("formOcorrencia").addEventListener("submit", salvarOcorrencia);
+    el("formOcorrencia").addEventListener("submit", (event) => {
+        if (etapaFormularioOcorrencia < 3) {
+            event.preventDefault();
+            if (validarEtapaFormularioOcorrencia(etapaFormularioOcorrencia)) {
+                ativarEtapaFormularioOcorrencia(etapaFormularioOcorrencia + 1, { focar: true });
+            }
+            return;
+        }
+        salvarOcorrencia(event);
+    });
     el("formOcorrencia").addEventListener("input", atualizarPreviewOcorrencia);
     el("formOcorrencia").addEventListener("change", atualizarPreviewOcorrencia);
     registrarEventosEditorDescricao();
     el("btnLimparFiltros").addEventListener("click", limparFiltrosOcorrencias);
     el("btnNovaOcorrencia").addEventListener("click", () => {
-        const painelAberto = painelFormularioOcorrenciaAberto();
-        if (painelAberto && !ocorrenciaEmEdicaoId) {
-            limparFormularioOcorrencia();
-            return;
-        }
-
         limparFormularioOcorrencia({ manterAberto: true });
-        mostrarPainelFormularioOcorrencia({ scroll: true });
         el("ocorrenciaBuscaEstudante").focus();
     });
     el("btnFecharPainelOcorrencia").addEventListener("click", () => {
@@ -60,6 +62,36 @@ function registrarEventosOcorrencias() {
     });
     el("btnCancelarEdicaoOcorrencia").addEventListener("click", () => {
         limparFormularioOcorrencia();
+    });
+    el("btnContinuarEtapaOcorrencia").addEventListener("click", () => {
+        if (validarEtapaFormularioOcorrencia(etapaFormularioOcorrencia)) {
+            ativarEtapaFormularioOcorrencia(etapaFormularioOcorrencia + 1, { focar: true });
+        }
+    });
+    el("btnVoltarEtapaOcorrencia").addEventListener("click", () => {
+        ativarEtapaFormularioOcorrencia(etapaFormularioOcorrencia - 1, { focar: true });
+    });
+    document.querySelectorAll("[data-ocorrencia-step-trigger]").forEach((botao) => {
+        botao.addEventListener("click", () => {
+            const etapa = Number(botao.dataset.ocorrenciaStepTrigger);
+            if (etapa > etapaFormularioOcorrencia && !podeAcessarEtapaFormularioOcorrencia(etapa)) return;
+            ativarEtapaFormularioOcorrencia(etapa, { focar: true });
+        });
+    });
+    document.querySelectorAll("[data-ocorrencia-view]").forEach((botao) => {
+        botao.addEventListener("click", () => {
+            alternarVisualizacaoMobileOcorrencia(botao.dataset.ocorrenciaView);
+        });
+    });
+    el("painelFormOcorrencia").addEventListener("click", (event) => {
+        if (event.target.matches("[data-fechar-modal-ocorrencia]")) {
+            limparFormularioOcorrencia();
+        }
+    });
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && painelFormularioOcorrenciaAberto()) {
+            limparFormularioOcorrencia();
+        }
     });
 
     el("ocorrenciaBuscaEstudante").addEventListener("input", () => {
@@ -196,15 +228,30 @@ function registrarEventosGerais() {
 
 async function init() {
     try {
-        const autorizado = await validarAcessoGestao();
-        if (!autorizado) return;
+        usuarioCoordenacaoAtual = await validarAcessoGestao();
+        if (!usuarioCoordenacaoAtual) return;
 
+        registrarEventosGerais();
+        const contextoPreRegistros = await carregarContextoPreRegistros(false);
+        const ehGestor = Boolean(contextoPreRegistros.is_manager);
+        if (!ehGestor) {
+            document.querySelector(".coordenacao-tabs")?.setAttribute("hidden", "");
+            document.querySelector(".coordenacao-tab-panels")?.setAttribute("hidden", "");
+            el("painelProfessorPreRegistro").hidden = false;
+            registrarEventosPreRegistrosProfessor();
+            await carregarContextoPreRegistros(false);
+            await carregarPreRegistros();
+            return;
+        }
+
+        el("painelProfessorPreRegistro").hidden = true;
         registrarEventosAbas();
         registrarEventosOcorrencias();
         registrarEventosRelatorios();
         registrarEventosEstudantes();
         registrarEventosRegimento();
-        registrarEventosGerais();
+        registrarEventosPreRegistrosGestao();
+        renderMotivosGestao();
 
         await carregarOpcoesOcorrencias();
         limparFormularioOcorrencia();
@@ -218,7 +265,8 @@ async function init() {
             carregarOcorrencias(),
             carregarEstudantes(),
             carregarCatalogosBaseLegal(),
-            carregarRegimentoItens()
+            carregarRegimentoItens(),
+            carregarPreRegistros({ manager: true })
         ]);
     } catch (err) {
         setMensagemOcorrencias(err.message || "Erro ao carregar modulo de coordenacao.", true);
