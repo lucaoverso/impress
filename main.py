@@ -6,7 +6,6 @@ from datetime import datetime, UTC
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
-from fastapi.staticfiles import StaticFiles
 
 from app_logging import setup_logging
 from auth import router as auth_router
@@ -29,6 +28,7 @@ import routers.professores_router as professores_router_module
 import routers.system_router as system_router_module
 from services.auth_service import hash_senha
 from services.worker import worker_loop
+from static_files import CachedStaticFiles
 
 setup_logging()
 logger = logging.getLogger(__name__)
@@ -196,4 +196,4 @@ app.include_router(ocorrencias_router)
 app.include_router(pcpi_router)
 app.include_router(preconselho_router)
 
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+app.mount("/static", CachedStaticFiles(directory=str(STATIC_DIR)), name="static")

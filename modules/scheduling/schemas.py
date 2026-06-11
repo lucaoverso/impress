@@ -15,6 +15,9 @@ class SchedulingResourceOption(BaseModel):
     id: int
     nome: str
     tipo: str
+    descricao: str = ""
+    quantidade_itens: int = 1
+    imagem_capa: str = ""
     ativo: bool = True
 
 

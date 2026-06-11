@@ -73,6 +73,9 @@ class SchedulingRouterIntegrationTest(unittest.TestCase):
                 self.assertIn("id", recursos[0])
                 self.assertIn("nome", recursos[0])
                 self.assertIn("tipo", recursos[0])
+                self.assertIn("descricao", recursos[0])
+                self.assertEqual(recursos[0].get("quantidade_itens"), 1)
+                self.assertIn("imagem_capa", recursos[0])
 
                 opcoes_resp = client.get("/agendamento/opcoes", headers=headers)
                 self.assertEqual(opcoes_resp.status_code, 200)
