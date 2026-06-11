@@ -16,8 +16,8 @@ class ReasonUpdate(BaseModel):
 
 
 class PreRegistrationCreate(BaseModel):
-    student_id: int
-    reason_id: int
+    student_ids: list[int]
+    reason_ids: list[int]
     responsible_contact: ResponsibleContact
 
 

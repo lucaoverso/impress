@@ -12,6 +12,7 @@ const PRE_REGISTRATION_STATUS_LABELS = {
 
 let motivosPreRegistroCache = [];
 let timerBuscaEstudantePreRegistro = null;
+let estudantesPreRegistroSelecionados = [];
 
 function setMensagemPreRegistro(id, texto, erro = false) {
     const target = el(id);
@@ -22,15 +23,62 @@ function setMensagemPreRegistro(id, texto, erro = false) {
 
 function preencherMotivosPreRegistro(motivos) {
     motivosPreRegistroCache = Array.isArray(motivos) ? motivos : [];
-    const select = el("preRegistroMotivoId");
-    if (!select) return;
-    select.innerHTML = '<option value="">Selecione um motivo cadastrado</option>';
+    const container = el("preRegistroMotivos");
+    if (!container) return;
+    container.innerHTML = "";
     motivosPreRegistroCache.filter((motivo) => Boolean(motivo.active)).forEach((motivo) => {
-        const option = document.createElement("option");
-        option.value = String(motivo.id);
-        option.innerText = motivo.name;
-        select.appendChild(option);
+        const label = document.createElement("label");
+        const input = document.createElement("input");
+        const text = document.createElement("span");
+        input.type = "checkbox";
+        input.name = "preRegistroMotivo";
+        input.value = String(motivo.id);
+        text.innerText = motivo.name;
+        label.append(input, text);
+        container.appendChild(label);
     });
+}
+
+function renderEstudantesPreRegistroSelecionados() {
+    const container = el("preRegistroEstudantesSelecionados");
+    if (!container) return;
+    container.innerHTML = "";
+    if (!estudantesPreRegistroSelecionados.length) {
+        const empty = document.createElement("p");
+        empty.className = "coordenacao-empty-state";
+        empty.innerText = "Nenhum estudante selecionado.";
+        container.appendChild(empty);
+        return;
+    }
+    estudantesPreRegistroSelecionados.forEach((student) => {
+        const item = document.createElement("div");
+        item.className = "coordenacao-pre-selected-item";
+        const text = document.createElement("span");
+        text.innerText = `${student.nome} - ${student.turma_nome || "Sem turma"}`;
+        const remove = document.createElement("button");
+        remove.type = "button";
+        remove.setAttribute("aria-label", `Remover ${student.nome}`);
+        remove.innerText = "Remover";
+        remove.addEventListener("click", () => {
+            estudantesPreRegistroSelecionados = estudantesPreRegistroSelecionados.filter(
+                (itemSelecionado) => Number(itemSelecionado.id) !== Number(student.id)
+            );
+            renderEstudantesPreRegistroSelecionados();
+        });
+        item.append(text, remove);
+        container.appendChild(item);
+    });
+}
+
+function adicionarEstudantePreRegistro(student) {
+    if (!estudantesPreRegistroSelecionados.some(
+        (item) => Number(item.id) === Number(student.id)
+    )) {
+        estudantesPreRegistroSelecionados.push(student);
+    }
+    el("preRegistroBuscaEstudante").value = "";
+    el("listaPreRegistroEstudantes").hidden = true;
+    renderEstudantesPreRegistroSelecionados();
 }
 
 function renderSugestoesEstudantesPreRegistro(estudantes) {
@@ -53,9 +101,7 @@ function renderSugestoesEstudantesPreRegistro(estudantes) {
         turma.innerText = estudante.turma_nome || "Sem turma";
         botao.append(nome, turma);
         botao.addEventListener("click", () => {
-            el("preRegistroEstudanteId").value = String(estudante.id);
-            el("preRegistroBuscaEstudante").value = estudante.label;
-            lista.hidden = true;
+            adicionarEstudantePreRegistro(estudante);
         });
         lista.appendChild(botao);
     });
@@ -86,7 +132,8 @@ function criarCardPreRegistro(item, { manager = false } = {}) {
     const header = document.createElement("div");
     header.className = "coordenacao-pre-registration-item-header";
     const title = document.createElement("strong");
-    title.innerText = item.student_name;
+    title.innerText = (item.students || []).map((student) => student.name).join(", ")
+        || item.student_name;
     const status = document.createElement("span");
     status.className = `status-chip status-${item.status === "completed" ? "resolvido" : "aguardando_responsavel"}`;
     status.innerText = PRE_REGISTRATION_STATUS_LABELS[item.status] || item.status;
@@ -95,11 +142,13 @@ function criarCardPreRegistro(item, { manager = false } = {}) {
     const meta = document.createElement("div");
     meta.className = "coordenacao-pre-registration-meta";
     [
-        `Turma: ${item.class_name || "Sem turma"}`,
-        `Motivo: ${item.reason_name}`,
+        `Turma(s): ${[...new Set((item.students || []).map((student) => student.class_name).filter(Boolean))].join(", ") || item.class_name || "Sem turma"}`,
+        `Motivo(s): ${(item.reasons || []).map((reason) => reason.name).join(", ") || item.reason_name}`,
+        item.discipline ? `Disciplina: ${item.discipline}` : "",
+        item.lesson ? `Aula: ${item.lesson}` : "",
         PRE_REGISTRATION_CONTACT_LABELS[item.responsible_contact] || item.responsible_contact,
         manager ? `Professor: ${item.professor_name}` : "",
-        `Enviado em: ${formatarDataHora(item.created_at)}`
+        `Registrado em: ${formatarDataHora(item.occurred_at || item.created_at)}`
     ].filter(Boolean).forEach((texto) => {
         const linha = document.createElement("span");
         linha.innerText = texto;
@@ -143,30 +192,33 @@ async function carregarPreRegistros({ manager = false } = {}) {
 
 async function salvarPreRegistroProfessor(event) {
     event.preventDefault();
-    const studentId = Number(el("preRegistroEstudanteId").value || 0);
-    const reasonId = Number(el("preRegistroMotivoId").value || 0);
+    const studentIds = estudantesPreRegistroSelecionados.map((student) => Number(student.id));
+    const reasonIds = Array.from(
+        document.querySelectorAll('[name="preRegistroMotivo"]:checked')
+    ).map((input) => Number(input.value));
     const contact = document.querySelector('[name="preRegistroContatoResponsavel"]:checked')?.value || "none";
-    if (studentId <= 0) {
-        setMensagemPreRegistro("msgPreRegistroProfessor", "Selecione um estudante da lista.", true);
+    if (!studentIds.length) {
+        setMensagemPreRegistro("msgPreRegistroProfessor", "Selecione pelo menos um estudante.", true);
         el("preRegistroBuscaEstudante").focus();
         return;
     }
-    if (reasonId <= 0) {
-        setMensagemPreRegistro("msgPreRegistroProfessor", "Selecione o motivo do pre-registro.", true);
-        el("preRegistroMotivoId").focus();
+    if (!reasonIds.length) {
+        setMensagemPreRegistro("msgPreRegistroProfessor", "Marque pelo menos um motivo.", true);
+        el("preRegistroMotivos").querySelector("input")?.focus();
         return;
     }
     await fetchJson("/occurrences/pre-registrations", {
         method: "POST",
         headers: headersJson,
         body: JSON.stringify({
-            student_id: studentId,
-            reason_id: reasonId,
+            student_ids: studentIds,
+            reason_ids: reasonIds,
             responsible_contact: contact
         })
     });
     el("formPreRegistroProfessor").reset();
-    el("preRegistroEstudanteId").value = "";
+    estudantesPreRegistroSelecionados = [];
+    renderEstudantesPreRegistroSelecionados();
     setMensagemPreRegistro("msgPreRegistroProfessor", "Pre-registro enviado a coordenacao.");
     await carregarPreRegistros();
 }
@@ -214,18 +266,28 @@ function iniciarComplementacaoPreRegistro(item) {
     limparFormularioOcorrencia({ manterAberto: true });
     preRegistroEmComplementacaoId = Number(item.id);
     el("ocorrenciaTipoRegistro").value = "estudante";
-    renderSelecionadorEstudantesVinculados([{
-        estudante_id: item.student_id,
-        nome: item.student_name,
-        turma_id: item.turma_id,
-        turma_nome: item.class_name
-    }]);
+    renderSelecionadorEstudantesVinculados((item.students || []).map((student) => ({
+        estudante_id: student.student_id,
+        nome: student.name,
+        turma_id: student.class_id,
+        turma_nome: student.class_name
+    })));
     el("ocorrenciaBuscaProfessor").value = item.professor_name || "";
     el("ocorrenciaProfessorRequerenteId").value = String(item.professor_id || "");
     atualizarModoFormularioRegistro();
     sincronizarTurmaOcorrenciaComEstudantes({ manterAulaAtual: false });
+    el("ocorrenciaDisciplina").value = item.discipline || "";
+    if (item.lesson) {
+        el("ocorrenciaAula").value = String(item.lesson);
+    }
+    const occurredAt = String(item.occurred_at || item.created_at || "");
+    if (occurredAt) {
+        const [datePart, timePart = ""] = occurredAt.replace("T", " ").split(" ");
+        el("ocorrenciaData").value = datePart;
+        el("ocorrenciaHorario").value = timePart.slice(0, 5);
+    }
     definirDescricaoEditor({
-        texto: `Motivo informado no pre-registro: ${item.reason_name}.\n${PRE_REGISTRATION_CONTACT_LABELS[item.responsible_contact] || ""}`
+        texto: `Motivos informados no pre-registro: ${(item.reasons || []).map((reason) => reason.name).join("; ") || item.reason_name}.\n${PRE_REGISTRATION_CONTACT_LABELS[item.responsible_contact] || ""}`
     });
     el("tituloFormOcorrencia").innerText = "Complementar pre-registro";
     ativarEtapaFormularioOcorrencia(1);
@@ -240,13 +302,13 @@ async function carregarContextoPreRegistros(manager = false) {
 }
 
 function registrarEventosPreRegistrosProfessor() {
+    renderEstudantesPreRegistroSelecionados();
     el("formPreRegistroProfessor").addEventListener("submit", (event) => {
         salvarPreRegistroProfessor(event).catch((err) => {
             setMensagemPreRegistro("msgPreRegistroProfessor", err.message, true);
         });
     });
     el("preRegistroBuscaEstudante").addEventListener("input", () => {
-        el("preRegistroEstudanteId").value = "";
         agendarBuscaEstudantesPreRegistro();
     });
     el("preRegistroBuscaEstudante").addEventListener("focus", () => {

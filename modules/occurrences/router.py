@@ -68,8 +68,8 @@ def post_pre_registration(
 ):
     return service.create_pre_registration(
         user,
-        student_id=payload.student_id,
-        reason_id=payload.reason_id,
+        student_ids=payload.student_ids,
+        reason_ids=payload.reason_ids,
         responsible_contact=payload.responsible_contact,
     )
 

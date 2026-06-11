@@ -26,25 +26,24 @@
                     <div>
                         <span class="coordenacao-panel-tag">Registro rapido</span>
                         <h2>Informar uma situacao a coordenacao</h2>
-                        <p>Selecione o estudante, informe o motivo e indique se a familia precisa ser contatada.</p>
+                        <p>Selecione os estudantes, marque os motivos e indique se a familia precisa ser contatada.</p>
                     </div>
                 </div>
                 <form id="formPreRegistroProfessor" class="coordenacao-pre-registration-form">
                     <label class="coordenacao-field" for="preRegistroBuscaEstudante">
-                        <span>Estudante</span>
+                        <span>Estudantes</span>
                         <div class="coordenacao-autocomplete-shell">
                             <input id="preRegistroBuscaEstudante" type="text" autocomplete="off"
-                                placeholder="Buscar estudante por nome ou turma" required>
+                                placeholder="Buscar e adicionar estudante por nome ou turma">
                             <div id="listaPreRegistroEstudantes" class="coordenacao-autocomplete-list" hidden></div>
                         </div>
                     </label>
-                    <input id="preRegistroEstudanteId" type="hidden">
-                    <label class="coordenacao-field" for="preRegistroMotivoId">
-                        <span>O que aconteceu?</span>
-                        <select id="preRegistroMotivoId" required>
-                            <option value="">Selecione um motivo cadastrado</option>
-                        </select>
-                    </label>
+                    <div id="preRegistroEstudantesSelecionados" class="coordenacao-pre-selected-list"
+                        aria-live="polite"></div>
+                    <fieldset class="coordenacao-reason-choice">
+                        <legend>O que aconteceu?</legend>
+                        <div id="preRegistroMotivos" class="coordenacao-reason-checkboxes"></div>
+                    </fieldset>
                     <fieldset class="coordenacao-contact-choice">
                         <legend>Contato com o responsavel</legend>
                         <label><input type="radio" name="preRegistroContatoResponsavel" value="none" checked>

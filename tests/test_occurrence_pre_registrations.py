@@ -3,6 +3,7 @@ import os
 import sys
 import tempfile
 import unittest
+from datetime import datetime
 
 from fastapi import HTTPException
 
@@ -10,6 +11,7 @@ from fastapi import HTTPException
 MODULES_TO_RELOAD = (
     "database",
     "db.core",
+    "modules.occurrences.catalog_repository",
     "modules.occurrences.repository",
     "modules.occurrences.service",
     "ocorrencias_router",
@@ -65,8 +67,8 @@ class OccurrencePreRegistrationsTest(unittest.TestCase):
 
             created = service.create_pre_registration(
                 professor,
-                student_id=student_id,
-                reason_id=reason["id"],
+                student_ids=[student_id],
+                reason_ids=[reason["id"]],
                 responsible_contact="communicate",
             )
             listed = service.list_pre_registrations(professor)
@@ -92,8 +94,8 @@ class OccurrencePreRegistrationsTest(unittest.TestCase):
             with self.assertRaises(HTTPException) as context:
                 service.create_pre_registration(
                     professor,
-                    student_id=student_id,
-                    reason_id=reason["id"],
+                    student_ids=[student_id],
+                    reason_ids=[reason["id"]],
                     responsible_contact="none",
                 )
 
@@ -111,8 +113,8 @@ class OccurrencePreRegistrationsTest(unittest.TestCase):
             )
             pre_registration = service.create_pre_registration(
                 professor,
-                student_id=student_id,
-                reason_id=reason["id"],
+                student_ids=[student_id],
+                reason_ids=[reason["id"]],
                 responsible_contact="summon",
             )
             legal_basis_id = database.criar_regimento_item(
@@ -150,6 +152,53 @@ class OccurrencePreRegistrationsTest(unittest.TestCase):
             self.assertEqual(len(completed), 1)
             self.assertEqual(completed[0]["id"], pre_registration["id"])
             self.assertEqual(completed[0]["occurrence_id"], occurrence["id"])
+
+    def test_pre_registration_accepts_multiple_students_and_reasons(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            database, service, _ = _reload_modules(
+                os.path.join(tmp_dir, "impressao.db")
+            )
+            turma_id, student_id, professor = self._create_context(database)
+            second_student_id = int(
+                database.criar_estudante("Segundo Estudante", turma_id)
+            )
+            first_reason = service.create_reason(
+                {"cargo": "ADMIN"},
+                "Conversa durante a explicacao",
+            )
+            second_reason = service.create_reason(
+                {"cargo": "ADMIN"},
+                "Atividade nao realizada",
+            )
+            discipline_id = int(database.criar_disciplina("Matematica", 5))
+            weekday = service.WEEKDAYS[datetime.now().weekday()]
+            database.criar_horario_escolar(
+                ano_letivo=datetime.now().year,
+                turma_id=turma_id,
+                disciplina_id=discipline_id,
+                professor_usuario_id=int(professor["id"]),
+                dia_semana=weekday,
+                aula_numero=2,
+            )
+
+            created = service.create_pre_registration(
+                professor,
+                student_ids=[student_id, second_student_id],
+                reason_ids=[first_reason["id"], second_reason["id"]],
+                responsible_contact="none",
+            )
+
+            self.assertEqual(
+                created["student_ids"],
+                [student_id, second_student_id],
+            )
+            self.assertEqual(
+                created["reason_ids"],
+                [first_reason["id"], second_reason["id"]],
+            )
+            self.assertEqual(created["discipline"], "Matematica")
+            self.assertEqual(created["lesson"], "2")
+            self.assertTrue(created["occurred_at"])
 
 
 if __name__ == "__main__":

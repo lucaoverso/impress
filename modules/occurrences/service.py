@@ -1,11 +1,14 @@
+from datetime import datetime
+
 from fastapi import HTTPException
 
 from routers.common import usuario_eh_gestor, usuario_eh_professor
 
-from . import repository
+from . import catalog_repository, repository
 
 
 RESPONSIBLE_CONTACTS = {"none", "communicate", "summon"}
+WEEKDAYS = ("SEGUNDA", "TERCA", "QUARTA", "QUINTA", "SEXTA", "SABADO", "DOMINGO")
 
 
 def _user_id(user: dict) -> int:
@@ -34,7 +37,7 @@ def context(user: dict) -> dict:
     return {
         "is_manager": manager,
         "is_teacher": usuario_eh_professor(user),
-        "reasons": repository.list_reasons(include_inactive=manager),
+        "reasons": catalog_repository.list_reasons(include_inactive=manager),
     }
 
 
@@ -42,7 +45,7 @@ def search_students(user: dict, term: str, limit: int) -> list[dict]:
     require_occurrences_access(user)
     clean_term = str(term or "").strip()
     safe_limit = min(max(int(limit or 20), 1), 50)
-    students = repository.search_students(clean_term, safe_limit)
+    students = catalog_repository.search_students(clean_term, safe_limit)
     return [
         {
             **student,
@@ -60,7 +63,7 @@ def create_reason(user: dict, name: str) -> dict:
     if len(clean_name) > 180:
         raise HTTPException(400, "O motivo excede 180 caracteres.")
     try:
-        return repository.create_reason(clean_name)
+        return catalog_repository.create_reason(clean_name)
     except Exception as exc:
         if "UNIQUE" in str(exc).upper():
             raise HTTPException(400, "Este motivo ja esta cadastrado.") from exc
@@ -75,7 +78,7 @@ def update_reason(user: dict, reason_id: int, *, name: str | None, active: bool 
         if len(clean_name) < 3 or len(clean_name) > 180:
             raise HTTPException(400, "Informe um motivo entre 3 e 180 caracteres.")
     try:
-        reason = repository.update_reason(reason_id, name=clean_name, active=active)
+        reason = catalog_repository.update_reason(reason_id, name=clean_name, active=active)
     except Exception as exc:
         if "UNIQUE" in str(exc).upper():
             raise HTTPException(400, "Este motivo ja esta cadastrado.") from exc
@@ -88,27 +91,91 @@ def update_reason(user: dict, reason_id: int, *, name: str | None, active: bool 
 def create_pre_registration(
     user: dict,
     *,
-    student_id: int,
-    reason_id: int,
+    student_ids: list[int],
+    reason_ids: list[int],
     responsible_contact: str,
 ) -> dict:
     if not usuario_eh_professor(user):
         raise HTTPException(403, "Apenas professores podem criar pre-registros.")
-    student = repository.get_student(student_id)
-    if not student or not bool(student.get("ativo")):
-        raise HTTPException(400, "Estudante nao encontrado ou inativo.")
-    reason = repository.get_reason(reason_id)
-    if not reason or not bool(reason.get("active")):
-        raise HTTPException(400, "Motivo nao encontrado ou inativo.")
+    normalized_student_ids = _normalize_ids(student_ids, "estudante")
+    students = catalog_repository.get_students(normalized_student_ids)
+    if len(students) != len(normalized_student_ids) or any(
+        not bool(item.get("ativo")) for item in students
+    ):
+        raise HTTPException(400, "Um ou mais estudantes nao foram encontrados ou estao inativos.")
+    normalized_reason_ids = _normalize_ids(reason_ids, "motivo")
+    reasons = catalog_repository.get_reasons(normalized_reason_ids)
+    if len(reasons) != len(normalized_reason_ids) or any(
+        not bool(item.get("active")) for item in reasons
+    ):
+        raise HTTPException(400, "Um ou mais motivos nao foram encontrados ou estao inativos.")
     contact = str(responsible_contact or "").strip()
     if contact not in RESPONSIBLE_CONTACTS:
         raise HTTPException(400, "Opcao de contato com responsavel invalida.")
+    occurred_at = datetime.now()
+    class_context = _resolve_class_context(
+        _user_id(user),
+        students,
+        occurred_at,
+    )
     return repository.create_pre_registration(
-        student_id=int(student_id),
-        reason_id=int(reason_id),
+        student_ids=normalized_student_ids,
+        reason_ids=normalized_reason_ids,
         professor_id=_user_id(user),
         responsible_contact=contact,
+        discipline=class_context["discipline"],
+        lesson=class_context["lesson"],
+        occurred_at=occurred_at.strftime("%Y-%m-%d %H:%M:%S"),
     )
+
+
+def _normalize_ids(values: list[int], label: str) -> list[int]:
+    normalized = []
+    for value in values or []:
+        try:
+            item_id = int(value)
+        except (TypeError, ValueError):
+            continue
+        if item_id > 0 and item_id not in normalized:
+            normalized.append(item_id)
+    if not normalized:
+        raise HTTPException(400, f"Selecione pelo menos um {label}.")
+    return normalized
+
+
+def _estimated_lesson(turn: str, moment: datetime) -> int:
+    start_hour = 13 if str(turn or "").upper().startswith("VESPERTINO") else 7
+    elapsed_minutes = (moment.hour * 60 + moment.minute) - start_hour * 60
+    return max(1, min(12, elapsed_minutes // 50 + 1))
+
+
+def _resolve_class_context(
+    professor_id: int,
+    students: list[dict],
+    moment: datetime,
+) -> dict:
+    schedules = catalog_repository.list_teacher_schedule(
+        professor_id,
+        year=moment.year,
+        weekday=WEEKDAYS[moment.weekday()],
+        class_ids=[int(item.get("turma_id") or 0) for item in students],
+    )
+    if not schedules:
+        return {"discipline": "", "lesson": ""}
+    if len(schedules) == 1:
+        selected = schedules[0]
+    else:
+        selected = min(
+            schedules,
+            key=lambda item: abs(
+                int(item.get("aula_numero") or 0)
+                - _estimated_lesson(item.get("turno", ""), moment)
+            ),
+        )
+    return {
+        "discipline": str(selected.get("disciplina_nome") or "").strip(),
+        "lesson": str(selected.get("aula_numero") or "").strip(),
+    }
 
 
 def list_pre_registrations(user: dict, status: str | None = None) -> list[dict]:
@@ -126,7 +193,7 @@ def list_pre_registrations(user: dict, status: str | None = None) -> list[dict]:
 def validate_pre_registration_completion(
     user: dict,
     pre_registration_id: int,
-    student_id: int | None,
+    student_ids: list[int],
 ) -> dict:
     require_manager(user)
     current = repository.get_pre_registration(pre_registration_id)
@@ -134,7 +201,9 @@ def validate_pre_registration_completion(
         raise HTTPException(404, "Pre-registro nao encontrado.")
     if current["status"] != "pending":
         raise HTTPException(409, "Este pre-registro nao esta pendente.")
-    if int(student_id or 0) != int(current["student_id"]):
+    expected_ids = {int(item) for item in current.get("student_ids") or []}
+    received_ids = {int(item) for item in student_ids or [] if int(item) > 0}
+    if received_ids != expected_ids:
         raise HTTPException(
             400,
             "A ocorrencia deve pertencer ao mesmo estudante do pre-registro.",
@@ -158,7 +227,7 @@ def complete_pre_registration(
     occurrence = repository.get_occurrence(occurrence_id)
     if not occurrence:
         raise HTTPException(400, "Ocorrencia informada nao foi encontrada.")
-    if int(occurrence.get("estudante_id") or 0) != int(current["student_id"]):
+    if set(occurrence.get("student_ids") or []) != set(current.get("student_ids") or []):
         raise HTTPException(
             400,
             "A ocorrencia deve pertencer ao mesmo estudante do pre-registro.",

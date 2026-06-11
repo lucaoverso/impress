@@ -94,6 +94,58 @@
     border: 0;
 }
 
+.coordenacao-reason-choice {
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.coordenacao-reason-choice legend {
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.coordenacao-reason-checkboxes,
+.coordenacao-pre-selected-list {
+    display: grid;
+    gap: 9px;
+}
+
+.coordenacao-reason-checkboxes label,
+.coordenacao-pre-selected-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 11px 12px;
+    border: 1px solid #dfe8f3;
+    border-radius: var(--radius-md);
+    background: #fff;
+}
+
+.coordenacao-reason-checkboxes label {
+    cursor: pointer;
+}
+
+.coordenacao-reason-checkboxes input {
+    width: auto;
+    flex: 0 0 auto;
+}
+
+.coordenacao-pre-selected-item {
+    justify-content: space-between;
+}
+
+.coordenacao-pre-selected-item span {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.coordenacao-pre-selected-item button {
+    flex: 0 0 auto;
+}
+
 .coordenacao-contact-choice legend {
     margin-bottom: 8px;
     font-weight: 700;
@@ -1662,7 +1714,8 @@ body.coordenacao-modal-open {
     }
 
     .coordenacao-pre-registration-item-header,
-    .coordenacao-reason-item {
+    .coordenacao-reason-item,
+    .coordenacao-pre-selected-item {
         align-items: stretch;
         flex-direction: column;
     }
@@ -1670,6 +1723,7 @@ body.coordenacao-modal-open {
     .coordenacao-pre-registration-item .btn-destaque,
     .coordenacao-pre-registration-form > button,
     .coordenacao-reason-item button,
+    .coordenacao-pre-selected-item button,
     #btnAtualizarPreRegistros {
         width: 100%;
         justify-self: stretch;

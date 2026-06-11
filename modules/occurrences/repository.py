@@ -1,141 +1,18 @@
 from db.core import get_connection
 
 
-def search_students(term: str, limit: int = 20) -> list[dict]:
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT
-            e.id,
-            e.nome,
-            e.turma_id,
-            COALESCE(t.nome, '') AS turma_nome
-        FROM estudantes e
-        LEFT JOIN turmas t ON t.id = e.turma_id
-        WHERE e.ativo = 1
-          AND (
-              ? = ''
-              OR LOWER(e.nome) LIKE LOWER(?)
-              OR LOWER(COALESCE(t.nome, '')) LIKE LOWER(?)
-          )
-        ORDER BY e.nome COLLATE NOCASE
-        LIMIT ?
-        """,
-        (term, f"%{term}%", f"%{term}%", int(limit)),
-    )
-    rows = [dict(row) for row in cursor.fetchall()]
-    conn.close()
-    return rows
-
-
-def get_student(student_id: int) -> dict | None:
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT
-            e.id,
-            e.nome,
-            e.turma_id,
-            COALESCE(t.nome, '') AS turma_nome,
-            e.ativo
-        FROM estudantes e
-        LEFT JOIN turmas t ON t.id = e.turma_id
-        WHERE e.id = ?
-        """,
-        (int(student_id),),
-    )
-    row = cursor.fetchone()
-    conn.close()
-    return dict(row) if row else None
-
-
-def list_reasons(*, include_inactive: bool = False) -> list[dict]:
-    conn = get_connection()
-    cursor = conn.cursor()
-    where = "" if include_inactive else "WHERE active = 1"
-    cursor.execute(
-        f"""
-        SELECT id, name, active, created_at, updated_at
-        FROM occurrence_reasons
-        {where}
-        ORDER BY active DESC, name COLLATE NOCASE
-        """
-    )
-    rows = [dict(row) for row in cursor.fetchall()]
-    conn.close()
-    return rows
-
-
-def get_reason(reason_id: int) -> dict | None:
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT id, name, active, created_at, updated_at
-        FROM occurrence_reasons
-        WHERE id = ?
-        """,
-        (int(reason_id),),
-    )
-    row = cursor.fetchone()
-    conn.close()
-    return dict(row) if row else None
-
-
-def create_reason(name: str) -> dict:
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT INTO occurrence_reasons (name, active, created_at, updated_at)
-        VALUES (?, 1, datetime('now'), datetime('now'))
-        """,
-        (name,),
-    )
-    reason_id = int(cursor.lastrowid)
-    conn.commit()
-    conn.close()
-    return get_reason(reason_id)
-
-
-def update_reason(reason_id: int, *, name: str | None, active: bool | None) -> dict | None:
-    assignments = []
-    values = []
-    if name is not None:
-        assignments.append("name = ?")
-        values.append(name)
-    if active is not None:
-        assignments.append("active = ?")
-        values.append(1 if active else 0)
-    if not assignments:
-        return get_reason(reason_id)
-
-    assignments.append("updated_at = datetime('now')")
-    values.append(int(reason_id))
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        f"""
-        UPDATE occurrence_reasons
-        SET {", ".join(assignments)}
-        WHERE id = ?
-        """,
-        tuple(values),
-    )
-    conn.commit()
-    conn.close()
-    return get_reason(reason_id)
-
-
 def create_pre_registration(
     *,
-    student_id: int,
-    reason_id: int,
+    student_ids: list[int],
+    reason_ids: list[int],
     professor_id: int,
     responsible_contact: str,
+    discipline: str,
+    lesson: str,
+    occurred_at: str,
 ) -> dict:
+    primary_student_id = int(student_ids[0])
+    primary_reason_id = int(reason_ids[0])
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
@@ -145,15 +22,50 @@ def create_pre_registration(
             reason_id,
             professor_id,
             responsible_contact,
+            discipline,
+            lesson,
+            occurred_at,
             status,
             created_at,
             updated_at
         )
-        VALUES (?, ?, ?, ?, 'pending', datetime('now'), datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'), datetime('now'))
         """,
-        (student_id, reason_id, professor_id, responsible_contact),
+        (
+            primary_student_id,
+            primary_reason_id,
+            professor_id,
+            responsible_contact,
+            discipline,
+            lesson,
+            occurred_at,
+        ),
     )
     pre_registration_id = int(cursor.lastrowid)
+    cursor.executemany(
+        """
+        INSERT INTO occurrence_pre_registration_students (
+            pre_registration_id, student_id, position
+        )
+        VALUES (?, ?, ?)
+        """,
+        [
+            (pre_registration_id, int(student_id), position)
+            for position, student_id in enumerate(student_ids, start=1)
+        ],
+    )
+    cursor.executemany(
+        """
+        INSERT INTO occurrence_pre_registration_reasons (
+            pre_registration_id, reason_id, position
+        )
+        VALUES (?, ?, ?)
+        """,
+        [
+            (pre_registration_id, int(reason_id), position)
+            for position, reason_id in enumerate(reason_ids, start=1)
+        ],
+    )
     conn.commit()
     conn.close()
     return get_pre_registration(pre_registration_id)
@@ -199,6 +111,9 @@ def list_pre_registrations(
             u.nome AS professor_name,
             COALESCE(u.email, '') AS professor_email,
             pr.responsible_contact,
+            pr.discipline,
+            pr.lesson,
+            COALESCE(NULLIF(pr.occurred_at, ''), pr.created_at) AS occurred_at,
             pr.status,
             pr.occurrence_id,
             pr.created_at,
@@ -218,8 +133,74 @@ def list_pre_registrations(
         tuple(values),
     )
     rows = [dict(row) for row in cursor.fetchall()]
+    pre_registration_ids = [int(row["id"]) for row in rows]
+    students_by_pre_registration = _list_pre_registration_students(
+        cursor,
+        pre_registration_ids,
+    )
+    reasons_by_pre_registration = _list_pre_registration_reasons(
+        cursor,
+        pre_registration_ids,
+    )
+    for row in rows:
+        pre_registration_id = int(row["id"])
+        row["students"] = students_by_pre_registration.get(pre_registration_id, [])
+        row["reasons"] = reasons_by_pre_registration.get(pre_registration_id, [])
+        row["student_ids"] = [item["student_id"] for item in row["students"]]
+        row["reason_ids"] = [item["reason_id"] for item in row["reasons"]]
     conn.close()
     return rows
+
+
+def _list_pre_registration_students(cursor, pre_registration_ids: list[int]) -> dict:
+    if not pre_registration_ids:
+        return {}
+    placeholders = ", ".join("?" for _ in pre_registration_ids)
+    cursor.execute(
+        f"""
+        SELECT
+            prs.pre_registration_id,
+            prs.student_id,
+            e.nome AS name,
+            e.turma_id AS class_id,
+            COALESCE(t.nome, '') AS class_name
+        FROM occurrence_pre_registration_students prs
+        JOIN estudantes e ON e.id = prs.student_id
+        LEFT JOIN turmas t ON t.id = e.turma_id
+        WHERE prs.pre_registration_id IN ({placeholders})
+        ORDER BY prs.pre_registration_id, prs.position, prs.student_id
+        """,
+        tuple(pre_registration_ids),
+    )
+    result = {}
+    for row in cursor.fetchall():
+        item = dict(row)
+        result.setdefault(int(item["pre_registration_id"]), []).append(item)
+    return result
+
+
+def _list_pre_registration_reasons(cursor, pre_registration_ids: list[int]) -> dict:
+    if not pre_registration_ids:
+        return {}
+    placeholders = ", ".join("?" for _ in pre_registration_ids)
+    cursor.execute(
+        f"""
+        SELECT
+            prr.pre_registration_id,
+            prr.reason_id,
+            r.name
+        FROM occurrence_pre_registration_reasons prr
+        JOIN occurrence_reasons r ON r.id = prr.reason_id
+        WHERE prr.pre_registration_id IN ({placeholders})
+        ORDER BY prr.pre_registration_id, prr.position, prr.reason_id
+        """,
+        tuple(pre_registration_ids),
+    )
+    result = {}
+    for row in cursor.fetchall():
+        item = dict(row)
+        result.setdefault(int(item["pre_registration_id"]), []).append(item)
+    return result
 
 
 def complete_pre_registration(pre_registration_id: int, occurrence_id: int) -> dict | None:
@@ -255,5 +236,23 @@ def get_occurrence(occurrence_id: int) -> dict | None:
         (int(occurrence_id),),
     )
     row = cursor.fetchone()
+    if not row:
+        conn.close()
+        return None
+    occurrence = dict(row)
+    cursor.execute(
+        """
+        SELECT estudante_id
+        FROM ocorrencia_estudantes
+        WHERE ocorrencia_id = ? AND estudante_id IS NOT NULL
+        ORDER BY ordem, estudante_id
+        """,
+        (int(occurrence_id),),
+    )
+    occurrence["student_ids"] = [
+        int(item["estudante_id"]) for item in cursor.fetchall()
+    ]
+    if not occurrence["student_ids"] and occurrence.get("estudante_id"):
+        occurrence["student_ids"] = [int(occurrence["estudante_id"])]
     conn.close()
-    return dict(row) if row else None
+    return occurrence

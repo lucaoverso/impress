@@ -959,7 +959,11 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
         occurrence_pre_registration_service.validate_pre_registration_completion(
             usuario,
             payload.pre_registration_id,
-            contexto["estudante_id"],
+            [
+                int(item.get("estudante_id") or 0)
+                for item in contexto["estudantes_vinculados"]
+                if int(item.get("estudante_id") or 0) > 0
+            ],
         )
 
     try:
