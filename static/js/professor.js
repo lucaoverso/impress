@@ -30,6 +30,9 @@ let reusoHistoricoEmCarregamento = false;
 let resolverModalAlertaConsumoAtual = null;
 let statusImpressaoAtual = { sem_papel: false, mensagem: "", atualizado_em: "" };
 let modalSemPapelExibido = false;
+let elementoFocoAntesDrawerImpressao = null;
+let elementoFocoAntesModalImpressao = null;
+let elementoFocoAntesPreviewImpressao = null;
 const QUALIDADE_MAX_DPR = 1.4;
 const FOLHA_PADDING = 8;
 const FOLHA_GAP = 6;
@@ -124,6 +127,9 @@ function aplicarStatusImpressaoNaTela({ mostrarModal = false } = {}) {
     if (bloqueado) {
         el("msg").innerText = mensagem;
         if (mostrarModal && modal && !modalSemPapelExibido) {
+            elementoFocoAntesModalImpressao = document.activeElement instanceof HTMLElement
+                ? document.activeElement
+                : null;
             modal.hidden = false;
             document.body.classList.add("print-alert-modal-open");
             modalSemPapelExibido = true;
@@ -135,7 +141,9 @@ function aplicarStatusImpressaoNaTela({ mostrarModal = false } = {}) {
         return [];
     }
 
-    if (modal) {
+    if (modal && !modal.hidden) {
+        fecharModalSemPapel();
+    } else if (modal) {
         modal.hidden = true;
     }
     document.body.classList.remove("print-alert-modal-open");
@@ -143,6 +151,17 @@ function aplicarStatusImpressaoNaTela({ mostrarModal = false } = {}) {
         el("msg").innerText = "";
     }
     modalSemPapelExibido = false;
+}
+
+function fecharModalSemPapel() {
+    const modal = el("modalSemPapelImpressao");
+    if (!modal || modal.hidden) {
+        return;
+    }
+    modal.hidden = true;
+    document.body.classList.remove("print-alert-modal-open");
+    elementoFocoAntesModalImpressao?.focus();
+    elementoFocoAntesModalImpressao = null;
 }
 
 function usuarioEhAdmin() {
@@ -1041,6 +1060,13 @@ function aplicarEstadoSelecaoWrapper(wrapper, paginaSelecionada, numeroPagina) {
     wrapper.classList.toggle("is-selected", paginaSelecionada);
     wrapper.classList.toggle("is-unchecked", !paginaSelecionada);
     wrapper.dataset.pageLabel = `Pg ${numeroPagina}`;
+    wrapper.setAttribute("role", "checkbox");
+    wrapper.setAttribute("tabindex", "0");
+    wrapper.setAttribute("aria-checked", paginaSelecionada ? "true" : "false");
+    wrapper.setAttribute(
+        "aria-label",
+        `${paginaSelecionada ? "Remover" : "Incluir"} página ${numeroPagina} ${paginaSelecionada ? "da" : "na"} impressão`
+    );
 }
 
 function atualizarEstadoVisualPagina(numeroPagina, paginaSelecionada) {
@@ -1133,6 +1159,36 @@ function modalAlertaConsumoAberto() {
     return Boolean(modal) && !modal.hidden;
 }
 
+function obterElementosFocaveis(container) {
+    if (!container) {
+        return [];
+    }
+    return Array.from(container.querySelectorAll(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter((item) => !item.hidden && item.getClientRects().length > 0);
+}
+
+function manterFocoEmCamada(event, container) {
+    if (event.key !== "Tab" || !container) {
+        return;
+    }
+    const focaveis = obterElementosFocaveis(container);
+    if (focaveis.length === 0) {
+        event.preventDefault();
+        container.focus();
+        return;
+    }
+    const primeiro = focaveis[0];
+    const ultimo = focaveis[focaveis.length - 1];
+    if (event.shiftKey && document.activeElement === primeiro) {
+        event.preventDefault();
+        ultimo.focus();
+    } else if (!event.shiftKey && document.activeElement === ultimo) {
+        event.preventDefault();
+        primeiro.focus();
+    }
+}
+
 function fecharModalAlertaConsumo(confirmado) {
     const modal = el("modalAlertaConsumoImpressao");
     if (!modal || modal.hidden) {
@@ -1141,6 +1197,8 @@ function fecharModalAlertaConsumo(confirmado) {
 
     modal.hidden = true;
     document.body.classList.remove("print-alert-modal-open");
+    elementoFocoAntesModalImpressao?.focus();
+    elementoFocoAntesModalImpressao = null;
     if (typeof resolverModalAlertaConsumoAtual === "function") {
         const resolver = resolverModalAlertaConsumoAtual;
         resolverModalAlertaConsumoAtual = null;
@@ -1189,6 +1247,9 @@ function abrirModalAlertaConsumo({ consumo, paginasPorFolha, orientacao, copias,
 
     modal.hidden = false;
     document.body.classList.add("print-alert-modal-open");
+    elementoFocoAntesModalImpressao = document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
 
     return new Promise((resolve) => {
         resolverModalAlertaConsumoAtual = resolve;
@@ -2328,10 +2389,20 @@ async function renderFolha() {
         thumb.classList.add("print-sheet-thumb");
         thumb.dataset.folha = String(indiceFolha);
         thumb.dataset.sheetLabel = `Folha ${indiceFolha} de ${totalFolhas}`;
+        thumb.setAttribute("tabindex", "0");
+        thumb.setAttribute("role", "button");
+        thumb.setAttribute("aria-label", `Mostrar folha ${indiceFolha} de ${totalFolhas}`);
         if (indiceFolha === folhaAtual) {
             thumb.classList.add("is-active");
         }
         thumb.addEventListener("click", () => irParaFolha(indiceFolha));
+        thumb.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter" && event.key !== " ") {
+                return;
+            }
+            event.preventDefault();
+            irParaFolha(indiceFolha);
+        });
 
         const folha = document.createElement("div");
         folha.classList.add("print-sheet");
@@ -2392,6 +2463,14 @@ async function renderFolha() {
             folha.appendChild(wrapper);
 
             wrapper.addEventListener("click", (event) => {
+                event.stopPropagation();
+                alternarSelecaoPagina(numeroPagina);
+            });
+            wrapper.addEventListener("keydown", (event) => {
+                if (event.key !== "Enter" && event.key !== " ") {
+                    return;
+                }
+                event.preventDefault();
                 event.stopPropagation();
                 alternarSelecaoPagina(numeroPagina);
             });
@@ -2616,8 +2695,7 @@ function registrarEventos() {
     if (modalSemPapel) {
         modalSemPapel.addEventListener("click", (event) => {
             if (event.target === modalSemPapel) {
-                modalSemPapel.hidden = true;
-                document.body.classList.remove("print-alert-modal-open");
+                fecharModalSemPapel();
             }
         });
     }
@@ -2628,8 +2706,7 @@ function registrarEventos() {
         fecharModalAlertaConsumo(false);
     });
     el("btnFecharModalSemPapelImpressao")?.addEventListener("click", () => {
-        el("modalSemPapelImpressao").hidden = true;
-        document.body.classList.remove("print-alert-modal-open");
+        fecharModalSemPapel();
     });
     el("btnEnviar").addEventListener("click", () => {
         enviarImpressao(false);
@@ -2643,8 +2720,13 @@ function registrarEventos() {
             return;
         }
         if (event.key === "Escape" && !el("modalSemPapelImpressao")?.hidden) {
-            el("modalSemPapelImpressao").hidden = true;
-            document.body.classList.remove("print-alert-modal-open");
+            fecharModalSemPapel();
+            return;
+        }
+
+        const modalAberto = document.querySelector(".print-alert-modal:not([hidden]) [role='dialog']");
+        if (modalAberto) {
+            manterFocoEmCamada(event, modalAberto);
         }
     });
 
@@ -2709,7 +2791,7 @@ function definirTextoResumoPadrao() {
     definirTexto("resumoLayout", "1 pagina por folha");
     definirTexto("resumoOrientacao", "Retrato");
     definirTexto("resumoDuplex", "Nao");
-    definirTexto("resumoTags", "Nenhuma tag selecionada");
+    definirTexto("resumoTags", "Nenhum tipo selecionado");
     definirTexto("resumoArquivoBarra", "Arquivo: -");
 }
 
@@ -2837,6 +2919,42 @@ function atualizarResumoImpressaoPainel(resumoImpressao = calcularResumoImpressa
         "resumoOrientacao",
         (el("orientacao")?.value || "retrato") === "paisagem" ? "Paisagem" : "Retrato"
     );
+    definirTexto("resumoDuplex", el("duplex")?.checked ? "Sim" : "Não");
+    const tagsSelecionadas = obterTagsImpressaoSelecionadas();
+    definirTexto(
+        "resumoTags",
+        tagsSelecionadas.length > 0 ? tagsSelecionadas.join(", ") : "Nenhum tipo selecionado"
+    );
+}
+
+function atualizarFeedbackVisivel() {
+    const feedback = el("printFeedbackVisible");
+    if (!feedback) {
+        return;
+    }
+
+    const mensagem = String(el("msg")?.innerText || "").trim();
+    const intervalo = String(el("intervaloInfo")?.innerText || "").trim();
+    const texto = mensagem || intervalo;
+    feedback.innerText = texto;
+    const textoNormalizado = texto.toLocaleLowerCase("pt-BR");
+    const ehSucesso = /sucesso|confirmad|enviad|conclu[ií]d/.test(textoNormalizado);
+    const ehErro = /erro|falha|inv[aá]lid|indispon[ií]vel|selecione|n[aã]o foi|n[aã]o pode/.test(textoNormalizado);
+    feedback.dataset.variant = texto ? (ehSucesso ? "success" : ehErro ? "error" : "info") : "";
+}
+
+function observarFeedbackLegado() {
+    const alvos = [el("msg"), el("intervaloInfo")].filter(Boolean);
+    if (alvos.length === 0 || typeof MutationObserver !== "function") {
+        return;
+    }
+    const observer = new MutationObserver(atualizarFeedbackVisivel);
+    alvos.forEach((alvo) => observer.observe(alvo, {
+        childList: true,
+        characterData: true,
+        subtree: true,
+    }));
+    atualizarFeedbackVisivel();
 }
 
 function sincronizarEstadoAcaoEnvio(mensagem = "") {
@@ -2914,9 +3032,16 @@ function abrirPainelHistorico() {
     if (!drawer) {
         return;
     }
+    elementoFocoAntesDrawerImpressao = document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     drawer.classList.add("is-open");
     drawer.setAttribute("aria-hidden", "false");
+    drawer.inert = false;
     document.body.classList.add("print-history-open");
+    window.requestAnimationFrame(() => {
+        drawer.querySelector(".print-history-panel")?.focus();
+    });
 }
 
 function fecharPainelHistorico() {
@@ -2926,13 +3051,24 @@ function fecharPainelHistorico() {
     }
     drawer.classList.remove("is-open");
     drawer.setAttribute("aria-hidden", "true");
+    drawer.inert = true;
     document.body.classList.remove("print-history-open");
+    elementoFocoAntesDrawerImpressao?.focus();
+    elementoFocoAntesDrawerImpressao = null;
 }
 
 function abrirPreviewMobile() {
     if (isPreviewMobile()) {
+        const painel = el("painelPreview");
+        elementoFocoAntesPreviewImpressao = document.activeElement instanceof HTMLElement
+            ? document.activeElement
+            : null;
         document.body.classList.add("print-preview-modal-open");
+        painel?.setAttribute("role", "dialog");
+        painel?.setAttribute("aria-modal", "true");
+        painel?.setAttribute("aria-label", "Pré-visualização da impressão");
         window.requestAnimationFrame(() => {
+            painel?.focus();
             if (pdfDoc) {
                 renderFolha();
                 return;
@@ -2943,7 +3079,13 @@ function abrirPreviewMobile() {
 }
 
 function fecharPreviewMobile() {
+    const painel = el("painelPreview");
     document.body.classList.remove("print-preview-modal-open");
+    painel?.removeAttribute("role");
+    painel?.removeAttribute("aria-modal");
+    painel?.removeAttribute("aria-label");
+    elementoFocoAntesPreviewImpressao?.focus();
+    elementoFocoAntesPreviewImpressao = null;
 }
 
 const ajustarPosicaoPainelMetaOriginal = ajustarPosicaoPainelMeta;
@@ -3070,6 +3212,7 @@ registrarEventos = function registrarEventosRefatorado() {
     el("btnFecharHistorico")?.addEventListener("click", fecharPainelHistorico);
     document.querySelector("[data-close-history='true']")?.addEventListener("click", fecharPainelHistorico);
     el("btnAbrirPreviewMobile")?.addEventListener("click", abrirPreviewMobile);
+    el("btnFecharPreviewMobile")?.addEventListener("click", fecharPreviewMobile);
     el("btnImprimirOutroArquivo")?.addEventListener("click", () => {
         imprimirOutroArquivo().catch((err) => {
             el("msg").innerText = err?.message || "Falha ao reiniciar o fluxo de impressao.";
@@ -3079,10 +3222,18 @@ registrarEventos = function registrarEventosRefatorado() {
     window.addEventListener("keydown", (event) => {
         if (event.key === "Escape" && document.body.classList.contains("print-history-open")) {
             fecharPainelHistorico();
+            return;
         }
         if (event.key === "Escape" && document.body.classList.contains("print-preview-modal-open")) {
             fecharPreviewMobile();
+            return;
         }
+
+        manterFocoEmCamada(
+            event,
+            document.querySelector(".print-history-drawer.is-open .print-history-panel")
+            || document.querySelector("body.print-preview-modal-open #painelPreview")
+        );
     });
 };
 
@@ -3094,6 +3245,7 @@ window.obterPaginasSelecionadas = obterPaginasSelecionadas;
 
 async function inicializarPagina() {
     registrarEventos();
+    observarFeedbackLegado();
     atualizarComportamentoOrientacao();
     atualizarEstadoArquivoSelecionado();
     mostrarPreviewVazio();

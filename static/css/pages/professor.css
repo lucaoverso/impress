@@ -1,32 +1,32 @@
 /* Print workflow for professores */
 
 :root {
-    --print-color-primary: #0d7a6f;
-    --print-color-primary-hover: #0b655b;
-    --print-color-primary-light: #e6f4f2;
-    --print-color-background: #f6f8fc;
-    --print-color-surface: #ffffff;
-    --print-color-surface-muted: #f1f4f8;
-    --print-color-border: #e3e8ef;
-    --print-color-border-strong: #cbd5e1;
-    --print-color-text: #0f172a;
-    --print-color-text-muted: #64748b;
-    --print-color-text-soft: #94a3b8;
-    --print-color-success: #16a34a;
+    --print-color-primary: var(--brand);
+    --print-color-primary-hover: var(--brand-strong);
+    --print-color-primary-light: var(--brand-soft);
+    --print-color-background: var(--surface-2);
+    --print-color-surface: var(--surface-0);
+    --print-color-surface-muted: var(--surface-1);
+    --print-color-border: var(--line);
+    --print-color-border-strong: var(--line-strong);
+    --print-color-text: var(--text-main);
+    --print-color-text-muted: var(--text-muted);
+    --print-color-text-soft: #667384;
+    --print-color-success: var(--success);
     --print-color-success-light: #dcfce7;
-    --print-color-warning: #f59e0b;
+    --print-color-warning: var(--warning);
     --print-color-warning-light: #fef3c7;
-    --print-color-danger: #ef4444;
+    --print-color-danger: var(--error);
     --print-color-danger-light: #fee2e2;
-    --print-color-info: #3b82f6;
+    --print-color-info: var(--info);
     --print-color-info-light: #dbeafe;
     --print-radius-sm: 8px;
     --print-radius-md: 12px;
-    --print-radius-lg: 18px;
-    --print-radius-xl: 24px;
+    --print-radius-lg: var(--radius-lg);
+    --print-radius-xl: var(--radius-lg);
     --print-radius-pill: 999px;
-    --print-shadow-sm: 0 2px 6px rgba(15, 23, 42, 0.06);
-    --print-shadow-md: 0 8px 24px rgba(15, 23, 42, 0.10);
+    --print-shadow-sm: var(--shadow-low);
+    --print-shadow-md: none;
     --print-shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.14);
     --print-space-1: 4px;
     --print-space-2: 8px;
@@ -37,16 +37,17 @@
     --print-desktop-panel-height: clamp(680px, calc(100svh - 140px), 920px);
     --print-preview-column-width: clamp(380px, 50vw, 700px);
     --print-step-one-width: clamp(540px, 54vw, 760px);
+    --print-font-xs: 12px;
+    --print-font-sm: 14px;
+    --print-font-md: 16px;
+    --print-weight-semibold: 600;
 }
 
 .professor-page {
     min-height: 100svh;
     overflow-x: hidden;
     color: var(--print-color-text);
-    background:
-        radial-gradient(circle at 14% 12%, rgba(13, 122, 111, 0.08), transparent 28%),
-        radial-gradient(circle at 88% 10%, rgba(245, 158, 11, 0.10), transparent 22%),
-        linear-gradient(180deg, var(--print-color-background) 0%, #eef4f8 62%, #e8f0f6 100%);
+    background: var(--surface-2);
 }
 
 .print-app-topbar,
@@ -2200,4 +2201,637 @@ body.print-preview-modal-open {
         max-width: none;
     }
 
+}
+
+/* Printing workspace aligned with UI_GUIDELINES.md. */
+.print-wizard-shell {
+    width: min(1180px, 100%);
+    padding: 28px 24px 48px;
+}
+
+.print-workspace {
+    overflow: clip;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-lg);
+    background: var(--surface-0);
+}
+
+.print-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid var(--line);
+}
+
+.print-page-header-copy {
+    display: grid;
+    gap: 4px;
+    max-width: 65ch;
+}
+
+.print-page-header h1,
+.print-page-header p {
+    margin: 0;
+}
+
+.print-page-header h1 {
+    font-size: 26px;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+}
+
+.print-page-header p,
+.print-step-header p,
+.print-preview-header p {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.print-page-header .print-secondary-btn {
+    flex: 0 0 auto;
+}
+
+.print-flow-stepper {
+    overflow-x: auto;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--line);
+    scrollbar-width: none;
+}
+
+.print-flow-stepper::-webkit-scrollbar {
+    display: none;
+}
+
+.print-flow-stepper ol {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(118px, 1fr));
+    min-width: 620px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.print-flow-stepper li {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 34px;
+    color: var(--text-muted);
+}
+
+.print-flow-stepper li:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 30px;
+    right: 12px;
+    top: 17px;
+    height: 1px;
+    background: var(--line);
+}
+
+.print-flow-stepper li > * {
+    position: relative;
+    z-index: 1;
+}
+
+.print-flow-stepper li span {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    border: 1px solid var(--line);
+    border-radius: 50%;
+    background: var(--surface-0);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.print-flow-stepper li strong {
+    padding-right: 10px;
+    background: var(--surface-0);
+    font-size: 12px;
+}
+
+.print-flow-stepper li.is-current,
+.print-flow-stepper li.is-ready {
+    color: var(--brand-strong);
+}
+
+.print-flow-stepper li.is-current span {
+    border-color: var(--brand);
+    background: var(--brand);
+    color: #ffffff;
+}
+
+.print-flow-stepper li.is-ready span {
+    border-color: var(--brand);
+    color: var(--brand);
+}
+
+.print-flow-stepper li.is-ready:not(:last-child)::after {
+    background: var(--brand);
+}
+
+.print-flow-stepper li.is-locked {
+    opacity: 0.72;
+}
+
+.print-selection-context {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) 1px minmax(0, 1fr);
+    align-items: center;
+    gap: 24px;
+    padding: 14px 32px;
+    background: var(--brand-soft);
+}
+
+.print-selection-context[hidden] {
+    display: none !important;
+}
+
+.print-context-group {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+}
+
+.print-context-group > span {
+    color: var(--brand-strong);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.print-context-group strong {
+    overflow: hidden;
+    color: var(--brand-strong);
+    font-size: 14px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.print-context-divider {
+    align-self: stretch;
+    min-height: 40px;
+    background: rgba(11, 91, 85, 0.2);
+}
+
+.print-context-preview-divider,
+.print-context-actions {
+    display: none;
+}
+
+.print-context-preview-btn {
+    min-height: 36px;
+    padding: 0 12px;
+    border-color: rgba(11, 91, 85, 0.25);
+    border-radius: var(--radius-sm);
+    background: rgba(255, 255, 255, 0.82);
+    color: var(--brand-strong);
+}
+
+.print-wizard-stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(380px, 0.82fr);
+    gap: 0;
+}
+
+html[data-printing-current-step="1"] .print-wizard-stage,
+html[data-printing-current-step="5"] .print-wizard-stage {
+    grid-template-columns: minmax(0, 1fr);
+}
+
+html[data-printing-current-step="5"] .print-wizard-right {
+    display: none;
+}
+
+.print-wizard-left,
+.print-wizard-right {
+    width: auto;
+    min-width: 0;
+}
+
+.print-wizard-left {
+    padding: 28px 32px 32px;
+}
+
+.print-wizard-right {
+    position: sticky;
+    top: 12px;
+    align-self: start;
+    min-height: 680px;
+    padding: 28px 32px 32px 0;
+}
+
+.print-wizard-left .print-step-card,
+.print-wizard-right .print-preview-stage,
+.print-flow-hero,
+.print-summary-card,
+.print-support-panel {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.print-wizard-left .print-step-card {
+    gap: 22px;
+    padding: 0;
+}
+
+html:not([data-printing-current-step="1"]) .print-wizard-left > .print-step-card:not([hidden]) {
+    min-height: 0;
+    height: auto;
+    max-height: none;
+    overflow: visible;
+}
+
+html[data-printing-current-step="1"] .print-wizard-left {
+    width: auto;
+    margin: 0;
+}
+
+.print-step-header {
+    display: block;
+}
+
+.print-step-header > div {
+    display: grid;
+    gap: 4px;
+}
+
+.print-step-header h2,
+.print-preview-header h2 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.2;
+    letter-spacing: -0.015em;
+}
+
+.print-step-header p,
+.print-preview-header p {
+    margin: 0;
+}
+
+.print-step-kicker {
+    display: none;
+}
+
+.print-upload-dropzone {
+    min-height: 150px;
+    border-radius: var(--radius-md);
+    background: var(--surface-1);
+    box-shadow: none;
+}
+
+.print-upload-icon {
+    border-radius: 10px;
+    box-shadow: none;
+}
+
+.print-config-section {
+    gap: 14px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+}
+
+.print-config-section + .print-config-section,
+.print-material-section {
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+}
+
+.print-config-section h3 {
+    font-size: 16px;
+}
+
+.print-options {
+    gap: 24px;
+}
+
+.print-options > .print-config-section {
+    flex: 1 1 0;
+}
+
+.print-choice-chip,
+.print-tag-chip {
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+}
+
+.print-layout-choice-grid {
+    gap: 8px;
+}
+
+.print-choice-block {
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+}
+
+.print-toggle-row {
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-1);
+}
+
+.print-tags-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 8px;
+}
+
+.print-tag-chip {
+    min-height: 44px;
+}
+
+.print-step-actions {
+    gap: 12px;
+    margin-top: 0;
+    padding-top: 18px;
+    border-top: 1px solid var(--line);
+}
+
+.print-step-actions button {
+    min-width: 170px;
+}
+
+.print-secondary-btn {
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+    font-weight: 600;
+}
+
+.print-wizard-shell .btn-destaque,
+.print-send-btn {
+    border-radius: var(--radius-sm);
+    box-shadow: none;
+}
+
+.print-preview-stage {
+    height: 680px;
+    padding-left: 28px;
+    border-left: 1px solid var(--line);
+}
+
+.print-preview-header {
+    align-items: center;
+}
+
+.print-preview-header > div:first-child {
+    display: grid;
+    gap: 4px;
+}
+
+.print-preview-pane {
+    border-radius: var(--radius-md);
+    background: var(--surface-1);
+}
+
+.print-preview-close-btn {
+    display: none;
+}
+
+.print-review-layout {
+    display: block;
+}
+
+.print-review-summary {
+    width: 100%;
+}
+
+.print-summary-list {
+    gap: 0;
+}
+
+.print-summary-list > div {
+    display: grid;
+    grid-template-columns: minmax(130px, 0.35fr) minmax(0, 1fr);
+    gap: 16px;
+    padding: 12px 0;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    border-radius: 0;
+    background: transparent;
+}
+
+.print-summary-list > div:last-child {
+    border-bottom: 0;
+}
+
+.print-summary-list dt {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13px;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.print-visible-feedback {
+    min-height: 0;
+    padding: 0 32px 24px;
+}
+
+.print-visible-feedback p {
+    margin: 0;
+}
+
+.print-visible-feedback p:not(:empty) {
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface-1);
+    color: var(--text-main);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.print-visible-feedback p[data-variant="error"]:not(:empty) {
+    border-color: #fecaca;
+    background: #fff5f5;
+    color: #991b1b;
+}
+
+.print-visible-feedback p[data-variant="success"]:not(:empty) {
+    border-color: #bbf7d0;
+    background: #f0fdf4;
+    color: #166534;
+}
+
+.print-history-panel {
+    border-radius: 0;
+    border: 0;
+    border-left: 1px solid var(--line);
+    background: var(--surface-0);
+    box-shadow: -8px 0 24px rgba(15, 23, 42, 0.12);
+}
+
+.print-meta-card {
+    border-radius: var(--radius-md);
+    background: var(--surface-1);
+}
+
+.print-job-reuse-btn,
+.print-job-cancel-btn {
+    min-height: 44px;
+}
+
+.print-alert-modal {
+    backdrop-filter: none;
+}
+
+.print-alert-modal-card {
+    border-radius: 20px;
+    background: var(--surface-0);
+}
+
+@media (max-width: 980px) {
+    .print-wizard-shell {
+        min-height: 0;
+        padding: 12px 8px 28px;
+    }
+
+    .print-page-header {
+        align-items: center;
+        padding: 16px;
+    }
+
+    .print-page-header h1 {
+        font-size: 20px;
+    }
+
+    .print-page-header p {
+        display: none;
+    }
+
+    .print-flow-stepper {
+        padding: 12px 16px;
+    }
+
+    .print-flow-stepper ol {
+        min-width: 390px;
+    }
+
+    .print-flow-stepper li {
+        gap: 0;
+    }
+
+    .print-flow-stepper li strong {
+        width: 1px;
+        overflow: hidden;
+        padding: 0;
+        clip-path: inset(50%);
+    }
+
+    .print-flow-stepper li:not(:last-child)::after {
+        left: 27px;
+        right: 5px;
+    }
+
+    .print-selection-context {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        padding: 12px 16px;
+    }
+
+    .print-selection-context .print-context-divider,
+    .print-selection-context .print-context-group:nth-of-type(3) {
+        display: none;
+    }
+
+    .print-context-actions {
+        display: grid;
+    }
+
+    .print-wizard-stage {
+        display: block;
+    }
+
+    .print-wizard-left {
+        padding: 20px 16px 24px;
+    }
+
+    .print-wizard-right {
+        display: none;
+        padding: 0;
+    }
+
+    body.print-preview-modal-open .print-wizard-right {
+        position: fixed;
+        z-index: 80;
+        inset: 0;
+        display: block;
+        overflow-y: auto;
+        padding: 16px;
+        background: rgba(15, 23, 42, 0.52);
+    }
+
+    body.print-preview-modal-open #painelPreview,
+    body.print-preview-modal-open #painelPreview[hidden] {
+        min-height: calc(100svh - 32px);
+        padding: 16px;
+        border: 0;
+        border-radius: var(--radius-lg);
+        background: var(--surface-0);
+    }
+
+    .print-preview-stage {
+        height: auto;
+        padding-left: 0;
+        border-left: 0;
+    }
+
+    .print-preview-close-btn {
+        display: inline-flex;
+    }
+
+    .print-preview-pane {
+        min-height: clamp(320px, 70svh, 680px);
+    }
+
+    .print-options {
+        flex-direction: column;
+    }
+
+    .print-step-actions,
+    .print-step-actions-end {
+        flex-direction: column;
+    }
+
+    .print-step-actions button {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .print-visible-feedback {
+        padding: 0 16px 20px;
+    }
+}
+
+@media (max-width: 640px) {
+    .print-page-header .print-secondary-btn {
+        width: auto;
+        min-width: 0;
+    }
+
+    .print-selection-context {
+        grid-template-columns: minmax(0, 1fr) auto;
+    }
+
+    .print-context-group strong {
+        white-space: normal;
+    }
+
+    .print-summary-list > div {
+        grid-template-columns: 1fr;
+        gap: 4px;
+    }
+
+    .print-tags-grid {
+        grid-template-columns: 1fr;
+    }
 }

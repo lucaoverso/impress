@@ -189,7 +189,9 @@
 
     function setChoiceSelection(selector, value, attributeName) {
         document.querySelectorAll(selector).forEach((button) => {
-            button.classList.toggle("is-selected", button.dataset[attributeName] === String(value));
+            const selected = button.dataset[attributeName] === String(value);
+            button.classList.toggle("is-selected", selected);
+            button.setAttribute("aria-pressed", selected ? "true" : "false");
         });
     }
 
@@ -224,11 +226,6 @@
             article.hidden = Number(step) !== currentStep;
         });
 
-        const stepperCard = document.getElementById("printStepperCard");
-        if (stepperCard && activeArticle && activeArticle.firstElementChild !== stepperCard) {
-            activeArticle.prepend(stepperCard);
-        }
-
         if (activeArticle) {
             clearStepAnimations(stepArticles);
             if (lastRenderedStep !== null && lastRenderedStep !== currentStep) {
@@ -250,6 +247,13 @@
 
             item.classList.toggle("is-current", step === currentStep);
             item.classList.toggle("is-complete", step < currentStep);
+            item.classList.toggle("is-ready", step < currentStep);
+            item.classList.toggle("is-locked", step > currentStep);
+            if (step === currentStep) {
+                item.setAttribute("aria-current", "step");
+            } else {
+                item.removeAttribute("aria-current");
+            }
         });
 
         document.documentElement.dataset.printingCurrentStep = String(currentStep);
@@ -257,9 +261,35 @@
         return currentStep;
     }
 
+    function renderPersistentContext(state, currentStep) {
+        const context = document.getElementById("printSelectionContext");
+        const file = document.getElementById("printContextFile");
+        const request = document.getElementById("printContextRequest");
+        const previewButton = document.getElementById("btnAbrirPreviewMobile");
+        if (!context || !file || !request) {
+            return;
+        }
+
+        const fileName = String(state?.upload?.fileName || "").trim();
+        const turma = document.getElementById("turmaImpressao");
+        const turmaLabel = turma?.selectedOptions?.[0]?.textContent?.trim() || "";
+        const copias = Math.max(1, Number(state?.request?.copias || 1));
+
+        context.hidden = currentStep <= 1 && !fileName;
+        file.textContent = fileName || "Aguardando arquivo";
+        request.textContent = state?.request?.turmaId
+            ? `${turmaLabel} · ${copias} ${copias === 1 ? "cópia" : "cópias"}`
+            : "Aguardando turma e cópias";
+
+        if (previewButton) {
+            previewButton.disabled = !state?.preview?.ready || state?.preview?.loading;
+        }
+    }
+
     function renderProgressiveFlow(state) {
         renderPageMode(state);
         const currentStep = renderCurrentStep(state);
+        renderPersistentContext(state, currentStep);
         syncDesktopPreviewHeight();
         const shouldShowPreview = Boolean(state?.upload?.valid || state?.preview?.ready)
             && currentStep > 1;

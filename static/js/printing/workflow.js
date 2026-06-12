@@ -10,7 +10,7 @@
             step1: true,
             step2: uploadValid && ownerValid,
             step3: uploadValid && requestValid,
-            step4: uploadValid && requestValid && settingsValid,
+            step4: uploadValid && requestValid && settingsValid && Boolean(state?.tags?.valid),
             step5: submitted,
         };
     }

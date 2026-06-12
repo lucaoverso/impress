@@ -89,6 +89,25 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn("css/pages/professor.css?v=build-cadastro-456", html)
         self.assertIn("js/cadastro-professor.js?v=build-cadastro-456", html)
 
+    def test_impressao_renderiza_fluxo_guiado_e_revisao_completa(self):
+        config, pages_router = _reload_modulos("build-print-789")
+        app = FastAPI()
+        app.mount("/static", StaticFiles(directory=str(config.STATIC_DIR)), name="static")
+
+        resposta = pages_router.impressao_page(_criar_request(app, "/impressao"))
+        html = resposta.body.decode("utf-8")
+
+        self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
+        self.assertIn("css/pages/professor.css?v=build-print-789", html)
+        self.assertIn("js/printing/index.js?v=build-print-789", html)
+        self.assertIn('id="printStepperCard"', html)
+        self.assertIn('id="printSelectionContext"', html)
+        self.assertIn('id="resumoDuplex"', html)
+        self.assertIn('id="resumoTags"', html)
+        self.assertIn('id="printFeedbackVisible"', html)
+        self.assertIn('role="dialog"', html)
+        self.assertLess(html.index('id="tagsConferencia"'), html.index('id="etapaConferencia"'))
+
     def test_horario_escolar_injeta_asset_version_e_no_store(self):
         config, pages_router = _reload_modulos("build-horario-789")
         app = FastAPI()

@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Professor - Impressao</title>
+    <title>Professor - Impressão</title>
     {% include "includes/style_bundle.html" %}
 </head>
 
@@ -34,15 +34,64 @@
     </section>
 
     <main class="print-wizard-shell">
+        <section class="print-workspace">
+            <header class="print-page-header">
+                <div class="print-page-header-copy">
+                    <h1>Solicitar impressão</h1>
+                    <p>Envie o arquivo, ajuste a impressão e confira tudo antes de confirmar.</p>
+                </div>
+                <button id="btnAbrirHistorico" class="print-secondary-btn" type="button">
+                    Meus pedidos
+                </button>
+            </header>
 
-        <section class="print-wizard-stage">
+            <nav id="printStepperCard" class="print-flow-stepper" aria-label="Etapas da impressão">
+                <ol>
+                    <li id="stepperArquivo" class="is-current" aria-current="step">
+                        <span>1</span><strong>Arquivo</strong>
+                    </li>
+                    <li id="stepperSolicitacao">
+                        <span>2</span><strong>Solicitação</strong>
+                    </li>
+                    <li id="stepperConfiguracoes">
+                        <span>3</span><strong>Configuração</strong>
+                    </li>
+                    <li id="stepperResumo">
+                        <span>4</span><strong>Conferência</strong>
+                    </li>
+                    <li id="stepperAcompanhamento">
+                        <span>5</span><strong>Acompanhamento</strong>
+                    </li>
+                </ol>
+            </nav>
+
+            <section id="printSelectionContext" class="print-selection-context" hidden aria-live="polite">
+                <div class="print-context-group">
+                    <span>Arquivo</span>
+                    <strong id="printContextFile">Aguardando arquivo</strong>
+                </div>
+                <div class="print-context-divider" aria-hidden="true"></div>
+                <div class="print-context-group">
+                    <span>Solicitação</span>
+                    <strong id="printContextRequest">Aguardando turma e cópias</strong>
+                </div>
+                <div class="print-context-divider print-context-preview-divider" aria-hidden="true"></div>
+                <div class="print-context-group print-context-actions">
+                    <span>Pré-visualização</span>
+                    <button id="btnAbrirPreviewMobile" class="print-context-preview-btn" type="button" disabled>
+                        Ver prévia
+                    </button>
+                </div>
+            </section>
+
+            <section class="print-wizard-stage">
             <section class="print-wizard-left">
                 <div id="printWizardStartAnchor" class="print-scroll-anchor" aria-hidden="true"></div>
                 <article id="etapaArquivo" class="print-step-card print-step-card-active">
                     <header class="print-step-header">
                         <div>
-                            <p class="print-step-kicker">Etapa 1</p>
-                            <h2>Professor e arquivo</h2>
+                            <h2>Escolha o arquivo</h2>
+                            <p>Selecione o material que será enviado para impressão.</p>
                         </div>
                     </header>
 
@@ -63,7 +112,9 @@
                     <p class="print-file-hint">Formatos aceitos: PDF, DOCX, DOC, PNG, JPG e JPEG.</p>
 
                     <div class="print-step-actions">
-                        <button id="btnContinuarArquivo" class="btn-destaque" type="button">Continuar</button>
+                        <button id="btnContinuarArquivo" class="btn-destaque" type="button">
+                            Continuar para solicitação
+                        </button>
                     </div>
                     <section id="painelProfessorEtapaArquivo" class="print-config-section print-step-history-grid" hidden>
                         <article id="grupoProfessorSolicitante" class="print-field-group" style="display: none;">
@@ -94,8 +145,8 @@
                 <article id="etapaSolicitacao" class="print-step-card" hidden>
                     <header class="print-step-header">
                         <div>
-                            <p class="print-step-kicker">Etapa 2</p>
                             <h2>Dados da solicitação</h2>
+                            <p>Informe a turma e confirme quantas cópias serão impressas.</p>
                         </div>
                     </header>
 
@@ -119,16 +170,20 @@
                     </section>
 
                     <div class="print-step-actions">
-                        <button id="btnVoltarSolicitacao" class="print-secondary-btn" type="button">Voltar</button>
-                        <button id="btnContinuarSolicitacao" class="btn-destaque" type="button">Continuar</button>
+                        <button id="btnVoltarSolicitacao" class="print-secondary-btn" type="button">
+                            Voltar para arquivo
+                        </button>
+                        <button id="btnContinuarSolicitacao" class="btn-destaque" type="button">
+                            Continuar para configuração
+                        </button>
                     </div>
                 </article>
 
                 <article id="etapaConfiguracoes" class="print-step-card" hidden>
                     <header class="print-step-header">
                         <div>
-                            <p class="print-step-kicker">Etapa 3</p>
-                            <h2>Configurar impressão</h2>
+                            <h2>Configure a impressão</h2>
+                            <p>Escolha as páginas, o layout e o tipo de material.</p>
                         </div>
                     </header>
 
@@ -197,22 +252,34 @@
                         </div>
                     </section>
 
+                    <section id="tagsConferencia" class="print-config-section print-material-section">
+                        <header>
+                            <h3>Tipo de material</h3>
+                            <p>Selecione pelo menos uma opção para identificar o pedido.</p>
+                        </header>
+                        <div id="tagsImpressao" class="print-tags-grid" aria-label="Tipos de material"></div>
+                    </section>
+
                     <div class="print-step-actions">
-                        <button id="btnVoltarConfiguracoes" class="print-secondary-btn" type="button">Voltar</button>
-                        <button id="btnContinuarConfiguracoes" class="btn-destaque" type="button">Continuar</button>
+                        <button id="btnVoltarConfiguracoes" class="print-secondary-btn" type="button">
+                            Voltar para solicitação
+                        </button>
+                        <button id="btnContinuarConfiguracoes" class="btn-destaque" type="button">
+                            Continuar para conferência
+                        </button>
                     </div>
                 </article>
 
                 <article id="etapaConferencia" class="print-step-card" hidden>
                     <header class="print-step-header">
                         <div>
-                            <p class="print-step-kicker">Etapa 4</p>
-                            <h2>Conferir solicitação</h2>
+                            <h2>Confira a solicitação</h2>
+                            <p>Revise os dados abaixo antes de enviar o pedido para a fila.</p>
                         </div>
                     </header>
 
-                    <div class="print-options">
-                        <section id="resumoConferencia" class="print-config-section">
+                    <div class="print-options print-review-layout">
+                        <section id="resumoConferencia" class="print-config-section print-review-summary">
                             <h3>Resumo da impressão</h3>
 
                             <dl class="print-summary-list print-summary-list-single">
@@ -221,12 +288,36 @@
                                     <dd id="resumoArquivo">Aguardando arquivo</dd>
                                 </div>
                                 <div>
+                                    <dt>Professor</dt>
+                                    <dd id="resumoProfessor">Será preenchido automaticamente</dd>
+                                </div>
+                                <div>
+                                    <dt>Turma</dt>
+                                    <dd id="resumoTurma">Não selecionada</dd>
+                                </div>
+                                <div>
                                     <dt>Cópias</dt>
                                     <dd id="resumoCopias">1</dd>
                                 </div>
                                 <div>
+                                    <dt>Páginas</dt>
+                                    <dd id="resumoPaginas">Todas</dd>
+                                </div>
+                                <div>
                                     <dt>Layout</dt>
                                     <dd id="resumoLayout">1 página por folha</dd>
+                                </div>
+                                <div>
+                                    <dt>Orientação</dt>
+                                    <dd id="resumoOrientacao">Retrato</dd>
+                                </div>
+                                <div>
+                                    <dt>Frente e verso</dt>
+                                    <dd id="resumoDuplex">Não</dd>
+                                </div>
+                                <div>
+                                    <dt>Tipo de material</dt>
+                                    <dd id="resumoTags">Nenhum tipo selecionado</dd>
                                 </div>
                                 <div>
                                     <dt>Total estimado</dt>
@@ -234,14 +325,12 @@
                                 </div>
                             </dl>
                         </section>
-                        <section id="tagsConferencia" class="print-config-section">
-                            <h3>Tipo de material</h3>
-                            <div id="tagsImpressao" class="print-tags-grid" aria-label="Tags da impressao"></div>
-                        </section>
                     </div>
 
                     <div class="print-step-actions">
-                        <button id="btnVoltarConferencia" class="print-secondary-btn" type="button">Voltar</button>
+                        <button id="btnVoltarConferencia" class="print-secondary-btn" type="button">
+                            Voltar para configuração
+                        </button>
                         <button id="btnEnviar" class="btn-destaque print-send-btn" type="button">Confirmar impressão</button>
                     </div>
                     <p id="estadoEnvio" class="print-submit-state" aria-live="polite"></p>
@@ -250,8 +339,8 @@
                 <article id="etapaAcompanhamento" class="print-step-card" hidden>
                     <header class="print-step-header">
                         <div>
-                            <p class="print-step-kicker">Etapa 5</p>
                             <h2 id="painelJobRecenteTitulo">Acompanhar pedido</h2>
+                            <p>Acompanhe o envio e cancele dentro do prazo, se necessário.</p>
                         </div>
                         <p id="painelJobRecenteBadge" class="auth-badge">Pedido enviado</p>
                     </header>
@@ -271,10 +360,11 @@
             </section>
 
             <aside class="print-wizard-right">
-                <section id="painelPreview" class="print-preview-stage">
+                <section id="painelPreview" class="print-preview-stage" tabindex="-1">
                     <header class="print-preview-header">
                         <div>
-                            <p class="auth-badge">Pré-visualização</p>
+                            <h2>Pré-visualização</h2>
+                            <p>Confira as páginas que serão impressas.</p>
                         </div>
                         <div class="print-preview-header-actions">
                             <div class="print-pagination" role="group" aria-label="Navegacao da pre-visualizacao">
@@ -282,6 +372,10 @@
                                 <span id="contadorFolha"></span>
                                 <button id="btnProxima" type="button" aria-label="Proxima folha">&#9654;</button>
                             </div>
+                            <button id="btnFecharPreviewMobile" class="print-secondary-btn print-preview-close-btn"
+                                type="button">
+                                Fechar prévia
+                            </button>
                         </div>
                     </header>
 
@@ -290,12 +384,18 @@
                     </section>
                 </section>
             </aside>
+            </section>
+
+            <section class="print-visible-feedback" aria-live="polite" aria-atomic="true">
+                <p id="printFeedbackVisible"></p>
+            </section>
         </section>
     </main>
 
-    <aside id="painelHistoricoImpressao" class="print-history-drawer" aria-hidden="true">
+    <aside id="painelHistoricoImpressao" class="print-history-drawer" aria-hidden="true" inert>
         <div class="print-history-backdrop" data-close-history="true"></div>
-        <section class="print-history-panel">
+        <section class="print-history-panel" role="dialog" aria-modal="true" aria-labelledby="tituloJobs"
+            tabindex="-1">
             <header class="print-history-header">
                 <div>
                     <p class="auth-badge">Cota e histórico</p>
