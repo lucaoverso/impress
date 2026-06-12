@@ -345,11 +345,6 @@ html[data-printing-current-step="1"] #etapaArquivo .print-step-actions {
     overflow: visible;
 }
 
-.print-step-card-active {
-    border-color: rgba(13, 122, 111, 0.28);
-    box-shadow: 0 0 0 1px rgba(13, 122, 111, 0.12), var(--print-shadow-md);
-}
-
 .print-step-actions {
     display: flex;
     justify-content: space-between;

@@ -3031,7 +3031,6 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     display: grid;
     gap: 16px;
     padding-top: 24px;
-    border-top: 1px solid var(--scheduler-border);
 }
 
 .scheduler-flow-page .scheduler-week-header h3,
@@ -3195,13 +3194,8 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     outline-offset: 2px;
 }
 
-.scheduler-summary-section .print-summary-list {
-    border-top: 1px solid var(--scheduler-border);
-}
-
 .scheduler-summary-section .print-summary-list > div {
     padding: 12px 0;
-    border-bottom: 1px solid var(--scheduler-border);
 }
 
 .scheduler-flow-page .scheduler-feedback-message:not(:empty) {
