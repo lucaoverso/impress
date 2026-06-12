@@ -21,19 +21,27 @@
     --brand-strong: #0b5b55;
     --brand-soft: #d6f2ef;
     --error: #dc2626;
+    --success: #16845b;
+    --warning: #b66a12;
+    --info: #326fa8;
     --radius-sm: 8px;
-    --radius-md: 10px;
-    --radius-lg: 14px;
-    --shadow-card: 0 10px 24px rgba(15, 23, 42, 0.08);
-    --focus-ring: 0 0 0 3px rgba(15, 118, 110, 0.18);
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-6: 24px;
+    --space-8: 32px;
+    --shadow-low: 0 2px 6px rgba(15, 23, 42, 0.06);
+    --shadow-card: var(--shadow-low);
+    --focus-ring: 0 0 0 3px rgba(15, 118, 110, 0.24);
+    --motion-fast: 180ms cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 body {
     font-family: var(--font-sans);
-    background:
-        radial-gradient(circle at 20% 15%, var(--bg-accent), transparent 38%),
-        radial-gradient(circle at 85% 5%, #fbe3b7, transparent 30%),
-        var(--bg-main);
+    background: var(--surface-2);
     color: var(--text-main);
     font-size: 16px;
     line-height: 1.5;
@@ -46,7 +54,8 @@ h1,
 h2,
 h3 {
     color: var(--text-main);
-    letter-spacing: -0.01em;
+    letter-spacing: -0.015em;
+    text-wrap: balance;
 }
 
 button,
@@ -71,12 +80,18 @@ button {
     font-size: 14px;
     font-weight: 600;
     cursor: pointer;
-    transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.1s ease, box-shadow 0.2s ease;
-    height: 48px;
+    transition:
+        border-color var(--motion-fast),
+        background-color var(--motion-fast),
+        color var(--motion-fast),
+        transform 100ms ease-out,
+        box-shadow var(--motion-fast);
+    min-height: 44px;
+    height: auto;
 }
 
 button:hover {
-    border-color: #aeb9c7;
+    border-color: var(--brand);
 }
 
 button:active {
@@ -100,7 +115,7 @@ input:not([type="checkbox"]):not([type="radio"]) {
     border-radius: 12px;
     background: var(--surface-0);
     outline: none;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition: border-color var(--motion-fast), box-shadow var(--motion-fast);
 }
 
 input:not([type="checkbox"]):not([type="radio"]),
@@ -120,7 +135,7 @@ textarea {
 
 input:not([type="checkbox"]):not([type="radio"])::placeholder,
 textarea::placeholder {
-    color: #8b97a6;
+    color: #667384;
 }
 
 select:focus,
@@ -140,5 +155,16 @@ footer {
     text-align: center;
     padding: 12px 16px 18px;
     font-size: 12px;
-    color: #5b6573;
+    color: var(--text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+    }
 }

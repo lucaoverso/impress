@@ -1,0 +1,1177 @@
+/* Scheduling flow aligned with the approved "Contexto persistente" direction. */
+
+.scheduler-flow-page {
+    --scheduler-primary: var(--brand);
+    --scheduler-primary-strong: var(--brand-strong);
+    --scheduler-primary-soft: var(--brand-soft);
+    --scheduler-canvas: var(--surface-1);
+    --scheduler-surface: var(--surface-0);
+    --scheduler-text: var(--text-main);
+    --scheduler-muted: var(--text-muted);
+    --scheduler-border: var(--line);
+    --scheduler-focus-ring: rgba(15, 118, 110, 0.28);
+    --scheduler-transition: var(--motion-fast);
+    display: block;
+    max-width: 1080px;
+    padding: 28px 24px 48px;
+    color: var(--scheduler-text);
+}
+
+html[data-scheduler-current-step] .scheduler-flow-page {
+    max-width: 1080px;
+}
+
+.scheduler-workspace {
+    position: relative;
+    overflow: clip;
+    border: 1px solid var(--scheduler-border);
+    border-radius: var(--radius-lg);
+    background: var(--scheduler-surface);
+}
+
+.scheduler-workspace::before {
+    display: none;
+}
+
+.scheduler-flow-page .scheduler-page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    padding: 28px 32px 20px;
+    border: 0;
+    border-bottom: 1px solid var(--scheduler-border);
+    border-radius: 0;
+    background: var(--scheduler-surface);
+    box-shadow: none;
+}
+
+.scheduler-flow-page .scheduler-page-header-copy {
+    gap: 4px;
+}
+
+.scheduler-flow-page .scheduler-page-header h1 {
+    margin: 0;
+    font-size: 26px;
+    line-height: 1.15;
+    letter-spacing: -0.025em;
+    color: var(--scheduler-text);
+}
+
+.scheduler-flow-page .scheduler-page-lead {
+    margin: 0;
+    font-size: 14px;
+    color: var(--scheduler-muted);
+}
+
+.scheduler-header-calendar-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    width: auto;
+    min-height: 44px;
+    padding: 0 14px;
+    border-color: var(--scheduler-primary);
+    border-radius: 8px;
+    color: var(--scheduler-primary-strong);
+    transition:
+        border-color var(--scheduler-transition),
+        background-color var(--scheduler-transition),
+        color var(--scheduler-transition);
+}
+
+.scheduler-header-calendar-btn:hover:not(:disabled) {
+    border-color: var(--scheduler-primary-strong);
+    background: var(--scheduler-primary-soft);
+}
+
+.scheduler-calendar-icon {
+    position: relative;
+    width: 15px;
+    height: 14px;
+    flex: 0 0 15px;
+    border: 1.5px solid currentColor;
+    border-radius: 3px;
+}
+
+.scheduler-calendar-icon::before {
+    content: "";
+    position: absolute;
+    inset: 3px -1.5px auto;
+    border-top: 1.5px solid currentColor;
+}
+
+.scheduler-calendar-icon::after {
+    content: "";
+    position: absolute;
+    top: -3px;
+    left: 3px;
+    width: 6px;
+    height: 4px;
+    border-right: 1.5px solid currentColor;
+    border-left: 1.5px solid currentColor;
+}
+
+.scheduler-flow-stepper {
+    overflow-x: auto;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--scheduler-border);
+    scrollbar-width: none;
+}
+
+.scheduler-flow-stepper::-webkit-scrollbar {
+    display: none;
+}
+
+.scheduler-flow-stepper ol {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(128px, 1fr));
+    min-width: 580px;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.scheduler-flow-stepper li {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    min-height: 34px;
+    color: var(--scheduler-muted);
+    transition: color var(--scheduler-transition);
+}
+
+.scheduler-flow-stepper li:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: 30px;
+    right: 12px;
+    top: 17px;
+    height: 1px;
+    background: var(--scheduler-border);
+}
+
+.scheduler-flow-stepper li > * {
+    position: relative;
+    z-index: 1;
+}
+
+.scheduler-flow-stepper li span {
+    display: grid;
+    place-items: center;
+    width: 26px;
+    height: 26px;
+    flex: 0 0 26px;
+    border: 1px solid var(--scheduler-border);
+    border-radius: 50%;
+    background: var(--scheduler-surface);
+    font-size: 12px;
+    font-weight: 800;
+    transition:
+        border-color var(--scheduler-transition),
+        background-color var(--scheduler-transition),
+        color var(--scheduler-transition);
+}
+
+.scheduler-flow-stepper li strong {
+    padding-right: 10px;
+    background: var(--scheduler-surface);
+    font-size: 12px;
+}
+
+.scheduler-flow-stepper li.is-current,
+.scheduler-flow-stepper li.is-ready {
+    color: var(--scheduler-primary-strong);
+}
+
+.scheduler-flow-stepper li.is-current span {
+    border-color: var(--scheduler-primary);
+    background: var(--scheduler-primary);
+    color: #ffffff;
+    box-shadow: none;
+}
+
+.scheduler-flow-stepper li.is-ready span {
+    border-color: var(--scheduler-primary);
+    color: var(--scheduler-primary);
+}
+
+.scheduler-flow-stepper li.is-ready:not(:last-child)::after {
+    background: var(--scheduler-primary);
+}
+
+.scheduler-selection-context {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 1px minmax(280px, 0.9fr);
+    gap: 28px;
+    align-items: center;
+    padding: 16px 32px;
+    border-left: 0;
+    background: var(--scheduler-primary-soft);
+}
+
+.scheduler-selection-context[hidden] {
+    display: none !important;
+}
+
+.scheduler-context-group {
+    display: grid;
+    gap: 8px;
+    min-width: 0;
+}
+
+.scheduler-context-group > span {
+    color: var(--scheduler-primary-strong);
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.scheduler-context-divider {
+    align-self: stretch;
+    min-height: 44px;
+    background: rgba(8, 63, 63, 0.24);
+}
+
+.scheduler-context-resources {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.scheduler-context-resource-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 12px;
+    border: 1px solid rgba(8, 63, 63, 0.16);
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.88);
+    color: var(--scheduler-text);
+    gap: 7px;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.scheduler-resource-icon {
+    position: relative;
+    width: 15px;
+    height: 10px;
+    flex: 0 0 15px;
+    border: 1.5px solid var(--scheduler-primary);
+    border-radius: 2px;
+}
+
+.scheduler-resource-icon::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 4px;
+    width: 4px;
+    height: 4px;
+    border: 1px solid var(--scheduler-primary);
+    border-radius: 50%;
+}
+
+.scheduler-resource-icon::after {
+    content: "";
+    position: absolute;
+    right: -3px;
+    bottom: -3px;
+    left: -3px;
+    border-bottom: 1.5px solid var(--scheduler-primary);
+}
+
+.scheduler-context-lesson strong {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    overflow: hidden;
+    color: var(--scheduler-primary-strong);
+    font-size: 14px;
+    line-height: 1.4;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.scheduler-context-lesson strong::before {
+    content: "";
+    width: 13px;
+    height: 13px;
+    flex: 0 0 13px;
+    border: 1.5px solid var(--scheduler-primary);
+    border-radius: 3px;
+}
+
+.scheduler-flow-surface {
+    position: relative;
+    padding: 28px 32px 32px;
+    border: 0;
+    border-radius: 0;
+    background: var(--scheduler-surface);
+}
+
+.scheduler-flow-surface::before {
+    display: none;
+}
+
+.scheduler-flow-step,
+.scheduler-resource-stage-card,
+.scheduler-lesson-stage {
+    gap: 22px;
+}
+
+#schedulerLessonStage > .scheduler-flow-heading {
+    display: flex;
+}
+
+.scheduler-flow-heading {
+    gap: 4px;
+}
+
+.scheduler-flow-heading h2 {
+    font-size: 20px;
+    letter-spacing: -0.015em;
+}
+
+.scheduler-flow-heading p:last-child {
+    font-size: 13px;
+}
+
+.scheduler-flow-page .print-step-kicker {
+    display: none;
+}
+
+.scheduler-flow-page .scheduler-resource-stage-grid {
+    display: flex;
+    gap: 10px;
+    overflow-x: hidden;
+    overflow-y: hidden;
+    padding: 3px 2px 10px;
+    scroll-snap-type: x proximity;
+}
+
+.scheduler-flow-page .scheduler-resource-stage-button {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    flex: 0 0 196px;
+    width: 196px;
+    min-height: 84px;
+    padding: 11px;
+    border: 1px solid var(--scheduler-border);
+    border-radius: var(--radius-md);
+    background: var(--scheduler-surface);
+    text-align: left;
+    transition:
+        border-color var(--scheduler-transition),
+        background-color var(--scheduler-transition),
+        box-shadow var(--scheduler-transition);
+}
+
+.scheduler-flow-page .scheduler-resource-stage-button:hover {
+    border-color: var(--scheduler-primary);
+    background: var(--scheduler-surface);
+}
+
+.scheduler-flow-page .scheduler-resource-stage-button.is-selected {
+    border-color: var(--scheduler-primary);
+    background: var(--scheduler-primary-soft);
+    box-shadow: inset 0 0 0 1px var(--scheduler-primary);
+}
+
+.scheduler-flow-page .scheduler-resource-stage-icon {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    border-radius: 10px;
+    background-color: var(--scheduler-primary-soft);
+    color: var(--scheduler-primary-strong);
+    transition:
+        background-color var(--scheduler-transition),
+        color var(--scheduler-transition);
+}
+
+.scheduler-flow-page .scheduler-resource-stage-icon .bi {
+    font-size: 23px;
+    line-height: 1;
+}
+
+.scheduler-flow-page .scheduler-resource-stage-button.is-selected .scheduler-resource-stage-icon {
+    background: var(--scheduler-primary);
+    color: var(--scheduler-surface);
+}
+
+.scheduler-flow-page .scheduler-resource-stage-copy {
+    min-width: 0;
+    padding: 0;
+}
+
+.scheduler-flow-page .scheduler-resource-stage-title {
+    display: block;
+    overflow: hidden;
+    font-size: 14px;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.scheduler-flow-page .scheduler-resource-stage-kicker,
+.scheduler-flow-page .scheduler-resource-stage-capacity {
+    font-size: 11px;
+    line-height: 1.25;
+}
+
+.scheduler-day-overview {
+    display: grid;
+    gap: 14px;
+    margin-top: 10px;
+    padding-top: 24px;
+    border-top: 1px solid var(--scheduler-border);
+}
+
+.scheduler-day-overview-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.scheduler-day-overview-header h3,
+.scheduler-day-overview-header p,
+.scheduler-day-overview-shift h4,
+.scheduler-day-overview-empty {
+    margin: 0;
+}
+
+.scheduler-day-overview-header h3 {
+    font-size: 17px;
+    line-height: 1.3;
+}
+
+.scheduler-day-overview-header p {
+    font-size: 13px;
+    color: var(--scheduler-muted);
+}
+
+.scheduler-day-overview-list,
+.scheduler-day-overview-shift {
+    display: grid;
+    gap: 8px;
+}
+
+.scheduler-day-overview-shift h4 {
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.scheduler-day-overview-rows {
+    overflow: hidden;
+    border: 1px solid var(--scheduler-border);
+    border-radius: var(--radius-md);
+    background: var(--scheduler-surface);
+}
+
+.scheduler-day-overview-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 58px;
+    padding: 10px 14px;
+}
+
+.scheduler-day-overview-row + .scheduler-day-overview-row {
+    border-top: 1px solid var(--scheduler-border);
+}
+
+.scheduler-day-overview-copy {
+    display: grid;
+    min-width: 0;
+    gap: 2px;
+}
+
+.scheduler-day-overview-copy strong,
+.scheduler-day-overview-copy span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.scheduler-day-overview-copy strong {
+    font-size: 14px;
+    line-height: 1.3;
+}
+
+.scheduler-day-overview-copy span,
+.scheduler-day-overview-lesson {
+    font-size: 12px;
+    line-height: 1.35;
+    color: var(--scheduler-muted);
+}
+
+.scheduler-day-overview-lesson {
+    flex: 0 0 auto;
+    white-space: nowrap;
+}
+
+.scheduler-day-overview-empty {
+    padding: 16px;
+    border-radius: var(--radius-md);
+    background: var(--scheduler-primary-soft);
+    font-size: 13px;
+    color: var(--scheduler-primary-strong);
+}
+
+.scheduler-mobile-resource-hero {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    min-height: 180px;
+    border-radius: 12px;
+    background: var(--scheduler-primary-soft);
+}
+
+.scheduler-mobile-resource-cover {
+    position: absolute;
+    inset: 0;
+    background:
+        linear-gradient(145deg, rgba(15, 118, 110, 0.16), rgba(15, 118, 110, 0.03)),
+        var(--scheduler-primary-soft);
+    background-position: center;
+    background-size: cover;
+}
+
+.scheduler-mobile-resource-overlay {
+    position: absolute;
+    inset: auto 0 0;
+    display: flex;
+    align-items: end;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 48px 16px 16px;
+    background: linear-gradient(to top, rgba(10, 22, 21, 0.78), transparent);
+    color: #ffffff;
+}
+
+.scheduler-mobile-resource-overlay strong {
+    max-width: 70%;
+    font-size: 17px;
+}
+
+.scheduler-mobile-resource-overlay span {
+    max-width: 30%;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: right;
+}
+
+.scheduler-week-section,
+.scheduler-day-lessons-section,
+.scheduler-repeat-section,
+.scheduler-summary-section {
+    gap: 14px;
+    padding-top: 0;
+    border-top: 0;
+}
+
+.scheduler-week-section {
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--scheduler-border);
+}
+
+.scheduler-flow-page .scheduler-week-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 20px;
+}
+
+.scheduler-flow-page .scheduler-week-header h3,
+.scheduler-day-lessons-section h3,
+.scheduler-summary-section h3 {
+    font-size: 15px;
+}
+
+.scheduler-flow-page .scheduler-week-nav {
+    display: grid;
+    grid-template-columns: 40px minmax(190px, auto) 40px auto;
+    gap: 6px;
+}
+
+.scheduler-flow-page .scheduler-week-nav button {
+    min-width: 40px;
+    min-height: 38px;
+    height: 38px;
+    padding: 0 10px;
+    border-radius: 6px;
+    transition:
+        border-color var(--scheduler-transition),
+        background-color var(--scheduler-transition),
+        color var(--scheduler-transition);
+}
+
+.scheduler-flow-page .scheduler-week-nav h3 {
+    align-self: center;
+    min-width: 0;
+    font-size: 13px;
+}
+
+.scheduler-flow-page .scheduler-week-strip {
+    gap: 6px;
+}
+
+.scheduler-flow-page .scheduler-week-day {
+    min-height: 60px;
+    padding: 8px 10px;
+    border-color: transparent;
+    border-radius: 6px;
+    background: transparent;
+    transition:
+        border-color var(--scheduler-transition),
+        background-color var(--scheduler-transition),
+        color var(--scheduler-transition);
+}
+
+.scheduler-flow-page .scheduler-week-day:hover {
+    border-color: var(--scheduler-border);
+    background: var(--scheduler-canvas);
+}
+
+.scheduler-flow-page .scheduler-week-day.is-selected {
+    border-color: var(--scheduler-primary);
+    background: var(--scheduler-primary);
+    color: #ffffff;
+    box-shadow: none;
+}
+
+.scheduler-flow-page .scheduler-week-day.is-selected span {
+    color: #ffffff;
+}
+
+.scheduler-flow-page .scheduler-week-day-number {
+    font-size: 15px;
+}
+
+.scheduler-day-lessons-header {
+    margin-bottom: 0;
+}
+
+.scheduler-day-agenda-list {
+    gap: 18px;
+}
+
+.scheduler-shift-section {
+    gap: 5px;
+}
+
+.scheduler-shift-header {
+    padding: 7px 10px 0;
+    background: var(--scheduler-canvas);
+}
+
+.scheduler-shift-header h4 {
+    margin-bottom: 7px;
+    font-size: 10px;
+    letter-spacing: 0.05em;
+}
+
+.scheduler-lesson-list-columns {
+    display: grid;
+    grid-template-columns: 72px minmax(150px, 0.9fr) minmax(190px, 1.1fr) minmax(180px, 1fr);
+    gap: 14px;
+    padding: 7px 10px 7px 34px;
+    border-top: 1px solid var(--scheduler-border);
+    color: var(--scheduler-muted);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.scheduler-shift-slots {
+    gap: 0;
+    border-top: 1px solid var(--scheduler-border);
+}
+
+.scheduler-lesson-option-row {
+    display: grid;
+    grid-template-columns: 20px 72px minmax(150px, 0.9fr) minmax(190px, 1.1fr) minmax(180px, 1fr);
+    gap: 14px;
+    align-items: center;
+    min-height: 48px;
+    padding: 8px 10px;
+    border: 0;
+    border-bottom: 1px solid var(--scheduler-border);
+    cursor: pointer;
+    transition: background-color var(--scheduler-transition);
+}
+
+.scheduler-lesson-option-row:hover:not(.is-disabled) {
+    background: rgba(221, 238, 235, 0.48);
+}
+
+.scheduler-lesson-option-row.is-selected {
+    border-left: 0;
+    background: var(--scheduler-primary-soft);
+}
+
+.scheduler-lesson-option-row.is-disabled {
+    cursor: not-allowed;
+    color: var(--scheduler-muted);
+}
+
+.scheduler-lesson-radio {
+    grid-column: 1;
+    width: 17px;
+    height: 17px;
+    margin: 0;
+    accent-color: var(--scheduler-primary);
+    cursor: inherit;
+}
+
+.scheduler-lesson-list-period,
+.scheduler-lesson-list-subject,
+.scheduler-lesson-list-class {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.scheduler-lesson-list-period {
+    grid-column: 2;
+    font-size: 12px;
+    color: var(--scheduler-text);
+}
+
+.scheduler-lesson-list-subject {
+    grid-column: 3;
+    font-size: 12px;
+    color: var(--scheduler-text);
+}
+
+.scheduler-lesson-list-class {
+    grid-column: 4;
+    font-size: 12px;
+    color: var(--scheduler-text);
+}
+
+.scheduler-lesson-option-row.is-disabled .scheduler-lesson-list-period,
+.scheduler-lesson-option-row.is-disabled .scheduler-lesson-list-subject,
+.scheduler-lesson-option-row.is-disabled .scheduler-lesson-list-class {
+    color: var(--scheduler-muted);
+}
+
+.scheduler-lesson-list-status {
+    grid-column: 5;
+    justify-self: start;
+    min-height: 26px;
+    padding: 4px 8px;
+    border-radius: 5px;
+    background: var(--scheduler-canvas);
+    color: var(--scheduler-muted);
+    font-size: 11px;
+    font-weight: 650;
+    line-height: 1.3;
+}
+
+.scheduler-lesson-list-status[data-variant="selected"] {
+    background: var(--scheduler-primary);
+    color: #ffffff;
+}
+
+.scheduler-lesson-list-status[data-variant="available"] {
+    background: var(--scheduler-primary-soft);
+    color: var(--scheduler-primary-strong);
+}
+
+.scheduler-lesson-list-status[data-variant="warning"] {
+    background: #fff4df;
+    color: #7a4510;
+}
+
+.scheduler-repeat-section {
+    padding-top: 18px;
+}
+
+.scheduler-selected-lesson-card {
+    display: none;
+}
+
+.scheduler-repeat-disclosure {
+    overflow: hidden;
+    border: 1px solid var(--scheduler-border);
+    border-radius: 6px;
+    background: rgba(221, 238, 235, 0.42);
+}
+
+.scheduler-repeat-disclosure summary {
+    min-height: 52px;
+    padding: 9px 12px;
+    transition: background-color var(--scheduler-transition);
+}
+
+.scheduler-repeat-disclosure summary:hover {
+    background: rgba(221, 238, 235, 0.72);
+}
+
+.scheduler-repeat-disclosure summary span {
+    margin-left: 6px;
+}
+
+.scheduler-repeat-content {
+    padding: 4px 12px 12px;
+    border-top: 1px solid var(--scheduler-border);
+    background: var(--scheduler-surface);
+}
+
+.scheduler-flow-page button.scheduler-extra-lesson-option {
+    display: grid;
+    grid-template-columns: 52px minmax(0, 1fr);
+    gap: 12px;
+    align-items: center;
+    min-height: 48px;
+    border-width: 0 0 1px;
+    border-radius: 0;
+    padding: 9px 4px;
+    transition:
+        background-color var(--scheduler-transition),
+        color var(--scheduler-transition);
+}
+
+.scheduler-extra-resource-cover {
+    width: 52px;
+    height: 44px;
+    border-radius: var(--radius-sm);
+    background: var(--scheduler-primary-soft);
+    background-position: center;
+    background-size: cover;
+}
+
+.scheduler-extra-resource-copy {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+    text-align: left;
+}
+
+.scheduler-flow-page button.scheduler-extra-lesson-option:last-child {
+    border-bottom: 0;
+}
+
+.scheduler-flow-actions {
+    padding-top: 18px;
+}
+
+.scheduler-flow-actions button {
+    min-width: 150px;
+}
+
+.scheduler-flow-actions .btn-destaque {
+    min-width: 250px;
+}
+
+.scheduler-flow-page .scheduler-lesson-detail-card,
+.scheduler-flow-page .scheduler-summary-lesson-card {
+    padding-bottom: 18px;
+}
+
+.scheduler-flow-page .scheduler-feedback-message:not(:empty) {
+    margin-top: 16px;
+}
+
+.scheduler-flow-page :focus-visible {
+    outline: 3px solid var(--scheduler-focus-ring);
+    outline-offset: 2px;
+}
+
+.scheduler-flow-page button:active:not(:disabled) {
+    transform: translateY(1px);
+}
+
+.scheduler-flow-page button:disabled {
+    cursor: not-allowed;
+    opacity: 0.56;
+}
+
+@media (max-width: 760px) {
+    .scheduler-flow-page {
+        padding: 12px 8px 28px;
+    }
+
+    .scheduler-flow-page .scheduler-page-header {
+        align-items: center;
+        padding: 16px;
+    }
+
+    .scheduler-flow-page .scheduler-page-header h1 {
+        font-size: 20px;
+    }
+
+    .scheduler-flow-page .scheduler-page-lead {
+        display: none;
+    }
+
+    html[data-scheduler-current-step="2"] .scheduler-flow-page .scheduler-page-header {
+        display: none;
+    }
+
+    .scheduler-header-calendar-btn {
+        min-height: 44px;
+        padding: 0 10px;
+        font-size: 13px;
+    }
+
+    .scheduler-flow-stepper {
+        padding: 12px 16px;
+    }
+
+    .scheduler-flow-stepper ol {
+        min-width: 350px;
+    }
+
+    .scheduler-flow-stepper li {
+        gap: 0;
+    }
+
+    .scheduler-flow-stepper li strong {
+        width: 1px;
+        overflow: hidden;
+        padding: 0;
+        clip-path: inset(50%);
+    }
+
+    .scheduler-flow-stepper li:not(:last-child)::after {
+        left: 27px;
+        right: 5px;
+    }
+
+    .scheduler-selection-context {
+        display: none;
+    }
+
+    .scheduler-context-divider {
+        display: none;
+    }
+
+    .scheduler-context-group {
+        gap: 5px;
+    }
+
+    .scheduler-context-group > span {
+        font-size: 13px;
+    }
+
+    .scheduler-context-resource-chip {
+        min-height: 36px;
+        padding: 0 9px;
+        font-size: 13px;
+    }
+
+    .scheduler-context-lesson strong {
+        font-size: 14px;
+        white-space: normal;
+    }
+
+    .scheduler-flow-surface {
+        padding: 20px 16px 24px;
+    }
+
+    .scheduler-flow-page .scheduler-resource-stage-grid {
+        gap: 12px;
+        scroll-snap-type: x mandatory;
+    }
+
+    .scheduler-flow-page .scheduler-resource-stage-grid .scheduler-resource-stage-button {
+        flex-basis: min(210px, calc(100vw - 76px));
+        width: min(210px, calc(100vw - 76px));
+        min-width: min(210px, calc(100vw - 76px));
+        min-height: 88px;
+        scroll-snap-align: start;
+    }
+
+    .scheduler-flow-page .scheduler-resource-stage-icon {
+        width: 44px;
+        height: 44px;
+    }
+
+    .scheduler-flow-page .scheduler-resource-stage-icon .bi {
+        font-size: 23px;
+    }
+
+    .scheduler-day-overview {
+        gap: 16px;
+        margin-top: 4px;
+        padding-top: 20px;
+    }
+
+    .scheduler-day-overview-header h3 {
+        font-size: 16px;
+    }
+
+    .scheduler-day-overview-row {
+        min-height: 56px;
+        padding: 9px 12px;
+    }
+
+    .scheduler-day-overview-copy strong {
+        font-size: 14px;
+    }
+
+    .scheduler-day-overview-copy span,
+    .scheduler-day-overview-lesson {
+        font-size: 12px;
+    }
+
+    .scheduler-flow-page .scheduler-week-header {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+    }
+
+    .scheduler-flow-page .scheduler-week-header > div:first-child {
+        display: none;
+    }
+
+    .scheduler-mobile-resource-hero {
+        min-height: 168px;
+        border-radius: var(--radius-md);
+    }
+
+    .scheduler-mobile-resource-overlay strong {
+        max-width: 65%;
+        font-size: 15px;
+    }
+
+    .scheduler-mobile-resource-overlay span {
+        max-width: 35%;
+        font-size: 12px;
+        font-weight: 700;
+        text-align: right;
+    }
+
+    .scheduler-flow-page .scheduler-week-nav {
+        grid-template-columns: 40px minmax(0, 1fr) 40px;
+    }
+
+    .scheduler-flow-page #btnSemanaHoje {
+        grid-column: 1 / -1;
+    }
+
+    .scheduler-flow-page .scheduler-week-strip {
+        display: flex;
+    }
+
+    .scheduler-flow-page .scheduler-week-day {
+        min-width: 76px;
+        flex: 0 0 76px;
+        min-height: 64px;
+    }
+
+    .scheduler-lesson-list-columns {
+        display: none;
+    }
+
+    .scheduler-shift-header {
+        padding: 18px 0 8px;
+        background: transparent;
+    }
+
+    .scheduler-shift-header h4 {
+        margin: 0;
+        font-size: 15px;
+        letter-spacing: 0;
+        text-transform: capitalize;
+    }
+
+    .scheduler-shift-slots {
+        overflow: hidden;
+        border: 1px solid var(--scheduler-border);
+        border-radius: 10px;
+    }
+
+    .scheduler-lesson-option-row {
+        grid-template-columns: 22px minmax(0, 1fr) auto;
+        grid-template-areas:
+            "radio subject period"
+            "radio class status";
+        gap: 2px 10px;
+        min-height: 64px;
+        padding: 9px 12px;
+    }
+
+    .scheduler-lesson-radio {
+        grid-column: auto;
+        grid-area: radio;
+        align-self: center;
+    }
+
+    .scheduler-lesson-list-period {
+        grid-column: auto;
+        grid-area: period;
+        align-self: start;
+        color: var(--scheduler-muted);
+        font-size: 12px;
+        font-weight: 600;
+    }
+
+    .scheduler-lesson-list-subject {
+        grid-column: auto;
+        grid-area: subject;
+        font-size: 14px;
+        font-weight: 700;
+    }
+
+    .scheduler-lesson-list-class {
+        grid-column: auto;
+        grid-area: class;
+        font-size: 12px;
+        color: var(--scheduler-muted);
+    }
+
+    .scheduler-lesson-list-status {
+        grid-column: auto;
+        grid-area: status;
+        justify-self: end;
+        max-width: 100%;
+        padding: 2px 0;
+        background: transparent;
+        font-size: 11px;
+        text-align: right;
+    }
+
+    .scheduler-lesson-list-status[data-variant="selected"],
+    .scheduler-lesson-list-status[data-variant="available"],
+    .scheduler-lesson-list-status[data-variant="warning"] {
+        background: transparent;
+        color: var(--scheduler-muted);
+    }
+
+    .scheduler-repeat-disclosure summary {
+        min-height: 56px;
+    }
+
+    .scheduler-flow-page button.scheduler-extra-lesson-option {
+        min-height: 52px;
+        font-size: 14px;
+    }
+
+    .scheduler-flow-actions,
+    .scheduler-flow-actions-split {
+        flex-direction: column;
+    }
+
+    .scheduler-flow-actions button,
+    .scheduler-flow-actions .btn-destaque {
+        width: 100%;
+        min-width: 0;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .scheduler-flow-page *,
+    .scheduler-flow-page *::before,
+    .scheduler-flow-page *::after {
+        scroll-behavior: auto !important;
+        transition-duration: 0.01ms !important;
+        animation-duration: 0.01ms !important;
+    }
+}

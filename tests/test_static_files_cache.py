@@ -27,6 +27,8 @@ class StaticFilesCacheTest(unittest.TestCase):
             "console.log('cache');",
             encoding="utf-8",
         )
+        (static_dir / "fonts").mkdir()
+        (static_dir / "fonts" / "icons.woff2").write_bytes(b"font-data")
 
         app = FastAPI()
         app.mount("/static", CachedStaticFiles(directory=static_dir), name="static")
@@ -49,6 +51,13 @@ class StaticFilesCacheTest(unittest.TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("Cache-Control"), IMMUTABLE_CACHE_CONTROL)
+
+    def test_hashed_font_query_uses_immutable_cache_and_font_content_type(self):
+        response = self.client.get("/static/fonts/icons.woff2?e34853135f9e39ac")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers.get("Cache-Control"), IMMUTABLE_CACHE_CONTROL)
+        self.assertEqual(response.headers.get("Content-Type"), "font/woff2")
 
     def test_common_image_uses_short_cache(self):
         response = self.client.get("/static/img/logo.png")

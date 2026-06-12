@@ -1,8 +1,11 @@
+import mimetypes
 from pathlib import PurePosixPath
-from urllib.parse import parse_qs
 
 from fastapi.staticfiles import StaticFiles
 
+
+mimetypes.add_type("font/woff", ".woff")
+mimetypes.add_type("font/woff2", ".woff2")
 
 IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable"
 IMAGE_CACHE_CONTROL = "public, max-age=86400"
@@ -19,9 +22,9 @@ class CachedStaticFiles(StaticFiles):
     @staticmethod
     def _cache_control(path: str, scope) -> str:
         normalized_path = path.replace("\\", "/").lstrip("/")
-        query = parse_qs(scope.get("query_string", b"").decode("latin-1"))
+        has_version_query = bool(scope.get("query_string", b""))
 
-        if normalized_path.startswith("img/resources/") or query.get("v"):
+        if normalized_path.startswith("img/resources/") or has_version_query:
             return IMMUTABLE_CACHE_CONTROL
 
         if PurePosixPath(normalized_path).suffix.lower() in IMAGE_EXTENSIONS:

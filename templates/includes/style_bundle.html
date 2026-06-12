@@ -1,4 +1,5 @@
 {% set css_version = asset_version | default('1') %}
+<link rel="stylesheet" href="{{ request.url_for('static', path='vendor/bootstrap-icons/bootstrap-icons.min.css') }}?v=1.13.1">
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/base.css') }}?v={{ css_version }}">
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/components.css') }}?v={{ css_version }}">
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/printing/tokens.css') }}?v={{ css_version }}">
@@ -8,6 +9,7 @@
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/auth.css') }}?v={{ css_version }}">
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/professor.css') }}?v={{ css_version }}">
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/services-scheduler.css') }}?v={{ css_version }}">
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/scheduling-flow.css') }}?v={{ css_version }}-8">
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/pcpi-preconselho.css') }}?v={{ css_version }}">
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/admin.css') }}?v={{ css_version }}">
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/coordenacao.css') }}?v={{ css_version }}">

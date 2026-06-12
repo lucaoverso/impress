@@ -1,0 +1,277 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-06-12T07:42:18.6330828-04:00",
+  "title": "Sistema de Design: Suite Escolar",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Verde Institucional",
+        "canonical": "#0f766e",
+        "tonalRamp": [
+          "oklch(20% 0.055 180)",
+          "oklch(30% 0.07 180)",
+          "oklch(42% 0.085 180)",
+          "oklch(52% 0.09 180)",
+          "oklch(64% 0.075 180)",
+          "oklch(76% 0.055 180)",
+          "oklch(87% 0.032 180)",
+          "oklch(95% 0.015 180)"
+        ]
+      },
+      "primary-strong": {
+        "role": "primary",
+        "displayName": "Verde Profundo",
+        "canonical": "#0b5b55",
+        "tonalRamp": [
+          "oklch(18% 0.045 180)",
+          "oklch(27% 0.06 180)",
+          "oklch(37% 0.07 180)",
+          "oklch(48% 0.075 180)",
+          "oklch(61% 0.065 180)",
+          "oklch(74% 0.045 180)",
+          "oklch(86% 0.028 180)",
+          "oklch(95% 0.012 180)"
+        ]
+      },
+      "primary-soft": {
+        "role": "primary",
+        "displayName": "Verde de Apoio",
+        "canonical": "#d6f2ef",
+        "tonalRamp": [
+          "oklch(20% 0.03 180)",
+          "oklch(31% 0.04 180)",
+          "oklch(43% 0.045 180)",
+          "oklch(56% 0.04 180)",
+          "oklch(69% 0.035 180)",
+          "oklch(80% 0.028 180)",
+          "oklch(89% 0.02 180)",
+          "oklch(96% 0.012 180)"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Branco de Trabalho",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#1f2a37",
+          "#374151",
+          "#64748b",
+          "#94a3b8",
+          "#cbd5e1",
+          "#e2e8f0",
+          "#f1f5f9",
+          "#ffffff"
+        ]
+      },
+      "surface-subtle": {
+        "role": "neutral",
+        "displayName": "Nevoa Azulada",
+        "canonical": "#f8fbff",
+        "tonalRamp": [
+          "oklch(20% 0.018 245)",
+          "oklch(32% 0.02 245)",
+          "oklch(45% 0.018 245)",
+          "oklch(58% 0.016 245)",
+          "oklch(71% 0.014 245)",
+          "oklch(82% 0.012 245)",
+          "oklch(90% 0.009 245)",
+          "oklch(98% 0.005 245)"
+        ]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Tinta Escolar",
+        "canonical": "#1f2a37",
+        "tonalRamp": [
+          "#111827",
+          "#1f2937",
+          "#374151",
+          "#4b5563",
+          "#6b7280",
+          "#9ca3af",
+          "#d1d5db",
+          "#f3f4f6"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Titulo de Pagina",
+        "purpose": "Identifica a tarefa principal sem assumir linguagem promocional."
+      },
+      "headline": {
+        "displayName": "Cabecalho de Fluxo",
+        "purpose": "Abre etapas, paineis e dialogos."
+      },
+      "title": {
+        "displayName": "Titulo de Secao",
+        "purpose": "Organiza grupos de conteudo e objetos independentes."
+      },
+      "body": {
+        "displayName": "Texto Operacional",
+        "purpose": "Instrucoes, conteudo e mensagens de apoio."
+      },
+      "label": {
+        "displayName": "Rotulo de Controle",
+        "purpose": "Campos, botoes e estados curtos."
+      }
+    },
+    "shadows": [
+      {
+        "name": "elevacao-baixa",
+        "value": "0 2px 6px rgba(15, 23, 42, 0.06)",
+        "purpose": "Controles ou unidades interativas pequenas."
+      },
+      {
+        "name": "elevacao-media",
+        "value": "0 8px 24px rgba(15, 23, 42, 0.10)",
+        "purpose": "Superficie principal separada do fundo."
+      },
+      {
+        "name": "elevacao-alta",
+        "value": "0 16px 40px rgba(15, 23, 42, 0.14)",
+        "purpose": "Somente dialogos, drawers e sobreposicoes."
+      }
+    ],
+    "motion": [
+      {
+        "name": "estado-rapido",
+        "value": "150ms ease-out",
+        "purpose": "Hover, foco, selecao e feedback imediato."
+      },
+      {
+        "name": "transicao-fluxo",
+        "value": "220ms cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "Mudanca de etapa, abertura de drawer e superficies maiores."
+      },
+      {
+        "name": "movimento-reduzido",
+        "value": "none",
+        "purpose": "Alternativa obrigatoria sob prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile",
+        "value": "640px"
+      },
+      {
+        "name": "tablet",
+        "value": "760px"
+      },
+      {
+        "name": "layout-compacto",
+        "value": "980px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Botao Primario",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acao dominante de uma tela ou etapa.",
+      "html": "<button class=\"ds-btn-primary\" type=\"button\">Confirmar impressao</button>",
+      "css": ".ds-btn-primary { min-height: 44px; padding: 0 16px; border: 1px solid var(--brand, #0f766e); border-radius: 12px; background: var(--brand, #0f766e); color: #fff; font: 700 14px/1.3 var(--font-sans, sans-serif); cursor: pointer; transition: background 150ms ease-out, border-color 150ms ease-out, transform 100ms ease-out; } .ds-btn-primary:hover { background: var(--brand-strong, #0b5b55); border-color: var(--brand-strong, #0b5b55); } .ds-btn-primary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18); } .ds-btn-primary:active { transform: translateY(1px); }"
+    },
+    {
+      "name": "Botao Secundario",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Voltar, fechar ou executar uma alternativa sem competir com a acao principal.",
+      "html": "<button class=\"ds-btn-secondary\" type=\"button\">Voltar</button>",
+      "css": ".ds-btn-secondary { min-height: 44px; padding: 0 16px; border: 1px solid var(--line-strong, #c9d2de); border-radius: 12px; background: var(--surface-0, #fff); color: var(--text-main, #1f2a37); font: 700 14px/1.3 var(--font-sans, sans-serif); cursor: pointer; transition: background 150ms ease-out, border-color 150ms ease-out; } .ds-btn-secondary:hover { background: var(--surface-1, #f8fbff); border-color: #aeb9c7; } .ds-btn-secondary:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18); }"
+    },
+    {
+      "name": "Campo de Texto",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Entrada familiar, legivel e com foco evidente.",
+      "html": "<label class=\"ds-field\"><span>Professor solicitante</span><input type=\"text\" placeholder=\"Digite o nome\"></label>",
+      "css": ".ds-field { display: grid; gap: 8px; color: var(--text-main, #1f2a37); font-family: var(--font-sans, sans-serif); } .ds-field span { font-size: 14px; font-weight: 700; } .ds-field input { height: 48px; padding: 0 14px; border: 1px solid var(--line, #d8dee8); border-radius: 12px; background: var(--surface-0, #fff); color: var(--text-main, #1f2a37); font: 400 16px/1.5 var(--font-sans, sans-serif); } .ds-field input::placeholder { color: #6b7787; } .ds-field input:focus { outline: none; border-color: var(--brand, #0f766e); box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18); }"
+    },
+    {
+      "name": "Opcao Selecionavel",
+      "kind": "chip",
+      "refersTo": "chip-selected",
+      "description": "Escolha compacta para filtros ou opcoes mutuamente exclusivas.",
+      "html": "<label class=\"ds-choice\"><input type=\"radio\" checked><span>Todas as paginas</span></label>",
+      "css": ".ds-choice { min-height: 44px; width: fit-content; padding: 0 14px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid rgba(15, 118, 110, 0.35); border-radius: 999px; background: var(--brand-soft, #d6f2ef); color: var(--brand, #0f766e); font: 700 13px/1.3 var(--font-sans, sans-serif); cursor: pointer; } .ds-choice:focus-within { box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18); } .ds-choice input { accent-color: var(--brand, #0f766e); }"
+    },
+    {
+      "name": "Superficie de Fluxo",
+      "kind": "card",
+      "refersTo": "surface-primary",
+      "description": "Uma unica superficie principal conduz a tarefa; secoes internas nao recebem sombra.",
+      "html": "<section class=\"ds-flow\"><header><h2>Dados da solicitacao</h2><p>Informe a turma e confira a quantidade de copias.</p></header><div class=\"ds-flow-section\">Conteudo da etapa</div></section>",
+      "css": ".ds-flow { padding: 24px; border: 1px solid var(--line-soft, #d8e1ec); border-radius: 16px; background: var(--surface-0, #fff); color: var(--text-main, #1f2a37); font-family: var(--font-sans, sans-serif); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.10); } .ds-flow header { display: grid; gap: 8px; } .ds-flow h2, .ds-flow p { margin: 0; } .ds-flow h2 { font-size: 24px; line-height: 1.15; } .ds-flow p { color: var(--text-muted, #4b5563); } .ds-flow-section { margin-top: 24px; padding-top: 24px; border-top: 1px solid var(--line-soft, #d8e1ec); }"
+    },
+    {
+      "name": "Barra Superior",
+      "kind": "nav",
+      "description": "Contexto da area atual e acesso ao menu sem competir com a tarefa.",
+      "html": "<nav class=\"ds-topbar\"><strong>Area docente</strong><button type=\"button\">Menu</button></nav>",
+      "css": ".ds-topbar { min-height: 64px; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; border: 1px solid var(--line-soft, #d8e1ec); border-radius: 0 0 12px 12px; background: var(--surface-1, #f8fbff); color: var(--text-main, #1f2a37); font-family: var(--font-sans, sans-serif); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08); } .ds-topbar strong { font-size: 14px; } .ds-topbar button { min-height: 40px; padding: 0 14px; border: 1px solid #cfe0ee; border-radius: 999px; background: #fff; color: #23405d; font-weight: 700; cursor: pointer; } .ds-topbar button:hover { background: #f4f9ff; } .ds-topbar button:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.18); }"
+    },
+    {
+      "name": "Estado de Sucesso",
+      "kind": "custom",
+      "description": "Status comunicado por texto e cor, sem depender apenas do matiz.",
+      "html": "<span class=\"ds-status-success\">Concluido</span>",
+      "css": ".ds-status-success { min-height: 28px; width: fit-content; padding: 0 10px; display: inline-flex; align-items: center; border: 1px solid #86efac; border-radius: 999px; background: #dcfce7; color: #166534; font: 800 12px/1.2 var(--font-sans, sans-serif); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "Escola em Ordem",
+    "overview": "A interface organiza a rotina escolar em fluxos claros, com uma superficie principal por tarefa. A hierarquia nasce de espacamento, alinhamento, titulos e divisores; cards ficam reservados para objetos realmente independentes. O verde-petroleo atual e provisorio e deve poder migrar para o azul-marinho da identidade escolar por meio de tokens semanticos.",
+    "keyCharacteristics": [
+      "Uma acao primaria evidente por tela ou etapa.",
+      "Superficies continuas, com poucos contornos e pouca fragmentacao.",
+      "Controles conhecidos, legiveis e consistentes.",
+      "Hierarquia por espacamento e tipografia antes de bordas e sombras.",
+      "Responsividade estrutural e alvos de toque adequados."
+    ],
+    "rules": [
+      {
+        "name": "A Regra da Superficie Continua",
+        "body": "Um fluxo usa uma superficie principal. Antes de criar outro card, tente espacamento, divisor, subtitulo ou fundo tonal sem elevacao.",
+        "section": "elevation"
+      },
+      {
+        "name": "A Regra da Troca de Marca",
+        "body": "Cores de acao devem usar tokens semanticos. Nunca espalhe novos azuis ou verdes literais para preparar a futura identidade.",
+        "section": "colors"
+      },
+      {
+        "name": "A Regra do Verde Funcional",
+        "body": "Verde-petroleo aparece em acao primaria, foco, selecao e estado atual. Nunca use grandes manchas verdes apenas para decorar.",
+        "section": "colors"
+      },
+      {
+        "name": "A Regra do Nivel Unico",
+        "body": "Um bloco com sombra nao deve conter outro bloco com sombra. Dentro dele, use fundo tonal, divisor ou espaco.",
+        "section": "elevation"
+      },
+      {
+        "name": "A Regra da Leitura Rapida",
+        "body": "Titulos dizem a tarefa, descricoes explicam o proximo passo e rotulos usam termos familiares da escola.",
+        "section": "typography"
+      }
+    ],
+    "dos": [
+      "Do use uma unica superficie principal para conduzir cada fluxo.",
+      "Do use espacamento de 16px a 24px e divisores antes de criar outro card.",
+      "Do mantenha controles com altura minima de 44px e foco visivel.",
+      "Do preserve nomes semanticos de tokens para permitir a futura troca pelo azul-marinho da escola.",
+      "Do mostre resumo antes de imprimir, reservar, cancelar ou excluir."
+    ],
+    "donts": [
+      "Don't use card dentro de card para separar cada pequeno grupo de campos.",
+      "Don't transforme todas as secoes em caixas com borda, raio e sombra.",
+      "Don't faca o produto parecer um painel tecnico de servidor, um dashboard empresarial generico ou uma landing page promocional.",
+      "Don't trate novidade visual como substituto de usabilidade.",
+      "Don't misture verde-petroleo e azul-marinho como duas cores primarias concorrentes durante a futura migracao de marca."
+    ]
+  }
+}
