@@ -164,6 +164,100 @@ class SchemaMigrationsTest(unittest.TestCase):
         self.assertEqual(int(rows[0]["disciplina_id"]), 12)
         self.assertEqual(int(rows[0]["professor_usuario_id"]), 22)
 
+    def test_migration_20260613_resolve_colisao_transitoria_durante_update(self):
+        migration = _load_migration_module("20260613_create_global_schedule_config.py")
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        try:
+            cursor = conn.cursor()
+            cursor.execute(
+                """
+                CREATE TABLE turmas (
+                    id INTEGER PRIMARY KEY,
+                    turno TEXT NOT NULL,
+                    aula_inicial INTEGER NOT NULL DEFAULT 1,
+                    aula_final INTEGER NOT NULL DEFAULT 0
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE horarios_escolares (
+                    id INTEGER PRIMARY KEY,
+                    ano_letivo INTEGER NOT NULL,
+                    turma_id INTEGER NOT NULL,
+                    disciplina_id INTEGER NOT NULL,
+                    professor_usuario_id INTEGER NOT NULL,
+                    dia_semana TEXT NOT NULL,
+                    aula_numero INTEGER NOT NULL DEFAULT 1,
+                    faixa_global INTEGER NOT NULL DEFAULT 0,
+                    criado_em TEXT NOT NULL DEFAULT '',
+                    atualizado_em TEXT NOT NULL DEFAULT ''
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE UNIQUE INDEX idx_horarios_escolares_turma_slot
+                ON horarios_escolares(ano_letivo, turma_id, dia_semana, aula_numero)
+                """
+            )
+            cursor.execute(
+                """
+                INSERT INTO turmas (id, turno, aula_inicial, aula_final)
+                VALUES (1, 'VESPERTINO', 6, 10)
+                """
+            )
+            cursor.execute(
+                """
+                INSERT INTO horarios_escolares (
+                    id,
+                    ano_letivo,
+                    turma_id,
+                    disciplina_id,
+                    professor_usuario_id,
+                    dia_semana,
+                    aula_numero,
+                    faixa_global,
+                    criado_em,
+                    atualizado_em
+                )
+                VALUES (1, 2026, 1, 11, 21, 'SEGUNDA', 0, 1, '2026-06-13 09:00:00', '2026-06-13 09:00:00')
+                """
+            )
+            cursor.execute(
+                """
+                INSERT INTO horarios_escolares (
+                    id,
+                    ano_letivo,
+                    turma_id,
+                    disciplina_id,
+                    professor_usuario_id,
+                    dia_semana,
+                    aula_numero,
+                    faixa_global,
+                    criado_em,
+                    atualizado_em
+                )
+                VALUES (2, 2026, 1, 12, 22, 'SEGUNDA', 1, 2, '2026-06-13 10:00:00', '2026-06-13 10:00:00')
+                """
+            )
+            conn.commit()
+
+            migration.upgrade(conn)
+
+            rows = conn.execute(
+                """
+                SELECT id, aula_numero, faixa_global
+                FROM horarios_escolares
+                ORDER BY id ASC
+                """
+            ).fetchall()
+        finally:
+            conn.close()
+
+        self.assertEqual([(1, 1, 1), (2, 2, 2)], [(int(row["id"]), int(row["aula_numero"]), int(row["faixa_global"])) for row in rows])
+
 
 if __name__ == "__main__":
     unittest.main()

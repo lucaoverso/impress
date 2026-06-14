@@ -165,6 +165,24 @@ def _backfill_horarios(cursor: sqlite3.Cursor) -> None:
     # UPDATE para evitar violar o indice unico legado por turma/dia/aula.
     _dedupe_conflicting_globalized_schedule_rows(cursor)
 
+    # Em bases legadas, duas linhas podem "trocar de lugar" durante a
+    # globalizacao, por exemplo 0->1 e 1->2. Sem uma etapa intermediaria,
+    # o indice unico antigo acusa conflito transitório no meio do UPDATE.
+    cursor.execute(
+        """
+        UPDATE horarios_escolares
+        SET aula_numero = -id
+        WHERE UPPER(COALESCE((
+            SELECT t.turno
+            FROM turmas t
+            WHERE t.id = horarios_escolares.turma_id
+        ), '')) IN ('VESPERTINO', 'VESPERTINO_EM')
+          AND CAST(COALESCE(horarios_escolares.faixa_global, 0) AS INTEGER) > 0
+          AND CAST(COALESCE(horarios_escolares.aula_numero, 0) AS INTEGER)
+              <> CAST(COALESCE(horarios_escolares.faixa_global, 0) AS INTEGER)
+        """
+    )
+
     cursor.execute(
         """
         UPDATE horarios_escolares
