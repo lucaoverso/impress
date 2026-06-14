@@ -422,14 +422,20 @@ def _sync_agendamentos(database, recursos: dict[str, int], usuarios: dict[str, i
             WHERE recurso_id = ?
               AND usuario_id = ?
               AND data = ?
-              AND faixa_global = ?
+              AND turno = ?
+              AND aula = ?
+              AND turma = ?
+              AND observacao = ?
             LIMIT 1
             """,
             (
                 recurso_id,
                 usuario_id,
                 item["data"],
-                int(item["faixa_global"]),
+                item["turno"],
+                item["aula"],
+                item["turma"],
+                OBSERVACAO_AGENDAMENTO,
             ),
         )
         existente = cursor.fetchone()
