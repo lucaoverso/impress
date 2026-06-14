@@ -304,7 +304,7 @@ def _dados_configuracao_aula_payload(
             (
                 item
                 for item in configuracoes_existentes
-                and int(item.get("aula_numero") or 0) == int(dados["aula_numero"] or 0)
+                if int(item.get("aula_numero") or 0) == int(dados["aula_numero"] or 0)
             ),
             None,
         )
