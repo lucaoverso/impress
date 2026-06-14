@@ -72,12 +72,98 @@ def _backfill_turmas(cursor: sqlite3.Cursor) -> None:
         )
 
 
+def _target_lesson_number(turn: str, lesson_number: int, global_slot: int) -> int:
+    turn_norm = str(turn or "").strip().upper()
+    if turn_norm in ("VESPERTINO", "VESPERTINO_EM"):
+        return int(global_slot or lesson_number or 0)
+    return int(lesson_number or 0)
+
+
+def _dedupe_conflicting_globalized_schedule_rows(cursor: sqlite3.Cursor) -> None:
+    cursor.execute(
+        """
+        SELECT
+            he.id,
+            he.ano_letivo,
+            he.turma_id,
+            he.dia_semana,
+            he.aula_numero,
+            COALESCE(he.faixa_global, 0) AS faixa_global,
+            COALESCE(t.turno, '') AS turno,
+            COALESCE(NULLIF(he.atualizado_em, ''), NULLIF(he.criado_em, ''), '') AS referencia_tempo
+        FROM horarios_escolares he
+        LEFT JOIN turmas t ON t.id = he.turma_id
+        ORDER BY he.id ASC
+        """
+    )
+
+    grouped_rows: dict[tuple[int, int, str, int], list[dict[str, int | str]]] = {}
+    for row in cursor.fetchall():
+        (
+            schedule_id,
+            school_year,
+            class_id,
+            weekday,
+            lesson_number,
+            global_slot,
+            turn,
+            timestamp_ref,
+        ) = row
+        target_lesson = _target_lesson_number(turn, lesson_number, global_slot)
+        if target_lesson <= 0:
+            continue
+        grouped_rows.setdefault(
+            (
+                int(school_year or 0),
+                int(class_id or 0),
+                str(weekday or ""),
+                int(target_lesson),
+            ),
+            [],
+        ).append(
+            {
+                "id": int(schedule_id or 0),
+                "lesson_number": int(lesson_number or 0),
+                "target_lesson": int(target_lesson),
+                "timestamp_ref": str(timestamp_ref or ""),
+            }
+        )
+
+    ids_to_delete: list[int] = []
+    for rows in grouped_rows.values():
+        if len(rows) < 2:
+            continue
+        rows.sort(
+            key=lambda item: (
+                int(item["lesson_number"] == item["target_lesson"]),
+                str(item["timestamp_ref"]),
+                int(item["id"]),
+            ),
+            reverse=True,
+        )
+        ids_to_delete.extend(int(item["id"]) for item in rows[1:])
+
+    if not ids_to_delete:
+        return
+
+    placeholders = ",".join("?" for _ in ids_to_delete)
+    cursor.execute(
+        f"DELETE FROM horarios_escolares WHERE id IN ({placeholders})",
+        ids_to_delete,
+    )
+
+
 def _backfill_horarios(cursor: sqlite3.Cursor) -> None:
     if not _table_exists(cursor, "horarios_escolares"):
         return
     existing_columns = _columns(cursor, "horarios_escolares")
     if "aula_numero" not in existing_columns:
         return
+
+    # Bases parcialmente migradas podem ter um registro ja globalizado e outro
+    # legado apontando para o mesmo slot final. Removemos a duplicata antes do
+    # UPDATE para evitar violar o indice unico legado por turma/dia/aula.
+    _dedupe_conflicting_globalized_schedule_rows(cursor)
 
     cursor.execute(
         """
@@ -94,6 +180,7 @@ def _backfill_horarios(cursor: sqlite3.Cursor) -> None:
             END
         )
         WHERE CAST(COALESCE(horarios_escolares.aula_numero, 0) AS INTEGER) > 0
+           OR CAST(COALESCE(horarios_escolares.faixa_global, 0) AS INTEGER) > 0
         """
     )
 
