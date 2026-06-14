@@ -1,9 +1,28 @@
+.apc-page,
+.apc-modal-backdrop,
+.apc-file-preview-modal,
+.apc-print-wizard-modal {
+    --apc-shell-gap: clamp(16px, 2vw, 24px);
+    --apc-shell-padding: clamp(16px, 2vw, 24px);
+    --apc-section-padding: clamp(18px, 2vw, 24px);
+    --apc-inner-padding: clamp(16px, 1.7vw, 20px);
+    --apc-panel-radius: 20px;
+    --apc-surface: var(--surface-0);
+    --apc-surface-muted: var(--surface-1);
+    --apc-surface-subtle: var(--surface-2);
+    --apc-border: var(--line);
+    --apc-border-soft: var(--line-soft);
+    --apc-border-strong: var(--line-strong);
+    --apc-accent: var(--brand);
+    --apc-accent-strong: var(--brand-strong);
+    --apc-accent-soft: var(--brand-soft);
+}
+
 .apc-page {
-    grid-template-columns: minmax(0, 1fr);
-    width: min(1280px, 100%);
+    width: min(1220px, 100%);
+    max-width: 1220px;
     margin: 0 auto;
-    padding: 24px;
-    gap: 24px;
+    color: var(--text-main);
 }
 
 .apc-page [hidden],
@@ -12,99 +31,84 @@
     display: none !important;
 }
 
-.apc-topbar {
-    background: var(--surface-0);
-    color: var(--text-main);
-    border: 1px solid var(--line-soft);
-    border-radius: 18px;
-    padding: 24px;
-    box-shadow: var(--shadow-card);
-    display: grid;
-    gap: 20px;
+.apc-workspace {
+    min-width: 0;
 }
 
-.apc-topbar-main {
-    display: flex;
+.apc-page-header {
     align-items: flex-start;
-    justify-content: space-between;
-    gap: 18px;
 }
 
-.apc-topbar-copy {
-    display: grid;
-    gap: 6px;
-    max-width: 760px;
+.apc-page-header-copy {
+    max-width: 62ch;
+}
+
+.apc-page-header-meta {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
 }
 
 .apc-eyebrow {
     margin: 0;
     width: fit-content;
-    padding: 4px 10px;
+    padding: 4px 12px;
     border-radius: 999px;
     background: var(--brand-soft);
     color: var(--brand-strong);
-    font-size: 11px;
+    font-size: 12px;
     font-weight: 800;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
-}
-
-.apc-topbar h1 {
-    margin: 0;
-    font-size: clamp(1.75rem, 2.4vw, 2rem);
-    line-height: 1.08;
-}
-
-.apc-topbar-description {
-    margin: 0;
-    color: var(--text-muted);
-    font-size: 14px;
 }
 
 .apc-topbar-user {
     margin: 0;
-    padding: 8px 12px;
-    border: 1px solid var(--line-soft);
-    border-radius: 999px;
-    background: var(--surface-1);
-    color: var(--text-muted);
-    font-size: 13px;
+    min-height: 36px;
+    padding: 7px 12px;
+    border: 1px solid var(--apc-border-soft);
+    border-radius: 10px;
+    background: var(--apc-surface-muted);
+    color: var(--apc-accent-strong);
+    font-size: 12px;
     font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
-.apc-topbar-actions {
+.apc-topbar-user:empty {
+    display: none;
+}
+
+.apc-toolbar-band {
+    display: grid;
+    grid-template-columns: minmax(190px, 230px) minmax(0, 1fr) minmax(170px, auto);
+    gap: 16px 20px;
+    align-items: end;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--apc-border-soft);
+    background: var(--apc-surface);
+}
+
+.apc-toolbar-field {
+    min-width: 0;
+}
+
+.apc-toolbar-actions {
     display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
     justify-content: flex-end;
 }
 
-.apc-topbar-actions button {
-    width: auto;
-    min-width: 140px;
-    height: 42px;
-    padding: 0 16px;
-    border-radius: 999px;
-    border-color: rgba(255, 255, 255, 0.22);
-    background: rgba(255, 255, 255, 0.08);
-    color: #ffffff;
-}
-
-.apc-topbar-actions button:hover {
-    background: rgba(255, 255, 255, 0.16);
-    border-color: rgba(255, 255, 255, 0.34);
-}
-
-.apc-topbar-grid {
-    display: grid;
-    grid-template-columns: minmax(190px, 230px) minmax(0, 1fr) auto;
-    gap: 12px 16px;
-    align-items: end;
+.apc-page.is-gestao-mode .apc-toolbar-band {
+    grid-template-columns: minmax(190px, 230px) minmax(0, 1fr);
 }
 
 .apc-field {
     display: grid;
     gap: 8px;
+    min-width: 0;
 }
 
 .apc-field label {
@@ -120,21 +124,25 @@
     background: var(--surface-0);
     color: var(--text-main);
     padding: 0 12px;
+    width: 100%;
 }
 
 .apc-toolbar-note {
-    min-height: 44px;
+    min-height: 48px;
     border-radius: 12px;
     padding: 12px 14px;
-    background: var(--brand-soft);
-    border: 1px solid rgba(15, 118, 110, 0.16);
-    color: var(--brand-strong);
+    background: rgba(214, 242, 239, 0.52);
+    border: 1px solid rgba(15, 118, 110, 0.12);
+    color: var(--apc-accent-strong);
     display: flex;
     align-items: center;
-    font-size: 14px;
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.45;
 }
 
 .apc-toolbar-message {
+    max-width: 70ch;
     min-height: 0;
     margin: 0;
     padding: 0;
@@ -143,11 +151,15 @@
     color: var(--text-muted);
 }
 
+.apc-toolbar-message:empty {
+    display: none;
+}
+
 .apc-toolbar-message:not(:empty) {
-    min-height: 44px;
-    padding: 11px 14px;
-    border: 1px solid var(--line-soft);
-    background: var(--surface-1);
+    min-height: 48px;
+    padding: 12px 16px;
+    border: 1px solid var(--apc-border-soft);
+    background: var(--apc-surface-muted);
 }
 
 .apc-toolbar-message.is-success {
@@ -165,69 +177,71 @@
 .apc-calendar-toggle {
     min-height: 44px;
     padding: 0 16px;
-    border-color: var(--brand);
-    background: var(--surface-0);
-    color: var(--brand-strong);
+    border-color: var(--apc-border);
+    background: var(--apc-surface);
+    color: var(--apc-accent-strong);
+    position: relative;
+}
+
+.apc-calendar-toggle::before {
+    content: "";
+    width: 16px;
+    height: 15px;
+    flex: 0 0 16px;
+    border: 1.5px solid currentColor;
+    border-radius: 4px;
+    box-sizing: border-box;
+    background:
+        linear-gradient(currentColor, currentColor) center 4px / 100% 1.5px no-repeat,
+        linear-gradient(currentColor, currentColor) 4px -1px / 1.5px 5px no-repeat,
+        linear-gradient(currentColor, currentColor) calc(100% - 4px) -1px / 1.5px 5px no-repeat;
 }
 
 .apc-calendar-toggle:hover {
-    background: var(--brand-soft);
-    border-color: var(--brand-strong);
+    background: var(--apc-accent-soft);
+    border-color: var(--apc-accent);
 }
 
 .apc-content {
-    grid-template-columns: minmax(0, 1fr);
-    align-items: start;
-    gap: 24px;
+    display: grid;
+    gap: var(--apc-shell-gap);
 }
 
 .apc-calendar-drawer {
-    grid-column: 1 / -1;
-    grid-row: 2;
+    min-width: 0;
 }
 
 .apc-calendar-card {
     align-self: start;
-    padding: 20px;
+    padding: var(--apc-inner-padding);
 }
 
 .apc-detail-card {
-    grid-column: 1 / -1;
-    grid-row: 1;
-    padding: 24px;
+    display: grid;
+    gap: 28px;
+    min-width: 0;
 }
 
 .apc-section-eyebrow {
     margin: 0 0 4px;
-    color: var(--brand);
-    font-size: 11px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
 }
 
 .apc-calendar-card h2 {
     margin: 0;
-    font-size: 18px;
+    font-size: 20px;
+    letter-spacing: -0.015em;
 }
 
-.apc-page.is-professor .apc-content {
-    grid-template-columns: minmax(0, 1fr);
-}
-
-.apc-page.is-professor .apc-calendar-card,
-.apc-page.is-professor .apc-detail-card {
-    position: static;
-}
-
-.apc-page.is-professor .apc-calendar-drawer {
-    grid-column: 1 / -1;
-    grid-row: 2;
-}
-
-.apc-page.is-professor .apc-detail-card {
-    grid-column: 1 / -1;
-    grid-row: 1;
+.apc-calendar-drawer-header p {
+    margin: 4px 0 0;
+    max-width: 36ch;
+    color: var(--text-muted);
+    font-size: 14px;
 }
 
 .apc-calendar-card .calendar-day {
@@ -275,12 +289,15 @@ body.apc-calendar-drawer-open {
 
 .apc-page.is-docente-mode .apc-calendar-card {
     position: relative;
-    width: min(520px, 100%);
+    width: min(560px, 100%);
     height: 100%;
+    padding: 24px 22px 22px;
     border-radius: 0;
     border-top: 0;
     border-right: 0;
     border-bottom: 0;
+    border-left: 1px solid var(--apc-border-soft);
+    background: var(--apc-surface);
     overflow-y: auto;
     outline: none;
     opacity: 0;
@@ -303,7 +320,9 @@ body.apc-calendar-drawer-open {
     justify-content: space-between;
     align-items: flex-start;
     gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: 22px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--apc-border-soft);
 }
 
 .apc-calendar-drawer-header h2,
@@ -314,6 +333,8 @@ body.apc-calendar-drawer-open {
 .apc-calendar-drawer-header button {
     min-height: 40px;
     padding: 0 14px;
+    border-color: var(--apc-border-soft);
+    color: var(--apc-accent-strong);
 }
 
 .apc-page.is-gestao-mode .apc-calendar-drawer-header {
@@ -357,16 +378,63 @@ body.apc-calendar-drawer-open {
 
 .apc-form {
     display: grid;
-    gap: 10px;
+    gap: 12px;
+}
+
+.apc-form-section {
+    display: grid;
+    gap: 18px;
+    padding-bottom: 22px;
+    border-bottom: 1px solid var(--apc-border-soft);
+}
+
+.apc-form-section:last-of-type {
+    padding-bottom: 0;
+    border-bottom: 0;
+}
+
+.apc-form-section-copy {
+    display: grid;
+    gap: 6px;
+}
+
+.apc-form-section-copy h4,
+.apc-form-section-copy p {
+    margin: 0;
+}
+
+.apc-form-section-copy h4 {
+    font-size: 20px;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+}
+
+.apc-form-section-copy p {
+    max-width: 62ch;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.apc-modal-field-grid {
+    display: grid;
+    gap: 12px 16px;
+}
+
+.apc-modal-field-grid--two {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.apc-modal-field-grid--three {
+    grid-template-columns: 1.25fr repeat(2, minmax(0, 1fr));
 }
 
 .apc-destinatarios-wrap {
     display: grid;
-    gap: 12px;
-    padding: 14px;
-    border: 1px solid rgba(19, 53, 88, 0.12);
+    gap: 16px;
+    padding: 20px;
+    border: 1px solid var(--apc-border-soft);
     border-radius: 16px;
-    background: rgba(244, 248, 252, 0.78);
+    background: var(--apc-surface-muted);
 }
 
 .apc-destinatarios-header {
@@ -389,10 +457,10 @@ body.apc-calendar-drawer-open {
 
 .apc-destinatario-card {
     display: grid;
-    gap: 10px;
-    padding: 12px;
+    gap: 12px;
+    padding: 14px;
     border-radius: 14px;
-    border: 1px solid rgba(19, 53, 88, 0.1);
+    border: 1px solid var(--line-soft);
     background: #fff;
 }
 
@@ -421,9 +489,21 @@ body.apc-calendar-drawer-open {
     gap: 8px;
     padding: 10px 12px;
     border-radius: 12px;
-    border: 1px solid rgba(19, 53, 88, 0.08);
-    background: rgba(244, 248, 252, 0.75);
+    border: 1px solid var(--line-soft);
+    background: rgba(255, 255, 255, 0.92);
     cursor: pointer;
+    transition: border-color var(--motion-fast), background-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+
+.apc-destinatario-item:has(input:checked) {
+    border-color: rgba(15, 118, 110, 0.28);
+    background: rgba(214, 242, 239, 0.68);
+    color: var(--brand-strong);
+}
+
+.apc-destinatario-item:has(input:focus-visible) {
+    border-color: var(--brand);
+    box-shadow: var(--focus-ring);
 }
 
 .apc-inline-actions {
@@ -433,15 +513,25 @@ body.apc-calendar-drawer-open {
     margin-top: 6px;
 }
 
+.apc-gestao-actions .apc-inline-actions,
+.apc-modal-footer .apc-inline-actions {
+    margin-top: 0;
+}
+
+.apc-gestao-actions .apc-inline-actions {
+    justify-content: flex-end;
+}
+
 .apc-gestao-actions {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
-    padding: 16px 18px;
-    border: 1px solid rgba(19, 53, 88, 0.08);
-    border-radius: 18px;
-    background: linear-gradient(180deg, #ffffff, #f6faff);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: end;
+    gap: 24px;
+    padding: 0 0 24px;
+    border: 0;
+    border-bottom: 1px solid var(--apc-border-soft);
+    border-radius: 0;
+    background: transparent;
 }
 
 .apc-gestao-actions-copy {
@@ -454,16 +544,24 @@ body.apc-calendar-drawer-open {
     margin: 0;
 }
 
+.apc-gestao-actions-copy h3 {
+    font-size: 20px;
+    letter-spacing: -0.015em;
+}
+
+.apc-gestao-actions-copy p {
+    max-width: 58ch;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
 .apc-gestao-actions .btn-destaque {
     min-height: 46px;
     padding-inline: 20px;
+    white-space: nowrap;
 }
 
 .apc-gestao-filtros {
-    padding: 16px;
-    border: 1px solid var(--line-soft);
-    border-radius: 18px;
-    background: var(--surface-1);
     display: grid;
     grid-template-columns: minmax(220px, 1.4fr) repeat(5, minmax(140px, 1fr));
     gap: 12px;
@@ -478,13 +576,14 @@ body.apc-calendar-drawer-open {
 
 .apc-detail-card {
     display: grid;
-    gap: 20px;
+    gap: 28px;
+    min-width: 0;
 }
 
 .apc-docente-workspace {
     display: grid;
-    grid-template-columns: minmax(280px, 0.78fr) minmax(0, 1.22fr);
-    gap: 20px;
+    grid-template-columns: minmax(290px, 0.8fr) minmax(0, 1.2fr);
+    gap: 28px;
     align-items: start;
 }
 
@@ -496,15 +595,16 @@ body.apc-calendar-drawer-open {
 .apc-docente-detalhe,
 .apc-gestao-detalhe {
     min-width: 0;
-    border: 1px solid var(--line-soft);
-    border-radius: 18px;
-    background: var(--surface-0);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
 }
 
 .apc-solicitacoes-column {
-    padding: 18px;
+    padding: 0 28px 0 0;
+    border-right: 1px solid var(--apc-border-soft);
     display: grid;
-    gap: 16px;
+    gap: 20px;
 }
 
 .apc-column-header h2,
@@ -516,14 +616,17 @@ body.apc-calendar-drawer-open {
 
 .apc-column-header h2,
 .apc-docente-detalhe-header h2 {
-    font-size: 18px;
+    font-size: 20px;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
 }
 
 .apc-column-header p:last-child,
 .apc-docente-detalhe-header p:last-child {
-    margin-top: 4px;
+    margin-top: 6px;
     color: var(--text-muted);
     font-size: 14px;
+    max-width: 58ch;
 }
 
 .apc-docente-detalhe,
@@ -531,9 +634,17 @@ body.apc-calendar-drawer-open {
     position: sticky;
     top: 16px;
     min-height: 280px;
-    padding: 20px;
+    padding: 0;
     display: grid;
-    gap: 16px;
+    gap: 18px;
+}
+
+.apc-docente-detalhe > .booking-empty,
+.apc-gestao-detalhe > .booking-empty {
+    padding: 22px 20px;
+    border: 1px dashed var(--line-soft);
+    border-radius: 16px;
+    background: var(--surface-1);
 }
 
 .apc-docente-detalhe-header {
@@ -549,39 +660,42 @@ body.apc-calendar-drawer-open {
 }
 
 .apc-gestao-detalhe-header h2 {
-    font-size: 18px;
+    font-size: 20px;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
 }
 
 .apc-gestao-detalhe-header p:last-child {
-    margin-top: 4px;
+    margin-top: 6px;
     color: var(--text-muted);
     font-size: 14px;
+    max-width: 58ch;
 }
 
 .apc-docente-detalhe > .apc-accordion-body {
-    border-top: 1px solid var(--line-soft);
+    border-top: 1px solid var(--apc-border-soft);
     padding: 16px 0 0;
     background: transparent;
 }
 
 .apc-pendencia-card {
-    padding: 16px;
-    border: 1px solid var(--line-soft);
-    border-radius: 16px;
-    background: var(--surface-0);
+    padding: 14px;
+    border: 1px solid var(--apc-border-soft);
+    border-radius: 14px;
+    background: var(--apc-surface);
     display: grid;
-    gap: 14px;
+    gap: 12px;
     transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
 }
 
 .apc-pendencia-card:hover {
-    border-color: var(--line-strong);
-    box-shadow: var(--shadow-sm, 0 2px 6px rgba(15, 23, 42, 0.06));
+    border-color: var(--apc-border-strong);
+    box-shadow: none;
 }
 
 .apc-pendencia-card.is-selected {
-    border-color: rgba(15, 118, 110, 0.34);
-    background: var(--brand-soft);
+    border-color: rgba(15, 118, 110, 0.28);
+    background: rgba(214, 242, 239, 0.44);
     box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.08);
 }
 
@@ -604,7 +718,9 @@ body.apc-calendar-drawer-open {
 }
 
 .apc-pendencia-card-copy h3 {
-    font-size: 16px;
+    font-size: 17px;
+    line-height: 1.2;
+    letter-spacing: -0.012em;
 }
 
 .apc-pendencia-card-copy p,
@@ -638,30 +754,34 @@ body.apc-modal-open {
     position: fixed;
     inset: 0;
     z-index: 1200;
-    background: rgba(7, 16, 28, 0.58);
-    backdrop-filter: blur(6px);
+    background: rgba(15, 23, 42, 0.46);
+    backdrop-filter: blur(5px);
     display: grid;
     place-items: center;
     padding: 24px;
 }
 
 .apc-modal {
-    width: min(980px, 100%);
-    max-height: min(88vh, 920px);
+    width: min(1080px, calc(100vw - 48px));
+    max-height: min(90vh, 940px);
     overflow: auto;
-    border-radius: 24px;
-    background: linear-gradient(180deg, #ffffff, #f7fbff);
-    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.28);
-    padding: 24px;
+    border: 1px solid var(--apc-border-soft);
+    border-radius: 18px;
+    background: var(--apc-surface);
+    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.22);
+    padding: 0;
     display: grid;
-    gap: 18px;
+    gap: 0;
 }
 
 .apc-modal-header {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 16px;
+    gap: 20px;
+    padding: 24px 28px 20px;
+    border-bottom: 1px solid var(--apc-border-soft);
+    background: var(--apc-surface);
 }
 
 .apc-modal-header h3,
@@ -669,25 +789,76 @@ body.apc-modal-open {
     margin: 0;
 }
 
+.apc-modal-header h3 {
+    font-size: 24px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+.apc-modal-header p:last-child {
+    margin-top: 6px;
+    max-width: 60ch;
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
 .apc-modal-close {
-    width: 42px;
-    min-width: 42px;
-    height: 42px;
-    border-radius: 999px;
-    padding: 0;
-    font-size: 1.35rem;
+    min-width: 0;
+    height: 40px;
+    padding: 0 14px;
+    border-radius: 10px;
+    border-color: var(--apc-border-soft);
+    color: var(--apc-accent-strong);
+    font-size: 14px;
+    font-weight: 700;
     line-height: 1;
 }
 
 .apc-modal-form {
-    gap: 12px;
+    gap: 22px;
+    padding: 24px 28px 0;
 }
 
 .apc-modal-footer {
     position: sticky;
     bottom: 0;
-    padding-top: 8px;
-    background: linear-gradient(180deg, rgba(247, 251, 255, 0), rgba(247, 251, 255, 0.96) 28%);
+    margin: 0 -28px;
+    padding: 18px 28px 24px;
+    border-top: 1px solid var(--apc-border-soft);
+    background: rgba(255, 255, 255, 0.96);
+    backdrop-filter: blur(10px);
+}
+
+.apc-modal-footer .apc-inline-actions {
+    margin-top: 0;
+    justify-content: flex-end;
+}
+
+.apc-modal .btn-perigo {
+    border-color: rgba(185, 28, 28, 0.18);
+    background: rgba(254, 242, 242, 0.88);
+    color: #b91c1c;
+}
+
+.apc-modal .btn-perigo:hover {
+    border-color: rgba(185, 28, 28, 0.3);
+    background: rgba(254, 226, 226, 0.96);
+}
+
+.apc-modal .btn-destaque,
+.apc-file-preview-panel .btn-destaque,
+.apc-print-wizard-panel .btn-destaque {
+    border-color: var(--apc-accent);
+    background: var(--apc-accent);
+    color: #ffffff;
+}
+
+.apc-modal .btn-destaque:hover,
+.apc-file-preview-panel .btn-destaque:hover,
+.apc-print-wizard-panel .btn-destaque:hover {
+    border-color: var(--apc-accent-strong);
+    background: var(--apc-accent-strong);
+    filter: none;
 }
 
 .apc-solicitacoes-data {
@@ -700,17 +871,17 @@ body.apc-modal-open {
 }
 
 .apc-solicitacao-item {
-    border: 1px solid var(--line-soft);
-    border-radius: 18px;
-    background: linear-gradient(180deg, #ffffff, #f8fbff);
+    border: 1px solid var(--apc-border-soft);
+    border-radius: 16px;
+    background: var(--apc-surface);
     overflow: hidden;
     transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .apc-solicitacao-item.is-selected,
 .apc-solicitacao-item[open] {
-    border-color: rgba(19, 53, 88, 0.26);
-    box-shadow: 0 12px 28px rgba(19, 53, 88, 0.08);
+    border-color: rgba(15, 118, 110, 0.24);
+    box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.06);
 }
 
 .apc-solicitacao-summary {
@@ -719,8 +890,14 @@ body.apc-modal-open {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 14px;
-    padding: 16px 18px;
+    gap: 12px;
+    padding: 14px 16px;
+}
+
+.apc-solicitacao-summary:focus-visible,
+.apc-professor-group-summary:focus-visible {
+    outline: none;
+    box-shadow: inset 0 0 0 2px rgba(15, 118, 110, 0.22);
 }
 
 .apc-page.is-professor .apc-solicitacao-summary {
@@ -743,20 +920,22 @@ body.apc-modal-open {
 }
 
 .apc-solicitacao-summary-main h4 {
-    font-size: 1rem;
+    font-size: 16px;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
 }
 
 .apc-solicitacao-resumo {
-    font-size: 0.93rem;
-    color: var(--ink-soft);
+    font-size: 14px;
+    color: var(--text-muted);
 }
 
 .apc-solicitacao-summary-meta {
     display: flex;
     flex-wrap: wrap;
     gap: 8px 10px;
-    color: var(--ink-soft);
-    font-size: 0.87rem;
+    color: var(--text-muted);
+    font-size: 13px;
 }
 
 .apc-solicitacao-summary-side {
@@ -771,25 +950,25 @@ body.apc-modal-open {
 }
 
 .apc-accordion-body {
-    border-top: 1px solid rgba(19, 53, 88, 0.08);
-    padding: 16px 18px 18px;
+    border-top: 1px solid var(--apc-border-soft);
+    padding: 14px 16px 16px;
     display: grid;
     gap: 14px;
-    background: rgba(244, 248, 252, 0.94);
+    background: var(--apc-surface-muted);
 }
 
 .apc-accordion-note,
 .apc-inline-observacao,
 .apc-inline-hint {
     margin: 0;
-    color: var(--ink-soft);
+    color: var(--text-muted);
 }
 
 .apc-inline-observacao {
-    padding: 12px 14px;
-    border-radius: 14px;
-    border: 1px solid rgba(19, 53, 88, 0.08);
-    background: rgba(255, 255, 255, 0.88);
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid var(--apc-border-soft);
+    background: var(--apc-surface);
 }
 
 .apc-resumo-compacto {
@@ -836,9 +1015,9 @@ body.apc-modal-open {
 }
 
 .apc-professor-group {
-    border: 1px solid var(--line-soft);
-    border-radius: 18px;
-    background: linear-gradient(180deg, #ffffff, #f8fbff);
+    border: 1px solid var(--apc-border-soft);
+    border-radius: 16px;
+    background: var(--apc-surface);
     overflow: hidden;
 }
 
@@ -848,8 +1027,8 @@ body.apc-modal-open {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    gap: 14px;
-    padding: 16px 18px;
+    gap: 12px;
+    padding: 14px 16px;
 }
 
 .apc-professor-group-summary::-webkit-details-marker {
@@ -867,8 +1046,8 @@ body.apc-modal-open {
 }
 
 .apc-professor-group-meta {
-    color: var(--ink-soft);
-    font-size: 0.9rem;
+    color: var(--text-muted);
+    font-size: 13px;
 }
 
 .apc-professor-group-side {
@@ -878,11 +1057,11 @@ body.apc-modal-open {
 }
 
 .apc-professor-group-body {
-    border-top: 1px solid rgba(19, 53, 88, 0.08);
-    padding: 16px 18px 18px;
+    border-top: 1px solid var(--apc-border-soft);
+    padding: 14px 16px 16px;
     display: grid;
     gap: 12px;
-    background: rgba(244, 248, 252, 0.94);
+    background: var(--apc-surface-muted);
 }
 
 .apc-professor-entrega-list {
@@ -891,12 +1070,12 @@ body.apc-modal-open {
 }
 
 .apc-entrega-item {
-    border: 1px solid var(--line-soft);
+    border: 1px solid var(--apc-border-soft);
     border-radius: 14px;
-    padding: 12px;
-    background: #ffffff;
+    padding: 14px;
+    background: var(--apc-surface);
     display: grid;
-    gap: 8px;
+    gap: 10px;
 }
 
 .apc-entrega-topo {
@@ -914,16 +1093,16 @@ body.apc-modal-open {
 .apc-arquivos-workspace {
     display: grid;
     grid-template-columns: minmax(280px, 0.85fr) minmax(0, 1.4fr);
-    gap: 14px;
+    gap: 16px;
     align-items: start;
 }
 
 .apc-arquivos-lista,
 .apc-arquivo-preview-card {
-    border: 1px solid var(--line-soft);
+    border: 1px solid var(--apc-border-soft);
     border-radius: 16px;
-    background: var(--surface-1);
-    padding: 14px;
+    background: var(--apc-surface-muted);
+    padding: 16px;
 }
 
 .apc-arquivos-lista {
@@ -934,9 +1113,9 @@ body.apc-modal-open {
 }
 
 .apc-arquivos-grupo {
-    border: 1px solid rgba(19, 53, 88, 0.08);
+    border: 1px solid var(--apc-border-soft);
     border-radius: 14px;
-    background: #ffffff;
+    background: var(--apc-surface);
     padding: 12px;
     display: grid;
     gap: 10px;
@@ -963,10 +1142,11 @@ body.apc-modal-open {
     text-align: left;
     border: 1px solid var(--line-soft);
     border-radius: 12px;
-    background: #f8fbff;
+    background: var(--apc-surface);
     padding: 12px;
     display: grid;
     gap: 6px;
+    transition: border-color var(--motion-fast), background-color var(--motion-fast), box-shadow var(--motion-fast);
 }
 
 .apc-arquivo-item-card .apc-inline-actions {
@@ -974,9 +1154,15 @@ body.apc-modal-open {
 }
 
 .apc-arquivo-item-btn.is-active {
-    border-color: rgba(19, 53, 88, 0.28);
-    box-shadow: 0 0 0 2px rgba(19, 53, 88, 0.08) inset;
-    background: #ffffff;
+    border-color: rgba(15, 118, 110, 0.28);
+    box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.08);
+    background: rgba(214, 242, 239, 0.36);
+}
+
+.apc-arquivo-item-btn:focus-visible {
+    outline: none;
+    border-color: var(--brand);
+    box-shadow: var(--focus-ring);
 }
 
 .apc-arquivo-item-btn strong,
@@ -986,7 +1172,7 @@ body.apc-modal-open {
 }
 
 .apc-arquivo-item-btn small {
-    color: var(--ink-soft);
+    color: var(--text-muted);
 }
 
 body.apc-file-preview-open {
@@ -1001,7 +1187,7 @@ body.apc-print-wizard-open {
     position: fixed;
     inset: 0;
     z-index: 1300;
-    padding: 24px;
+    padding: 20px;
     display: grid;
     place-items: center;
     opacity: 0;
@@ -1026,23 +1212,23 @@ body.apc-print-wizard-open {
     position: absolute;
     inset: 0;
     z-index: 1;
-    background: rgba(15, 23, 42, 0.72);
-    backdrop-filter: blur(5px);
+    background: rgba(15, 23, 42, 0.52);
+    backdrop-filter: blur(6px);
 }
 
 .apc-file-preview-panel {
     position: relative;
     z-index: 2;
-    width: min(1440px, 96vw);
+    width: min(1520px, 96vw);
     height: min(920px, 94vh);
-    padding: 20px;
-    border: 1px solid var(--line-soft);
-    border-radius: 20px;
-    background: var(--surface-0);
-    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.32);
-    display: flex;
-    
-    gap: 16px;
+    padding: 24px;
+    border: 1px solid var(--apc-border-soft);
+    border-radius: 18px;
+    background: var(--apc-surface);
+    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.24);
+    display: grid;
+    grid-template-columns: minmax(300px, 340px) minmax(0, 1fr);
+    gap: 24px;
     outline: none;
     transform: translateY(12px) scale(0.99);
     transition: transform 0.22s ease;
@@ -1053,12 +1239,11 @@ body.apc-print-wizard-open {
 }
 
 .apc-file-preview-header {
-    display: flex;
-    flex-direction: column; 
-    align-items: flex-start;
-    justify-content: space-between;
+    display: grid;
+    align-content: start;
     gap: 20px;
-
+    min-height: 0;
+    padding-right: 8px;
 }
 
 .apc-file-preview-header .apc-arquivo-preview-meta {
@@ -1067,30 +1252,49 @@ body.apc-print-wizard-open {
 
 .apc-file-preview-header h2 {
     margin: 0;
-    font-size: 20px;
+    font-size: 24px;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
     overflow-wrap: anywhere;
 }
 
 .apc-file-preview-content {
     min-height: 0;
     overflow: hidden;
-    border: 1px solid var(--line-soft);
+    border: 1px solid var(--apc-border-soft);
     border-radius: 16px;
-    background: var(--surface-2);
+    background: var(--apc-surface-muted);
     display: grid;
     place-items: stretch;
     width: 100%;
 }
 
+.apc-file-preview-header .apc-inline-actions {
+    width: 100%;
+    margin-top: auto;
+    display: grid;
+    gap: 10px;
+}
+
+.apc-file-preview-header .apc-inline-actions button {
+    width: 100%;
+    border-color: var(--apc-border-soft);
+    color: var(--apc-accent-strong);
+}
+
+.apc-file-preview-header .apc-inline-actions .btn-destaque {
+    color: #ffffff;
+}
+
 .apc-arquivo-preview-card {
     min-height: 520px;
     display: grid;
-    gap: 12px;
+    gap: 14px;
 }
 
 .apc-arquivo-preview-meta {
     display: grid;
-    gap: 6px;
+    gap: 8px;
 }
 
 .apc-arquivo-preview-meta h4,
@@ -1098,12 +1302,18 @@ body.apc-print-wizard-open {
     margin: 0;
 }
 
+.apc-arquivo-preview-meta p {
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.45;
+}
+
 .apc-arquivo-preview-state {
     height: 100%;
-    border: 1px dashed rgba(19, 53, 88, 0.18);
-    border-radius: 14px;
-    padding: 14px;
-    background: rgba(255, 255, 255, 0.8);
+    border: 1px dashed rgba(15, 118, 110, 0.18);
+    border-radius: 16px;
+    padding: 18px;
+    background: rgba(255, 255, 255, 0.86);
     display: grid;
     place-items: center;
 }
@@ -1141,7 +1351,7 @@ body.apc-print-wizard-open {
     position: fixed;
     inset: 0;
     z-index: 1350;
-    padding: 24px;
+    padding: 20px;
     display: grid;
     place-items: center;
     opacity: 0;
@@ -1163,21 +1373,21 @@ body.apc-print-wizard-open {
     position: absolute;
     inset: 0;
     z-index: 1;
-    background: rgba(15, 23, 42, 0.72);
-    backdrop-filter: blur(5px);
+    background: rgba(15, 23, 42, 0.52);
+    backdrop-filter: blur(6px);
 }
 
 .apc-print-wizard-panel {
     position: relative;
     z-index: 2;
-    width: min(860px, 96vw);
+    width: min(940px, 96vw);
     max-height: 94vh;
     overflow: auto;
-    padding: 24px;
-    border: 1px solid var(--line-soft);
-    border-radius: 20px;
-    background: var(--surface-0);
-    box-shadow: 0 28px 70px rgba(15, 23, 42, 0.32);
+    padding: 24px 24px 22px;
+    border: 1px solid var(--apc-border-soft);
+    border-radius: 18px;
+    background: var(--apc-surface);
+    box-shadow: 0 24px 64px rgba(15, 23, 42, 0.24);
     outline: none;
     transform: translateY(12px) scale(0.99);
     transition: transform 0.22s ease;
@@ -1192,6 +1402,8 @@ body.apc-print-wizard-open {
     align-items: flex-start;
     justify-content: space-between;
     gap: 20px;
+    padding-bottom: 18px;
+    border-bottom: 1px solid var(--apc-border-soft);
 }
 
 .apc-print-wizard-header h2,
@@ -1201,33 +1413,39 @@ body.apc-print-wizard-open {
 
 .apc-print-wizard-header #apcPrintWizardArquivo {
     margin-top: 5px;
-    color: var(--ink-soft);
+    color: var(--text-muted);
     overflow-wrap: anywhere;
 }
 
+.apc-print-wizard-header button {
+    border-color: var(--apc-border-soft);
+    color: var(--apc-accent-strong);
+}
+
 .apc-print-stepper {
-    margin: 22px 0;
+    margin: 20px 0;
     padding: 0;
     list-style: none;
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 8px;
+    gap: 10px;
 }
 
 .apc-print-stepper li {
-    padding: 10px 12px;
-    border: 1px solid var(--line-soft);
+    padding: 12px 14px;
+    border: 1px solid var(--apc-border-soft);
     border-radius: 12px;
-    color: var(--ink-soft);
-    background: var(--surface-2);
-    font-size: 0.88rem;
+    color: var(--text-muted);
+    background: var(--apc-surface-muted);
+    font-size: 14px;
     font-weight: 700;
+    text-align: center;
 }
 
 .apc-print-stepper li.is-current {
-    border-color: rgba(19, 53, 88, 0.32);
-    color: var(--brand-strong);
-    background: rgba(19, 53, 88, 0.08);
+    border-color: rgba(15, 118, 110, 0.28);
+    color: var(--apc-accent-strong);
+    background: rgba(214, 242, 239, 0.48);
 }
 
 .apc-print-stepper li.is-complete {
@@ -1239,16 +1457,16 @@ body.apc-print-wizard-open {
 .apc-print-wizard-form,
 .apc-print-step {
     display: grid;
-    gap: 14px;
+    gap: 16px;
 }
 
 .apc-print-step {
-    min-height: 250px;
+    min-height: 260px;
     align-content: start;
-    padding: 20px;
-    border: 1px solid var(--line-soft);
+    padding: 22px;
+    border: 1px solid var(--apc-border-soft);
     border-radius: 16px;
-    background: #ffffff;
+    background: var(--apc-surface-muted);
 }
 
 .apc-print-step header h3,
@@ -1258,7 +1476,7 @@ body.apc-print-wizard-open {
 
 .apc-print-step header p,
 .apc-inline-hint {
-    color: var(--ink-soft);
+    color: var(--text-muted);
 }
 
 .apc-inline-hint {
@@ -1280,6 +1498,14 @@ body.apc-print-wizard-open {
     cursor: pointer;
 }
 
+.apc-print-checkbox {
+    padding: 10px 12px;
+    border: 1px solid var(--apc-border-soft);
+    border-radius: 12px;
+    background: var(--apc-surface);
+    transition: border-color var(--motion-fast), background-color var(--motion-fast), box-shadow var(--motion-fast);
+}
+
 .apc-print-checkbox input,
 .apc-print-tag input {
     width: 18px;
@@ -1290,8 +1516,9 @@ body.apc-print-wizard-open {
 .apc-print-tags-fieldset {
     margin: 0;
     padding: 14px;
-    border: 1px solid var(--line-soft);
+    border: 1px solid var(--apc-border-soft);
     border-radius: 14px;
+    background: var(--apc-surface);
 }
 
 .apc-print-tags-fieldset legend {
@@ -1307,16 +1534,24 @@ body.apc-print-wizard-open {
 
 .apc-print-tag {
     padding: 9px 12px;
-    border: 1px solid var(--line-soft);
+    border: 1px solid var(--apc-border-soft);
     border-radius: 999px;
-    background: var(--surface-2);
-    font-size: 0.9rem;
+    background: var(--apc-surface-muted);
+    font-size: 14px;
+    transition: border-color var(--motion-fast), background-color var(--motion-fast), box-shadow var(--motion-fast);
 }
 
+.apc-print-checkbox:has(input:checked),
 .apc-print-tag:has(input:checked) {
-    border-color: rgba(19, 53, 88, 0.32);
-    color: var(--brand-strong);
-    background: rgba(19, 53, 88, 0.08);
+    border-color: rgba(15, 118, 110, 0.28);
+    color: var(--apc-accent-strong);
+    background: rgba(214, 242, 239, 0.46);
+}
+
+.apc-print-checkbox:has(input:focus-visible),
+.apc-print-tag:has(input:focus-visible) {
+    border-color: var(--brand);
+    box-shadow: var(--focus-ring);
 }
 
 .apc-print-summary {
@@ -1324,7 +1559,7 @@ body.apc-print-wizard-open {
     display: grid;
     grid-template-columns: minmax(130px, 0.35fr) minmax(0, 1fr);
     gap: 0;
-    border: 1px solid var(--line-soft);
+    border: 1px solid var(--apc-border-soft);
     border-radius: 14px;
     overflow: hidden;
 }
@@ -1333,12 +1568,12 @@ body.apc-print-wizard-open {
 .apc-print-summary dd {
     margin: 0;
     padding: 11px 13px;
-    border-bottom: 1px solid var(--line-soft);
+    border-bottom: 1px solid var(--apc-border-soft);
 }
 
 .apc-print-summary dt {
     font-weight: 700;
-    background: var(--surface-2);
+    background: var(--apc-surface-muted);
 }
 
 .apc-print-summary dd {
@@ -1354,6 +1589,8 @@ body.apc-print-wizard-open {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+    padding-top: 4px;
+    border-top: 1px solid var(--apc-border-soft);
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1370,29 +1607,29 @@ body.apc-print-wizard-open {
 }
 
 .apc-professor-card {
-    border: 1px solid var(--line-soft);
+    border: 1px solid var(--apc-border-soft);
     border-radius: 14px;
-    padding: 12px;
-    background: #ffffff;
+    padding: 14px;
+    background: var(--apc-surface);
     display: grid;
-    gap: 8px;
+    gap: 10px;
     align-content: start;
 }
 
 .apc-professor-card.is-enviado {
     border-color: rgba(15, 118, 110, 0.3);
     box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.08);
-    background: linear-gradient(180deg, rgba(220, 252, 231, 0.98), rgba(240, 253, 244, 0.96));
+    background: rgba(214, 242, 239, 0.4);
 }
 
 .apc-professor-card.is-pendente {
     border-color: rgba(234, 179, 8, 0.18);
-    background: linear-gradient(180deg, rgba(255, 251, 235, 0.98), #ffffff);
+    background: rgba(255, 247, 237, 0.86);
 }
 
 .apc-professor-card.is-fechado {
     border-color: rgba(185, 28, 28, 0.18);
-    background: linear-gradient(180deg, rgba(254, 242, 242, 0.98), #ffffff);
+    background: rgba(254, 242, 242, 0.84);
 }
 
 .apc-professor-topo {
@@ -1457,15 +1694,16 @@ body.apc-print-wizard-open {
     min-height: 30px;
     padding: 0 10px;
     border-radius: 999px;
-    background: rgba(19, 53, 88, 0.08);
-    color: #21446b;
-    font-size: 0.83rem;
+    background: rgba(214, 242, 239, 0.62);
+    color: var(--apc-accent-strong);
+    font-size: 13px;
+    font-weight: 700;
 }
 
 .apc-horarios-lista {
     margin: 0;
     padding-left: 18px;
-    color: var(--ink-soft);
+    color: var(--text-muted);
 }
 
 .apc-inline-form {
@@ -1483,10 +1721,10 @@ body.apc-print-wizard-open {
 }
 
 .apc-envio-card {
-    border: 1px solid rgba(19, 53, 88, 0.12);
+    border: 1px solid var(--apc-border-soft);
     border-radius: 14px;
-    padding: 12px;
-    background: rgba(244, 248, 252, 0.88);
+    padding: 14px;
+    background: var(--apc-surface-muted);
     display: grid;
     gap: 10px;
 }
@@ -1501,7 +1739,7 @@ body.apc-print-wizard-open {
 
 .apc-envio-nome {
     font-size: 0.98rem;
-    color: var(--brand-700);
+    color: var(--apc-accent-strong);
     word-break: break-word;
 }
 
@@ -1515,7 +1753,7 @@ body.apc-print-wizard-open {
 }
 
 .apc-envio-link {
-    color: var(--brand-700);
+    color: var(--apc-accent-strong);
     font-weight: 700;
     text-decoration: none;
 }
@@ -1526,18 +1764,18 @@ body.apc-print-wizard-open {
 
 .apc-envio-meta {
     margin: 0;
-    color: var(--ink-soft);
+    color: var(--text-muted);
 }
 
 .apc-calendar-flag {
     margin-top: 6px;
     display: block;
     font-size: 0.74rem;
-    color: var(--ink-soft);
+    color: var(--text-muted);
 }
 
 .apc-calendar-day.has-apc {
-    border-color: rgba(19, 53, 88, 0.22);
+    border-color: rgba(15, 118, 110, 0.2);
 }
 
 .apc-calendar-day.is-pending {
@@ -1549,18 +1787,23 @@ body.apc-print-wizard-open {
 }
 
 @media (max-width: 1120px) {
-    .apc-content {
-        grid-template-columns: 1fr;
-    }
-
-    .apc-calendar-card,
-    .apc-detail-card {
-        grid-column: 1;
-        grid-row: auto;
-        position: static;
-    }
-
     .apc-docente-workspace {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 24px;
+    }
+
+    .apc-page.is-gestao-mode .apc-docente-workspace {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .apc-solicitacoes-column {
+        padding: 0 0 24px;
+        border-right: 0;
+        border-bottom: 1px solid var(--line-soft);
+    }
+
+    .apc-arquivos-workspace,
+    .apc-file-preview-panel {
         grid-template-columns: minmax(0, 1fr);
     }
 
@@ -1580,30 +1823,30 @@ body.apc-print-wizard-open {
 
 @media (max-width: 780px) {
     .apc-page {
-        padding: 16px;
-        gap: 16px;
+        padding: var(--apc-shell-padding);
     }
 
-    .apc-topbar {
-        padding: 20px 16px;
-        border-radius: 18px;
+    .apc-page .scheduler-page-lead {
+        display: block;
     }
 
-    .apc-topbar-main {
-        flex-direction: column;
-    }
-
-    .apc-topbar-actions {
-        width: 100%;
+    .apc-page-header-meta {
         justify-content: stretch;
     }
 
-    .apc-topbar-actions button {
-        flex: 1 1 100%;
+    .apc-toolbar-band {
+        grid-template-columns: 1fr;
+        padding: 16px;
+        gap: 14px;
     }
 
-    .apc-topbar-grid {
+    .apc-page.is-gestao-mode .apc-toolbar-band {
         grid-template-columns: 1fr;
+    }
+
+    .apc-toolbar-actions {
+        width: 100%;
+        justify-content: stretch;
     }
 
     .apc-calendar-toggle {
@@ -1611,20 +1854,25 @@ body.apc-print-wizard-open {
     }
 
     .apc-topbar-user {
-        width: fit-content;
+        width: 100%;
         border-radius: 12px;
     }
 
-    .apc-calendar-card,
-    .apc-detail-card {
+    .apc-flow-surface {
         padding: 16px;
     }
 
-    .apc-solicitacoes-column,
+    .apc-detail-card {
+        gap: 20px;
+    }
+
+    .apc-solicitacoes-column {
+        padding: 0 0 20px;
+    }
+
     .apc-docente-detalhe,
     .apc-gestao-detalhe {
-        padding: 16px;
-        border-radius: 16px;
+        min-height: 0;
     }
 
     .apc-gestao-filtros {
@@ -1642,6 +1890,11 @@ body.apc-print-wizard-open {
     }
 
     .apc-professor-card-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .apc-modal-field-grid--two,
+    .apc-modal-field-grid--three {
         grid-template-columns: minmax(0, 1fr);
     }
 
@@ -1699,7 +1952,7 @@ body.apc-print-wizard-open {
     }
 
     .apc-file-preview-header .apc-inline-actions button {
-        flex: 1 1 0;
+        width: 100%;
         min-height: 44px;
     }
 
@@ -1743,8 +1996,30 @@ body.apc-print-wizard-open {
     }
 
     .apc-modal {
-        padding: 18px;
         border-radius: 20px;
+    }
+
+    .apc-modal-header {
+        padding: 20px 18px 16px;
+    }
+
+    .apc-modal-form {
+        padding: 18px 18px 0;
+        gap: 18px;
+    }
+
+    .apc-modal-footer {
+        margin: 0 -18px -18px;
+        padding: 16px 18px 18px;
+    }
+
+    .apc-modal-footer .apc-inline-actions {
+        width: 100%;
+        margin-top: 0;
+    }
+
+    .apc-modal-footer .apc-inline-actions button {
+        flex: 1 1 100%;
     }
 
     .apc-solicitacao-summary {
@@ -1760,6 +2035,10 @@ body.apc-print-wizard-open {
 @media (max-width: 640px) {
     .apc-solicitacao-summary {
         flex-direction: column;
+    }
+
+    .apc-destinatario-opcoes {
+        grid-template-columns: minmax(0, 1fr);
     }
 
     .apc-print-wizard-modal {

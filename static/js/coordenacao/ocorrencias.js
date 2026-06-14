@@ -162,7 +162,7 @@ function sincronizarRegimentoPendenteAntesSalvar() {
     }
 
     setMensagemOcorrencias(
-        "Selecione uma opcao da base legal na lista antes de salvar a ocorrencia.",
+        "Selecione uma opção da base legal na lista antes de salvar a ocorrência.",
         true
     );
     input.focus();
@@ -187,7 +187,7 @@ function atualizarSugestoesRegimentoBusca(forcar = false) {
     const textoVazio = totalAtivos === 0
         ? "Cadastre bases legais ativas para pesquisar."
         : itensDisponiveis.length === 0
-            ? "Todas as bases legais ativas ja foram anexadas."
+            ? "Todas as bases legais ativas já foram anexadas."
         : "Nenhuma base legal encontrada.";
     preencherDatalist("listaRegimentoBusca", mapaBuscaRegimento, itens, {
         onSelect: selecionarSugestaoRegimento,
@@ -243,7 +243,7 @@ function formatarAulaOcorrencia(ocorrencia) {
     const turma = obterTurmaOpcaoPorId(ocorrencia?.turma_id);
     const faixa = resolverFaixaOcorrenciaParaTurma(turma, ocorrencia?.aula);
     if (faixa <= 0 || !turma) {
-        return ocorrencia?.aula || "Nao informada";
+        return ocorrencia?.aula || "Não informada";
     }
 
     const aulaTurno = aulaTurnoPorFaixa(turma.turno, faixa);
@@ -387,8 +387,8 @@ function atualizarModoFormularioRegistro({ limparCamposOcultos = false } = {}) {
     const disciplinaInput = el("ocorrenciaDisciplina");
     if (disciplinaInput) {
         disciplinaInput.placeholder = ehGeral
-            ? "Ex: orientacoes gerais para o fechamento do bimestre"
-            : (ehProfessor ? "Ex: alinhamento pedagogico, acompanhamento, pauta" : "Buscar disciplina cadastrada ou digitar nome");
+            ? "Ex: orientações gerais para o fechamento do bimestre"
+            : (ehProfessor ? "Ex: alinhamento pedagógico, acompanhamento, pauta" : "Buscar disciplina cadastrada ou digitar nome");
         disciplinaInput.required = true;
     }
 
@@ -401,9 +401,12 @@ function atualizarModoFormularioRegistro({ limparCamposOcultos = false } = {}) {
 
     const regimentoHint = el("ocorrenciaRegimentoHint");
     if (regimentoHint) {
-        regimentoHint.innerText = registroExigeBaseLegal(tipoRegistro)
-            ? "Pesquise, clique para anexar e repita o processo para vincular mais de uma base legal ao documento. Nos registros de estudante, ao menos uma base legal e obrigatoria."
-            : "A base legal fica opcional neste tipo de registro. Use apenas quando fizer sentido como apoio documental.";
+        regimentoHint.innerText = "Pesquise, clique para anexar e repita o processo para vincular mais de uma base legal ao documento. Vincule pelo menos uma base legal antes de concluir o registro.";
+    }
+
+    const regimentoLabel = el("ocorrenciaRegimentoLabel");
+    if (regimentoLabel) {
+        regimentoLabel.innerText = "Base legal vinculada";
     }
 
     if (limparCamposOcultos) {
@@ -439,7 +442,7 @@ function obterOcorrenciaEmEdicaoAtual() {
     return (ocorrenciasCache || []).find((ocorrencia) => Number(ocorrencia.id) === Number(ocorrenciaEmEdicaoId)) || null;
 }
 
-function obterTextoOuPadrao(valor, padrao = "Nao informado") {
+function obterTextoOuPadrao(valor, padrao = "Não informado") {
     const texto = String(valor || "").trim();
     return texto || padrao;
 }
@@ -1117,8 +1120,8 @@ function atualizarAcaoAplicadaPorGravidade({
         : String(acaoAtual || "").trim();
     const opcoes = obterAcoesAplicadasDisponiveis(gravidade, valorAtual, tipoRegistro);
     const placeholder = gravidade
-        ? "Selecione a acao aplicada"
-        : "Selecione a acao aplicada";
+        ? "Selecione a ação aplicada"
+        : "Selecione a ação aplicada";
 
     preencherSelect("ocorrenciaAcaoAplicada", opcoes, {
         placeholder
@@ -1131,10 +1134,10 @@ function atualizarAcaoAplicadaPorGravidade({
     const hint = el("ocorrenciaGravidadeInfo");
     if (hint) {
         hint.innerText = (tipoRegistro === "estudante" && gravidade)
-            ? `Gravidade automatica: ${GRAVIDADE_ROTULOS[gravidade] || gravidade}. Voce pode registrar a acao que considerar mais adequada.`
+            ? `Gravidade automática: ${GRAVIDADE_ROTULOS[gravidade] || gravidade}. Você pode registrar a ação que considerar mais adequada.`
             : (tipoRegistro === "estudante"
-                ? "Gravidade automatica ainda nao identificada pela base legal selecionada. Escolha a acao que melhor representa a orientacao adotada."
-                : "Selecione a acao que melhor descreve o atendimento, a reuniao ou a orientacao registrada.");
+                ? "Gravidade automática ainda não identificada pela base legal selecionada. Escolha a ação que melhor representa a orientação adotada."
+                : "Selecione a ação que melhor descreve o atendimento, a reunião ou a orientação registrada.");
     }
 
     return gravidade;
@@ -1142,7 +1145,7 @@ function atualizarAcaoAplicadaPorGravidade({
 
 function obterTurmaPreviewFormulario() {
     if (obterTipoRegistroFormulario() !== "estudante") {
-        return "Nao se aplica";
+        return "Não se aplica";
     }
     const contexto = obterContextoTurmaEstudantesFormulario();
     if (contexto.possui_multiplas_turmas) {
@@ -1153,12 +1156,12 @@ function obterTurmaPreviewFormulario() {
     if (contexto.turma_nome) return contexto.turma_nome;
     const turma = obterTurmaOpcaoPorId(contexto.turma_id);
     if (turma?.nome) return turma.nome;
-    return "Nao informada";
+    return "Não informada";
 }
 
 function obterAulaPreviewFormulario() {
     if (obterTipoRegistroFormulario() !== "estudante") {
-        return "Nao se aplica";
+        return "Não se aplica";
     }
     const select = el("ocorrenciaAula");
     const opcao = select?.selectedOptions?.[0];
@@ -1168,12 +1171,12 @@ function obterAulaPreviewFormulario() {
     }
 
     const valor = String(select?.value || "").trim();
-    return valor || "Nao informada";
+    return valor || "Não informada";
 }
 
 function obterHorarioPreviewFormulario() {
     const horario = String(el("ocorrenciaHorario")?.value || "").trim();
-    return horario ? `As ${horario} h` : "Nao informado";
+    return horario ? `Às ${horario} h` : "Não informado";
 }
 
 function obterObservacaoFinalPreview(acaoAplicada) {
@@ -1183,12 +1186,12 @@ function obterObservacaoFinalPreview(acaoAplicada) {
         return OBSERVACOES_ACAO_PREVIEW[acao];
     }
     if (tipoRegistro === "professor") {
-        return "OBS.: Documento emitido para registro funcional e acompanhamento da orientacao ao professor.";
+        return "OBS.: Documento emitido para registro funcional e acompanhamento da orientação ao professor.";
     }
     if (tipoRegistro === "geral") {
-        return "OBS.: Documento emitido para registro institucional de orientacao geral ao corpo docente.";
+        return "OBS.: Documento emitido para registro institucional de orientação geral ao corpo docente.";
     }
-    return `OBS.: Documento emitido para registro e acompanhamento da acao aplicada: ${rotuloAcao(acao)}.`;
+    return `OBS.: Documento emitido para registro e acompanhamento da ação aplicada: ${rotuloAcao(acao)}.`;
 }
 
 function obterParticipantesAssinaturaPreview(tipoRegistro) {
@@ -1224,12 +1227,12 @@ function atualizarCabecalhoPreviewOcorrencia(acaoAplicada, gravidade, tipoRegist
     const previewGravidade = el("previewGravidade");
     if (previewGravidade) {
         previewGravidade.innerText = tipoRegistro === "estudante"
-            ? `Gravidade: ${GRAVIDADE_ROTULOS[gravidade] || "Nao identificada"}`
-            : "Assinatura obrigatoria no documento impresso";
+            ? `Gravidade: ${GRAVIDADE_ROTULOS[gravidade] || "Não identificada"}`
+            : "Assinatura obrigatória no documento impresso";
     }
 }
 
-function definirTextoPreview(id, valor, padrao = "Nao informado") {
+function definirTextoPreview(id, valor, padrao = "Não informado") {
     const target = el(id);
     if (!target) return;
     target.innerText = obterTextoOuPadrao(valor, padrao);
@@ -1311,7 +1314,7 @@ function renderizarAssinaturasPreview(tipoRegistro) {
     if (assinaturaIndividual && tipoRegistro === "estudante") {
         const grade = document.createElement("div");
         grade.className = "coordenacao-preview-signature-grid";
-        ["Estudante", "Coordenacao Pedagogica", "Direcao"].forEach((titulo) => {
+        ["Estudante", "Coordenação Pedagógica", "Direção"].forEach((titulo) => {
             grade.appendChild(criarItem(titulo));
         });
         container.appendChild(grade);
@@ -1338,7 +1341,7 @@ function renderizarAssinaturasPreview(tipoRegistro) {
 
         const gestao = document.createElement("div");
         gestao.className = "coordenacao-preview-signature-running-footer";
-        ["Coordenacao Pedagogica", "Direcao"].forEach((tituloItem) => {
+        ["Coordenação Pedagógica", "Direção"].forEach((tituloItem) => {
             gestao.appendChild(criarItem(tituloItem));
         });
         container.appendChild(gestao);
@@ -1347,7 +1350,7 @@ function renderizarAssinaturasPreview(tipoRegistro) {
 
     const simples = document.createElement("div");
     simples.className = "coordenacao-preview-signature-single";
-    simples.appendChild(criarItem("Coordenacao Pedagogica"));
+    simples.appendChild(criarItem("Coordenação Pedagógica"));
     container.appendChild(simples);
 }
 
@@ -1444,7 +1447,7 @@ function atualizarSelectAulasPorTurma(turmaId, faixaSelecionada = null) {
         const option = document.createElement("option");
         option.value = "";
         option.innerText = contextoTurma.possui_multiplas_turmas
-            ? "Aula unica indisponivel para ocorrencia com turmas diferentes"
+            ? "Aula única indisponível para ocorrência com turmas diferentes"
             : (turmaId
                 ? "Configure o turno da turma no painel admin"
                 : "Selecione um estudante para carregar as aulas");
@@ -1681,7 +1684,7 @@ function criarBlocoDetalhesRegimento(ocorrencia) {
         const vazio = document.createElement("p");
         vazio.className = "coordenacao-detail-hint";
         vazio.innerText = registroExigeBaseLegal(ocorrencia?.tipo_registro)
-            ? "Nenhum item de base legal vinculado a esta ocorrencia."
+            ? "Nenhum item de base legal vinculado a esta ocorrência."
             : "Nenhum item de base legal vinculado a este registro.";
         wrapper.appendChild(vazio);
         return wrapper;
@@ -1706,7 +1709,7 @@ function renderDetalhesOcorrencia(ocorrencia) {
     const container = el("detalhesOcorrencia");
     if (!container) return;
     if (!ocorrencia) {
-        container.innerText = "Selecione um registro para visualizar os detalhes.";
+        container.innerText = "Selecione um registro do histórico para revisar contexto, base legal e documento.";
         return;
     }
 
@@ -1714,10 +1717,18 @@ function renderDetalhesOcorrencia(ocorrencia) {
     const actions = document.createElement("div");
     actions.className = "coordenacao-detail-actions";
 
+    const btnEditar = document.createElement("button");
+    btnEditar.type = "button";
+    btnEditar.innerText = "Editar registro";
+    btnEditar.addEventListener("click", () => {
+        preencherFormularioOcorrencia(ocorrencia);
+    });
+    actions.appendChild(btnEditar);
+
     const btnPdf = document.createElement("button");
     btnPdf.type = "button";
     btnPdf.className = "btn-destaque";
-    btnPdf.innerText = "Gerar PDF para impressao";
+    btnPdf.innerText = "Gerar PDF para impressão";
     btnPdf.addEventListener("click", () => {
         abrirPdfOcorrencia(ocorrencia);
     });
@@ -1726,7 +1737,7 @@ function renderDetalhesOcorrencia(ocorrencia) {
 
     const hint = document.createElement("p");
     hint.className = "coordenacao-detail-hint";
-    hint.innerText = "Use este documento para impressao, assinatura e arquivamento fisico.";
+    hint.innerText = "Use este documento para impressão, assinatura e arquivamento físico.";
     container.appendChild(hint);
 
     const tipoRegistro = String(ocorrencia.tipo_registro || "estudante").trim() || "estudante";
@@ -1734,15 +1745,15 @@ function renderDetalhesOcorrencia(ocorrencia) {
     const professoresVinculados = normalizarProfessoresVinculados(ocorrencia.professores_vinculados);
     const campos = [
         ["Tipo", rotuloTipoRegistro(tipoRegistro)],
-        ["Referencia", obterReferenciaRegistro(ocorrencia)],
+        ["Referência", obterReferenciaRegistro(ocorrencia)],
         ["Contexto", obterContextoRegistro(ocorrencia)],
-        [tipoRegistro === "geral" ? "Publico" : "Professor", ocorrencia.professor_requerente],
+        [tipoRegistro === "geral" ? "Público" : "Professor", ocorrencia.professor_requerente],
         [tipoRegistro === "geral" ? "Tema ou pauta" : "Disciplina ou assunto", ocorrencia.disciplina],
         ["Data", formatarDataBr(ocorrencia.data_ocorrencia)],
-        ["Horario", ocorrencia.horario_ocorrencia],
-        ["Acao aplicada", rotuloAcao(ocorrencia.acao_aplicada)],
+        ["Horário", ocorrencia.horario_ocorrencia],
+        ["Ação aplicada", rotuloAcao(ocorrencia.acao_aplicada)],
         ["Status", rotuloStatus(ocorrencia.status)],
-        ["Descricao", ocorrencia.descricao],
+        ["Descrição", ocorrencia.descricao],
         ["Criado em", formatarDataHora(ocorrencia.criado_em)],
         ["Atualizado em", formatarDataHora(ocorrencia.atualizado_em)]
     ];
@@ -1758,20 +1769,20 @@ function renderDetalhesOcorrencia(ocorrencia) {
     }
 
     campos.forEach(([rotulo, valor]) => {
-        const linha = document.createElement(rotulo === "Descricao" ? "div" : "p");
+        const linha = document.createElement(rotulo === "Descrição" ? "div" : "p");
         linha.className = "coordenacao-detail-line";
         const strong = document.createElement("strong");
         strong.innerText = `${rotulo}: `;
         const span = document.createElement("span");
-        if (rotulo === "Descricao") {
+        if (rotulo === "Descrição") {
             renderizarDescricaoFormatada(
                 span,
                 ocorrencia.descricao_formatada || "",
                 ocorrencia.descricao || "",
-                "Nao informado"
+                "Não informado"
             );
         } else {
-            span.innerText = valor || "Nao informado";
+            span.innerText = valor || "Não informado";
         }
         linha.appendChild(strong);
         linha.appendChild(span);
@@ -1783,9 +1794,3 @@ function renderDetalhesOcorrencia(ocorrencia) {
         container.appendChild(blocoRegimento);
     }
 }
-    const regimentoLabel = el("ocorrenciaRegimentoLabel");
-    if (regimentoLabel) {
-        regimentoLabel.innerText = registroExigeBaseLegal(tipoRegistro)
-            ? "Base legal vinculada"
-            : "Base legal vinculada (opcional)";
-    }

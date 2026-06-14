@@ -2,6 +2,8 @@ from datetime import datetime
 
 from fastapi import HTTPException
 
+from db.horario_escolar import listar_configuracoes_aulas
+from modules.scheduling.lesson_config import list_global_lessons
 from routers.common import usuario_eh_gestor, usuario_eh_professor
 
 from . import catalog_repository, repository
@@ -149,6 +151,46 @@ def _estimated_lesson(turn: str, moment: datetime) -> int:
     return max(1, min(12, elapsed_minutes // 50 + 1))
 
 
+def _time_to_minutes(value: str) -> int | None:
+    clean_value = str(value or "").strip()
+    if not clean_value:
+        return None
+    try:
+        parsed = datetime.strptime(clean_value, "%H:%M")
+    except ValueError:
+        return None
+    return parsed.hour * 60 + parsed.minute
+
+
+def _estimated_global_lesson(moment: datetime) -> int:
+    configuracoes = listar_configuracoes_aulas(incluir_inativas=False)
+    aulas = list_global_lessons(configuracoes, only_active=True)
+    if not aulas:
+        return 0
+
+    current_minutes = moment.hour * 60 + moment.minute
+    nearest_lesson = 0
+    nearest_delta = None
+
+    for aula in aulas:
+        start_minutes = _time_to_minutes(aula.get("horario_inicio"))
+        end_minutes = _time_to_minutes(aula.get("horario_fim"))
+        lesson_number = int(aula.get("aula_numero") or 0)
+        if lesson_number <= 0 or start_minutes is None or end_minutes is None:
+            continue
+
+        if start_minutes <= current_minutes < end_minutes:
+            return lesson_number
+
+        midpoint = (start_minutes + end_minutes) / 2
+        delta = abs(current_minutes - midpoint)
+        if nearest_delta is None or delta < nearest_delta:
+            nearest_delta = delta
+            nearest_lesson = lesson_number
+
+    return nearest_lesson
+
+
 def _resolve_class_context(
     professor_id: int,
     students: list[dict],
@@ -165,11 +207,15 @@ def _resolve_class_context(
     if len(schedules) == 1:
         selected = schedules[0]
     else:
+        estimated_global_lesson = _estimated_global_lesson(moment)
         selected = min(
             schedules,
             key=lambda item: abs(
                 int(item.get("aula_numero") or 0)
-                - _estimated_lesson(item.get("turno", ""), moment)
+                - (
+                    estimated_global_lesson
+                    or _estimated_lesson(item.get("turno", ""), moment)
+                )
             ),
         )
     return {

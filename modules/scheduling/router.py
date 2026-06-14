@@ -3,7 +3,6 @@ from fastapi import APIRouter, Depends
 from auth import get_usuario_logado
 from modules.scheduling.dependencies import (
     TURNOS_CONFIG,
-    calcular_faixa_global,
     require_admin_for_scheduling,
     resolve_scheduling_teacher,
     user_can_manage_scheduling,
@@ -15,6 +14,7 @@ from modules.scheduling.dependencies import (
 )
 from modules.scheduling.repository import (
     list_active_classes as listar_turmas_ativas,
+    list_lesson_configurations as listar_configuracoes_aulas,
     list_active_resources as listar_recursos_ativos,
     list_reservations as listar_agendamentos,
     list_scheduling_teachers as listar_professores_agendamento,
@@ -45,7 +45,11 @@ def recursos_agendamento(_usuario=Depends(get_usuario_logado)):
 
 @router.get("/agendamento/opcoes", response_model=SchedulingOptionsOut)
 def opcoes_agendamento(_usuario=Depends(get_usuario_logado)):
-    return build_scheduling_options(TURNOS_CONFIG, listar_turmas_ativas())
+    return build_scheduling_options(
+        TURNOS_CONFIG,
+        listar_turmas_ativas(),
+        listar_configuracoes_aulas(include_inactive=False),
+    )
 
 
 @router.get("/agendamento/professores", response_model=list[SchedulingTeacherOut])
@@ -80,11 +84,11 @@ def criar_reserva_agendamento(
         payload=payload,
         usuario=usuario,
         turnos_config=TURNOS_CONFIG,
+        grade_entries=listar_configuracoes_aulas(include_inactive=False),
         validar_data_agendamento=validar_data_agendamento,
         validar_turma=validar_turma,
         validar_tema_aula=validar_tema_aula,
         validar_aula=validar_aula,
-        calcular_faixa_global=calcular_faixa_global,
         resolver_usuario_professor_selecionado=resolve_scheduling_teacher,
     )
 

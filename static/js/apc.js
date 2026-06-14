@@ -1304,7 +1304,7 @@ function renderDetalheDocenteApc(detalhe) {
 
     const prazo = document.createElement("p");
     prazo.innerText =
-        `${paraDataBr(periodo.data_referencia)} | Prazo: ${formatarDataHoraApc(periodo.prazo_envio)}`;
+        `Prazo: ${formatarDataHoraApc(periodo.prazo_envio)}`;
     copia.appendChild(prazo);
     header.appendChild(copia);
 
@@ -1317,9 +1317,8 @@ function renderDetalheDocenteApc(detalhe) {
     painel.appendChild(header);
     painel.appendChild(
         renderResumoCompactoApc([
-            { label: "Entregas", valor: String(detalhe.total_entregas || 0) },
-            { label: "Enviadas", valor: String(detalhe.total_enviadas || 0) },
             { label: "Pendentes", valor: String(detalhe.total_pendentes || 0) },
+            { label: "Enviadas", valor: String(detalhe.total_enviadas || 0) },
             { label: "Prazo", valor: periodo.prazo_expirado ? "Encerrado" : "Aberto" },
         ])
     );

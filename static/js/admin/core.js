@@ -14,14 +14,22 @@ const headersJson = criarHeadersJsonAuth(token);
 let opcoesProfessor = { turmas: [], disciplinas: [] };
 let contextoAtribuicoesDocentes = { professores: [], turmas: [], disciplinas: [] };
 let contextoTurmasDisciplinas = { professores: [], turmas: [], disciplinas: [] };
+let configuracoesAulasAdmin = [];
 let professorEmEdicaoId = null;
 let recursoEmEdicaoId = null;
+let configuracaoAulaEmEdicaoId = null;
 const turmasDisciplinasExpandidas = new Set();
 const TURNO_LABEL = {
     INTEGRAL: "Período integral",
     MATUTINO: "Matutino",
     VESPERTINO: "Vespertino",
     VESPERTINO_EM: "Vespertino E.M."
+};
+const JANELA_AULAS_PADRAO_POR_TURNO = {
+    MATUTINO: [1, 5],
+    VESPERTINO: [6, 10],
+    VESPERTINO_EM: [6, 11],
+    INTEGRAL: [1, 8]
 };
 const CARGO_ADMIN = "ADMIN";
 const CARGO_PROFESSOR = "PROFESSOR";

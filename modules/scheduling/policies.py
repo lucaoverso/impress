@@ -2,8 +2,12 @@ from datetime import datetime
 
 from fastapi import HTTPException
 
-from modules.scheduling.config import FAIXA_GLOBAL_OFFSET_POR_TURNO, TURNOS_CONFIG
 from modules.scheduling import repository
+from modules.scheduling.config import TURNOS_CONFIG
+from modules.scheduling.lesson_config import (
+    list_lessons_for_class,
+    total_configured_lessons,
+)
 
 
 def validar_data_agendamento(data_txt: str) -> str:
@@ -20,31 +24,57 @@ def validar_turno(turno: str) -> str:
     return turno_limpo
 
 
-def validar_aula(aula: str, turno: str) -> str:
+def validar_aula(aula: str, turma_ou_turno) -> str:
     aula_limpa = str(aula).strip()
     if not aula_limpa.isdigit():
         raise HTTPException(400, "Aula inválida.")
 
     numero_aula = int(aula_limpa)
-    max_aulas_turno = TURNOS_CONFIG[turno]["aulas"]
-    if numero_aula < 1 or numero_aula > max_aulas_turno:
+    if numero_aula <= 0:
+        raise HTTPException(400, "Aula inválida.")
+
+    if isinstance(turma_ou_turno, dict):
+        grade_entries = repository.list_lesson_configurations(include_inactive=False)
+        lessons_for_class = list_lessons_for_class(turma_ou_turno, grade_entries)
+        if not lessons_for_class:
+            total_lessons = total_configured_lessons(grade_entries)
+            if total_lessons <= 0:
+                raise HTTPException(
+                    409,
+                    "Nenhuma aula global foi configurada. Cadastre os horarios no painel admin.",
+                )
+            raise HTTPException(
+                400,
+                "A turma selecionada esta sem janela de aulas configurada. Atualize no painel admin.",
+            )
+
+        allowed_lessons = {int(item.get("aula_numero") or 0) for item in lessons_for_class}
+        if numero_aula not in allowed_lessons:
+            first_lesson = min(allowed_lessons)
+            last_lesson = max(allowed_lessons)
+            raise HTTPException(
+                400,
+                (
+                    "Aula inválida para a turma selecionada. "
+                    f"Essa turma utiliza as aulas {first_lesson} a {last_lesson}."
+                ),
+            )
+        return str(numero_aula)
+
+    turn = validar_turno(turma_ou_turno)
+    config_turno = TURNOS_CONFIG.get(turn) or {}
+    max_aulas_turno = int(config_turno.get("aulas") or 0)
+    if numero_aula < 1 or (max_aulas_turno and numero_aula > max_aulas_turno):
         raise HTTPException(
             400,
             f"Aula inválida para o turno selecionado. Esse turno possui {max_aulas_turno} aulas.",
         )
 
-    return aula_limpa
+    return str(numero_aula)
 
 
-def calcular_faixa_global(turno: str, aula: str) -> int:
-    turno_limpo = validar_turno(turno)
-    numero_aula = int(validar_aula(aula, turno_limpo))
-    faixa_global = numero_aula + FAIXA_GLOBAL_OFFSET_POR_TURNO[turno_limpo]
-
-    if turno_limpo == "INTEGRAL" and numero_aula > 5:
-        faixa_global += 1
-
-    return faixa_global
+def calcular_faixa_global(turma_ou_turno, aula: str) -> int:
+    return int(validar_aula(aula, turma_ou_turno))
 
 
 def validar_turma(turma: str) -> dict:

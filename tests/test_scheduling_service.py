@@ -28,6 +28,8 @@ class SchedulingServiceTest(unittest.TestCase):
         resultado = build_scheduling_options(turnos_config, turmas_ativas)
 
         self.assertIn("turnos", resultado)
+        self.assertIn("grade_aulas", resultado)
+        self.assertIn("aulas_globais", resultado)
         self.assertIn("turmas", resultado)
         self.assertEqual(len(resultado["turnos"]), 2)
         self.assertEqual(len(resultado["turmas"]), 2)
@@ -138,7 +140,7 @@ class SchedulingServiceTest(unittest.TestCase):
         usuario = {"id": 1}
 
         def buscar_agendamento_por_id(agendamento_id):
-            return {"id": agendamento_id, "status": "ATIVO", "data": "2026-06-12", "usuario_id": 1}
+            return {"id": agendamento_id, "status": "ATIVO", "data": "2099-06-12", "usuario_id": 1}
 
         def cancelar_agendamento(agendamento_id):
             return True
@@ -159,6 +161,6 @@ class SchedulingServiceTest(unittest.TestCase):
                 agendamento_id=5,
                 usuario={"id": 2},
                 usuario_eh_admin=lambda usuario: False,
-                buscar_agendamento_por_id=lambda agendamento_id: {"id": agendamento_id, "status": "ATIVO", "data": "2026-06-12", "usuario_id": 1},
+                buscar_agendamento_por_id=lambda agendamento_id: {"id": agendamento_id, "status": "ATIVO", "data": "2099-06-12", "usuario_id": 1},
                 cancelar_agendamento=lambda agendamento_id: True,
             )

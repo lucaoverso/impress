@@ -27,22 +27,19 @@ const OPCAO_TURNOS_FALLBACK = [
     { id: "VESPERTINO_EM", nome: "Vespertino", aulas: 6 }
 ];
 const MAX_AULAS_EXIBICAO = 5;
-
 const TURNO_OFFSET_FAIXA = {
     MATUTINO: 0,
     INTEGRAL: 0,
     VESPERTINO: 5,
     VESPERTINO_EM: 5
 };
-const TURNOS_GRADE_HORARIO = [
-    { id: "MATUTINO", nome: "Matutino", aulas: 5, faixaInicial: 1 },
-    { id: "VESPERTINO", nome: "Vespertino", aulas: 6, faixaInicial: 6 }
-];
 
 let usuarioAtual = null;
 let recursos = [];
 let turnos = [];
 let turmas = [];
+let gradeAulas = [];
+let aulasGlobais = [];
 let reservasMes = [];
 let professoresAgendamento = [];
 let mesAtual = new Date();
@@ -152,7 +149,28 @@ function normalizarTurnoId(turnoId) {
     return String(turnoId || "").trim().toUpperCase();
 }
 
+function itensVisuaisGradeAtivos() {
+    return (Array.isArray(gradeAulas) ? gradeAulas : [])
+        .filter((item) => Boolean(item?.ativo ?? true))
+        .sort((a, b) => Number(a?.ordem_visual || 0) - Number(b?.ordem_visual || 0));
+}
+
+function aulasGlobaisAtivas() {
+    return (Array.isArray(aulasGlobais) ? aulasGlobais : [])
+        .filter((item) => Boolean(item?.ativo ?? true))
+        .sort((a, b) => Number(a?.aula_numero || 0) - Number(b?.aula_numero || 0));
+}
+
+function obterAulaGlobalPorNumero(numeroAula) {
+    const aula = Number(numeroAula || 0);
+    return aulasGlobaisAtivas().find((item) => Number(item?.aula_numero || 0) === aula) || null;
+}
+
 function aulaLabel(aula) {
+    const aulaConfig = obterAulaGlobalPorNumero(aula);
+    if (aulaConfig?.label_curta) {
+        return aulaConfig.label_curta;
+    }
     return `${aula}ª aula`;
 }
 
@@ -2059,6 +2077,8 @@ async function carregarOpcoesAgendamento() {
         turnos = Array.isArray(data.turnos) && data.turnos.length > 0
             ? data.turnos
             : OPCAO_TURNOS_FALLBACK;
+        gradeAulas = Array.isArray(data.grade_aulas) ? data.grade_aulas : [];
+        aulasGlobais = Array.isArray(data.aulas_globais) ? data.aulas_globais : [];
 
         turmas = Array.isArray(data.turmas)
             ? data.turmas
@@ -2077,13 +2097,20 @@ async function carregarOpcoesAgendamento() {
                         turno_nome: String(turma?.turno_nome || (turnoApi ? turnoApi.nome : "Turno não configurado")),
                         aulas,
                         turno_valido: turnoValido,
-                        quantidade_estudantes: Number(turma?.quantidade_estudantes || 0)
+                        quantidade_estudantes: Number(turma?.quantidade_estudantes || 0),
+                        aula_inicial: Number(turma?.aula_inicial || 0),
+                        aula_final: Number(turma?.aula_final || 0),
+                        aulas_disponiveis: Array.isArray(turma?.aulas_disponiveis)
+                            ? turma.aulas_disponiveis
+                            : []
                     };
                 })
                 .filter((turma) => Boolean(turma.nome))
             : [];
     } catch (err) {
         turnos = OPCAO_TURNOS_FALLBACK;
+        gradeAulas = [];
+        aulasGlobais = [];
         turmas = [];
     }
 
@@ -2251,23 +2278,11 @@ function nomeTurnoExibicao(turnoId, nomeTurnoBase = "") {
 }
 
 function obterLinhasAulasGradeSemanal() {
-    const linhas = [];
-
-    TURNOS_GRADE_HORARIO.forEach((turno) => {
-        for (let aula = 1; aula <= turno.aulas; aula++) {
-            linhas.push({
-                turnoId: turno.id,
-                turnoNome: turno.nome,
-                aula
-            });
-        }
-    });
-
-    return linhas;
+    return itensVisuaisGradeAtivos();
 }
 
-function chaveCelulaAgendaDia(turnoId, aula) {
-    return `${normalizarTurnoId(turnoId)}|${Number(aula || 0)}`;
+function chaveCelulaAgendaDia(aula) {
+    return String(Number(aula || 0));
 }
 
 function obterTurnoAulaPorFaixaGrade(faixaGlobal) {
@@ -2275,19 +2290,14 @@ function obterTurnoAulaPorFaixaGrade(faixaGlobal) {
     if (!Number.isInteger(faixa) || faixa <= 0) {
         return null;
     }
-
-    for (const turno of TURNOS_GRADE_HORARIO) {
-        const faixaInicial = Number(turno.faixaInicial || 0);
-        const faixaFinal = faixaInicial + Number(turno.aulas || 0) - 1;
-        if (faixa >= faixaInicial && faixa <= faixaFinal) {
-            return {
-                turnoId: turno.id,
-                aula: faixa - faixaInicial + 1
-            };
-        }
+    const aulaConfig = obterAulaGlobalPorNumero(faixa);
+    if (!aulaConfig) {
+        return null;
     }
-
-    return null;
+    return {
+        aula: Number(aulaConfig.aula_numero || 0),
+        label: String(aulaConfig.label || aulaConfig.label_curta || "")
+    };
 }
 
 function obterTurnoAulaGradeReserva(reserva) {
@@ -2296,29 +2306,11 @@ function obterTurnoAulaGradeReserva(reserva) {
         return porFaixa;
     }
 
-    const turno = normalizarTurnoId(reserva?.turno);
     const aula = Number(reserva?.aula || 0);
     if (!Number.isInteger(aula) || aula <= 0) {
         return null;
     }
-
-    if (turno === "MATUTINO" && aula <= 5) {
-        return { turnoId: "MATUTINO", aula };
-    }
-    if ((turno === "VESPERTINO" || turno === "VESPERTINO_EM") && aula <= 6) {
-        return { turnoId: "VESPERTINO", aula };
-    }
-    if (turno === "INTEGRAL") {
-        if (aula <= 5) {
-            return { turnoId: "MATUTINO", aula };
-        }
-        const aulaVespertino = aula - 4;
-        if (aulaVespertino >= 1 && aulaVespertino <= 6) {
-            return { turnoId: "VESPERTINO", aula: aulaVespertino };
-        }
-    }
-
-    return null;
+    return { aula };
 }
 
 function mapearReservasDiaPorCelula() {
@@ -2342,7 +2334,7 @@ function mapearReservasDiaPorCelula() {
             return;
         }
 
-        const chave = chaveCelulaAgendaDia(posicaoGrade.turnoId, posicaoGrade.aula);
+        const chave = chaveCelulaAgendaDia(posicaoGrade.aula);
         if (!mapa.has(chave)) {
             mapa.set(chave, []);
         }
@@ -2365,7 +2357,7 @@ function mapearAulasProfessorDiaPorCelula() {
             return;
         }
 
-        const chave = chaveCelulaAgendaDia(posicaoGrade.turnoId, posicaoGrade.aula);
+        const chave = chaveCelulaAgendaDia(posicaoGrade.aula);
         if (!mapa.has(chave)) {
             mapa.set(chave, []);
         }
@@ -2730,22 +2722,21 @@ function renderAgendaDiaAulas() {
     tabela.appendChild(thead);
 
     const tbody = document.createElement("tbody");
-    let turnoAtual = "";
-
     obterLinhasAulasGradeSemanal().forEach((linhaGrade) => {
-        if (linhaGrade.turnoId !== turnoAtual) {
-            turnoAtual = linhaGrade.turnoId;
-            const linhaTurno = document.createElement("tr");
-            linhaTurno.className = "weekly-turno-row";
-            const thTurno = document.createElement("th");
-            thTurno.colSpan = 2;
-            thTurno.scope = "colgroup";
-            thTurno.innerText = linhaGrade.turnoNome;
-            linhaTurno.appendChild(thTurno);
-            tbody.appendChild(linhaTurno);
+        if (String(linhaGrade?.tipo || "").toUpperCase() === "INTERVALO") {
+            const linhaIntervalo = document.createElement("tr");
+            linhaIntervalo.className = "weekly-turno-row";
+            const thIntervalo = document.createElement("th");
+            thIntervalo.colSpan = 2;
+            thIntervalo.scope = "colgroup";
+            thIntervalo.innerText = linhaGrade.label || linhaGrade.nome || "Intervalo";
+            linhaIntervalo.appendChild(thIntervalo);
+            tbody.appendChild(linhaIntervalo);
+            return;
         }
 
-        const chave = chaveCelulaAgendaDia(linhaGrade.turnoId, linhaGrade.aula);
+        const aulaNumero = Number(linhaGrade.aula_numero || linhaGrade.aula || 0);
+        const chave = chaveCelulaAgendaDia(aulaNumero);
         const aulasCelula = aulasPorCelula.get(chave) || [];
         const reservasCelula = reservasPorCelula.get(chave) || [];
 
@@ -2754,7 +2745,7 @@ function renderAgendaDiaAulas() {
         const label = document.createElement("th");
         label.scope = "row";
         label.className = "weekly-aula-label";
-        label.innerText = aulaLabel(linhaGrade.aula);
+        label.innerText = linhaGrade.label || aulaLabel(aulaNumero);
         tr.appendChild(label);
 
         const celulaRecursos = document.createElement("td");
@@ -3171,7 +3162,9 @@ function criarLinhaAgendaDia({
     radio.className = "scheduler-lesson-radio";
     radio.checked = Boolean(selecionada);
     radio.disabled = !podeSelecionar;
-    radio.setAttribute("aria-label", `${selecionada ? "Remover" : "Selecionar"} ${aulaLabel(linhaGrade.aula)}`);
+    const aulaNumeroLinha = Number(linhaGrade.aula_numero || linhaGrade.aula || 0);
+    const aulaRotuloLinha = String(linhaGrade.label || aulaLabel(aulaNumeroLinha));
+    radio.setAttribute("aria-label", `${selecionada ? "Remover" : "Selecionar"} ${aulaRotuloLinha}`);
     radio.addEventListener("change", () => {
         if (aulaPrincipal) {
             selecionarAulaParaAgendamento(aulaPrincipal);
@@ -3180,7 +3173,7 @@ function criarLinhaAgendaDia({
 
     const aula = document.createElement("strong");
     aula.className = "scheduler-lesson-list-period";
-    aula.innerText = aulaLabel(linhaGrade.aula);
+    aula.innerText = aulaRotuloLinha;
 
     const turmaNome = textoPadraoDetalheReserva(
         aulaPrincipal?.turma_nome || aulaPrincipal?.turmaNome,
@@ -3252,59 +3245,54 @@ function renderAgendaDiaAulas() {
     const grade = obterLinhasAulasGradeSemanal();
     lista.innerHTML = "";
 
-    let turnoAtual = "";
-    let corpoTurno = null;
+    const secao = document.createElement("section");
+    secao.className = "scheduler-shift-section";
+
+    const cabecalho = document.createElement("header");
+    cabecalho.className = "scheduler-shift-header";
+
+    const tituloSecao = document.createElement("h4");
+    tituloSecao.innerText = "GRADE GLOBAL";
+    cabecalho.appendChild(tituloSecao);
+
+    const colunas = document.createElement("div");
+    colunas.className = "scheduler-lesson-list-columns";
+    ["Aula", "Turma", "Professor e disciplina", "Disponibilidade"].forEach((texto) => {
+        const coluna = document.createElement("span");
+        coluna.innerText = texto;
+        colunas.appendChild(coluna);
+    });
+    cabecalho.appendChild(colunas);
+    secao.appendChild(cabecalho);
+
+    const corpoGrade = document.createElement("div");
+    corpoGrade.className = "scheduler-shift-slots";
+    secao.appendChild(corpoGrade);
+    lista.appendChild(secao);
 
     grade.forEach((linhaGrade) => {
-        if (linhaGrade.turnoId !== turnoAtual) {
-            turnoAtual = linhaGrade.turnoId;
-
-            const secao = document.createElement("section");
-            secao.className = "scheduler-shift-section";
-
-            const cabecalhoTurno = document.createElement("header");
-            cabecalhoTurno.className = "scheduler-shift-header";
-
-            const tituloTurno = document.createElement("h4");
-            tituloTurno.innerText = linhaGrade.turnoNome.toUpperCase();
-            cabecalhoTurno.appendChild(tituloTurno);
-
-            const colunas = document.createElement("div");
-            colunas.className = "scheduler-lesson-list-columns";
-            ["Aula", "Turma", "Professor e disciplina", "Disponibilidade"].forEach((texto) => {
-                const coluna = document.createElement("span");
-                coluna.innerText = texto;
-                colunas.appendChild(coluna);
-            });
-            cabecalhoTurno.appendChild(colunas);
-            secao.appendChild(cabecalhoTurno);
-
-            corpoTurno = document.createElement("div");
-            corpoTurno.className = "scheduler-shift-slots";
-            secao.appendChild(corpoTurno);
-
-            lista.appendChild(secao);
+        if (String(linhaGrade?.tipo || "").toUpperCase() === "INTERVALO") {
+            const divisor = document.createElement("div");
+            divisor.className = "scheduler-resource-empty";
+            divisor.innerText = linhaGrade.label || linhaGrade.nome || "Intervalo";
+            corpoGrade.appendChild(divisor);
+            return;
         }
 
-        const chave = chaveCelulaAgendaDia(linhaGrade.turnoId, linhaGrade.aula);
+        const aulaNumero = Number(linhaGrade.aula_numero || linhaGrade.aula || 0);
+        const chave = chaveCelulaAgendaDia(aulaNumero);
         const aulasCelula = aulasPorCelula.get(chave) || [];
         if (aulasCelula.length === 0) {
             return;
         }
 
         aulasCelula.forEach((aula) => {
-            corpoTurno?.appendChild(criarLinhaAgendaDia({
+            corpoGrade.appendChild(criarLinhaAgendaDia({
                 linhaGrade,
                 aula,
                 reservasCelula: reservasPorCelula.get(chave) || []
             }));
         });
-    });
-
-    lista.querySelectorAll(".scheduler-shift-section").forEach((secao) => {
-        if (!secao.querySelector(".scheduler-lesson-option-row")) {
-            secao.remove();
-        }
     });
 
     if (!lista.querySelector(".scheduler-lesson-option-row")) {
@@ -3780,8 +3768,13 @@ async function agendarRecurso() {
             return;
         }
 
-        if (!Number.isInteger(aulaNumero) || aulaNumero < 1 || aulaNumero > Number(turma.aulas)) {
-            setMensagem(`A aula ${obterTituloAulaAgendamento(aula)} está inválida para o turno da turma.`, "erro");
+        const aulasPermitidas = new Set(
+            (Array.isArray(turma.aulas_disponiveis) ? turma.aulas_disponiveis : [])
+                .map((item) => Number(item?.aula_numero || 0))
+                .filter((numero) => numero > 0)
+        );
+        if (!Number.isInteger(aulaNumero) || aulaNumero < 1 || !aulasPermitidas.has(aulaNumero)) {
+            setMensagem(`A aula ${obterTituloAulaAgendamento(aula)} está fora da janela configurada para a turma.`, "erro");
             return;
         }
 

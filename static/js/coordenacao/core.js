@@ -128,25 +128,25 @@ const MODELO_JSON_BASE_LEGAL = [
     "}"
 ].join("\n");
 const OBSERVACOES_ACAO_PREVIEW = {
-    advertencia_verbal: "OBS.: Aplicada advertencia verbal com orientacao pedagogica, conforme a base legal selecionada.",
-    retirada_sala_orientacao: "OBS.: Aplicada retirada do estudante da sala ou atividade, com encaminhamento para orientacao.",
-    suspensao_extracurricular: "OBS.: Aplicada suspensao temporaria de participacao em programas extracurriculares.",
-    suspensao_orientada_2_dias: "OBS.: Aplicada suspensao orientada das aulas pelo periodo definido pela equipe escolar.",
-    suspensao_aulas_3_dias: "OBS.: Aplicada suspensao das aulas, respeitado o limite previsto na base legal.",
-    transferencia_compulsoria: "OBS.: Aplicada transferencia compulsoria, conforme decisao institucional cabivel ao caso.",
-    orientacao_verbal: "OBS.: O registro fica arquivado para acompanhamento pedagogico e orientacao verbal junto ao estudante.",
-    advertencia: "OBS.: Pela falta de integracao e compromisso e por nao acatar as solicitacoes da docente, recebe esta acao pedagogico-disciplinar de advertencia.",
-    chamada_responsavel: "OBS.: Solicitado o comparecimento do responsavel para alinhamento e acompanhamento conjunto do caso.",
-    encaminhamento_direcao: "OBS.: O registro segue encaminhado a Direcao para providencias e acompanhamento institucional.",
-    registro_informativo: "OBS.: Documento emitido para registro informativo e acompanhamento pedagogico interno.",
-    orientacao_professor: "OBS.: Registro emitido para documentar a orientacao individual feita ao professor, com ciencia formal das partes.",
-    reuniao_alinhamento: "OBS.: Registro emitido para documentar reuniao de alinhamento e pactuacao institucional com o professor.",
-    orientacao_geral_docentes: "OBS.: Registro emitido para documentar orientacao geral apresentada ao corpo docente, com coleta de assinaturas ao final."
+    advertencia_verbal: "OBS.: Aplicada advertência verbal com orientação pedagógica, conforme a base legal selecionada.",
+    retirada_sala_orientacao: "OBS.: Aplicada retirada do estudante da sala ou atividade, com encaminhamento para orientação.",
+    suspensao_extracurricular: "OBS.: Aplicada suspensão temporária de participação em programas extracurriculares.",
+    suspensao_orientada_2_dias: "OBS.: Aplicada suspensão orientada das aulas pelo período definido pela equipe escolar.",
+    suspensao_aulas_3_dias: "OBS.: Aplicada suspensão das aulas, respeitado o limite previsto na base legal.",
+    transferencia_compulsoria: "OBS.: Aplicada transferência compulsória, conforme decisão institucional cabível ao caso.",
+    orientacao_verbal: "OBS.: O registro fica arquivado para acompanhamento pedagógico e orientação verbal junto ao estudante.",
+    advertencia: "OBS.: Pela falta de integração e compromisso e por não acatar as solicitações da docente, recebe esta ação pedagógico-disciplinar de advertência.",
+    chamada_responsavel: "OBS.: Solicitado o comparecimento do responsável para alinhamento e acompanhamento conjunto do caso.",
+    encaminhamento_direcao: "OBS.: O registro segue encaminhado à Direção para providências e acompanhamento institucional.",
+    registro_informativo: "OBS.: Documento emitido para registro informativo e acompanhamento pedagógico interno.",
+    orientacao_professor: "OBS.: Registro emitido para documentar a orientação individual feita ao professor, com ciência formal das partes.",
+    reuniao_alinhamento: "OBS.: Registro emitido para documentar reunião de alinhamento e pactuação institucional com o professor.",
+    orientacao_geral_docentes: "OBS.: Registro emitido para documentar orientação geral apresentada ao corpo docente, com coleta de assinaturas ao final."
 };
 const GRAVIDADE_ROTULOS = {
     leve: "Falta leve",
     grave: "Falta grave",
-    gravissima: "Falta gravissima"
+    gravissima: "Falta gravíssima"
 };
 const ORDEM_GRAVIDADE = {
     leve: 1,
@@ -187,7 +187,7 @@ function houveFalhaImportacao(resultado) {
 }
 
 function comporMensagemImportacaoCsv(resultado) {
-    const mensagemBase = String(resultado?.mensagem || "Importacao concluida.").trim();
+    const mensagemBase = String(resultado?.mensagem || "Importação concluída.").trim();
     const detalhes = Array.isArray(resultado?.detalhes_erros) ? resultado.detalhes_erros : [];
     if (detalhes.length === 0) return mensagemBase;
 
@@ -223,14 +223,14 @@ async function requisitarExclusao(urlDelete, urlFallback) {
 }
 
 function formatarDataBr(dataIso) {
-    if (!dataIso) return "Nao informada";
+    if (!dataIso) return "Não informada";
     const data = new Date(`${dataIso}T00:00:00`);
     if (Number.isNaN(data.getTime())) return dataIso;
     return data.toLocaleDateString("pt-BR");
 }
 
 function formatarDataHora(dataHoraSql) {
-    if (!dataHoraSql) return "Nao informado";
+    if (!dataHoraSql) return "Não informado";
     const texto = String(dataHoraSql).trim();
     const data = new Date(texto.replace(" ", "T") + "Z");
     if (Number.isNaN(data.getTime())) return texto;
@@ -238,15 +238,15 @@ function formatarDataHora(dataHoraSql) {
 }
 
 function rotuloAcao(acao) {
-    return rotulosAcao.get(acao) || acao || "Nao informado";
+    return rotulosAcao.get(acao) || acao || "Não informado";
 }
 
 function rotuloStatus(status) {
-    return rotulosStatus.get(status) || status || "Nao informado";
+    return rotulosStatus.get(status) || status || "Não informado";
 }
 
 function rotuloTipoRegistro(tipo) {
-    return rotulosTipoRegistro.get(tipo) || tipo || "Nao informado";
+    return rotulosTipoRegistro.get(tipo) || tipo || "Não informado";
 }
 
 function obterTipoRegistroFormulario() {
@@ -254,7 +254,7 @@ function obterTipoRegistroFormulario() {
 }
 
 function registroExigeBaseLegal(tipo = obterTipoRegistroFormulario()) {
-    return String(tipo || "").trim() === "estudante";
+    return Boolean(String(tipo || "").trim());
 }
 
 function classeStatus(status) {
@@ -274,14 +274,14 @@ function obterReferenciaRegistro(ocorrencia) {
     if (tipo === "professor") {
         return resumoNomesVinculados(professoresVinculados)
             || String(ocorrencia?.professor_requerente || ocorrencia?.nome_estudante || "").trim()
-            || "Nao informado";
+            || "Não informado";
     }
     if (tipo === "estudante") {
         return resumoNomesVinculados(estudantesVinculados)
             || String(ocorrencia?.nome_estudante || "").trim()
-            || "Nao informado";
+            || "Não informado";
     }
-    return String(ocorrencia?.nome_estudante || "").trim() || "Nao informado";
+    return String(ocorrencia?.nome_estudante || "").trim() || "Não informado";
 }
 
 function obterContextoRegistro(ocorrencia) {
@@ -290,7 +290,7 @@ function obterContextoRegistro(ocorrencia) {
         const totalProfessores = normalizarProfessoresVinculados(ocorrencia?.professores_vinculados).length;
         return totalProfessores > 1 ? `${totalProfessores} professores vinculados` : "Professor individual";
     }
-    if (tipo === "geral") return "Orientacao geral";
+    if (tipo === "geral") return "Orientação geral";
     const estudantes = normalizarEstudantesVinculados(ocorrencia?.estudantes_vinculados);
     const turmasVinculadas = Array.from(new Set(
         estudantes
@@ -395,7 +395,7 @@ function renderSelecionadorVinculados(containerId, itens, {
         corpo.className = "coordenacao-selection-card-body";
 
         const titulo = document.createElement("strong");
-        titulo.innerText = String(item?.nome || "").trim() || "Nao informado";
+        titulo.innerText = String(item?.nome || "").trim() || "Não informado";
         corpo.appendChild(titulo);
 
         const metaTexto = String(metaItem(item, indice) || "").trim();
@@ -500,7 +500,7 @@ function validarEtapaFormularioOcorrencia(etapa) {
     sincronizarDescricaoEditor();
     if (String(el("ocorrenciaDescricao")?.value || "").trim()) return true;
 
-    setMensagemOcorrencias("Descreva a ocorrencia antes de continuar.", true);
+    setMensagemOcorrencias("Descreva a ocorrência antes de continuar.", true);
     obterEditorDescricao()?.focus();
     return false;
 }
@@ -532,7 +532,7 @@ function atualizarBotaoNovaOcorrencia() {
     } else if (ocorrenciaEmEdicaoId) {
         botao.innerText = "Novo registro";
     } else {
-        botao.innerText = "Ocultar formulario";
+        botao.innerText = "Ocultar formulário";
     }
 
     botao.setAttribute("aria-expanded", painelAberto ? "true" : "false");
@@ -770,7 +770,7 @@ function validarBaseLegalSelecionadaAntesSalvar() {
         return idsSelecionados;
     }
 
-    setMensagemOcorrencias("Selecione ao menos uma base legal para vincular o registro de estudante.", true);
+    setMensagemOcorrencias("Selecione ao menos uma base legal antes de salvar a ocorrência.", true);
     el("ocorrenciaBuscaRegimento")?.focus();
     atualizarSugestoesRegimentoBusca(true);
     return [];
@@ -808,7 +808,7 @@ function renderSelecionadorRegimento(idsSelecionados = null) {
     if (itens.length === 0) {
         const vazio = document.createElement("p");
         vazio.className = "coordenacao-empty-state";
-        vazio.innerText = "Cadastre itens da base legal para anexa-los na ocorrencia.";
+        vazio.innerText = "Cadastre itens da base legal para anexá-los à ocorrência.";
         container.appendChild(vazio);
         atualizarAcaoAplicadaPorGravidade({ gravidade: "" });
         atualizarPreviewOcorrencia();

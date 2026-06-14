@@ -33,6 +33,30 @@ class SchedulingTurnoOption(BaseModel):
     aulas: int
 
 
+class SchedulingLessonConfigOut(BaseModel):
+    id: int
+    ordem_visual: int
+    tipo: str
+    aula_numero: int | None = None
+    nome: str
+    horario_inicio: str = ""
+    horario_fim: str = ""
+    ativo: bool = True
+    faixa_global: int = 0
+    label: str = ""
+    label_curta: str = ""
+
+
+class SchedulingLessonConfigIn(BaseModel):
+    ordem_visual: int
+    tipo: str
+    aula_numero: int | None = None
+    nome: str
+    horario_inicio: str
+    horario_fim: str
+    ativo: bool = True
+
+
 class SchedulingClassOption(BaseModel):
     nome: str
     turno: str
@@ -40,10 +64,15 @@ class SchedulingClassOption(BaseModel):
     aulas: int
     turno_valido: bool
     quantidade_estudantes: int
+    aula_inicial: int
+    aula_final: int
+    aulas_disponiveis: list[SchedulingLessonConfigOut]
 
 
 class SchedulingOptionsOut(BaseModel):
     turnos: list[SchedulingTurnoOption]
+    grade_aulas: list[SchedulingLessonConfigOut]
+    aulas_globais: list[SchedulingLessonConfigOut]
     turmas: list[SchedulingClassOption]
 
 

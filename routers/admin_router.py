@@ -47,6 +47,12 @@ from db.impressao import (
     obter_regras_cota,
     recalcular_cotas_mes,
 )
+from db.horario_escolar import (
+    atualizar_configuracao_aula,
+    buscar_configuracao_aula_por_id,
+    criar_configuracao_aula,
+    listar_configuracoes_aulas,
+)
 from db.usuarios import (
     atualizar_professor,
     atualizar_senha_usuario,
@@ -60,6 +66,13 @@ from db.usuarios import (
     promover_professor_para_coordenador,
     revogar_tokens_usuario,
 )
+from modules.scheduling.lesson_config import (
+    lesson_window_from_turn,
+    normalize_schedule_entries,
+    validate_class_lesson_window,
+    validate_schedule_entry,
+)
+from modules.scheduling.schemas import SchedulingLessonConfigIn, SchedulingLessonConfigOut
 from models import (
     CoordenadorCreateIn,
     DisciplinaCreateIn,
@@ -235,6 +248,92 @@ def _buscar_turma_admin_por_id(turma_id: int):
         (item for item in listar_turmas(incluir_inativas=True) if int(item["id"]) == int(turma_id)),
         None,
     )
+
+
+def _dados_janela_aulas_turma(turno: str, aula_inicial, aula_final) -> tuple[int, int]:
+    configuracoes_aulas = listar_configuracoes_aulas(incluir_inativas=False)
+    inicio_padrao, fim_padrao = lesson_window_from_turn(turno)
+    inicio_informado = aula_inicial if aula_inicial is not None else inicio_padrao
+    fim_informado = aula_final if aula_final is not None else fim_padrao
+    try:
+        return validate_class_lesson_window(
+            inicio_informado,
+            fim_informado,
+            configuracoes_aulas,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+def _dados_configuracao_aula_payload(
+    payload: SchedulingLessonConfigIn,
+    *,
+    configuracao_id_atual: int | None = None,
+) -> dict:
+    try:
+        dados = validate_schedule_entry(
+            visual_order=payload.ordem_visual,
+            entry_type=payload.tipo,
+            lesson_number=payload.aula_numero,
+            name=payload.nome,
+            start_time=payload.horario_inicio,
+            end_time=payload.horario_fim,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+    configuracoes_existentes = [
+        item
+        for item in listar_configuracoes_aulas(incluir_inativas=True)
+        if int(item.get("id") or 0) != int(configuracao_id_atual or 0)
+    ]
+
+    conflito_ordem = next(
+        (
+            item
+            for item in configuracoes_existentes
+            if int(item.get("ordem_visual") or 0) == int(dados["ordem_visual"])
+        ),
+        None,
+    )
+    if conflito_ordem:
+        raise HTTPException(409, "Ja existe um item da grade com esta ordem visual.")
+
+    if dados["tipo"] == "AULA":
+        conflito = next(
+            (
+                item
+                for item in configuracoes_existentes
+                and int(item.get("aula_numero") or 0) == int(dados["aula_numero"] or 0)
+            ),
+            None,
+        )
+        if conflito:
+            raise HTTPException(409, "Ja existe uma configuracao para este numero de aula.")
+
+    if bool(payload.ativo):
+        inicio_novo = datetime.strptime(dados["horario_inicio"], "%H:%M")
+        fim_novo = datetime.strptime(dados["horario_fim"], "%H:%M")
+        conflito_horario = next(
+            (
+                item
+                for item in configuracoes_existentes
+                if bool(item.get("ativo"))
+                and inicio_novo < datetime.strptime(str(item.get("horario_fim") or ""), "%H:%M")
+                and datetime.strptime(str(item.get("horario_inicio") or ""), "%H:%M") < fim_novo
+            ),
+            None,
+        )
+        if conflito_horario:
+            raise HTTPException(
+                409,
+                "Este horario se sobrepoe a outro item ativo da grade escolar.",
+            )
+
+    return {
+        **dados,
+        "ativo": bool(payload.ativo),
+    }
 
 
 def _buscar_disciplina_admin_por_id(disciplina_id: int):
@@ -428,6 +527,11 @@ def criar_turma_admin(
     exigir_gestor(usuario)
     nome = payload.nome.strip()
     turno = validar_turno(payload.turno)
+    aula_inicial, aula_final = _dados_janela_aulas_turma(
+        turno,
+        payload.aula_inicial,
+        payload.aula_final,
+    )
     quantidade_estudantes = validar_numero_nao_negativo(
         payload.quantidade_estudantes,
         "Quantidade de estudantes",
@@ -440,6 +544,8 @@ def criar_turma_admin(
         turma_id = criar_turma(
             nome=nome,
             turno=turno,
+            aula_inicial=aula_inicial,
+            aula_final=aula_final,
             quantidade_estudantes=quantidade_estudantes,
         )
     except sqlite3.IntegrityError as exc:
@@ -456,6 +562,11 @@ def atualizar_turma_admin(
 ):
     exigir_gestor(usuario)
     turno = validar_turno(payload.turno)
+    aula_inicial, aula_final = _dados_janela_aulas_turma(
+        turno,
+        payload.aula_inicial,
+        payload.aula_final,
+    )
     quantidade_estudantes = validar_numero_nao_negativo(
         payload.quantidade_estudantes,
         "Quantidade de estudantes",
@@ -464,6 +575,8 @@ def atualizar_turma_admin(
     alterado = atualizar_turma_dados(
         turma_id=turma_id,
         turno=turno,
+        aula_inicial=aula_inicial,
+        aula_final=aula_final,
         quantidade_estudantes=quantidade_estudantes,
     )
     if not alterado:
@@ -482,6 +595,71 @@ def atualizar_status_turma_admin(
     if not alterado:
         raise HTTPException(404, "Turma não encontrada.")
     return {"mensagem": "Status da turma atualizado com sucesso."}
+
+
+@router.get("/admin/configuracao-aulas", response_model=list[SchedulingLessonConfigOut])
+def listar_configuracao_aulas_admin(
+    incluir_inativas: bool = True,
+    usuario=Depends(get_usuario_logado),
+):
+    exigir_gestor(usuario)
+    return normalize_schedule_entries(
+        listar_configuracoes_aulas(incluir_inativas=incluir_inativas)
+    )
+
+
+@router.post("/admin/configuracao-aulas", response_model=SchedulingLessonConfigOut)
+def criar_configuracao_aulas_admin(
+    payload: SchedulingLessonConfigIn,
+    usuario=Depends(get_usuario_logado),
+):
+    exigir_gestor(usuario)
+    dados = _dados_configuracao_aula_payload(payload)
+    try:
+        item = criar_configuracao_aula(
+            ordem_visual=dados["ordem_visual"],
+            tipo=dados["tipo"],
+            aula_numero=dados["aula_numero"],
+            nome=dados["nome"],
+            horario_inicio=dados["horario_inicio"],
+            horario_fim=dados["horario_fim"],
+            ativo=dados["ativo"],
+        )
+    except sqlite3.IntegrityError as exc:
+        raise HTTPException(409, "Nao foi possivel salvar a configuracao da aula.") from exc
+    return normalize_schedule_entries([item])[0]
+
+
+@router.put("/admin/configuracao-aulas/{configuracao_id}", response_model=SchedulingLessonConfigOut)
+def atualizar_configuracao_aulas_admin(
+    configuracao_id: int,
+    payload: SchedulingLessonConfigIn,
+    usuario=Depends(get_usuario_logado),
+):
+    exigir_gestor(usuario)
+    if not buscar_configuracao_aula_por_id(configuracao_id):
+        raise HTTPException(404, "Configuracao de aula nao encontrada.")
+
+    dados = _dados_configuracao_aula_payload(
+        payload,
+        configuracao_id_atual=configuracao_id,
+    )
+    try:
+        item = atualizar_configuracao_aula(
+            configuracao_id=configuracao_id,
+            ordem_visual=dados["ordem_visual"],
+            tipo=dados["tipo"],
+            aula_numero=dados["aula_numero"],
+            nome=dados["nome"],
+            horario_inicio=dados["horario_inicio"],
+            horario_fim=dados["horario_fim"],
+            ativo=dados["ativo"],
+        )
+    except sqlite3.IntegrityError as exc:
+        raise HTTPException(409, "Nao foi possivel atualizar a configuracao da aula.") from exc
+    if not item:
+        raise HTTPException(404, "Configuracao de aula nao encontrada.")
+    return normalize_schedule_entries([item])[0]
 
 
 @router.get("/admin/disciplinas")

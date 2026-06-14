@@ -4,7 +4,12 @@ import sys
 import tempfile
 import unittest
 
-from fastapi.testclient import TestClient
+try:
+    from fastapi.testclient import TestClient
+    TESTCLIENT_IMPORT_ERROR = None
+except Exception as exc:  # pragma: no cover - depends on optional test dependency
+    TestClient = None
+    TESTCLIENT_IMPORT_ERROR = exc
 
 
 def _reload_app_modules(db_path: str):
@@ -34,6 +39,10 @@ def _reload_app_modules(db_path: str):
     return main, database
 
 
+@unittest.skipIf(
+    TestClient is None,
+    f"fastapi.testclient indisponivel neste ambiente: {TESTCLIENT_IMPORT_ERROR}",
+)
 class SchedulingRouterIntegrationTest(unittest.TestCase):
     def setUp(self):
         self._old_db_path = os.environ.get("DB_PATH")

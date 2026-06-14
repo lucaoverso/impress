@@ -844,52 +844,52 @@ function expandirPaginasParaFolha(paginasDaFolha, paginasPorFolha) {
     return paginas;
 }
 
+function ajustarDimensoesProporcionais(tamanhoBase, larguraMaxima, alturaMaxima) {
+    const larguraDisponivel = Math.max(1, Number(larguraMaxima) || 0);
+    const alturaDisponivel = Math.max(1, Number(alturaMaxima) || 0);
+    const escala = Math.min(
+        larguraDisponivel / tamanhoBase.largura,
+        alturaDisponivel / tamanhoBase.altura
+    );
+    const escalaSegura = Number.isFinite(escala) && escala > 0 ? escala : 1;
+
+    return {
+        largura: Math.max(1, Math.round(tamanhoBase.largura * escalaSegura)),
+        altura: Math.max(1, Math.round(tamanhoBase.altura * escalaSegura)),
+    };
+}
+
 function obterDimensoesMiniatura(tamanhoFolha, isMobile) {
     const pane = document.querySelector(".print-preview-pane");
 
-    const larguraDisponivel = pane
-        ? Math.max(180, pane.clientWidth - RESERVA_BORDA_PREVIEW)
+    const larguraDisponivel = pane?.clientWidth
+        ? Math.max(1, pane.clientWidth - RESERVA_BORDA_PREVIEW)
         : Math.max(180, window.innerWidth - 40);
-    const alturaDisponivelBase = pane
-        ? Math.max(220, pane.clientHeight - RESERVA_BORDA_PREVIEW)
+    const alturaDisponivelBase = pane?.clientHeight
+        ? Math.max(1, pane.clientHeight - RESERVA_BORDA_PREVIEW)
         : Math.max(220, Math.floor(window.innerHeight * (isMobile ? 0.62 : 0.5)));
 
     const alturaDisponivel = isMobile
-        ? Math.max(260, alturaDisponivelBase - Math.max(12, LABEL_PREVIEW_RESERVA - 24))
+        ? Math.max(1, alturaDisponivelBase - Math.max(12, LABEL_PREVIEW_RESERVA - 24))
         : alturaDisponivelBase;
     const larguraAlvo = isMobile
         ? Math.max(
-            180,
+            1,
             Math.min(
                 larguraDisponivel,
-                window.innerWidth - 28,
+                Math.max(1, window.innerWidth - 28),
                 420
             )
         )
         : larguraDisponivel;
-    const escala = Math.min(
-        larguraAlvo / tamanhoFolha.largura,
-        alturaDisponivel / tamanhoFolha.altura
-    );
 
-    return {
-        largura: Math.max(isMobile ? 180 : 96, Math.round(tamanhoFolha.largura * escala)),
-        altura: Math.max(isMobile ? 250 : 130, Math.round(tamanhoFolha.altura * escala))
-    };
+    return ajustarDimensoesProporcionais(tamanhoFolha, larguraAlvo, alturaDisponivel);
 }
 
 function obterDimensoesMiniaturaDesktop(tamanhoFolha, larguraTrilha) {
     const larguraDisponivel = Math.max(72, larguraTrilha - 28);
     const alturaMaxima = 170;
-    const escala = Math.min(
-        larguraDisponivel / tamanhoFolha.largura,
-        alturaMaxima / tamanhoFolha.altura
-    );
-
-    return {
-        largura: Math.max(72, Math.round(tamanhoFolha.largura * escala)),
-        altura: Math.max(56, Math.round(tamanhoFolha.altura * escala))
-    };
+    return ajustarDimensoesProporcionais(tamanhoFolha, larguraDisponivel, alturaMaxima);
 }
 
 function obterPaginasPreview() {
@@ -2341,15 +2341,11 @@ async function renderFolha() {
         tamanhoMiniatura = obterDimensoesMiniaturaDesktop(tamanhoFolha, larguraTrilha);
         const larguraPrincipalDisponivel = Math.max(220, larguraPane - larguraTrilha - 28);
         const alturaPrincipalDisponivel = Math.max(260, alturaPane - 20);
-        const escalaPrincipal = Math.min(
-            larguraPrincipalDisponivel / tamanhoFolha.largura,
-            alturaPrincipalDisponivel / tamanhoFolha.altura
+        tamanhoPrincipal = ajustarDimensoesProporcionais(
+            tamanhoFolha,
+            larguraPrincipalDisponivel,
+            alturaPrincipalDisponivel
         );
-
-        tamanhoPrincipal = {
-            largura: Math.max(220, Math.round(tamanhoFolha.largura * escalaPrincipal)),
-            altura: Math.max(260, Math.round(tamanhoFolha.altura * escalaPrincipal)),
-        };
     }
 
     const areaLargura = tamanhoMiniatura.largura - (FOLHA_PADDING * 2) - (FOLHA_GAP * (configLayout.colunas - 1));
@@ -2406,6 +2402,7 @@ async function renderFolha() {
 
         const folha = document.createElement("div");
         folha.classList.add("print-sheet");
+        folha.style.aspectRatio = `${tamanhoFolha.largura} / ${tamanhoFolha.altura}`;
         folha.style.display = "grid";
         folha.style.gap = `${FOLHA_GAP}px`;
         folha.style.padding = `${FOLHA_PADDING}px`;

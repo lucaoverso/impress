@@ -1,7 +1,14 @@
 from collections import Counter
 from datetime import datetime
 
-from routers.common import FAIXA_GLOBAL_OFFSET_POR_TURNO, TURNOS_CONFIG
+from modules.scheduling.config import TURNOS_CONFIG
+from modules.scheduling.lesson_config import (
+    build_lesson_display_label,
+    find_lesson_by_number,
+    list_lessons_for_class,
+    list_visual_schedule_items_for_class,
+    total_configured_lessons,
+)
 
 DIAS_SEMANA_HORARIO = (
     {"valor": "SEGUNDA", "label": "Segunda-feira"},
@@ -42,6 +49,12 @@ DIA_SEMANA_LABELS = {item["valor"]: item["label"] for item in DIAS_SEMANA_HORARI
 DIA_SEMANA_ORDEM = {
     item["valor"]: indice for indice, item in enumerate(DIAS_SEMANA_HORARIO, start=1)
 }
+FAIXA_GLOBAL_OFFSET_POR_TURNO_LEGADO = {
+    "MATUTINO": 0,
+    "INTEGRAL": 0,
+    "VESPERTINO": 5,
+    "VESPERTINO_EM": 5,
+}
 
 
 def listar_dias_semana_horario() -> list[dict]:
@@ -74,7 +87,12 @@ def validar_ano_letivo(valor: int) -> int:
     return ano
 
 
-def validar_aula_numero(valor: int, turno: str = "") -> int:
+def validar_aula_numero(
+    valor: int,
+    turma: dict | None = None,
+    *,
+    configuracoes_aulas: list[dict] | None = None,
+) -> int:
     try:
         aula = int(valor)
     except (TypeError, ValueError) as exc:
@@ -82,11 +100,26 @@ def validar_aula_numero(valor: int, turno: str = "") -> int:
     if aula <= 0:
         raise ValueError("Aula inválida.")
 
-    turno_norm = str(turno or "").strip().upper()
-    maximo_turno = int((TURNOS_CONFIG.get(turno_norm) or {}).get("aulas") or 0)
-    if maximo_turno and aula > maximo_turno:
-        raise ValueError(f"A aula informada excede o limite do turno selecionado ({maximo_turno}).")
-    if aula > 12:
+    if turma:
+        aulas_turma = list_lessons_for_class(turma, configuracoes_aulas or [])
+        if not aulas_turma:
+            raise ValueError("A turma não possui aulas globais configuradas.")
+        aulas_permitidas = {int(item.get("aula_numero") or 0) for item in aulas_turma}
+        if aula not in aulas_permitidas:
+            primeira_aula = min(aulas_permitidas)
+            ultima_aula = max(aulas_permitidas)
+            raise ValueError(
+                "A aula informada está fora da janela configurada para a turma "
+                f"({primeira_aula} a {ultima_aula})."
+            )
+        return aula
+
+    total_aulas = total_configured_lessons(configuracoes_aulas or [])
+    if total_aulas and aula > total_aulas:
+        raise ValueError(
+            f"A aula informada excede o total de aulas globais configuradas ({total_aulas})."
+        )
+    if aula > 20:
         raise ValueError("Aula inválida.")
     return aula
 
@@ -103,14 +136,22 @@ def nome_turno_horario(turno: str) -> str:
 
 def faixa_global_por_turno_e_aula(turno: str, aula_numero: int) -> int:
     turno_norm = str(turno or "").strip().upper()
-    aula = validar_aula_numero(aula_numero, turno_norm)
-    faixa = aula + int(FAIXA_GLOBAL_OFFSET_POR_TURNO.get(turno_norm) or 0)
+    aula = validar_aula_numero(aula_numero)
+    faixa = aula + int(FAIXA_GLOBAL_OFFSET_POR_TURNO_LEGADO.get(turno_norm) or 0)
     if turno_norm == "INTEGRAL" and aula > 5:
         faixa += 1
     return faixa
 
 
-def aula_label_com_faixa(turno: str, aula_numero: int) -> str:
+def aula_label_com_faixa(
+    turno: str,
+    aula_numero: int,
+    configuracoes_aulas: list[dict] | None = None,
+) -> str:
+    configuracoes = configuracoes_aulas or []
+    aula_config = find_lesson_by_number(configuracoes, int(aula_numero or 0))
+    if aula_config:
+        return str(aula_config.get("label") or "")
     faixa = faixa_global_por_turno_e_aula(turno, aula_numero)
     return f"{int(aula_numero)}a aula (faixa {faixa})"
 
@@ -131,13 +172,30 @@ def listar_faixas_turno_horario(turno: str) -> list[dict]:
     return itens
 
 
-def enriquecer_horario_escolar(item: dict) -> dict:
+def listar_grade_turma_horario(turma: dict, configuracoes_aulas: list[dict]) -> list[dict]:
+    return list_visual_schedule_items_for_class(turma, configuracoes_aulas or [])
+
+
+def listar_aulas_turma_horario(turma: dict, configuracoes_aulas: list[dict]) -> list[dict]:
+    return list_lessons_for_class(turma, configuracoes_aulas or [])
+
+
+def total_aulas_turma_horario(turma: dict, configuracoes_aulas: list[dict]) -> int:
+    return len(listar_aulas_turma_horario(turma, configuracoes_aulas))
+
+
+def enriquecer_horario_escolar(
+    item: dict,
+    configuracoes_aulas: list[dict] | None = None,
+) -> dict:
     turno = str((item or {}).get("turno") or "").strip().upper()
     aula_numero = int((item or {}).get("aula_numero") or 0)
+    configuracoes = configuracoes_aulas or []
+    aula_config = find_lesson_by_number(configuracoes, aula_numero)
     faixa_global = (
-        faixa_global_por_turno_e_aula(turno, aula_numero)
-        if turno and aula_numero > 0
-        else 0
+        aula_numero
+        if aula_config
+        else (faixa_global_por_turno_e_aula(turno, aula_numero) if aula_numero > 0 else 0)
     )
     return {
         **dict(item or {}),
@@ -151,12 +209,26 @@ def enriquecer_horario_escolar(item: dict) -> dict:
         "turno": turno,
         "turno_nome": nome_turno_horario(turno),
         "faixa_global": faixa_global,
-        "aula_label": aula_label_com_faixa(turno, aula_numero) if faixa_global > 0 else "",
+        "aula_label": (
+            str(aula_config.get("label") or "")
+            if aula_config
+            else aula_label_com_faixa(turno, aula_numero, configuracoes)
+        )
+        if faixa_global > 0
+        else "",
+        "horario_inicio": str((aula_config or {}).get("horario_inicio") or "").strip(),
+        "horario_fim": str((aula_config or {}).get("horario_fim") or "").strip(),
     }
 
 
-def ordenar_horarios_escolares(itens: list[dict]) -> list[dict]:
-    enriquecidos = [enriquecer_horario_escolar(item) for item in (itens or [])]
+def ordenar_horarios_escolares(
+    itens: list[dict],
+    configuracoes_aulas: list[dict] | None = None,
+) -> list[dict]:
+    enriquecidos = [
+        enriquecer_horario_escolar(item, configuracoes_aulas=configuracoes_aulas)
+        for item in (itens or [])
+    ]
     return sorted(
         enriquecidos,
         key=lambda item: (

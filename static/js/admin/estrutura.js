@@ -397,6 +397,370 @@ async function carregarTurmasDisciplinasAdmin() {
         });
 }
 
+function tipoConfiguracaoAula(item = {}) {
+    return String(item?.tipo || "AULA").trim().toUpperCase();
+}
+
+function configuracoesAulasAtivas() {
+    return (Array.isArray(configuracoesAulasAdmin) ? configuracoesAulasAdmin : [])
+        .filter((item) => Boolean(item?.ativo ?? true))
+        .sort((a, b) => Number(a?.ordem_visual || 0) - Number(b?.ordem_visual || 0));
+}
+
+function aulasGlobaisConfiguradasAdmin() {
+    return configuracoesAulasAtivas()
+        .filter((item) => tipoConfiguracaoAula(item) === "AULA")
+        .sort((a, b) => Number(a?.aula_numero || 0) - Number(b?.aula_numero || 0));
+}
+
+function obterConfiguracaoAulaAdminPorId(configuracaoId) {
+    return (Array.isArray(configuracoesAulasAdmin) ? configuracoesAulasAdmin : [])
+        .find((item) => Number(item.id) === Number(configuracaoId)) || null;
+}
+
+function rotuloCurtoAulaAdmin(item = {}) {
+    if (String(item?.label_curta || "").trim()) {
+        return String(item.label_curta).trim();
+    }
+    if (tipoConfiguracaoAula(item) === "AULA" && Number(item?.aula_numero || 0) > 0) {
+        return `${Number(item.aula_numero)}a aula`;
+    }
+    return String(item?.nome || "Intervalo").trim() || "Intervalo";
+}
+
+function textoHorarioConfiguracaoAula(item = {}) {
+    const inicio = String(item?.horario_inicio || "").trim();
+    const fim = String(item?.horario_fim || "").trim();
+    if (inicio && fim) {
+        return `${inicio} - ${fim}`;
+    }
+    return "Horario nao informado";
+}
+
+function janelaPadraoTurnoAdmin(turno) {
+    const turnoNormalizado = String(turno || "").trim().toUpperCase();
+    return JANELA_AULAS_PADRAO_POR_TURNO[turnoNormalizado] || [1, 5];
+}
+
+function preencherSelectAulasGlobais(select, aulas, valorAtual = 0, placeholder = "") {
+    if (!select) {
+        return;
+    }
+
+    select.innerHTML = "";
+
+    if (placeholder) {
+        const option = document.createElement("option");
+        option.value = "";
+        option.innerText = placeholder;
+        select.appendChild(option);
+    }
+
+    (Array.isArray(aulas) ? aulas : []).forEach((aula) => {
+        const option = document.createElement("option");
+        option.value = String(Number(aula?.aula_numero || 0));
+        option.innerText = rotuloCurtoAulaAdmin(aula);
+        select.appendChild(option);
+    });
+
+    const valor = Number(valorAtual || 0);
+    if (valor > 0) {
+        select.value = String(valor);
+    } else if (!placeholder && select.options.length > 0) {
+        select.selectedIndex = 0;
+    } else {
+        select.value = "";
+    }
+}
+
+function sincronizarSelectsJanelaAulasTurma({
+    turno,
+    selectInicial,
+    selectFinal,
+    aulaInicialAtual = 0,
+    aulaFinalAtual = 0,
+    forcarPadrao = false
+} = {}) {
+    if (!selectInicial || !selectFinal) {
+        return;
+    }
+
+    const aulas = aulasGlobaisConfiguradasAdmin();
+    if (aulas.length === 0) {
+        preencherSelectAulasGlobais(selectInicial, [], 0, "Cadastre a grade primeiro");
+        preencherSelectAulasGlobais(selectFinal, [], 0, "Cadastre a grade primeiro");
+        selectInicial.disabled = true;
+        selectFinal.disabled = true;
+        return;
+    }
+
+    selectInicial.disabled = false;
+    selectFinal.disabled = false;
+
+    const numerosAulas = aulas.map((item) => Number(item.aula_numero || 0)).filter((item) => item > 0);
+    const [inicioPadrao, fimPadrao] = janelaPadraoTurnoAdmin(turno);
+
+    let aulaInicial = Number(aulaInicialAtual || selectInicial.value || 0);
+    if (forcarPadrao || !numerosAulas.includes(aulaInicial)) {
+        aulaInicial = numerosAulas.includes(inicioPadrao) ? inicioPadrao : (numerosAulas[0] || 0);
+    }
+
+    preencherSelectAulasGlobais(selectInicial, aulas, aulaInicial);
+
+    const aulasFinais = aulas.filter((item) => Number(item?.aula_numero || 0) >= aulaInicial);
+    const numerosAulasFinais = aulasFinais
+        .map((item) => Number(item.aula_numero || 0))
+        .filter((item) => item >= aulaInicial);
+
+    let aulaFinal = Number(aulaFinalAtual || selectFinal.value || 0);
+    if (forcarPadrao || !numerosAulasFinais.includes(aulaFinal)) {
+        const ultimaAulaDisponivel = numerosAulasFinais[numerosAulasFinais.length - 1] || aulaInicial;
+        aulaFinal = numerosAulasFinais.includes(fimPadrao) ? fimPadrao : ultimaAulaDisponivel;
+    }
+    if (aulaFinal < aulaInicial) {
+        aulaFinal = aulaInicial;
+    }
+
+    preencherSelectAulasGlobais(selectFinal, aulasFinais, aulaFinal);
+}
+
+function atualizarJanelaAulasFormularioTurma({ forcarPadrao = false } = {}) {
+    sincronizarSelectsJanelaAulasTurma({
+        turno: el("turmaTurno")?.value || "MATUTINO",
+        selectInicial: el("turmaAulaInicial"),
+        selectFinal: el("turmaAulaFinal"),
+        aulaInicialAtual: Number(el("turmaAulaInicial")?.value || 0),
+        aulaFinalAtual: Number(el("turmaAulaFinal")?.value || 0),
+        forcarPadrao
+    });
+}
+
+function atualizarFormularioTipoConfiguracaoAula() {
+    const tipo = tipoConfiguracaoAula({ tipo: el("configAulaTipo")?.value });
+    const inputNumero = el("configAulaNumero");
+    if (!inputNumero) {
+        return;
+    }
+
+    const ehAula = tipo === "AULA";
+    inputNumero.disabled = !ehAula;
+    inputNumero.required = ehAula;
+    inputNumero.placeholder = ehAula ? "Numero global da aula" : "Nao se aplica para intervalo";
+    if (!ehAula) {
+        inputNumero.value = "";
+    }
+}
+
+function limparFormularioConfiguracaoAula() {
+    configuracaoAulaEmEdicaoId = null;
+    el("formConfiguracaoAula")?.reset();
+    if (el("configAulaTipo")) {
+        el("configAulaTipo").value = "AULA";
+    }
+    if (el("configAulaAtivo")) {
+        el("configAulaAtivo").checked = true;
+    }
+    if (el("tituloFormConfiguracaoAula")) {
+        el("tituloFormConfiguracaoAula").innerText = "Cadastrar aula";
+    }
+    if (el("btnSalvarConfiguracaoAula")) {
+        el("btnSalvarConfiguracaoAula").innerText = "Cadastrar aula";
+    }
+    if (el("btnCancelarEdicaoConfiguracaoAula")) {
+        el("btnCancelarEdicaoConfiguracaoAula").style.display = "none";
+    }
+    atualizarFormularioTipoConfiguracaoAula();
+}
+
+function preencherFormularioConfiguracaoAula(item) {
+    if (!item) {
+        limparFormularioConfiguracaoAula();
+        return;
+    }
+
+    configuracaoAulaEmEdicaoId = Number(item.id || 0);
+    if (el("configAulaTipo")) {
+        el("configAulaTipo").value = tipoConfiguracaoAula(item);
+    }
+    if (el("configAulaNome")) {
+        el("configAulaNome").value = String(item.nome || "");
+    }
+    if (el("configAulaNumero")) {
+        el("configAulaNumero").value = item.aula_numero ? String(item.aula_numero) : "";
+    }
+    if (el("configAulaOrdemVisual")) {
+        el("configAulaOrdemVisual").value = String(item.ordem_visual || "");
+    }
+    if (el("configAulaHorarioInicio")) {
+        el("configAulaHorarioInicio").value = String(item.horario_inicio || "");
+    }
+    if (el("configAulaHorarioFim")) {
+        el("configAulaHorarioFim").value = String(item.horario_fim || "");
+    }
+    if (el("configAulaAtivo")) {
+        el("configAulaAtivo").checked = Boolean(item.ativo);
+    }
+    if (el("tituloFormConfiguracaoAula")) {
+        el("tituloFormConfiguracaoAula").innerText = "Editar item da grade";
+    }
+    if (el("btnSalvarConfiguracaoAula")) {
+        el("btnSalvarConfiguracaoAula").innerText = "Atualizar item";
+    }
+    if (el("btnCancelarEdicaoConfiguracaoAula")) {
+        el("btnCancelarEdicaoConfiguracaoAula").style.display = "inline-flex";
+    }
+    atualizarFormularioTipoConfiguracaoAula();
+}
+
+function renderListaConfiguracoesAulasAdmin() {
+    const ul = el("listaConfiguracaoAulasAdmin");
+    if (!ul) {
+        return;
+    }
+
+    ul.innerHTML = "";
+    if (!Array.isArray(configuracoesAulasAdmin) || configuracoesAulasAdmin.length === 0) {
+        const vazio = document.createElement("li");
+        vazio.className = "booking-empty";
+        vazio.innerText = "Nenhum item configurado na grade escolar.";
+        ul.appendChild(vazio);
+        return;
+    }
+
+    configuracoesAulasAdmin.forEach((item) => {
+        const li = document.createElement("li");
+        li.className = "admin-list-item";
+
+        const titulo = document.createElement("p");
+        titulo.innerText = rotuloCurtoAulaAdmin(item);
+
+        const detalhe = document.createElement("p");
+        detalhe.className = "booking-detail";
+        detalhe.innerText = [
+            `Tipo: ${tipoConfiguracaoAula(item) === "AULA" ? "Aula" : "Intervalo"}`,
+            `Ordem: ${Number(item.ordem_visual || 0)}`,
+            tipoConfiguracaoAula(item) === "AULA" && Number(item.aula_numero || 0) > 0
+                ? `Numero global: ${Number(item.aula_numero)}`
+                : null,
+            textoHorarioConfiguracaoAula(item),
+            item.ativo ? "Ativo" : "Inativo"
+        ].filter(Boolean).join(" | ");
+
+        const linha = document.createElement("div");
+        linha.className = "admin-inline";
+
+        const btnEditar = document.createElement("button");
+        btnEditar.type = "button";
+        btnEditar.innerText = "Editar";
+        btnEditar.addEventListener("click", () => {
+            preencherFormularioConfiguracaoAula(item);
+            if (typeof ativarAbaAdmin === "function") {
+                ativarAbaAdmin("aulas");
+            }
+            window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+
+        const btnStatus = document.createElement("button");
+        btnStatus.type = "button";
+        btnStatus.innerText = item.ativo ? "Desativar" : "Ativar";
+        btnStatus.addEventListener("click", async () => {
+            try {
+                await fetchJson(`/admin/configuracao-aulas/${item.id}`, {
+                    method: "PUT",
+                    headers: headersJson,
+                    body: JSON.stringify({
+                        ordem_visual: Number(item.ordem_visual || 0),
+                        tipo: tipoConfiguracaoAula(item),
+                        aula_numero: tipoConfiguracaoAula(item) === "AULA"
+                            ? Number(item.aula_numero || 0)
+                            : null,
+                        nome: String(item.nome || ""),
+                        horario_inicio: String(item.horario_inicio || ""),
+                        horario_fim: String(item.horario_fim || ""),
+                        ativo: !Boolean(item.ativo)
+                    })
+                });
+                setMensagem(
+                    "msgConfiguracaoAula",
+                    `Item ${rotuloCurtoAulaAdmin(item)} ${item.ativo ? "desativado" : "ativado"} com sucesso.`
+                );
+                await Promise.all([
+                    carregarConfiguracoesAulasAdmin(),
+                    carregarTurmasAdmin()
+                ]);
+            } catch (err) {
+                setMensagem("msgConfiguracaoAula", err.message, true);
+            }
+        });
+
+        linha.appendChild(btnEditar);
+        linha.appendChild(btnStatus);
+
+        li.appendChild(titulo);
+        li.appendChild(detalhe);
+        li.appendChild(linha);
+        ul.appendChild(li);
+    });
+}
+
+async function carregarConfiguracoesAulasAdmin() {
+    configuracoesAulasAdmin = await fetchJson("/admin/configuracao-aulas?incluir_inativas=true", { headers });
+    renderListaConfiguracoesAulasAdmin();
+    atualizarJanelaAulasFormularioTurma();
+
+    if (configuracaoAulaEmEdicaoId) {
+        const item = obterConfiguracaoAulaAdminPorId(configuracaoAulaEmEdicaoId);
+        if (item) {
+            preencherFormularioConfiguracaoAula(item);
+        } else {
+            limparFormularioConfiguracaoAula();
+        }
+    }
+}
+
+async function salvarConfiguracaoAula(event) {
+    event.preventDefault();
+
+    try {
+        const payload = {
+            ordem_visual: Number(el("configAulaOrdemVisual")?.value || 0),
+            tipo: el("configAulaTipo")?.value || "AULA",
+            aula_numero: el("configAulaNumero")?.disabled
+                ? null
+                : Number(el("configAulaNumero")?.value || 0),
+            nome: String(el("configAulaNome")?.value || "").trim(),
+            horario_inicio: String(el("configAulaHorarioInicio")?.value || "").trim(),
+            horario_fim: String(el("configAulaHorarioFim")?.value || "").trim(),
+            ativo: Boolean(el("configAulaAtivo")?.checked)
+        };
+
+        const rota = configuracaoAulaEmEdicaoId
+            ? `/admin/configuracao-aulas/${configuracaoAulaEmEdicaoId}`
+            : "/admin/configuracao-aulas";
+        const metodo = configuracaoAulaEmEdicaoId ? "PUT" : "POST";
+
+        await fetchJson(rota, {
+            method: metodo,
+            headers: headersJson,
+            body: JSON.stringify(payload)
+        });
+
+        setMensagem(
+            "msgConfiguracaoAula",
+            configuracaoAulaEmEdicaoId
+                ? "Item da grade atualizado com sucesso."
+                : "Item da grade cadastrado com sucesso."
+        );
+        limparFormularioConfiguracaoAula();
+        await Promise.all([
+            carregarConfiguracoesAulasAdmin(),
+            carregarTurmasAdmin()
+        ]);
+    } catch (err) {
+        setMensagem("msgConfiguracaoAula", err.message, true);
+    }
+}
+
 async function carregarTurmasAdmin() {
     const turmas = await fetchJson("/admin/turmas?incluir_inativas=true", { headers });
     const ul = el("listaTurmasAdmin");
@@ -419,7 +783,12 @@ async function carregarTurmasAdmin() {
 
         const detalhe = document.createElement("p");
         detalhe.className = "booking-detail";
-        detalhe.innerText = `Turno: ${nomeTurno(turma.turno)} | Estudantes: ${turma.quantidade_estudantes ?? 0} | Status: ${turma.ativo ? "Ativa" : "Inativa"}`;
+        detalhe.innerText = [
+            `Turno: ${nomeTurno(turma.turno)}`,
+            `Aulas: ${Number(turma.aula_inicial || 0)} a ${Number(turma.aula_final || 0)}`,
+            `Estudantes: ${turma.quantidade_estudantes ?? 0}`,
+            `Status: ${turma.ativo ? "Ativa" : "Inativa"}`
+        ].join(" | ");
 
         const linha = document.createElement("div");
         linha.className = "admin-inline";
@@ -439,16 +808,44 @@ async function carregarTurmasAdmin() {
         inputQuantidade.value = String(turma.quantidade_estudantes ?? 0);
         inputQuantidade.title = "Quantidade de estudantes";
 
+        const inputAulaInicial = document.createElement("select");
+        inputAulaInicial.title = "Aula inicial da turma";
+
+        const inputAulaFinal = document.createElement("select");
+        inputAulaFinal.title = "Aula final da turma";
+
+        const atualizarJanelaTurma = ({ forcarPadrao = false } = {}) => {
+            sincronizarSelectsJanelaAulasTurma({
+                turno: inputTurno.value,
+                selectInicial: inputAulaInicial,
+                selectFinal: inputAulaFinal,
+                aulaInicialAtual: Number(inputAulaInicial.value || turma.aula_inicial || 0),
+                aulaFinalAtual: Number(inputAulaFinal.value || turma.aula_final || 0),
+                forcarPadrao
+            });
+        };
+
+        atualizarJanelaTurma();
+        inputTurno.addEventListener("change", () => atualizarJanelaTurma({ forcarPadrao: true }));
+        inputAulaInicial.addEventListener("change", () => atualizarJanelaTurma());
+
         const btnSalvarDados = document.createElement("button");
         btnSalvarDados.type = "button";
         btnSalvarDados.innerText = "Salvar dados";
         btnSalvarDados.addEventListener("click", async () => {
             try {
+                const aulaInicial = Number(inputAulaInicial.value || 0);
+                const aulaFinal = Number(inputAulaFinal.value || 0);
+                if (aulaInicial <= 0 || aulaFinal <= 0) {
+                    throw new Error("Configure a grade global antes de salvar a turma.");
+                }
                 await fetchJson(`/admin/turmas/${turma.id}`, {
                     method: "PUT",
                     headers: headersJson,
                     body: JSON.stringify({
                         turno: inputTurno.value,
+                        aula_inicial: aulaInicial,
+                        aula_final: aulaFinal,
                         quantidade_estudantes: Number(inputQuantidade.value)
                     })
                 });
@@ -480,6 +877,8 @@ async function carregarTurmasAdmin() {
         });
 
         linha.appendChild(inputTurno);
+        linha.appendChild(inputAulaInicial);
+        linha.appendChild(inputAulaFinal);
         linha.appendChild(inputQuantidade);
         linha.appendChild(btnSalvarDados);
 
@@ -494,12 +893,19 @@ async function carregarTurmasAdmin() {
 async function cadastrarTurma(event) {
     event.preventDefault();
     try {
+        const aulaInicial = Number(el("turmaAulaInicial")?.value || 0);
+        const aulaFinal = Number(el("turmaAulaFinal")?.value || 0);
+        if (aulaInicial <= 0 || aulaFinal <= 0) {
+            throw new Error("Cadastre primeiro a grade global de aulas da escola.");
+        }
         await fetchJson("/admin/turmas", {
             method: "POST",
             headers: headersJson,
             body: JSON.stringify({
                 nome: el("turmaNome").value.trim(),
                 turno: el("turmaTurno").value,
+                aula_inicial: aulaInicial,
+                aula_final: aulaFinal,
                 quantidade_estudantes: Number(el("turmaQuantidadeEstudantes").value)
             })
         });
@@ -508,6 +914,7 @@ async function cadastrarTurma(event) {
         el("formTurma").reset();
         el("turmaTurno").value = "MATUTINO";
         el("turmaQuantidadeEstudantes").value = "0";
+        atualizarJanelaAulasFormularioTurma({ forcarPadrao: true });
         await Promise.all([
             carregarTurmasAdmin(),
             atualizarOpcoesProfessorSePermitido(),

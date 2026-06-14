@@ -38,7 +38,7 @@ function descreverFiltrosOcorrencias(configuracao) {
     const dataFinal = valorCampo(configuracao.dataFinalId);
 
     if (nomeEstudante) {
-        partes.push(`Referencia: ${nomeEstudante}`);
+        partes.push(`Referência: ${nomeEstudante}`);
     }
     if (tipoRegistro) {
         partes.push(`Tipo: ${rotuloTipoRegistro(tipoRegistro)}`);
@@ -51,11 +51,11 @@ function descreverFiltrosOcorrencias(configuracao) {
         partes.push(`Status: ${rotuloStatus(status)}`);
     }
     if (dataInicial && dataFinal) {
-        partes.push(`Periodo: ${formatarDataBr(dataInicial)} ate ${formatarDataBr(dataFinal)}`);
+        partes.push(`Período: ${formatarDataBr(dataInicial)} até ${formatarDataBr(dataFinal)}`);
     } else if (dataInicial) {
         partes.push(`A partir de: ${formatarDataBr(dataInicial)}`);
     } else if (dataFinal) {
-        partes.push(`Ate: ${formatarDataBr(dataFinal)}`);
+        partes.push(`Até: ${formatarDataBr(dataFinal)}`);
     }
 
     return partes.length > 0 ? partes.join(" | ") : "Sem filtro aplicado.";
@@ -102,7 +102,7 @@ function agruparOcorrencias(lista, obterChave, obterRotulo) {
         const chaveBruta = obterChave(ocorrencia);
         const rotuloBruto = obterRotulo(ocorrencia);
         const chave = String(chaveBruta || rotuloBruto || "nao_informado").trim();
-        const rotulo = String(rotuloBruto || chaveBruta || "Nao informado").trim() || "Nao informado";
+        const rotulo = String(rotuloBruto || chaveBruta || "Não informado").trim() || "Não informado";
         const atual = mapa.get(chave) || { label: rotulo, total: 0 };
         atual.total += 1;
         mapa.set(chave, atual);
@@ -144,7 +144,7 @@ function renderRankingLista(idLista, itens, vazio, totalBase = 0) {
         meta.className = "coordenacao-ranking-meta";
         if (totalBase > 0) {
             const percentual = Math.round((item.total / totalBase) * 100);
-            meta.innerText = `${percentual}% do relatorio`;
+            meta.innerText = `${percentual}% do relatório`;
         } else {
             meta.innerText = `${item.total} registro(s)`;
         }
@@ -190,7 +190,7 @@ function atualizarResumoRelatorioOcorrencias() {
     if (el("relatorioPeriodo")) {
         el("relatorioPeriodo").innerText = total > 0
             ? `Recorte atual: ${descricaoFiltros}`
-            : `Nenhuma ocorrencia encontrada. ${descricaoFiltros}`;
+            : `Nenhuma ocorrência encontrada. ${descricaoFiltros}`;
     }
 
     renderRankingLista(
@@ -218,7 +218,7 @@ function atualizarResumoRelatorioOcorrencias() {
         agruparOcorrencias(
             relatorioOcorrenciasCache,
             (ocorrencia) => ocorrencia.professor_requerente_id || ocorrencia.professor_requerente,
-            (ocorrencia) => ocorrencia.professor_requerente || "Nao informado"
+            (ocorrencia) => ocorrencia.professor_requerente || "Não informado"
         ),
         "Nenhum professor encontrado para o recorte selecionado.",
         total
@@ -235,7 +235,7 @@ function renderTabelaRelatorioOcorrencias() {
         const td = document.createElement("td");
         td.colSpan = 6;
         td.className = "booking-empty";
-        td.innerText = "Nenhum registro encontrado para o relatorio.";
+        td.innerText = "Nenhum registro encontrado para o relatório.";
         tr.appendChild(td);
         tbody.appendChild(tr);
         return;
@@ -245,9 +245,9 @@ function renderTabelaRelatorioOcorrencias() {
         const tr = document.createElement("tr");
         tr.appendChild(criarCelulaTabela("Data", formatarDataBr(ocorrencia.data_ocorrencia)));
         tr.appendChild(criarCelulaTabela("Tipo", rotuloTipoRegistro(ocorrencia.tipo_registro)));
-        tr.appendChild(criarCelulaTabela("Referencia", obterReferenciaRegistro(ocorrencia)));
+        tr.appendChild(criarCelulaTabela("Referência", obterReferenciaRegistro(ocorrencia)));
         tr.appendChild(criarCelulaTabela("Contexto", obterContextoRegistro(ocorrencia)));
-        tr.appendChild(criarCelulaTabela("Acao aplicada", rotuloAcao(ocorrencia.acao_aplicada)));
+        tr.appendChild(criarCelulaTabela("Ação aplicada", rotuloAcao(ocorrencia.acao_aplicada)));
         tr.appendChild(criarCelulaTabela("Status", rotuloStatus(ocorrencia.status)));
         tbody.appendChild(tr);
     });
@@ -261,7 +261,7 @@ function renderRelatorioOcorrencias() {
 function invalidarRelatorioOcorrencias() {
     if (!relatorioOcorrenciasCarregado) return;
     relatorioOcorrenciasCarregado = false;
-    setMensagemRelatorios("Dados atualizados. Gere o relatorio novamente para refletir as alteracoes.");
+    setMensagemRelatorios("Dados atualizados. Gere o relatório novamente para refletir as alterações.");
 }
 
 async function carregarOpcoesOcorrencias() {
@@ -415,9 +415,9 @@ function renderTabelaOcorrencias() {
 
         tr.appendChild(criarCelulaTabela("Data", formatarDataBr(ocorrencia.data_ocorrencia)));
         tr.appendChild(criarCelulaTabela("Tipo", rotuloTipoRegistro(ocorrencia.tipo_registro)));
-        tr.appendChild(criarCelulaTabela("Referencia", obterReferenciaRegistro(ocorrencia)));
+        tr.appendChild(criarCelulaTabela("Referência", obterReferenciaRegistro(ocorrencia)));
         tr.appendChild(criarCelulaTabela("Contexto", obterContextoRegistro(ocorrencia)));
-        tr.appendChild(criarCelulaTabela("Acao aplicada", rotuloAcao(ocorrencia.acao_aplicada)));
+        tr.appendChild(criarCelulaTabela("Ação aplicada", rotuloAcao(ocorrencia.acao_aplicada)));
 
         const statusBadge = document.createElement("span");
         statusBadge.className = `status-chip ${classeStatus(ocorrencia.status)}`;
@@ -456,7 +456,7 @@ function renderTabelaOcorrencias() {
         linhaAcoes.appendChild(btnPdf);
         linhaAcoes.appendChild(btnEditar);
         linhaAcoes.appendChild(btnExcluir);
-        tr.appendChild(criarCelulaTabela("Acoes", linhaAcoes));
+        tr.appendChild(criarCelulaTabela("Ações", linhaAcoes));
 
         tbody.appendChild(tr);
     });
@@ -531,7 +531,7 @@ function renderTabelaEstudantes() {
         linhaAcoes.appendChild(btnEditar);
         linhaAcoes.appendChild(btnStatus);
         linhaAcoes.appendChild(btnExcluir);
-        tr.appendChild(criarCelulaTabela("Acoes", linhaAcoes));
+        tr.appendChild(criarCelulaTabela("Ações", linhaAcoes));
 
         tbody.appendChild(tr);
     });

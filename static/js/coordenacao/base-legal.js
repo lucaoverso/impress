@@ -18,8 +18,8 @@ function renderTabelaRegimento() {
         const tr = document.createElement("tr");
         tr.appendChild(criarCelulaTabela("Tipo", rotuloTipoBaseLegal(item.tipo)));
         tr.appendChild(criarCelulaTabela("Lei", item.lei_nome || ""));
-        tr.appendChild(criarCelulaTabela("Referencia", item.artigo || ""));
-        tr.appendChild(criarCelulaTabela("Descricao", item.descricao || ""));
+        tr.appendChild(criarCelulaTabela("Referência", item.artigo || ""));
+        tr.appendChild(criarCelulaTabela("Descrição", item.descricao || ""));
 
         const linhaAcoes = document.createElement("div");
         linhaAcoes.className = "coordenacao-inline";
@@ -41,7 +41,7 @@ function renderTabelaRegimento() {
 
         linhaAcoes.appendChild(btnEditar);
         linhaAcoes.appendChild(btnExcluir);
-        tr.appendChild(criarCelulaTabela("Acoes", linhaAcoes));
+        tr.appendChild(criarCelulaTabela("Ações", linhaAcoes));
 
         tbody.appendChild(tr);
     });
@@ -87,7 +87,7 @@ function renderTabelaLeisBaseLegal() {
 
         linhaAcoes.appendChild(btnEditar);
         linhaAcoes.appendChild(btnExcluir);
-        tr.appendChild(criarCelulaTabela("Acoes", linhaAcoes));
+        tr.appendChild(criarCelulaTabela("Ações", linhaAcoes));
         tbody.appendChild(tr);
     });
 }
@@ -126,7 +126,7 @@ async function carregarCatalogosBaseLegal() {
 
 function rotuloTipoBaseLegal(tipo) {
     if (tipo === "inciso") return "Inciso";
-    if (tipo === "alinea") return "Alinea";
+    if (tipo === "alinea") return "Alínea";
     return "Artigo";
 }
 
@@ -159,7 +159,7 @@ function limparFormularioAlineaBaseLegal() {
     alineaBaseLegalEmEdicao = null;
     el("formAlineaBaseLegal").reset();
     el("alineaBaseLegalIncisoId").value = "";
-    el("tituloFormAlineaBaseLegal").innerText = "Cadastrar alinea";
+    el("tituloFormAlineaBaseLegal").innerText = "Cadastrar alínea";
     el("btnCancelarEdicaoAlineaBaseLegal").style.display = "none";
     ocultarSugestoes("listaIncisosBaseLegal");
 }
@@ -200,7 +200,7 @@ function iniciarEdicaoAlineaBaseLegal(alinea) {
     el("alineaBaseLegalIncisoId").value = alinea.inciso_id ? String(alinea.inciso_id) : "";
     el("alineaBaseLegalIdentificador").value = alinea.identificador || alinea.alinea_identificador || "";
     el("alineaBaseLegalDescricao").value = alinea.descricao || alinea.alinea_descricao || "";
-    el("tituloFormAlineaBaseLegal").innerText = "Editar alinea";
+    el("tituloFormAlineaBaseLegal").innerText = "Editar alínea";
     el("btnCancelarEdicaoAlineaBaseLegal").style.display = "inline-block";
     ativarAbaCoordenacao("regimento");
 }
@@ -508,7 +508,7 @@ async function salvarAlineaBaseLegal(event) {
     aplicarSelecaoIncisoBaseLegalPorTexto();
     const incisoId = Number(el("alineaBaseLegalIncisoId").value || 0);
     if (incisoId <= 0) {
-        setMensagemRegimento("Selecione um inciso cadastrado para salvar a alinea.", true);
+        setMensagemRegimento("Selecione um inciso cadastrado para salvar a alínea.", true);
         return;
     }
 
@@ -526,14 +526,14 @@ async function salvarAlineaBaseLegal(event) {
                 headers: headersJson,
                 body: JSON.stringify(payload)
             });
-            setMensagemRegimento("Alinea atualizada com sucesso.");
+            setMensagemRegimento("Alínea atualizada com sucesso.");
         } else {
             await fetchJson("/alineas", {
                 method: "POST",
                 headers: headersJson,
                 body: JSON.stringify(payload)
             });
-            setMensagemRegimento("Alinea cadastrada com sucesso.");
+            setMensagemRegimento("Alínea cadastrada com sucesso.");
         }
 
         limparFormularioAlineaBaseLegal();
@@ -559,7 +559,7 @@ async function salvarRegimento(event) {
     if (event && typeof event.preventDefault === "function") {
         event.preventDefault();
     }
-    setMensagemRegimento("Use os formularios separados de lei, artigo, inciso ou alinea.", true);
+    setMensagemRegimento("Use os formulários separados de lei, artigo, inciso ou alínea.", true);
 }
 
 function limparSelecaoLeiBaseLegalSeNecessario(leiId) {
@@ -601,7 +601,7 @@ function limparSelecaoAlineaBaseLegalSeNecessario(alineaId) {
 async function excluirLeiBaseLegal(lei) {
     const nomeLei = String(lei?.nome || "esta lei").trim();
     const confirmou = window.confirm(
-        `Excluir ${nomeLei}? A exclusao so sera permitida se nao houver artigos vinculados.`
+        `Excluir ${nomeLei}? A exclusão só será permitida se não houver artigos vinculados.`
     );
     if (!confirmou) return;
 
@@ -615,7 +615,7 @@ async function excluirLeiBaseLegal(lei) {
             carregarCatalogosBaseLegal(),
             carregarRegimentoItens(obterIdsRegimentoSelecionadosFormulario())
         ]);
-        setMensagemRegimento(resposta?.mensagem || "Lei excluida com sucesso.");
+        setMensagemRegimento(resposta?.mensagem || "Lei excluída com sucesso.");
     } catch (err) {
         setMensagemRegimento(err.message, true);
     }
@@ -625,7 +625,7 @@ async function excluirBaseLegal(item) {
     const tipo = rotuloTipoBaseLegal(item?.tipo).toLowerCase();
     const referencia = String(item?.artigo || item?.label || `este ${tipo}`).trim();
     const confirmou = window.confirm(
-        `Excluir ${referencia}? A exclusao so sera permitida se nao houver dependencias ou ocorrencias vinculadas.`
+        `Excluir ${referencia}? A exclusão só será permitida se não houver dependências ou ocorrências vinculadas.`
     );
     if (!confirmou) return;
 
@@ -647,9 +647,8 @@ async function excluirBaseLegal(item) {
             carregarCatalogosBaseLegal(),
             carregarRegimentoItens(obterIdsRegimentoSelecionadosFormulario())
         ]);
-        setMensagemRegimento(resposta?.mensagem || "Item da base legal excluido com sucesso.");
+        setMensagemRegimento(resposta?.mensagem || "Item da base legal excluído com sucesso.");
     } catch (err) {
         setMensagemRegimento(err.message, true);
     }
 }
-

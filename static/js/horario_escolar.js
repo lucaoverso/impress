@@ -14,6 +14,7 @@ const headersHorario = criarHeadersAuth(tokenHorario);
 let contextoHorario = {
     anos_letivos: [],
     dias_semana: [],
+    grade_aulas: [],
     turmas: [],
     disciplinas: [],
     professores: [],
@@ -33,12 +34,8 @@ let ultimoResultadoHorario = {
 let estadoMatrizHorario = null;
 let escopoProfessorHorario = "geral";
 let modoVisualizacaoGestorHorario = "turmas";
-const TOTAL_AULAS_POR_TURNO_HORARIO = {
-    INTEGRAL: 8,
-    MATUTINO: 5,
-    VESPERTINO: 5,
-    VESPERTINO_EM: 6,
-};
+const TIPO_GRADE_AULA = "AULA";
+const TIPO_GRADE_INTERVALO = "INTERVALO";
 
 function interfaceProfessorAtiva() {
     return String(contextoHorario.modo_interface || "").toLowerCase() === "professor";
@@ -183,31 +180,114 @@ function obterDiaInfo(valor) {
 }
 
 function labelAulaHorario(item = {}) {
-    const faixaGlobal = Number(item.faixa_global || 0);
     const aulaNumero = Number(item.aula_numero || 0);
-    if (aulaNumero > 0 && faixaGlobal > 0) {
-        return `${aulaNumero}a aula (faixa ${faixaGlobal})`;
+    if (String(item?.aula_label || "").trim()) {
+        return String(item.aula_label).trim();
     }
+
+    const aulaConfig = obterAulaGlobalHorario(aulaNumero || item.faixa_global);
+    if (aulaConfig?.label) {
+        return String(aulaConfig.label).trim();
+    }
+
     if (aulaNumero > 0) {
         return `${aulaNumero}a aula`;
     }
     return "";
 }
 
-function totalAulasPorTurnoHorario(turno) {
-    return Number(TOTAL_AULAS_POR_TURNO_HORARIO[String(turno || "").trim().toUpperCase()] || 0);
+function itensGradeHorarioAtivos() {
+    return (Array.isArray(contextoHorario.grade_aulas) ? contextoHorario.grade_aulas : [])
+        .filter((item) => Boolean(item?.ativo ?? true))
+        .sort((a, b) => Number(a?.ordem_visual || 0) - Number(b?.ordem_visual || 0));
+}
+
+function aulasGlobaisHorarioAtivas() {
+    return itensGradeHorarioAtivos()
+        .filter((item) => String(item?.tipo || "").trim().toUpperCase() === TIPO_GRADE_AULA)
+        .sort((a, b) => Number(a?.aula_numero || 0) - Number(b?.aula_numero || 0));
+}
+
+function obterAulaGlobalHorario(aulaNumero) {
+    const valor = Number(aulaNumero || 0);
+    return aulasGlobaisHorarioAtivas()
+        .find((item) => Number(item?.aula_numero || 0) === valor) || null;
+}
+
+function obterJanelaAulasTurmaHorario(grupo = {}) {
+    const turma = obterTurmaPorId(grupo.turma_id);
+    const aulasConfiguradas = aulasGlobaisHorarioAtivas();
+    const primeiraAula = Number(aulasConfiguradas[0]?.aula_numero || 0);
+    const ultimaAula = Number(aulasConfiguradas[aulasConfiguradas.length - 1]?.aula_numero || 0);
+
+    let aulaInicial = Number(grupo.aula_inicial || turma?.aula_inicial || 0);
+    let aulaFinal = Number(grupo.aula_final || turma?.aula_final || 0);
+
+    if (aulaInicial <= 0) {
+        aulaInicial = primeiraAula;
+    }
+    if (aulaFinal < aulaInicial) {
+        aulaFinal = ultimaAula || aulaInicial;
+    }
+
+    return [aulaInicial, aulaFinal];
+}
+
+function criarGradeFallbackTurmaHorario(grupo = {}) {
+    const [aulaInicial, aulaFinal] = obterJanelaAulasTurmaHorario(grupo);
+    if (aulaInicial <= 0 || aulaFinal < aulaInicial) {
+        return [];
+    }
+    return Array.from({ length: aulaFinal - aulaInicial + 1 }, (_, index) => {
+        const aulaNumero = aulaInicial + index;
+        return {
+            tipo: TIPO_GRADE_AULA,
+            aula_numero: aulaNumero,
+            faixa_global: aulaNumero,
+            label: `${aulaNumero}a aula`,
+            label_curta: `${aulaNumero}a aula`,
+        };
+    });
 }
 
 function obterFaixasGrupoTurma(grupo = {}) {
-    const turma = obterTurmaPorId(grupo.turma_id);
-    const turno = String(grupo.turno || turma?.turno || "").trim().toUpperCase();
-    const totalPorTurno = totalAulasPorTurnoHorario(turno);
-    const maiorAulaNosItens = (grupo.itens || []).reduce(
-        (maior, item) => Math.max(maior, Number(item.aula_numero || 0)),
-        0
-    );
-    const total = Math.max(totalPorTurno, maiorAulaNosItens, 1);
-    return Array.from({ length: total }, (_, index) => index + 1);
+    const itensGrade = itensGradeHorarioAtivos();
+    if (itensGrade.length === 0) {
+        return criarGradeFallbackTurmaHorario(grupo);
+    }
+
+    const [aulaInicial, aulaFinal] = obterJanelaAulasTurmaHorario(grupo);
+    return itensGrade.filter((item, index, lista) => {
+        const tipo = String(item?.tipo || "").trim().toUpperCase();
+        if (tipo === TIPO_GRADE_AULA) {
+            const aulaNumero = Number(item?.aula_numero || 0);
+            return aulaNumero >= aulaInicial && aulaNumero <= aulaFinal;
+        }
+
+        if (tipo !== TIPO_GRADE_INTERVALO) {
+            return false;
+        }
+
+        const itensAnteriores = lista
+            .slice(0, index)
+            .filter((candidato) => String(candidato?.tipo || "").trim().toUpperCase() === TIPO_GRADE_AULA)
+            .map((candidato) => Number(candidato?.aula_numero || 0))
+            .filter((numero) => numero > 0);
+        const itensPosteriores = lista
+            .slice(index + 1)
+            .filter((candidato) => String(candidato?.tipo || "").trim().toUpperCase() === TIPO_GRADE_AULA)
+            .map((candidato) => Number(candidato?.aula_numero || 0))
+            .filter((numero) => numero > 0);
+
+        const aulaAnterior = itensAnteriores[itensAnteriores.length - 1] || 0;
+        const aulaPosterior = itensPosteriores[0] || 0;
+        return (
+            aulaAnterior > 0
+            && aulaPosterior > 0
+            && aulaAnterior >= aulaInicial
+            && aulaPosterior <= aulaFinal
+        );
+    });
 }
 
 function descricaoCelulaHorarioProfessor(item) {
@@ -703,11 +783,25 @@ function renderizarGradeTurmaSemanal(grupo) {
     });
 
     const tbody = document.createElement("tbody");
-    obterFaixasGrupoTurma(grupo).forEach((aulaNumero) => {
+    obterFaixasGrupoTurma(grupo).forEach((faixaInfo) => {
+        if (String(faixaInfo?.tipo || "").trim().toUpperCase() === TIPO_GRADE_INTERVALO) {
+            const trIntervalo = document.createElement("tr");
+            trIntervalo.className = "weekly-turno-row";
+
+            const thIntervalo = document.createElement("th");
+            thIntervalo.scope = "colgroup";
+            thIntervalo.colSpan = (contextoHorario.dias_semana || []).length + 1;
+            thIntervalo.innerText = String(faixaInfo.label || faixaInfo.nome || "Intervalo");
+            trIntervalo.appendChild(thIntervalo);
+            tbody.appendChild(trIntervalo);
+            return;
+        }
+
+        const aulaNumero = Number(faixaInfo?.aula_numero || 0);
         const tr = document.createElement("tr");
 
         const thLinha = document.createElement("th");
-        thLinha.innerText = `${aulaNumero}a aula`;
+        thLinha.innerText = String(faixaInfo.label || `${aulaNumero}a aula`);
         tr.appendChild(thLinha);
 
         (contextoHorario.dias_semana || []).forEach((dia) => {
@@ -748,12 +842,18 @@ function obterDiasGradeProfessor() {
 }
 
 function obterFaixasGradeProfessor(itens) {
+    const gradeConfigurada = itensGradeHorarioAtivos();
+    if (gradeConfigurada.length > 0) {
+        return gradeConfigurada;
+    }
+
     const faixas = new Map();
     (itens || []).forEach((item) => {
         const faixaGlobal = Number(item.faixa_global || item.aula_numero || 0);
         if (faixaGlobal <= 0) return;
         if (!faixas.has(faixaGlobal)) {
             faixas.set(faixaGlobal, {
+                tipo: TIPO_GRADE_AULA,
                 faixa_global: faixaGlobal,
                 aula_numero: Number(item.aula_numero || 0),
                 label: String(item.aula_label || labelAulaHorario(item) || "").trim() || `${item.aula_numero}a aula`,
@@ -838,7 +938,7 @@ function renderizarGradeProfessorSemanal(grupo, { tituloCard = "", subtituloCard
     const mapa = new Map();
     (grupo.itens || []).forEach((item) => {
         mapa.set(
-            `${String(item.dia_semana || "").toUpperCase()}:${Number(item.faixa_global || item.aula_numero || 0)}`,
+            `${String(item.dia_semana || "").toUpperCase()}:${Number(item.aula_numero || item.faixa_global || 0)}`,
             item
         );
     });
@@ -866,15 +966,29 @@ function renderizarGradeProfessorSemanal(grupo, { tituloCard = "", subtituloCard
 
     const tbody = document.createElement("tbody");
     faixas.forEach((faixa) => {
+        if (String(faixa?.tipo || "").trim().toUpperCase() === TIPO_GRADE_INTERVALO) {
+            const trIntervalo = document.createElement("tr");
+            trIntervalo.className = "weekly-turno-row";
+
+            const thIntervalo = document.createElement("th");
+            thIntervalo.scope = "colgroup";
+            thIntervalo.colSpan = dias.length + 1;
+            thIntervalo.innerText = String(faixa.label || faixa.nome || "Intervalo");
+            trIntervalo.appendChild(thIntervalo);
+            tbody.appendChild(trIntervalo);
+            return;
+        }
+
         const tr = document.createElement("tr");
+        const aulaNumero = Number(faixa.aula_numero || faixa.faixa_global || 0);
 
         const thLinha = document.createElement("th");
-        thLinha.innerText = faixa.label || `${faixa.aula_numero}a aula`;
+        thLinha.innerText = faixa.label || `${aulaNumero}a aula`;
         tr.appendChild(thLinha);
 
         dias.forEach((dia) => {
             const td = document.createElement("td");
-            const item = mapa.get(`${dia.valor}:${faixa.faixa_global}`) || null;
+            const item = mapa.get(`${dia.valor}:${aulaNumero}`) || null;
 
             if (!item) {
                 td.className = "is-empty";
@@ -1219,6 +1333,25 @@ function renderizarMatrizHorario() {
         }));
 
     faixas.forEach((faixaInfo) => {
+        if (String(faixaInfo?.tipo || "").trim().toUpperCase() === TIPO_GRADE_INTERVALO) {
+            const trIntervalo = document.createElement("tr");
+            trIntervalo.className = "weekly-turno-row";
+
+            const thIntervalo = document.createElement("th");
+            thIntervalo.innerText = String(faixaInfo.label || faixaInfo.nome || "Intervalo");
+            trIntervalo.appendChild(thIntervalo);
+
+            const tdIntervalo = document.createElement("td");
+            tdIntervalo.colSpan = (estadoMatrizHorario.dias_semana || []).length;
+            tdIntervalo.innerText = [
+                String(faixaInfo.horario_inicio || "").trim(),
+                String(faixaInfo.horario_fim || "").trim()
+            ].filter(Boolean).join(" - ") || "Pausa da grade";
+            trIntervalo.appendChild(tdIntervalo);
+            tbody.appendChild(trIntervalo);
+            return;
+        }
+
         const aulaNumero = Number(faixaInfo.aula_numero || 0);
         const tr = document.createElement("tr");
         const th = document.createElement("th");

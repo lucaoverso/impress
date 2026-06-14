@@ -28,6 +28,34 @@ def _reload_modules(db_path: str):
     return database, models, horario_router
 
 
+def _seed_grade_aulas(database) -> None:
+    itens = [
+        (1, "AULA", 1, "Aula 1", "07:00", "07:50"),
+        (2, "AULA", 2, "Aula 2", "07:50", "08:40"),
+        (3, "INTERVALO", None, "Intervalo da manha", "08:40", "09:00"),
+        (4, "AULA", 3, "Aula 3", "09:00", "09:50"),
+        (5, "AULA", 4, "Aula 4", "09:50", "10:40"),
+        (6, "AULA", 5, "Aula 5", "10:40", "11:30"),
+        (7, "AULA", 6, "Aula 6", "13:00", "13:50"),
+        (8, "AULA", 7, "Aula 7", "13:50", "14:40"),
+        (9, "INTERVALO", None, "Intervalo da tarde", "14:40", "15:00"),
+        (10, "AULA", 8, "Aula 8", "15:00", "15:50"),
+        (11, "AULA", 9, "Aula 9", "15:50", "16:40"),
+        (12, "AULA", 10, "Aula 10", "16:40", "17:30"),
+        (13, "AULA", 11, "Aula 11", "17:30", "18:20"),
+    ]
+    for ordem_visual, tipo, aula_numero, nome, horario_inicio, horario_fim in itens:
+        database.criar_configuracao_aula(
+            ordem_visual=ordem_visual,
+            tipo=tipo,
+            aula_numero=aula_numero,
+            nome=nome,
+            horario_inicio=horario_inicio,
+            horario_fim=horario_fim,
+            ativo=True,
+        )
+
+
 class HorarioEscolarRouterTest(unittest.TestCase):
     def setUp(self):
         self._old_db_path = os.environ.get("DB_PATH")
@@ -55,6 +83,7 @@ class HorarioEscolarRouterTest(unittest.TestCase):
             db_path = os.path.join(tmp_dir, "impressao.db")
             database, models, horario_router = _reload_modules(db_path)
             database.criar_tabelas()
+            _seed_grade_aulas(database)
 
             turma_id = int(database.criar_turma("7A", "MATUTINO", 30))
             disciplina_id = int(database.criar_disciplina("Matematica", 5))
@@ -140,6 +169,7 @@ class HorarioEscolarRouterTest(unittest.TestCase):
             db_path = os.path.join(tmp_dir, "impressao.db")
             database, models, horario_router = _reload_modules(db_path)
             database.criar_tabelas()
+            _seed_grade_aulas(database)
 
             turma_id = int(database.criar_turma("8B", "MATUTINO", 32))
             disciplina_id = int(database.criar_disciplina("Matematica", 5))
@@ -185,7 +215,11 @@ class HorarioEscolarRouterTest(unittest.TestCase):
             self.assertEqual(int(matriz["turma"]["id"]), turma_id)
             self.assertEqual(int(matriz["turma"]["total_aulas"]), 5)
             self.assertEqual(matriz["aulas"], [1, 2, 3, 4, 5])
-            self.assertEqual([item["faixa_global"] for item in matriz["faixas"]], [1, 2, 3, 4, 5])
+            self.assertEqual(
+                [item["tipo"] for item in matriz["faixas"]],
+                ["AULA", "AULA", "INTERVALO", "AULA", "AULA", "AULA"],
+            )
+            self.assertEqual([item["faixa_global"] for item in matriz["faixas"]], [1, 2, 0, 3, 4, 5])
             self.assertEqual(len(matriz["registros"]), 1)
             self.assertEqual(len(matriz["cards_disponiveis"]), 3)
             self.assertEqual(len(matriz["cards_resumo"]), 1)
@@ -210,6 +244,7 @@ class HorarioEscolarRouterTest(unittest.TestCase):
             db_path = os.path.join(tmp_dir, "impressao.db")
             database, models, horario_router = _reload_modules(db_path)
             database.criar_tabelas()
+            _seed_grade_aulas(database)
 
             turma_matutino_id = int(database.criar_turma("7A", "MATUTINO", 30))
             turma_vespertino_id = int(database.criar_turma("8A", "VESPERTINO", 30))
@@ -239,11 +274,26 @@ class HorarioEscolarRouterTest(unittest.TestCase):
                     disciplina_id=disciplina_id,
                     professor_id=professor_id,
                     dia_semana="segunda",
-                    aula_numero=4,
+                    aula_numero=1,
                 ),
                 usuario=self._usuario_coord(),
             )
-            self.assertEqual(int(matutino["faixa_global"]), 4)
+            self.assertEqual(int(matutino["faixa_global"]), 1)
+
+            with self.assertRaises(HTTPException) as ctx_janela:
+                horario_router.criar_horario_escolar_api(
+                    payload=models.HorarioEscolarRegistroIn(
+                        ano_letivo=2033,
+                        turma_id=turma_vespertino_id,
+                        disciplina_id=disciplina_id,
+                        professor_id=professor_id,
+                        dia_semana="segunda",
+                        aula_numero=1,
+                    ),
+                    usuario=self._usuario_coord(),
+                )
+            self.assertEqual(int(ctx_janela.exception.status_code), 400)
+            self.assertIn("janela", str(ctx_janela.exception.detail).lower())
 
             vespertino = horario_router.criar_horario_escolar_api(
                 payload=models.HorarioEscolarRegistroIn(
@@ -252,11 +302,11 @@ class HorarioEscolarRouterTest(unittest.TestCase):
                     disciplina_id=disciplina_id,
                     professor_id=professor_id,
                     dia_semana="segunda",
-                    aula_numero=4,
+                    aula_numero=6,
                 ),
                 usuario=self._usuario_coord(),
             )
-            self.assertEqual(int(vespertino["faixa_global"]), 9)
+            self.assertEqual(int(vespertino["faixa_global"]), 6)
 
             with self.assertRaises(HTTPException) as ctx:
                 horario_router.criar_horario_escolar_api(
@@ -266,7 +316,7 @@ class HorarioEscolarRouterTest(unittest.TestCase):
                         disciplina_id=disciplina_id,
                         professor_id=professor_id,
                         dia_semana="segunda",
-                        aula_numero=8,
+                        aula_numero=1,
                     ),
                     usuario=self._usuario_coord(),
                 )
@@ -279,6 +329,7 @@ class HorarioEscolarRouterTest(unittest.TestCase):
             db_path = os.path.join(tmp_dir, "impressao.db")
             database, models, horario_router = _reload_modules(db_path)
             database.criar_tabelas()
+            _seed_grade_aulas(database)
 
             turma_a_id = int(database.criar_turma("7A", "MATUTINO", 30))
             turma_b_id = int(database.criar_turma("8A", "VESPERTINO", 30))
@@ -349,7 +400,7 @@ class HorarioEscolarRouterTest(unittest.TestCase):
                     disciplina_id=disciplina_id,
                     professor_id=professor_logado_id,
                     dia_semana="terca",
-                    aula_numero=2,
+                    aula_numero=7,
                 ),
                 usuario=self._usuario_coord(),
             )

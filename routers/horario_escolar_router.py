@@ -12,6 +12,7 @@ from db.catalogos import (
 )
 from db.docencia import listar_atribuicoes_docentes, listar_turmas_disciplinas_admin
 from db.horario_escolar import (
+    listar_configuracoes_aulas,
     buscar_horario_escolar_por_id,
     criar_horario_escolar,
     excluir_horario_escolar,
@@ -24,6 +25,7 @@ from db.usuarios import (
     listar_cargas_professores_por_usuario_ids,
     listar_professores_agendamento,
 )
+from modules.scheduling.lesson_config import normalize_schedule_entries
 from models import (
     HorarioEscolarRegistroIn,
     HorarioEscolarRegistroOut,
@@ -35,13 +37,14 @@ from services.horario_escolar_service import (
     anos_letivos_sugeridos,
     dia_semana_por_data,
     enriquecer_horario_escolar,
+    listar_aulas_turma_horario,
     listar_dias_semana_horario,
-    listar_faixas_turno_horario,
+    listar_grade_turma_horario,
     montar_cards_disponiveis_turma,
     nome_dia_semana,
     normalizar_dia_semana,
     ordenar_horarios_escolares,
-    total_aulas_por_turno,
+    total_aulas_turma_horario,
     validar_aula_numero,
     validar_ano_letivo,
 )
@@ -185,6 +188,7 @@ def _validar_vinculo_docente(professor: dict, turma: dict, disciplina: dict):
 def _validar_payload_horario(
     payload: HorarioEscolarRegistroIn | HorarioEscolarRegistroUpdateIn,
 ) -> dict:
+    configuracoes_aulas = listar_configuracoes_aulas(incluir_inativas=False)
     try:
         ano_letivo = validar_ano_letivo(payload.ano_letivo)
     except ValueError as exc:
@@ -202,7 +206,11 @@ def _validar_payload_horario(
 
     try:
         dia_semana = normalizar_dia_semana(payload.dia_semana)
-        aula_numero = validar_aula_numero(payload.aula_numero, turma.get("turno"))
+        aula_numero = validar_aula_numero(
+            payload.aula_numero,
+            turma,
+            configuracoes_aulas=configuracoes_aulas,
+        )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 
@@ -225,10 +233,14 @@ def obter_contexto_horario_escolar_api(usuario=Depends(get_usuario_logado)):
     anos = anos_letivos_sugeridos(listar_anos_letivos_horario_escolar())
     eh_gestor = usuario_eh_gestor(usuario)
     professor_logado_id = _id_professor_logado(usuario)
+    configuracoes_aulas = normalize_schedule_entries(
+        listar_configuracoes_aulas(incluir_inativas=False)
+    )
     return {
         "anos_letivos": anos,
         "ano_letivo_atual": datetime.now().year,
         "dias_semana": listar_dias_semana_horario(),
+        "grade_aulas": configuracoes_aulas,
         "turmas": listar_turmas_ativas(),
         "disciplinas": listar_disciplinas_ativas() if eh_gestor else [],
         "professores": _serializar_contexto_professores(professores) if eh_gestor else [],
@@ -263,6 +275,7 @@ def listar_horarios_escolares_api(
         except ValueError as exc:
             raise HTTPException(400, str(exc)) from exc
 
+    configuracoes_aulas = listar_configuracoes_aulas(incluir_inativas=False)
     itens = ordenar_horarios_escolares(
         listar_horarios_escolares(
             ano_letivo=ano_letivo_valor,
@@ -270,7 +283,8 @@ def listar_horarios_escolares_api(
             professor_id=professor_id,
             disciplina_id=disciplina_id,
             dia_semana=dia_semana_valor,
-        )
+        ),
+        configuracoes_aulas=configuracoes_aulas,
     )
     itens = _enriquecer_itens_para_usuario(itens, usuario)
     return {
@@ -300,11 +314,13 @@ def obter_matriz_horario_turma_api(
     if not turma:
         raise HTTPException(404, "Turma não encontrada.")
 
+    configuracoes_aulas = listar_configuracoes_aulas(incluir_inativas=False)
     registros = ordenar_horarios_escolares(
         listar_horarios_escolares(
             ano_letivo=ano_letivo_valor,
             turma_id=int(turma["id"]),
-        )
+        ),
+        configuracoes_aulas=configuracoes_aulas,
     )
     turma_disciplinas = listar_turmas_disciplinas_admin(
         turma_id=int(turma["id"]),
@@ -314,8 +330,9 @@ def obter_matriz_horario_turma_api(
         turma_disciplinas,
         registros,
     )
-    total_aulas = total_aulas_por_turno(turma.get("turno"))
-    faixas = listar_faixas_turno_horario(turma.get("turno"))
+    total_aulas = total_aulas_turma_horario(turma, configuracoes_aulas)
+    faixas = listar_grade_turma_horario(turma, configuracoes_aulas)
+    aulas = listar_aulas_turma_horario(turma, configuracoes_aulas)
 
     return {
         "ano_letivo": ano_letivo_valor,
@@ -324,7 +341,7 @@ def obter_matriz_horario_turma_api(
             "total_aulas": total_aulas,
         },
         "dias_semana": listar_dias_semana_horario(),
-        "aulas": list(range(1, total_aulas + 1)),
+        "aulas": [int(item.get("aula_numero") or 0) for item in aulas],
         "faixas": faixas,
         "registros": registros,
         "cards_disponiveis": cards_disponiveis,
@@ -351,7 +368,10 @@ def criar_horario_escolar_api(
         )
     except IntegrityError as exc:
         raise HTTPException(409, _traduzir_erro_integridade(exc)) from exc
-    return enriquecer_horario_escolar(item)
+    return enriquecer_horario_escolar(
+        item,
+        configuracoes_aulas=listar_configuracoes_aulas(incluir_inativas=False),
+    )
 
 
 @router.put("/horario-escolar/registros/{registro_id}", response_model=HorarioEscolarRegistroOut)
@@ -378,7 +398,10 @@ def atualizar_horario_escolar_api(
         raise HTTPException(409, _traduzir_erro_integridade(exc)) from exc
     if not item:
         raise HTTPException(404, "Registro do horário escolar não encontrado.")
-    return enriquecer_horario_escolar(item)
+    return enriquecer_horario_escolar(
+        item,
+        configuracoes_aulas=listar_configuracoes_aulas(incluir_inativas=False),
+    )
 
 
 @router.delete("/horario-escolar/registros/{registro_id}")
@@ -411,11 +434,13 @@ def listar_professores_do_dia_api(
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 
+    configuracoes_aulas = listar_configuracoes_aulas(incluir_inativas=False)
     itens = ordenar_horarios_escolares(
         listar_horarios_escolares(
             ano_letivo=ano_referencia,
             dia_semana=dia_semana,
-        )
+        ),
+        configuracoes_aulas=configuracoes_aulas,
     )
     grupos_professor = agrupar_horarios_por_professor(itens)
     return {

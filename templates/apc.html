@@ -12,163 +12,172 @@
     {% set navbar_context = "Central de anexos" %}
     {% set navbar_current = "apc" %}
     {% include "includes/app_navbar.html" %}
-    <main class="scheduler-page apc-page">
-        <section class="apc-topbar">
-            <div class="apc-topbar-main">
-                <div class="apc-topbar-copy">
-                    <p class="apc-eyebrow">Servicos escolares</p>
-                    <h1>Central de Anexos</h1>
-                    <p class="apc-topbar-description">
+    <main class="scheduler-page scheduler-flow-page apc-page">
+        <section class="scheduler-workspace apc-workspace">
+            <header class="scheduler-page-header apc-page-header">
+                <div class="scheduler-page-header-copy apc-page-header-copy">
+                    <h1>Central de anexos</h1>
+                    <p class="scheduler-page-lead">
                         Consulte entregas, envie arquivos e acompanhe solicitacoes em um unico lugar.
                     </p>
                 </div>
-                <p id="apcUsuario" class="apc-topbar-user"></p>
-            </div>
+                <div class="apc-page-header-meta">
+                    <p id="apcUsuario" class="apc-topbar-user"></p>
+                </div>
+            </header>
 
-            <div class="apc-topbar-grid">
-                <div class="apc-field">
-                    <label for="apcAnoLetivo">Ano letivo</label>
-                    <select id="apcAnoLetivo"></select>
+            <section class="apc-toolbar-band" aria-label="Filtros e atalhos da central de anexos">
+                <div class="apc-toolbar-field">
+                    <div class="apc-field">
+                        <label for="apcAnoLetivo">Ano letivo</label>
+                        <select id="apcAnoLetivo"></select>
+                    </div>
                 </div>
 
                 <div id="apcResumoMes" class="apc-toolbar-note">
                     Carregando as entregas deste mes...
                 </div>
 
-                <button id="btnAlternarCalendarioApc" class="apc-calendar-toggle" type="button"
-                    aria-controls="apcCalendarDrawer" aria-expanded="false">
-                    Ver calendario
-                </button>
-            </div>
+                <div class="apc-toolbar-actions">
+                    <button id="btnAlternarCalendarioApc"
+                        class="print-secondary-btn scheduler-header-calendar-btn apc-calendar-toggle" type="button"
+                        aria-controls="apcCalendarDrawer" aria-expanded="false">
+                        Calendario mensal
+                    </button>
+                </div>
+            </section>
 
-            <p id="msgApc" class="apc-toolbar-message" role="status" aria-live="polite"></p>
-        </section>
+            <section class="scheduler-flow-surface apc-content apc-flow-surface">
+                <p id="msgApc" class="apc-toolbar-message" role="status" aria-live="polite"></p>
 
-        <section class="scheduler-content apc-content">
-            <div id="apcCalendarDrawer" class="apc-calendar-drawer" hidden>
-                <div class="apc-calendar-backdrop" data-apc-calendar-close="true"></div>
-                <article id="apcCalendarCard" class="calendar-card apc-calendar-card" role="dialog"
-                    aria-modal="true" aria-labelledby="apcCalendarDrawerTitle" tabindex="-1">
-                    <header class="apc-calendar-drawer-header">
-                        <div>
-                            <p class="apc-section-eyebrow">Consulta mensal</p>
-                            <h2 id="apcCalendarDrawerTitle">Calendario de entregas</h2>
+                <div id="apcCalendarDrawer" class="apc-calendar-drawer" hidden>
+                    <div class="apc-calendar-backdrop" data-apc-calendar-close="true"></div>
+                    <article id="apcCalendarCard" class="calendar-card apc-calendar-card" role="dialog"
+                        aria-modal="true" aria-labelledby="apcCalendarDrawerTitle" tabindex="-1">
+                        <header class="apc-calendar-drawer-header">
+                            <div>
+                                <h2 id="apcCalendarDrawerTitle">Calendario de entregas</h2>
+                                <p>Consulte o mes inteiro e acompanhe as entregas previstas para cada data.</p>
+                            </div>
+                            <button id="btnFecharCalendarioApc" type="button" data-apc-calendar-close="true">
+                                Fechar
+                            </button>
+                        </header>
+                        <div class="calendar-header">
+                            <button id="btnApcMesAnterior" type="button" aria-label="Mes anterior">&#9664;</button>
+                            <h2 id="apcMesAtual"></h2>
+                            <button id="btnApcMesProximo" type="button" aria-label="Proximo mes">&#9654;</button>
+                            <button id="btnApcMesHoje" type="button">Hoje</button>
                         </div>
-                        <button id="btnFecharCalendarioApc" type="button" data-apc-calendar-close="true">
-                            Fechar
-                        </button>
-                    </header>
-                    <div class="calendar-header">
-                        <button id="btnApcMesAnterior" type="button" aria-label="Mes anterior">&#9664;</button>
-                        <h2 id="apcMesAtual"></h2>
-                        <button id="btnApcMesProximo" type="button" aria-label="Proximo mes">&#9654;</button>
-                        <button id="btnApcMesHoje" type="button">Hoje</button>
-                    </div>
-                    <div id="apcCalendarioGrid" class="calendar-grid"></div>
-                </article>
-            </div>
-
-            <article class="calendar-card apc-detail-card">
-                <div id="apcGestaoActions" class="apc-gestao-actions" hidden>
-                    <div class="apc-gestao-actions-copy">
-                        <h3>Demandas de entrega</h3>
-                        <p>Acompanhe as solicitacoes e abra uma demanda para analisar os professores.</p>
-                    </div>
-                    <div class="apc-inline-actions">
-                        <button id="btnAbrirNovaApc" class="btn-destaque" type="button">Nova solicitacao</button>
-                        <button id="btnAbrirEditarApc" type="button" hidden>Editar selecionada</button>
-                    </div>
+                        <div id="apcCalendarioGrid" class="calendar-grid"></div>
+                    </article>
                 </div>
 
-                <section id="apcGestaoFiltros" class="apc-gestao-filtros" hidden aria-label="Filtros das demandas">
-                    <div class="apc-field apc-gestao-busca">
-                        <label for="apcFiltroBusca">Buscar demanda</label>
-                        <input id="apcFiltroBusca" type="search" placeholder="Titulo, professor, disciplina ou turma">
+                <section class="apc-detail-card">
+                    <div id="apcGestaoActions" class="apc-gestao-actions" hidden>
+                        <div class="apc-gestao-actions-copy">
+                            <h3>Demandas de entrega</h3>
+                            <p>Acompanhe as solicitacoes e abra uma demanda para analisar os professores.</p>
+                        </div>
+                        <div class="apc-inline-actions">
+                            <button id="btnAbrirNovaApc" class="btn-destaque" type="button">Nova solicitacao</button>
+                            <button id="btnAbrirEditarApc" type="button" hidden>Editar selecionada</button>
+                        </div>
                     </div>
-                    <div class="apc-field">
-                        <label for="apcFiltroProfessor">Professor</label>
-                        <select id="apcFiltroProfessor">
-                            <option value="">Todos</option>
-                        </select>
-                    </div>
-                    <div class="apc-field">
-                        <label for="apcFiltroDisciplina">Disciplina</label>
-                        <select id="apcFiltroDisciplina">
-                            <option value="">Todas</option>
-                        </select>
-                    </div>
-                    <div class="apc-field">
-                        <label for="apcFiltroTurma">Turma</label>
-                        <select id="apcFiltroTurma">
-                            <option value="">Todas</option>
-                        </select>
-                    </div>
-                    <div class="apc-field">
-                        <label for="apcFiltroStatus">Status</label>
-                        <select id="apcFiltroStatus">
-                            <option value="">Todos</option>
-                            <option value="pendente">Com pendencias</option>
-                            <option value="concluida">Concluidas</option>
-                            <option value="atrasada">Prazo encerrado</option>
-                        </select>
-                    </div>
-                    <div class="apc-field">
-                        <label for="apcOrdenacaoGestao">Ordenar por</label>
-                        <select id="apcOrdenacaoGestao">
-                            <option value="prazo">Prazo mais proximo</option>
-                            <option value="recentes">Demandas mais recentes</option>
-                            <option value="antigas">Demandas mais antigas</option>
-                            <option value="envios_recentes">Envios mais recentes</option>
-                            <option value="envios_antigos">Envios mais antigos</option>
-                            <option value="pendencias">Mais pendencias</option>
-                        </select>
-                    </div>
-                </section>
 
-                <div class="apc-docente-workspace">
-                    <section class="apc-solicitacoes-column" aria-labelledby="apcSolicitacoesTitulo">
-                        <header class="apc-column-header">
-                            <div>
-                                <p class="apc-section-eyebrow">Solicitacoes</p>
-                                <h2 id="apcSolicitacoesTitulo">Entregas do mes</h2>
-                                <p id="apcSolicitacoesDescricao">
-                                    As pendencias aparecem primeiro e a mais urgente ja fica aberta.
-                                </p>
-                            </div>
-                        </header>
-
-                        <div id="apcSolicitacoesData" class="apc-solicitacoes-data">
-                            <div class="booking-empty">Nenhuma solicitacao encontrada.</div>
+                    <section id="apcGestaoFiltros" class="apc-gestao-filtros" hidden
+                        aria-label="Filtros das demandas">
+                        <div class="apc-field apc-gestao-busca">
+                            <label for="apcFiltroBusca">Buscar demanda</label>
+                            <input id="apcFiltroBusca" type="search"
+                                placeholder="Titulo, professor, disciplina ou turma">
+                        </div>
+                        <div class="apc-field">
+                            <label for="apcFiltroProfessor">Professor</label>
+                            <select id="apcFiltroProfessor">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        <div class="apc-field">
+                            <label for="apcFiltroDisciplina">Disciplina</label>
+                            <select id="apcFiltroDisciplina">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                        <div class="apc-field">
+                            <label for="apcFiltroTurma">Turma</label>
+                            <select id="apcFiltroTurma">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                        <div class="apc-field">
+                            <label for="apcFiltroStatus">Status</label>
+                            <select id="apcFiltroStatus">
+                                <option value="">Todos</option>
+                                <option value="pendente">Com pendencias</option>
+                                <option value="concluida">Concluidas</option>
+                                <option value="atrasada">Prazo encerrado</option>
+                            </select>
+                        </div>
+                        <div class="apc-field">
+                            <label for="apcOrdenacaoGestao">Ordenar por</label>
+                            <select id="apcOrdenacaoGestao">
+                                <option value="prazo">Prazo mais proximo</option>
+                                <option value="recentes">Demandas mais recentes</option>
+                                <option value="antigas">Demandas mais antigas</option>
+                                <option value="envios_recentes">Envios mais recentes</option>
+                                <option value="envios_antigos">Envios mais antigos</option>
+                                <option value="pendencias">Mais pendencias</option>
+                            </select>
                         </div>
                     </section>
 
-                    <aside id="apcDocenteDetalhe" class="apc-docente-detalhe" aria-live="polite">
-                        <div class="booking-empty">
-                            Carregando os anexos da demanda mais urgente...
-                        </div>
-                    </aside>
+                    <div class="apc-docente-workspace">
+                        <section class="apc-solicitacoes-column" aria-labelledby="apcSolicitacoesTitulo">
+                            <header class="apc-column-header">
+                                <div>
+                                    <h2 id="apcSolicitacoesTitulo">Entregas do mes</h2>
+                                    <p id="apcSolicitacoesDescricao">
+                                        As pendencias aparecem primeiro e a mais urgente ja fica aberta.
+                                    </p>
+                                </div>
+                            </header>
 
-                    <aside id="apcGestaoDetalhe" class="apc-gestao-detalhe" hidden aria-live="polite">
-                        <header class="apc-gestao-detalhe-header">
-                            <div>
-                                <p class="apc-section-eyebrow">Analise por professor</p>
-                                <h2 id="apcGestaoDetalheTitulo">Selecione uma demanda</h2>
-                                <p id="apcGestaoDetalheDescricao">
-                                    Os professores e anexos da solicitacao aparecerao aqui.
-                                </p>
+                            <div id="apcSolicitacoesData" class="apc-solicitacoes-data">
+                                <div class="booking-empty">Nenhuma solicitacao encontrada.</div>
                             </div>
-                        </header>
-                        <div id="apcListaPainel" class="apc-lista-painel">
-                            <div class="booking-empty">Nenhuma solicitacao selecionada.</div>
-                        </div>
-                    </aside>
-                </div>
-            </article>
+                        </section>
+
+                        <aside id="apcDocenteDetalhe" class="apc-docente-detalhe" aria-live="polite"
+                            aria-label="Detalhes da solicitacao selecionada">
+                            <div class="booking-empty">
+                                Carregando os anexos da demanda mais urgente...
+                            </div>
+                        </aside>
+
+                        <aside id="apcGestaoDetalhe" class="apc-gestao-detalhe" hidden aria-live="polite"
+                            aria-labelledby="apcGestaoDetalheTitulo">
+                            <header class="apc-gestao-detalhe-header">
+                                <div>
+                                    <h2 id="apcGestaoDetalheTitulo">Selecione uma demanda</h2>
+                                    <p id="apcGestaoDetalheDescricao">
+                                        Os professores e anexos da solicitacao aparecerao aqui.
+                                    </p>
+                                </div>
+                            </header>
+                            <div id="apcListaPainel" class="apc-lista-painel">
+                                <div class="booking-empty">Nenhuma solicitacao selecionada.</div>
+                            </div>
+                        </aside>
+                    </div>
+                </section>
+            </section>
         </section>
     </main>
 
     <div id="apcModalBackdrop" class="apc-modal-backdrop" hidden>
-        <section class="apc-modal" role="dialog" aria-modal="true" aria-labelledby="apcModalTitulo">
+        <section class="apc-modal" role="dialog" aria-modal="true" aria-labelledby="apcModalTitulo"
+            aria-describedby="apcModalDescricao">
             <header class="apc-modal-header">
                 <div>
                     <p class="apc-eyebrow">Central de Anexos</p>
@@ -176,25 +185,43 @@
                     <p id="apcModalDescricao">Defina o documento solicitado, o prazo e quem deve visualizar essa entrega.</p>
                 </div>
                 <button id="btnFecharModalApc" class="apc-modal-close" type="button" aria-label="Fechar modal">
-                    x
+                    Fechar
                 </button>
             </header>
 
             <form id="formApcPeriodo" class="apc-form apc-modal-form">
-                <label for="apcDataReferencia">Data de referencia</label>
-                <input id="apcDataReferencia" type="date" required>
+                <section class="apc-form-section" aria-labelledby="apcModalDadosTitulo">
+                    <div class="apc-form-section-copy">
+                        <h4 id="apcModalDadosTitulo">Dados da solicitacao</h4>
+                        <p>Defina a referencia da entrega, o prazo e quem deve visualizar esta demanda.</p>
+                    </div>
 
-                <label for="apcPrazoEnvio">Prazo de envio</label>
-                <input id="apcPrazoEnvio" type="datetime-local" required>
+                    <div class="apc-modal-field-grid apc-modal-field-grid--two">
+                        <div class="apc-field">
+                            <label for="apcDataReferencia">Data de referencia</label>
+                            <input id="apcDataReferencia" type="date" required>
+                        </div>
+                        <div class="apc-field">
+                            <label for="apcPrazoEnvio">Prazo de envio</label>
+                            <input id="apcPrazoEnvio" type="datetime-local" required>
+                        </div>
+                    </div>
 
-                <label for="apcTitulo">Documento solicitado</label>
-                <input id="apcTitulo" type="text" maxlength="80" value="Documento">
-
-                <label for="apcPublicoAlvo">Quem deve enviar</label>
-                <select id="apcPublicoAlvo"></select>
-
-                <label for="apcTipoEntrega">Tipo da solicitacao</label>
-                <select id="apcTipoEntrega"></select>
+                    <div class="apc-modal-field-grid apc-modal-field-grid--three">
+                        <div class="apc-field">
+                            <label for="apcTitulo">Documento solicitado</label>
+                            <input id="apcTitulo" type="text" maxlength="80" value="Documento">
+                        </div>
+                        <div class="apc-field">
+                            <label for="apcPublicoAlvo">Quem deve enviar</label>
+                            <select id="apcPublicoAlvo"></select>
+                        </div>
+                        <div class="apc-field">
+                            <label for="apcTipoEntrega">Tipo da solicitacao</label>
+                            <select id="apcTipoEntrega"></select>
+                        </div>
+                    </div>
+                </section>
 
                 <section id="apcDestinatariosWrap" class="apc-destinatarios-wrap" hidden>
                     <div class="apc-destinatarios-header">
@@ -213,9 +240,18 @@
                     </div>
                 </section>
 
-                <label for="apcObservacao">Observacao</label>
-                <textarea id="apcObservacao" rows="3"
-                    placeholder="Ex.: atividade pedagogica, prova bimestral, roteiro, plano ou outro material."></textarea>
+                <section class="apc-form-section" aria-labelledby="apcModalObservacaoTitulo">
+                    <div class="apc-form-section-copy">
+                        <h4 id="apcModalObservacaoTitulo">Orientacoes adicionais</h4>
+                        <p>Use este campo para contextualizar o que deve ser enviado ou como o material sera analisado.</p>
+                    </div>
+
+                    <div class="apc-field">
+                        <label for="apcObservacao">Observacao</label>
+                        <textarea id="apcObservacao" rows="3"
+                            placeholder="Ex.: atividade pedagogica, prova bimestral, roteiro, plano ou outro material."></textarea>
+                    </div>
+                </section>
 
                 <div class="apc-modal-footer">
                     <div class="apc-inline-actions">

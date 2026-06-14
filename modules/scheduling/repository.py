@@ -6,6 +6,12 @@ from db.agendamento import (
     listar_agendamentos,
 )
 from db.catalogos import buscar_recurso_por_id, listar_recursos_ativos, listar_turmas_ativas
+from db.horario_escolar import (
+    atualizar_configuracao_aula,
+    buscar_configuracao_aula_por_id,
+    criar_configuracao_aula,
+    listar_configuracoes_aulas,
+)
 from db.usuarios import listar_professores_agendamento
 
 from modules.scheduling.models import SchedulingReservation, SchedulingResource
@@ -81,6 +87,58 @@ def list_active_resources():
 
 def list_active_classes():
     return listar_turmas_ativas()
+
+
+def list_lesson_configurations(*, include_inactive: bool = True):
+    return listar_configuracoes_aulas(incluir_inativas=include_inactive)
+
+
+def get_lesson_configuration(configuration_id: int):
+    return buscar_configuracao_aula_por_id(configuration_id)
+
+
+def create_lesson_configuration(
+    *,
+    visual_order: int,
+    entry_type: str,
+    lesson_number: int | None,
+    name: str,
+    start_time: str,
+    end_time: str,
+    active: bool = True,
+):
+    return criar_configuracao_aula(
+        ordem_visual=visual_order,
+        tipo=entry_type,
+        aula_numero=lesson_number,
+        nome=name,
+        horario_inicio=start_time,
+        horario_fim=end_time,
+        ativo=active,
+    )
+
+
+def update_lesson_configuration(
+    *,
+    configuration_id: int,
+    visual_order: int,
+    entry_type: str,
+    lesson_number: int | None,
+    name: str,
+    start_time: str,
+    end_time: str,
+    active: bool,
+):
+    return atualizar_configuracao_aula(
+        configuracao_id=configuration_id,
+        ordem_visual=visual_order,
+        tipo=entry_type,
+        aula_numero=lesson_number,
+        nome=name,
+        horario_inicio=start_time,
+        horario_fim=end_time,
+        ativo=active,
+    )
 
 
 def list_scheduling_teachers():

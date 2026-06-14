@@ -1,12 +1,12 @@
 const PRE_REGISTRATION_CONTACT_LABELS = {
-    none: "Sem solicitacao de contato",
-    communicate: "Comunicar o responsavel",
-    summon: "Convocar o responsavel"
+    none: "Sem solicitação de contato",
+    communicate: "Comunicar o responsável",
+    summon: "Convocar o responsável"
 };
 
 const PRE_REGISTRATION_STATUS_LABELS = {
-    pending: "Pendente de complementacao",
-    completed: "Concluido",
+    pending: "Pendente de complementação",
+    completed: "Concluído",
     cancelled: "Cancelado"
 };
 
@@ -160,7 +160,7 @@ function criarCardPreRegistro(item, { manager = false } = {}) {
         const botao = document.createElement("button");
         botao.type = "button";
         botao.className = "btn-destaque";
-        botao.innerText = "Complementar registro";
+        botao.innerText = "Concluir ocorrência";
         botao.addEventListener("click", () => iniciarComplementacaoPreRegistro(item));
         card.appendChild(botao);
     }
@@ -174,7 +174,9 @@ function renderPreRegistros(containerId, items, options = {}) {
     if (!items.length) {
         const vazio = document.createElement("p");
         vazio.className = "coordenacao-empty-state";
-        vazio.innerText = "Nenhum pre-registro encontrado.";
+        vazio.innerText = options.manager
+            ? "Nenhuma pendência enviada pelos professores."
+            : "Nenhum pre-registro encontrado.";
         container.appendChild(vazio);
         return;
     }
@@ -219,7 +221,7 @@ async function salvarPreRegistroProfessor(event) {
     el("formPreRegistroProfessor").reset();
     estudantesPreRegistroSelecionados = [];
     renderEstudantesPreRegistroSelecionados();
-    setMensagemPreRegistro("msgPreRegistroProfessor", "Pre-registro enviado a coordenacao.");
+    setMensagemPreRegistro("msgPreRegistroProfessor", "Pré-registro enviado à coordenação.");
     await carregarPreRegistros();
 }
 

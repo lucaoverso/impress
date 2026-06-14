@@ -1,6 +1,15 @@
 function registrarEventos() {
     registrarEventosAbasAdmin();
     el("formTurma").addEventListener("submit", cadastrarTurma);
+    el("turmaTurno").addEventListener("change", () => {
+        atualizarJanelaAulasFormularioTurma({ forcarPadrao: true });
+    });
+    el("turmaAulaInicial").addEventListener("change", () => {
+        atualizarJanelaAulasFormularioTurma();
+    });
+    el("formConfiguracaoAula").addEventListener("submit", salvarConfiguracaoAula);
+    el("configAulaTipo").addEventListener("change", atualizarFormularioTipoConfiguracaoAula);
+    el("btnCancelarEdicaoConfiguracaoAula").addEventListener("click", limparFormularioConfiguracaoAula);
     el("formDisciplina").addEventListener("submit", cadastrarDisciplina);
     el("formRecurso").addEventListener("submit", cadastrarRecurso);
     el("btnCancelarEdicaoRecurso").addEventListener("click", limparFormularioRecurso);
@@ -68,6 +77,9 @@ async function init() {
         if (usuarioEhAdmin) {
             atualizarHintSenha();
         }
+        atualizarFormularioTipoConfiguracaoAula();
+        await carregarConfiguracoesAulasAdmin();
+        atualizarJanelaAulasFormularioTurma({ forcarPadrao: true });
 
         const tarefas = [
             carregarStatusImpressaoAdmin(),

@@ -106,10 +106,28 @@ DISCIPLINAS_PADRAO = [
     "Filosofia",
     "Sociologia",
 ]
+TIPO_CONFIGURACAO_AULA = "AULA"
+TIPO_CONFIGURACAO_INTERVALO = "INTERVALO"
+TIPOS_CONFIGURACAO_GRADE = (
+    TIPO_CONFIGURACAO_AULA,
+    TIPO_CONFIGURACAO_INTERVALO,
+)
+JANELA_AULAS_PADRAO_POR_TURNO = {
+    "MATUTINO": (1, 5),
+    "VESPERTINO": (6, 10),
+    "VESPERTINO_EM": (6, 11),
+    "INTEGRAL": (1, 8),
+}
 
 
 def _normalizar_booleano_sql(valor) -> int:
     return 1 if bool(valor) else 0
+
+
+def _janela_aulas_padrao_por_turno(turno: str) -> tuple[int, int]:
+    turno_norm = str(turno or "").strip().upper()
+    inicio, fim = JANELA_AULAS_PADRAO_POR_TURNO.get(turno_norm, (1, 5))
+    return int(inicio), int(fim)
 
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR_PADRAO = BASE_DIR.parent / "sistema-impress-data"
@@ -477,9 +495,26 @@ def criar_tabelas():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT UNIQUE NOT NULL,
             turno TEXT NOT NULL DEFAULT '',
+            aula_inicial INTEGER NOT NULL DEFAULT 1,
+            aula_final INTEGER NOT NULL DEFAULT 0,
             quantidade_estudantes INTEGER NOT NULL DEFAULT 0,
             ativo INTEGER NOT NULL DEFAULT 1,
             criado_em TEXT NOT NULL
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS configuracao_aulas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            ordem_visual INTEGER NOT NULL DEFAULT 0,
+            tipo TEXT NOT NULL DEFAULT 'AULA',
+            aula_numero INTEGER,
+            nome TEXT NOT NULL DEFAULT '',
+            horario_inicio TEXT NOT NULL DEFAULT '',
+            horario_fim TEXT NOT NULL DEFAULT '',
+            ativo INTEGER NOT NULL DEFAULT 1,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
         )
     """)
 
@@ -754,6 +789,7 @@ def _aplicar_compatibilidade_schema_legada(cursor):
     _garantir_colunas_cota_regras(cursor)
     _garantir_colunas_recursos(cursor)
     _garantir_colunas_turmas(cursor)
+    _garantir_colunas_configuracao_aulas(cursor)
     _garantir_colunas_disciplinas(cursor)
     _garantir_colunas_turmas_disciplinas(cursor)
     _garantir_colunas_estudantes(cursor)
@@ -835,6 +871,17 @@ def _criar_indices_schema(cursor):
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_agendamentos_usuario_data
         ON agendamentos(usuario_id, data)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_configuracao_aulas_ordem_visual
+        ON configuracao_aulas(ordem_visual, id)
+    """)
+
+    cursor.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_configuracao_aulas_numero_unico
+        ON configuracao_aulas(aula_numero)
+        WHERE aula_numero IS NOT NULL
     """)
 
     cursor.execute("""
@@ -1497,26 +1544,10 @@ def _garantir_colunas_agendamentos(cursor):
     if "tema_aula" not in colunas:
         cursor.execute("ALTER TABLE agendamentos ADD COLUMN tema_aula TEXT NOT NULL DEFAULT ''")
 
-    # Faixa global padroniza simultaneidade entre turnos:
-    # MATUTINO inicia na faixa 1.
-    # INTEGRAL usa 1-5 e depois 7-9 (pulando a faixa 6).
-    # VESPERTINO/VESPERTINO_EM iniciam na faixa 6.
     cursor.execute("""
         UPDATE agendamentos
-        SET faixa_global = (
-            CASE
-                WHEN UPPER(COALESCE(turno, '')) = 'MATUTINO' THEN CAST(COALESCE(NULLIF(TRIM(aula), ''), '0') AS INTEGER)
-                WHEN UPPER(COALESCE(turno, '')) = 'INTEGRAL' THEN (
-                    CAST(COALESCE(NULLIF(TRIM(aula), ''), '0') AS INTEGER)
-                    + CASE
-                        WHEN CAST(COALESCE(NULLIF(TRIM(aula), ''), '0') AS INTEGER) > 5 THEN 1
-                        ELSE 0
-                      END
-                )
-                WHEN UPPER(COALESCE(turno, '')) IN ('VESPERTINO', 'VESPERTINO_EM') THEN CAST(COALESCE(NULLIF(TRIM(aula), ''), '0') AS INTEGER) + 5
-                ELSE CAST(COALESCE(NULLIF(TRIM(aula), ''), '0') AS INTEGER)
-            END
-        )
+        SET faixa_global = CAST(COALESCE(NULLIF(TRIM(aula), ''), '0') AS INTEGER)
+        WHERE CAST(COALESCE(NULLIF(TRIM(aula), ''), '0') AS INTEGER) > 0
     """)
 
 
@@ -1633,10 +1664,104 @@ def _garantir_colunas_turmas(cursor):
 
     if "turno" not in colunas:
         cursor.execute("ALTER TABLE turmas ADD COLUMN turno TEXT NOT NULL DEFAULT ''")
+    if "aula_inicial" not in colunas:
+        cursor.execute("ALTER TABLE turmas ADD COLUMN aula_inicial INTEGER NOT NULL DEFAULT 1")
+    if "aula_final" not in colunas:
+        cursor.execute("ALTER TABLE turmas ADD COLUMN aula_final INTEGER NOT NULL DEFAULT 0")
     if "quantidade_estudantes" not in colunas:
         cursor.execute(
             "ALTER TABLE turmas ADD COLUMN quantidade_estudantes INTEGER NOT NULL DEFAULT 0"
         )
+
+    cursor.execute(
+        """
+        SELECT id, turno, aula_inicial, aula_final
+        FROM turmas
+        """
+    )
+    for row in cursor.fetchall():
+        inicio = int(row["aula_inicial"] or 0)
+        fim = int(row["aula_final"] or 0)
+        if inicio > 0 and fim >= inicio:
+            continue
+        inicio_padrao, fim_padrao = _janela_aulas_padrao_por_turno(row["turno"])
+        cursor.execute(
+            """
+            UPDATE turmas
+            SET aula_inicial = ?, aula_final = ?
+            WHERE id = ?
+            """,
+            (inicio_padrao, fim_padrao, int(row["id"])),
+        )
+
+
+def _garantir_colunas_configuracao_aulas(cursor):
+    cursor.execute("PRAGMA table_info(configuracao_aulas)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+
+    if not colunas:
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS configuracao_aulas (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                ordem_visual INTEGER NOT NULL DEFAULT 0,
+                tipo TEXT NOT NULL DEFAULT 'AULA',
+                aula_numero INTEGER,
+                nome TEXT NOT NULL DEFAULT '',
+                horario_inicio TEXT NOT NULL DEFAULT '',
+                horario_fim TEXT NOT NULL DEFAULT '',
+                ativo INTEGER NOT NULL DEFAULT 1,
+                criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+                atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+            """
+        )
+        colunas = {
+            "ordem_visual",
+            "tipo",
+            "aula_numero",
+            "nome",
+            "horario_inicio",
+            "horario_fim",
+            "ativo",
+            "criado_em",
+            "atualizado_em",
+        }
+
+    if "ordem_visual" not in colunas:
+        cursor.execute(
+            "ALTER TABLE configuracao_aulas ADD COLUMN ordem_visual INTEGER NOT NULL DEFAULT 0"
+        )
+    if "tipo" not in colunas:
+        cursor.execute(
+            "ALTER TABLE configuracao_aulas ADD COLUMN tipo TEXT NOT NULL DEFAULT 'AULA'"
+        )
+    if "aula_numero" not in colunas:
+        cursor.execute("ALTER TABLE configuracao_aulas ADD COLUMN aula_numero INTEGER")
+    if "nome" not in colunas:
+        cursor.execute("ALTER TABLE configuracao_aulas ADD COLUMN nome TEXT NOT NULL DEFAULT ''")
+    if "horario_inicio" not in colunas:
+        cursor.execute(
+            "ALTER TABLE configuracao_aulas ADD COLUMN horario_inicio TEXT NOT NULL DEFAULT ''"
+        )
+    if "horario_fim" not in colunas:
+        cursor.execute(
+            "ALTER TABLE configuracao_aulas ADD COLUMN horario_fim TEXT NOT NULL DEFAULT ''"
+        )
+    if "ativo" not in colunas:
+        cursor.execute(
+            "ALTER TABLE configuracao_aulas ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1"
+        )
+    if "criado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE configuracao_aulas ADD COLUMN criado_em TEXT NOT NULL DEFAULT (datetime('now'))"
+        )
+    if "atualizado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE configuracao_aulas ADD COLUMN atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))"
+        )
+
+    # A configuração da grade começa vazia por padrão e deve ser cadastrada pelo admin.
 
 
 def _garantir_colunas_disciplinas(cursor):
@@ -5199,36 +5324,19 @@ def seed_recursos_padrao():
     conn.close()
 
 
-_HORARIO_FAIXA_GLOBAL_OFFSET_POR_TURNO = {
-    "MATUTINO": 0,
-    "INTEGRAL": 0,
-    "VESPERTINO": 5,
-    "VESPERTINO_EM": 5,
-}
-
-
 def _faixa_global_por_turno_e_aula_horario(turno: str, aula_numero: int) -> int:
-    turno_norm = str(turno or "").strip().upper()
     aula = int(aula_numero or 0)
     if aula <= 0:
         return 0
-    faixa = aula + int(_HORARIO_FAIXA_GLOBAL_OFFSET_POR_TURNO.get(turno_norm) or 0)
-    if turno_norm == "INTEGRAL" and aula > 5:
-        faixa += 1
-    return faixa
+    return aula
 
 
 def _expressao_sql_faixa_global_horario(alias_horario: str = "he", alias_turma: str = "t") -> str:
     aula_expr = f"CAST(COALESCE({alias_horario}.aula_numero, 0) AS INTEGER)"
-    turno_expr = f"UPPER(COALESCE({alias_turma}.turno, ''))"
     return f"""
         COALESCE(
             NULLIF({alias_horario}.faixa_global, 0),
-            CASE
-                WHEN {turno_expr} IN ('VESPERTINO', 'VESPERTINO_EM') THEN {aula_expr} + 5
-                WHEN {turno_expr} = 'INTEGRAL' THEN {aula_expr} + CASE WHEN {aula_expr} > 5 THEN 1 ELSE 0 END
-                ELSE {aula_expr}
-            END
+            {aula_expr}
         )
     """
 
@@ -5298,21 +5406,10 @@ def _buscar_horario_escolar_conflito_professor_cursor(
 
 
 def _recalcular_faixa_global_horarios_turma(cursor, turma_id: int, turno: str) -> None:
-    turno_norm = str(turno or "").strip().upper()
-    if turno_norm in {"VESPERTINO", "VESPERTINO_EM"}:
-        expressao = "CAST(COALESCE(aula_numero, 0) AS INTEGER) + 5"
-    elif turno_norm == "INTEGRAL":
-        expressao = (
-            "CAST(COALESCE(aula_numero, 0) AS INTEGER) + "
-            "CASE WHEN CAST(COALESCE(aula_numero, 0) AS INTEGER) > 5 THEN 1 ELSE 0 END"
-        )
-    else:
-        expressao = "CAST(COALESCE(aula_numero, 0) AS INTEGER)"
-
     cursor.execute(
-        f"""
+        """
         UPDATE horarios_escolares
-        SET faixa_global = {expressao}
+        SET faixa_global = CAST(COALESCE(aula_numero, 0) AS INTEGER)
         WHERE turma_id = ?
         """,
         (int(turma_id),),
@@ -6162,7 +6259,7 @@ def listar_turmas(incluir_inativas: bool = False):
     cursor = conn.cursor()
 
     query = """
-        SELECT id, nome, turno, quantidade_estudantes, ativo, criado_em
+        SELECT id, nome, turno, aula_inicial, aula_final, quantidade_estudantes, ativo, criado_em
         FROM turmas
     """
     params = []
@@ -6189,7 +6286,7 @@ def buscar_turma_por_id(turma_id: int):
 
     cursor.execute(
         """
-        SELECT id, nome, turno, quantidade_estudantes, ativo, criado_em
+        SELECT id, nome, turno, aula_inicial, aula_final, quantidade_estudantes, ativo, criado_em
         FROM turmas
         WHERE id = ?
     """,
@@ -6210,7 +6307,7 @@ def buscar_turma_por_nome(nome: str, incluir_inativas: bool = True):
     cursor = conn.cursor()
 
     query = """
-        SELECT id, nome, turno, quantidade_estudantes, ativo, criado_em
+        SELECT id, nome, turno, aula_inicial, aula_final, quantidade_estudantes, ativo, criado_em
         FROM turmas
         WHERE nome = ? COLLATE NOCASE
     """
@@ -6225,11 +6322,22 @@ def buscar_turma_por_nome(nome: str, incluir_inativas: bool = True):
     return dict(row) if row else None
 
 
-def criar_turma(nome: str, turno: str = "", quantidade_estudantes: int = 0):
+def criar_turma(
+    nome: str,
+    turno: str = "",
+    quantidade_estudantes: int = 0,
+    aula_inicial: int | None = None,
+    aula_final: int | None = None,
+):
     nome_limpo = _normalizar_nome_catalogo(nome)
     if not nome_limpo:
         raise ValueError("Nome da turma é obrigatório.")
     turno_limpo = str(turno or "").strip().upper()
+    inicio_padrao, fim_padrao = _janela_aulas_padrao_por_turno(turno_limpo)
+    aula_inicial_valor = int(aula_inicial or 0) if aula_inicial is not None else inicio_padrao
+    aula_final_valor = int(aula_final or 0) if aula_final is not None else fim_padrao
+    if aula_inicial_valor <= 0 or aula_final_valor < aula_inicial_valor:
+        raise ValueError("Janela de aulas da turma é inválida.")
     quantidade_estudantes_valor = int(quantidade_estudantes or 0)
     if quantidade_estudantes_valor < 0:
         raise ValueError("Quantidade de estudantes não pode ser negativa.")
@@ -6239,10 +6347,24 @@ def criar_turma(nome: str, turno: str = "", quantidade_estudantes: int = 0):
 
     cursor.execute(
         """
-        INSERT INTO turmas (nome, turno, quantidade_estudantes, ativo, criado_em)
-        VALUES (?, ?, ?, 1, datetime('now'))
+        INSERT INTO turmas (
+            nome,
+            turno,
+            aula_inicial,
+            aula_final,
+            quantidade_estudantes,
+            ativo,
+            criado_em
+        )
+        VALUES (?, ?, ?, ?, ?, 1, datetime('now'))
     """,
-        (nome_limpo, turno_limpo, quantidade_estudantes_valor),
+        (
+            nome_limpo,
+            turno_limpo,
+            aula_inicial_valor,
+            aula_final_valor,
+            quantidade_estudantes_valor,
+        ),
     )
 
     turma_id = cursor.lastrowid
@@ -6251,8 +6373,19 @@ def criar_turma(nome: str, turno: str = "", quantidade_estudantes: int = 0):
     return turma_id
 
 
-def atualizar_turma_dados(turma_id: int, turno: str, quantidade_estudantes: int):
+def atualizar_turma_dados(
+    turma_id: int,
+    turno: str,
+    quantidade_estudantes: int,
+    aula_inicial: int | None = None,
+    aula_final: int | None = None,
+):
     turno_limpo = str(turno or "").strip().upper()
+    inicio_padrao, fim_padrao = _janela_aulas_padrao_por_turno(turno_limpo)
+    aula_inicial_valor = int(aula_inicial or 0) if aula_inicial is not None else inicio_padrao
+    aula_final_valor = int(aula_final or 0) if aula_final is not None else fim_padrao
+    if aula_inicial_valor <= 0 or aula_final_valor < aula_inicial_valor:
+        raise ValueError("Janela de aulas da turma é inválida.")
     quantidade_estudantes_valor = int(quantidade_estudantes or 0)
     if quantidade_estudantes_valor < 0:
         raise ValueError("Quantidade de estudantes não pode ser negativa.")
@@ -6263,10 +6396,16 @@ def atualizar_turma_dados(turma_id: int, turno: str, quantidade_estudantes: int)
     cursor.execute(
         """
         UPDATE turmas
-        SET turno = ?, quantidade_estudantes = ?
+        SET turno = ?, aula_inicial = ?, aula_final = ?, quantidade_estudantes = ?
         WHERE id = ?
     """,
-        (turno_limpo, quantidade_estudantes_valor, turma_id),
+        (
+            turno_limpo,
+            aula_inicial_valor,
+            aula_final_valor,
+            quantidade_estudantes_valor,
+            turma_id,
+        ),
     )
 
     alterado = cursor.rowcount > 0
@@ -6294,6 +6433,167 @@ def atualizar_status_turma(turma_id: int, ativo: bool):
     conn.commit()
     conn.close()
     return alterado
+
+
+def _mapear_configuracao_aula(row) -> dict:
+    item = dict(row)
+    aula_numero = item.get("aula_numero")
+    return {
+        "id": int(item["id"]),
+        "ordem_visual": int(item.get("ordem_visual") or 0),
+        "tipo": str(item.get("tipo") or TIPO_CONFIGURACAO_AULA).strip().upper(),
+        "aula_numero": int(aula_numero) if aula_numero not in (None, "") else None,
+        "nome": str(item.get("nome") or "").strip(),
+        "horario_inicio": str(item.get("horario_inicio") or "").strip(),
+        "horario_fim": str(item.get("horario_fim") or "").strip(),
+        "ativo": bool(int(item.get("ativo", 1) or 0)),
+        "criado_em": str(item.get("criado_em") or "").strip(),
+        "atualizado_em": str(item.get("atualizado_em") or "").strip(),
+    }
+
+
+def listar_configuracoes_aulas(incluir_inativas: bool = False):
+    conn = get_connection()
+    cursor = conn.cursor()
+
+    query = """
+        SELECT
+            id,
+            ordem_visual,
+            tipo,
+            aula_numero,
+            nome,
+            horario_inicio,
+            horario_fim,
+            ativo,
+            criado_em,
+            atualizado_em
+        FROM configuracao_aulas
+    """
+    params = []
+    if not incluir_inativas:
+        query += " WHERE ativo = 1"
+    query += " ORDER BY ordem_visual ASC, id ASC"
+
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    return [_mapear_configuracao_aula(row) for row in rows]
+
+
+def buscar_configuracao_aula_por_id(configuracao_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT
+            id,
+            ordem_visual,
+            tipo,
+            aula_numero,
+            nome,
+            horario_inicio,
+            horario_fim,
+            ativo,
+            criado_em,
+            atualizado_em
+        FROM configuracao_aulas
+        WHERE id = ?
+        """,
+        (int(configuracao_id),),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return _mapear_configuracao_aula(row) if row else None
+
+
+def criar_configuracao_aula(
+    *,
+    ordem_visual: int,
+    tipo: str,
+    aula_numero: int | None,
+    nome: str,
+    horario_inicio: str,
+    horario_fim: str,
+    ativo: bool = True,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO configuracao_aulas (
+            ordem_visual,
+            tipo,
+            aula_numero,
+            nome,
+            horario_inicio,
+            horario_fim,
+            ativo,
+            criado_em,
+            atualizado_em
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        """,
+        (
+            int(ordem_visual),
+            str(tipo).strip().upper(),
+            int(aula_numero) if aula_numero not in (None, "") else None,
+            str(nome or "").strip(),
+            str(horario_inicio or "").strip(),
+            str(horario_fim or "").strip(),
+            1 if ativo else 0,
+        ),
+    )
+    configuracao_id = int(cursor.lastrowid)
+    conn.commit()
+    conn.close()
+    return buscar_configuracao_aula_por_id(configuracao_id)
+
+
+def atualizar_configuracao_aula(
+    *,
+    configuracao_id: int,
+    ordem_visual: int,
+    tipo: str,
+    aula_numero: int | None,
+    nome: str,
+    horario_inicio: str,
+    horario_fim: str,
+    ativo: bool,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE configuracao_aulas
+        SET
+            ordem_visual = ?,
+            tipo = ?,
+            aula_numero = ?,
+            nome = ?,
+            horario_inicio = ?,
+            horario_fim = ?,
+            ativo = ?,
+            atualizado_em = datetime('now')
+        WHERE id = ?
+        """,
+        (
+            int(ordem_visual),
+            str(tipo).strip().upper(),
+            int(aula_numero) if aula_numero not in (None, "") else None,
+            str(nome or "").strip(),
+            str(horario_inicio or "").strip(),
+            str(horario_fim or "").strip(),
+            1 if ativo else 0,
+            int(configuracao_id),
+        ),
+    )
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    if not alterado:
+        return None
+    return buscar_configuracao_aula_por_id(configuracao_id)
 
 
 def _mapear_disciplina(row) -> dict:

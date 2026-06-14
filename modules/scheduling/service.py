@@ -3,6 +3,14 @@ from datetime import datetime
 from fastapi import HTTPException
 
 from modules.scheduling import repository
+from modules.scheduling.lesson_config import (
+    find_lesson_by_number,
+    list_global_lessons,
+    list_lessons_for_class,
+    normalize_schedule_entries,
+    resolve_class_lesson_window,
+    total_configured_lessons,
+)
 from modules.scheduling.models import SchedulingResource, SchedulingReservation
 
 
@@ -12,7 +20,13 @@ def _get_entity_value(entity, field, default=None):
     return getattr(entity, field, default)
 
 
-def build_scheduling_options(turnos_config: dict, turmas_ativas: list[dict]):
+def build_scheduling_options(
+    turnos_config: dict,
+    turmas_ativas: list[dict],
+    grade_entries: list[dict] | None = None,
+):
+    grade_items = normalize_schedule_entries(grade_entries or [])
+    global_lessons = list_global_lessons(grade_items, only_active=True)
     turnos = [
         {"id": turno_id, "nome": cfg["nome"], "aulas": cfg["aulas"]}
         for turno_id, cfg in turnos_config.items()
@@ -22,18 +36,33 @@ def build_scheduling_options(turnos_config: dict, turmas_ativas: list[dict]):
     for turma in turmas_ativas:
         turno_turma = str(turma.get("turno") or "").strip().upper()
         config_turno = turnos_config.get(turno_turma)
+        lessons_for_class = list_lessons_for_class(turma, grade_items)
+        start_lesson, end_lesson = resolve_class_lesson_window(turma)
+        total_lessons_class = len(lessons_for_class) if lessons_for_class else int(
+            (config_turno or {}).get("aulas") or 0
+        )
         turmas.append(
             {
                 "nome": turma["nome"],
                 "turno": turno_turma,
                 "turno_nome": config_turno["nome"] if config_turno else "Turno não configurado",
-                "aulas": config_turno["aulas"] if config_turno else 0,
-                "turno_valido": bool(config_turno),
+                "aulas": total_lessons_class,
+                "turno_valido": bool(config_turno) and (
+                    bool(lessons_for_class) if grade_items else True
+                ),
                 "quantidade_estudantes": int(turma.get("quantidade_estudantes") or 0),
+                "aula_inicial": int(start_lesson),
+                "aula_final": int(end_lesson),
+                "aulas_disponiveis": lessons_for_class,
             }
         )
 
-    return {"turnos": turnos, "turmas": turmas}
+    return {
+        "turnos": turnos,
+        "grade_aulas": grade_items,
+        "aulas_globais": global_lessons,
+        "turmas": turmas,
+    }
 
 
 def validate_scheduling_period(
@@ -70,6 +99,24 @@ def ensure_class_shift_is_configured(turma: dict, turnos_config: dict):
     return turno
 
 
+def ensure_class_lesson_window_is_configured(turma: dict, grade_entries: list[dict]):
+    lessons_for_class = list_lessons_for_class(turma, grade_entries)
+    if lessons_for_class:
+        return lessons_for_class
+
+    total_lessons = total_configured_lessons(grade_entries)
+    if total_lessons <= 0:
+        raise HTTPException(
+            409,
+            "Nenhuma aula global foi configurada. Cadastre os horarios no painel admin.",
+        )
+
+    raise HTTPException(
+        400,
+        "Turma sem janela de aulas configurada. Atualize o cadastro da turma no painel admin.",
+    )
+
+
 def ensure_slot_has_capacity(recurso: SchedulingResource | dict, reservas_ativas_faixa: int):
     capacidade_recurso = max(int(_get_entity_value(recurso, "quantidade_itens", 1) or 1), 1)
     if reservas_ativas_faixa >= capacidade_recurso:
@@ -89,6 +136,7 @@ def build_reservation_creation_payload(
     usuario: dict,
     recurso: dict,
     turnos_config: dict,
+    grade_entries: list[dict] | None,
     validar_data_agendamento,
     validar_turma,
     validar_tema_aula,
@@ -101,8 +149,15 @@ def build_reservation_creation_payload(
     turma = validar_turma(payload.turma)
     tema_aula = validar_tema_aula(payload.tema_aula)
     turno = ensure_class_shift_is_configured(turma, turnos_config)
-    aula = validar_aula(payload.aula, turno)
-    faixa_global = calcular_faixa_global(turno, aula)
+    if grade_entries:
+        ensure_class_lesson_window_is_configured(turma, grade_entries)
+        aula = validar_aula(payload.aula, turma)
+        faixa_global = int(aula)
+        lesson_entry = find_lesson_by_number(grade_entries, faixa_global)
+    else:
+        aula = validar_aula(payload.aula, turno)
+        faixa_global = calcular_faixa_global(turno, aula)
+        lesson_entry = None
     usuario_reserva = resolver_usuario_professor_selecionado(
         usuario,
         payload.professor_id,
@@ -116,6 +171,7 @@ def build_reservation_creation_payload(
         "turno": turno,
         "aula": aula,
         "faixa_global": faixa_global,
+        "aula_label": lesson_entry.get("label", "") if lesson_entry else "",
         "turma": turma["nome"],
         "tema_aula": tema_aula,
         "observacao": (payload.observacao or "").strip(),
@@ -156,12 +212,13 @@ def create_scheduling_reservation(
     payload,
     usuario: dict,
     turnos_config: dict,
-    validar_data_agendamento,
-    validar_turma,
-    validar_tema_aula,
-    validar_aula,
-    calcular_faixa_global,
-    resolver_usuario_professor_selecionado,
+    grade_entries: list[dict] | None = None,
+    validar_data_agendamento=None,
+    validar_turma=None,
+    validar_tema_aula=None,
+    validar_aula=None,
+    calcular_faixa_global=None,
+    resolver_usuario_professor_selecionado=None,
     buscar_recurso_por_id=None,
     contar_agendamentos_ativos_faixa=None,
     criar_agendamento=None,
@@ -171,6 +228,10 @@ def create_scheduling_reservation(
         contar_agendamentos_ativos_faixa or repository.count_active_reservations_in_slot
     )
     criar_agendamento_fn = criar_agendamento or repository.create_reservation
+    if validar_data_agendamento is None or validar_turma is None or validar_tema_aula is None:
+        raise ValueError("As validacoes obrigatorias do agendamento nao foram informadas.")
+    if validar_aula is None or resolver_usuario_professor_selecionado is None:
+        raise ValueError("As dependencias obrigatorias do agendamento nao foram informadas.")
 
     recurso = buscar_recurso_por_id_fn(payload.recurso_id)
     dados_reserva = build_reservation_creation_payload(
@@ -178,11 +239,13 @@ def create_scheduling_reservation(
         usuario=usuario,
         recurso=recurso,
         turnos_config=turnos_config,
+        grade_entries=grade_entries,
         validar_data_agendamento=validar_data_agendamento,
         validar_turma=validar_turma,
         validar_tema_aula=validar_tema_aula,
         validar_aula=validar_aula,
-        calcular_faixa_global=calcular_faixa_global,
+        calcular_faixa_global=calcular_faixa_global
+        or (lambda _turno, aula: int(aula)),
         resolver_usuario_professor_selecionado=resolver_usuario_professor_selecionado,
     )
 
