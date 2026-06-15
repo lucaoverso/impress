@@ -480,13 +480,45 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     margin-top: 0;
 }
 
-.scheduler-upcoming-overview .scheduler-day-overview-header {
-    align-items: flex-start;
+.scheduler-upcoming-summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    min-height: 48px;
+    cursor: pointer;
+    list-style: none;
 }
 
-.scheduler-upcoming-overview .scheduler-day-overview-header > div {
+.scheduler-upcoming-summary::-webkit-details-marker {
+    display: none;
+}
+
+.scheduler-upcoming-summary:focus-visible {
+    border-radius: 8px;
+    outline: 3px solid var(--scheduler-focus-ring);
+    outline-offset: 4px;
+}
+
+.scheduler-upcoming-summary-copy {
     display: grid;
     gap: 3px;
+}
+
+.scheduler-upcoming-summary-copy strong {
+    font-size: 17px;
+    line-height: 1.3;
+}
+
+.scheduler-upcoming-summary-copy small {
+    color: var(--scheduler-muted);
+    font-size: 13px;
+}
+
+.scheduler-upcoming-summary-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .scheduler-upcoming-count {
@@ -499,11 +531,28 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     font-weight: 800;
 }
 
+.scheduler-upcoming-chevron {
+    width: 10px;
+    height: 10px;
+    border-right: 2px solid var(--scheduler-primary-strong);
+    border-bottom: 2px solid var(--scheduler-primary-strong);
+    transform: rotate(45deg);
+    transition: transform 180ms ease-out;
+}
+
+.scheduler-upcoming-overview[open] .scheduler-upcoming-chevron {
+    transform: rotate(225deg);
+}
+
 .scheduler-upcoming-list,
 .scheduler-upcoming-date,
 .scheduler-upcoming-lessons {
     display: grid;
     gap: 10px;
+}
+
+.scheduler-upcoming-list {
+    padding-top: 14px;
 }
 
 .scheduler-upcoming-date {
@@ -520,6 +569,28 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     font-size: 15px;
     line-height: 1.35;
     color: var(--scheduler-text);
+}
+
+.scheduler-day-overview-period,
+.scheduler-day-overview-period-lessons {
+    display: grid;
+    gap: 8px;
+}
+
+.scheduler-day-overview-period + .scheduler-day-overview-period {
+    margin-top: 8px;
+    padding-top: 14px;
+    border-top: 1px solid var(--scheduler-border);
+}
+
+.scheduler-day-overview-period-title {
+    width: fit-content;
+    border-radius: 999px;
+    background: var(--scheduler-primary-soft);
+    padding: 5px 9px;
+    color: var(--scheduler-primary-strong);
+    font-size: 12px;
+    line-height: 1.2;
 }
 
 .scheduler-day-overview-rows {
@@ -1094,13 +1165,13 @@ html[data-scheduler-current-step] .scheduler-flow-page {
         font-size: 16px;
     }
 
-    .scheduler-upcoming-overview .scheduler-day-overview-header {
+    .scheduler-upcoming-summary {
         display: grid;
         gap: 8px;
     }
 
-    .scheduler-upcoming-count {
-        width: fit-content;
+    .scheduler-upcoming-summary-meta {
+        justify-content: space-between;
     }
 
     .scheduler-day-overview-row {

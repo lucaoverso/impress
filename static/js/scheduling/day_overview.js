@@ -71,6 +71,58 @@ function criarLinhaProfessorVisaoDia(grupoProfessor) {
     return linha;
 }
 
+function agruparReservasPorPeriodoVisao(reservas = []) {
+    const periodos = new Map([
+        ["MATUTINO", []],
+        ["VESPERTINO", []]
+    ]);
+    reservas.forEach((reserva) => {
+        const periodo = periodoAulaPorFaixa(faixaGlobalReserva(reserva), reserva.turno);
+        if (periodos.has(periodo)) {
+            periodos.get(periodo).push(reserva);
+        }
+    });
+    return Array.from(periodos.entries()).filter(([, itens]) => itens.length > 0);
+}
+
+function criarBlocoAulasPorPeriodo(reservas = []) {
+    const fragmento = document.createDocumentFragment();
+
+    agruparReservasPorPeriodoVisao(reservas).forEach(([periodo, reservasPeriodo]) => {
+        const blocoPeriodo = document.createElement("section");
+        blocoPeriodo.className = "scheduler-day-overview-period";
+        blocoPeriodo.dataset.period = periodo.toLowerCase();
+
+        const tituloPeriodo = document.createElement("strong");
+        tituloPeriodo.className = "scheduler-day-overview-period-title";
+        tituloPeriodo.innerText = nomePeriodoAgendamento(periodo);
+        blocoPeriodo.appendChild(tituloPeriodo);
+
+        const aulasPeriodo = document.createElement("div");
+        aulasPeriodo.className = "scheduler-day-overview-period-lessons";
+        agruparReservasVisaoDia(reservasPeriodo).forEach((grupoAula) => {
+            const grupo = document.createElement("section");
+            grupo.className = "scheduler-day-overview-shift";
+
+            const titulo = document.createElement("h4");
+            titulo.innerText = aulaLabel(grupoAula.aulaNumero);
+            grupo.appendChild(titulo);
+
+            const lista = document.createElement("div");
+            lista.className = "scheduler-day-overview-rows";
+            grupoAula.professores.forEach((professor) => {
+                lista.appendChild(criarLinhaProfessorVisaoDia(professor));
+            });
+            grupo.appendChild(lista);
+            aulasPeriodo.appendChild(grupo);
+        });
+
+        blocoPeriodo.appendChild(aulasPeriodo);
+        fragmento.appendChild(blocoPeriodo);
+    });
+    return fragmento;
+}
+
 function renderVisaoGeralAgendamentosDia() {
     const container = el("schedulerDayOverviewList");
     const dataResumo = el("schedulerDayOverviewDate");
@@ -94,23 +146,7 @@ function renderVisaoGeralAgendamentosDia() {
         return;
     }
 
-    agruparReservasVisaoDia(reservasDia).forEach((grupoAula) => {
-        const grupo = document.createElement("section");
-        grupo.className = "scheduler-day-overview-shift";
-
-        const titulo = document.createElement("h4");
-        titulo.innerText = aulaLabel(grupoAula.aulaNumero);
-        grupo.appendChild(titulo);
-
-        const lista = document.createElement("div");
-        lista.className = "scheduler-day-overview-rows";
-        grupoAula.professores.forEach((professor) => {
-            lista.appendChild(criarLinhaProfessorVisaoDia(professor));
-        });
-
-        grupo.appendChild(lista);
-        container.appendChild(grupo);
-    });
+    container.appendChild(criarBlocoAulasPorPeriodo(reservasDia));
 }
 
 async function carregarReservasProximosDias() {
@@ -167,22 +203,7 @@ function criarGrupoProximaData(dataIso, reservasData) {
 
     const aulas = document.createElement("div");
     aulas.className = "scheduler-upcoming-lessons";
-    agruparReservasVisaoDia(reservasData).forEach((grupoAula) => {
-        const grupo = document.createElement("section");
-        grupo.className = "scheduler-day-overview-shift";
-
-        const titulo = document.createElement("h4");
-        titulo.innerText = aulaLabel(grupoAula.aulaNumero);
-        grupo.appendChild(titulo);
-
-        const lista = document.createElement("div");
-        lista.className = "scheduler-day-overview-rows";
-        grupoAula.professores.forEach((professor) => {
-            lista.appendChild(criarLinhaProfessorVisaoDia(professor));
-        });
-        grupo.appendChild(lista);
-        aulas.appendChild(grupo);
-    });
+    aulas.appendChild(criarBlocoAulasPorPeriodo(reservasData));
 
     grupoData.appendChild(aulas);
     return grupoData;

@@ -78,17 +78,19 @@
                         <div id="schedulerDayOverviewList" class="scheduler-day-overview-list" aria-live="polite"></div>
                     </section>
 
-                    <section class="scheduler-day-overview scheduler-upcoming-overview"
-                        aria-labelledby="schedulerUpcomingOverviewTitle">
-                        <header class="scheduler-day-overview-header">
-                            <div>
-                                <h3 id="schedulerUpcomingOverviewTitle">Agendamentos dos próximos dias</h3>
-                                <p>Próximos 30 dias a partir da data selecionada</p>
-                            </div>
-                            <span id="schedulerUpcomingOverviewCount" class="scheduler-upcoming-count"></span>
-                        </header>
+                    <details class="scheduler-day-overview scheduler-upcoming-overview">
+                        <summary class="scheduler-upcoming-summary">
+                            <span class="scheduler-upcoming-summary-copy">
+                                <strong id="schedulerUpcomingOverviewTitle">Agendamentos dos próximos dias</strong>
+                                <small>Próximos 30 dias a partir da data selecionada</small>
+                            </span>
+                            <span class="scheduler-upcoming-summary-meta">
+                                <span id="schedulerUpcomingOverviewCount" class="scheduler-upcoming-count"></span>
+                                <span class="scheduler-upcoming-chevron" aria-hidden="true"></span>
+                            </span>
+                        </summary>
                         <div id="schedulerUpcomingOverviewList" class="scheduler-upcoming-list" aria-live="polite"></div>
-                    </section>
+                    </details>
                 </article>
 
             <article id="schedulerLessonStage" class="scheduler-flow-step scheduler-lesson-stage" hidden>

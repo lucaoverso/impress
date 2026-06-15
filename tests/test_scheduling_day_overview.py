@@ -18,6 +18,8 @@ class SchedulingDayOverviewTest(unittest.TestCase):
         self.assertIn("carregarReservasProximosDias", script)
         self.assertIn("somarDiasDataLocal(dataBase, 30)", script)
         self.assertIn(".slice(0, 5)", script)
+        self.assertIn("agruparReservasPorPeriodoVisao", script)
+        self.assertIn("nomePeriodoAgendamento(periodo)", script)
 
     def test_template_carrega_renderer_antes_do_script_principal(self):
         template = (BASE_DIR / "templates" / "agendamento.html").read_text(encoding="utf-8")
@@ -26,6 +28,8 @@ class SchedulingDayOverviewTest(unittest.TestCase):
         main_index = template.index("js/agendamento.js")
         self.assertLess(overview_index, main_index)
         self.assertIn('id="schedulerUpcomingOverviewList"', template)
+        self.assertIn("<details", template)
+        self.assertIn('class="scheduler-upcoming-summary"', template)
 
     def test_troca_de_data_recarrega_proximos_agendamentos(self):
         script = (BASE_DIR / "static" / "js" / "agendamento.js").read_text(
