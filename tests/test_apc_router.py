@@ -179,12 +179,74 @@ class ApcRouterTest(unittest.TestCase):
             )
             self.assertTrue(Path(str(envio["arquivo_path"])).exists())
 
+            revisado = apc_router.revisar_envio_apc_api(
+                envio_id=int(envio["id"]),
+                payload=importlib.import_module(
+                    "modules.apc_review.schemas"
+                ).ApcReviewUpdateIn(
+                    status="AJUSTE_SOLICITADO",
+                    mensagem="Inclua a identificacao da turma na primeira pagina.",
+                ),
+                usuario=self._usuario_coord(),
+            )
+            self.assertEqual(revisado["review_status"], "AJUSTE_SOLICITADO")
+            self.assertEqual(
+                revisado["review_message"],
+                "Inclua a identificacao da turma na primeira pagina.",
+            )
+
             detalhe_professor = apc_router.obter_periodo_apc_api(
                 periodo_id=int(quinta["id"]),
                 usuario=self._usuario_professor(professor_id),
             )
             self.assertIsNotNone(detalhe_professor["envio"])
             self.assertEqual(detalhe_professor["envio"]["arquivo_nome_cliente"], "atividade.pdf")
+            self.assertEqual(
+                detalhe_professor["envio"]["review_status"],
+                "AJUSTE_SOLICITADO",
+            )
+            self.assertEqual(int(detalhe_professor["total_ajustes"]), 1)
+
+            novo_upload = UploadFile(
+                io.BytesIO(b"arquivo corrigido"),
+                filename="atividade-corrigida.pdf",
+                headers=Headers({"content-type": "application/pdf"}),
+            )
+            reenviado = apc_router.enviar_arquivo_apc_api(
+                periodo_id=int(quinta["id"]),
+                turma_id=turma_id,
+                disciplina_id=disciplina_id,
+                arquivo=novo_upload,
+                usuario=self._usuario_professor(professor_id),
+            )
+            self.assertEqual(reenviado["review_status"], "PENDENTE")
+            self.assertEqual(reenviado["review_message"], "")
+            self.assertIsNone(reenviado["reviewed_by_user_id"])
+
+            aprovado = apc_router.revisar_envio_apc_api(
+                envio_id=int(envio["id"]),
+                payload=importlib.import_module(
+                    "modules.apc_review.schemas"
+                ).ApcReviewUpdateIn(
+                    status="APROVADO",
+                    mensagem="Material conferido.",
+                ),
+                usuario=self._usuario_coord(),
+            )
+            self.assertEqual(aprovado["review_status"], "APROVADO")
+
+            with self.assertRaises(HTTPException) as review_ctx:
+                apc_router.revisar_envio_apc_api(
+                    envio_id=int(envio["id"]),
+                    payload=importlib.import_module(
+                        "modules.apc_review.schemas"
+                    ).ApcReviewUpdateIn(
+                        status="APROVADO",
+                        mensagem="",
+                    ),
+                    usuario=self._usuario_professor(professor_id),
+                )
+            self.assertEqual(int(review_ctx.exception.status_code), 403)
             self.assertEqual(int(detalhe_professor["total_aulas"]), 1)
 
             detalhe_gestao_atualizado = apc_router.obter_periodo_apc_api(

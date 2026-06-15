@@ -656,6 +656,11 @@ class ApcEnvioOut(BaseModel):
     arquivo_tamanho: int = 0
     enviado_em: str = ""
     atualizado_em: str = ""
+    review_status: str = "PENDENTE"
+    review_message: str = ""
+    reviewed_by_user_id: int | None = None
+    reviewed_by_name: str = ""
+    reviewed_at: str = ""
 
 
 class TurmaCreateIn(BaseModel):

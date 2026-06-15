@@ -148,6 +148,16 @@ function limparPreviewArquivoApc(mensagem = "Selecione um arquivo para visualiza
     if (el("btnApcImprimirArquivo")) {
         el("btnApcImprimirArquivo").hidden = true;
     }
+    if (el("apcReviewPanel")) {
+        el("apcReviewPanel").hidden = true;
+    }
+    if (el("formApcReview")) {
+        el("formApcReview").hidden = true;
+        el("formApcReview").reset();
+    }
+    if (el("apcReviewMessageState")) {
+        el("apcReviewMessageState").innerText = "";
+    }
 }
 
 function tipoPreviewArquivoApc(envio) {
@@ -665,9 +675,36 @@ function renderResumoCompactoApc(itens) {
 
 function criarStatusApc(texto, tipo = "pending") {
     const span = document.createElement("span");
-    span.className = `apc-status ${tipo === "ok" ? "is-ok" : tipo === "closed" ? "is-closed" : "is-pending"}`;
+    const classe = tipo === "ok"
+        ? "is-ok"
+        : tipo === "closed"
+            ? "is-closed"
+            : tipo === "adjustment"
+                ? "is-adjustment"
+                : "is-pending";
+    span.className = `apc-status ${classe}`;
     span.innerText = texto;
     return span;
+}
+
+function statusRevisaoEnvioApc(envio) {
+    const status = String(envio?.review_status || "PENDENTE").toUpperCase();
+    if (status === "APROVADO") {
+        return { status, texto: "Aprovado", tipo: "ok" };
+    }
+    if (status === "AJUSTE_SOLICITADO") {
+        return { status, texto: "Realizar ajuste", tipo: "adjustment" };
+    }
+    return { status: "PENDENTE", texto: "Aguardando analise", tipo: "pending" };
+}
+
+function criarOrientacaoRevisaoApc(envio) {
+    const mensagem = String(envio?.review_message || "").trim();
+    if (!mensagem) return null;
+    const orientacao = document.createElement("p");
+    orientacao.className = "apc-review-guidance";
+    orientacao.innerText = mensagem;
+    return orientacao;
 }
 
 function criarChipApc(texto) {
@@ -915,6 +952,9 @@ function agruparItensGestaoPorProfessor(itens) {
                 total_entregas: 0,
                 total_enviadas: 0,
                 total_pendentes: 0,
+                total_aprovadas: 0,
+                total_ajustes: 0,
+                total_aguardando_revisao: 0,
                 turmas: [],
                 disciplinas: [],
                 entregas: [],
@@ -924,6 +964,10 @@ function agruparItensGestaoPorProfessor(itens) {
         grupo.total_entregas += 1;
         grupo.total_enviadas += item.enviado ? 1 : 0;
         grupo.total_pendentes += item.enviado ? 0 : 1;
+        const reviewStatus = String(item.envio?.review_status || "PENDENTE");
+        grupo.total_aprovadas += reviewStatus === "APROVADO" ? 1 : 0;
+        grupo.total_ajustes += reviewStatus === "AJUSTE_SOLICITADO" ? 1 : 0;
+        grupo.total_aguardando_revisao += item.enviado && reviewStatus === "PENDENTE" ? 1 : 0;
         if (item.turma_nome && !grupo.turmas.includes(item.turma_nome)) {
             grupo.turmas.push(item.turma_nome);
         }
@@ -942,16 +986,34 @@ function statusResumoPeriodoApc(item, modoGestao = false) {
         return { texto: "Sem dados", tipo: "pending" };
     }
     if (modoGestao) {
+        if (Number(item.total_ajustes || 0) > 0) {
+            return { texto: "Ajustes solicitados", tipo: "adjustment" };
+        }
+        if (
+            Number(item.total_elegiveis || 0) > 0
+            && Number(item.total_aprovados || 0) === Number(item.total_elegiveis || 0)
+        ) {
+            return { texto: "Aprovado", tipo: "ok" };
+        }
         if (Number(item.total_elegiveis || 0) > 0 && Number(item.total_pendentes || 0) === 0) {
-            return { texto: "Concluido", tipo: "ok" };
+            return { texto: "Revisao pendente", tipo: "pending" };
         }
         if (item.prazo_expirado) {
             return { texto: "Prazo encerrado", tipo: "closed" };
         }
         return { texto: "Aguardando envios", tipo: "pending" };
     }
+    if (Number(item.total_ajustes || 0) > 0) {
+        return { texto: "Realizar ajuste", tipo: "adjustment" };
+    }
+    if (
+        Number(item.total_entregas || 0) > 0
+        && Number(item.total_aprovados || 0) === Number(item.total_entregas || 0)
+    ) {
+        return { texto: "Aprovado", tipo: "ok" };
+    }
     if (item.enviado) {
-        return { texto: "Enviado", tipo: "ok" };
+        return { texto: "Aguardando analise", tipo: "pending" };
     }
     if (item.prazo_expirado) {
         return { texto: "Prazo encerrado", tipo: "closed" };
@@ -1033,7 +1095,8 @@ function criarCardEnvioExistenteApc(periodo, item) {
 
     const topo = document.createElement("div");
     topo.className = "apc-envio-card-topo";
-    topo.appendChild(criarStatusApc("Arquivo enviado", "ok"));
+    const review = statusRevisaoEnvioApc(envio);
+    topo.appendChild(criarStatusApc(review.texto, review.tipo));
 
     const enviadoEm = document.createElement("p");
     enviadoEm.className = "apc-envio-meta";
@@ -1045,6 +1108,11 @@ function criarCardEnvioExistenteApc(periodo, item) {
     nome.className = "apc-envio-nome";
     nome.innerText = nomeArquivoPrincipalApc(envio);
     envioCard.appendChild(nome);
+
+    const guidance = criarOrientacaoRevisaoApc(envio);
+    if (guidance) {
+        envioCard.appendChild(guidance);
+    }
 
     const acoes = document.createElement("div");
     acoes.className = "apc-inline-actions apc-envio-actions";
@@ -1095,9 +1163,10 @@ function criarCardEntregaProfessorApc(periodo, item) {
         ? `${item.disciplina_nome}${item.turma_nome ? ` - ${item.turma_nome}` : ""}`
         : "Entrega geral";
     topo.innerHTML = `<div><h4>${titulo}</h4></div>`;
+    const review = statusRevisaoEnvioApc(item.envio);
     topo.appendChild(
         item.enviado
-            ? criarStatusApc("Enviado", "ok")
+            ? criarStatusApc(review.texto, review.tipo)
             : (periodo.prazo_expirado ? criarStatusApc("Prazo encerrado", "closed") : criarStatusApc("Pendente"))
     );
     card.appendChild(topo);
@@ -1458,10 +1527,8 @@ function renderSolicitacoesGestaoApc() {
             `${periodo.total_enviados || 0}/${periodo.total_elegiveis || 0} entregas enviadas`;
         copia.append(titulo, resumo);
         topo.appendChild(copia);
-        topo.appendChild(criarStatusApc(
-            Number(periodo.total_pendentes || 0) === 0 ? "Concluida" : "Pendente",
-            Number(periodo.total_pendentes || 0) === 0 ? "ok" : ""
-        ));
+        const status = statusResumoPeriodoApc(periodo, true);
+        topo.appendChild(criarStatusApc(status.texto, status.tipo));
         card.appendChild(topo);
 
         const meta = document.createElement("div");
@@ -1558,11 +1625,18 @@ function renderListaGestaoApc(detalhe) {
 
         const side = document.createElement("div");
         side.className = "apc-professor-group-side";
-        side.appendChild(
-            grupo.total_pendentes === 0
-                ? criarStatusApc("Concluido", "ok")
-                : criarStatusApc("Pendente")
-        );
+        if (grupo.total_ajustes > 0) {
+            side.appendChild(criarStatusApc("Realizar ajuste", "adjustment"));
+        } else if (
+            grupo.total_entregas > 0
+            && grupo.total_aprovadas === grupo.total_entregas
+        ) {
+            side.appendChild(criarStatusApc("Aprovado", "ok"));
+        } else if (grupo.total_pendentes === 0) {
+            side.appendChild(criarStatusApc("Aguardando analise"));
+        } else {
+            side.appendChild(criarStatusApc("Pendente"));
+        }
        
         summary.appendChild(side);
         details.appendChild(summary);
@@ -1590,7 +1664,12 @@ function renderListaGestaoApc(detalhe) {
                 ? `${item.disciplina_nome}${item.turma_nome ? ` - ${item.turma_nome}` : ""}`
                 : "Entrega geral";
             topo.innerHTML = `<div><h5>${titulo}</h5></div>`;
-            topo.appendChild(item.enviado ? criarStatusApc("Enviado", "ok") : criarStatusApc("Pendente"));
+            const review = statusRevisaoEnvioApc(item.envio);
+            topo.appendChild(
+                item.enviado
+                    ? criarStatusApc(review.texto, review.tipo)
+                    : criarStatusApc("Pendente")
+            );
             card.appendChild(topo);
 
 
@@ -1610,6 +1689,11 @@ function renderListaGestaoApc(detalhe) {
                 enviadoEm.className = "apc-envio-meta";
                 enviadoEm.innerText = `Enviado em ${formatarDataHoraApc(item.envio.enviado_em)}`;
                 card.appendChild(enviadoEm);
+
+                const guidance = criarOrientacaoRevisaoApc(item.envio);
+                if (guidance) {
+                    card.appendChild(guidance);
+                }
 
                 const acoes = document.createElement("div");
                 acoes.className = "apc-inline-actions";
@@ -1692,6 +1776,83 @@ function preencherMetaModalPreviewApc(envio) {
     }
 }
 
+function setMensagemReviewApc(texto, erro = false) {
+    const mensagem = el("apcReviewMessageState");
+    if (!mensagem) return;
+    mensagem.innerText = texto || "";
+    mensagem.classList.toggle("is-error", Boolean(texto) && erro);
+    mensagem.classList.toggle("is-success", Boolean(texto) && !erro);
+}
+
+function renderReviewPanelApc(envio) {
+    const panel = el("apcReviewPanel");
+    const summary = el("apcReviewSummary");
+    const form = el("formApcReview");
+    if (!panel || !summary || !form || !envio?.id) return;
+
+    const review = statusRevisaoEnvioApc(envio);
+    panel.hidden = false;
+    summary.innerHTML = "";
+    summary.appendChild(criarStatusApc(review.texto, review.tipo));
+
+    const guidance = criarOrientacaoRevisaoApc(envio);
+    if (guidance) {
+        summary.appendChild(guidance);
+    } else {
+        const empty = document.createElement("p");
+        empty.innerText = review.status === "PENDENTE"
+            ? "Este anexo ainda nao foi analisado pela coordenacao."
+            : "A coordenacao nao adicionou uma orientacao.";
+        summary.appendChild(empty);
+    }
+
+    if (envio.reviewed_at) {
+        const reviewedAt = document.createElement("small");
+        reviewedAt.innerText = [
+            `Revisado em ${formatarDataHoraApc(envio.reviewed_at)}`,
+            envio.reviewed_by_name || "",
+        ].filter(Boolean).join(" por ");
+        summary.appendChild(reviewedAt);
+    }
+
+    form.hidden = !modoGestaoAtivoApc();
+    if (modoGestaoAtivoApc()) {
+        el("apcReviewStatus").value = review.status;
+        el("apcReviewMessage").value = String(envio.review_message || "");
+    }
+    setMensagemReviewApc("");
+}
+
+async function salvarRevisaoApc(event) {
+    event.preventDefault();
+    if (!envioPreviewApc?.id || !modoGestaoAtivoApc()) return;
+
+    const submit = event.currentTarget.querySelector("button[type='submit']");
+    if (submit) submit.disabled = true;
+    setMensagemReviewApc("Salvando revisao...");
+    try {
+        const updated = await fetchJson(
+            `/apc/envios/${envioPreviewApc.id}/revisao`,
+            {
+                method: "PUT",
+                headers: headersJsonApc,
+                body: JSON.stringify({
+                    status: el("apcReviewStatus").value,
+                    mensagem: el("apcReviewMessage").value.trim(),
+                }),
+            }
+        );
+        envioPreviewApc = updated;
+        renderReviewPanelApc(updated);
+        setMensagemReviewApc("Revisao salva com sucesso.");
+        await carregarCalendarioApc();
+    } catch (err) {
+        setMensagemReviewApc(err.message || "Nao foi possivel salvar a revisao.", true);
+    } finally {
+        if (submit) submit.disabled = false;
+    }
+}
+
 async function carregarPreviewArquivoApc(envio) {
     if (!envio?.id) {
         limparPreviewArquivoApc();
@@ -1705,6 +1866,7 @@ async function carregarPreviewArquivoApc(envio) {
     );
     envioPreviewApc = envio;
     preencherMetaModalPreviewApc(envio);
+    renderReviewPanelApc(envio);
     el("apcArquivoPreviewState").hidden = false;
     el("apcArquivoPreviewState").innerHTML = '<div class="booking-empty">Carregando arquivo...</div>';
     el("apcArquivoPreviewFrame").hidden = true;
@@ -1857,9 +2019,15 @@ function renderCalendarioApc() {
             btnDia.classList.add("has-apc");
             const todosConcluidos = modoGestaoAtivoApc()
                 ? periodos.every(
-                    (item) => Number(item.total_elegiveis || 0) > 0 && Number(item.total_pendentes || 0) === 0
+                    (item) => (
+                        Number(item.total_elegiveis || 0) > 0
+                        && Number(item.total_aprovados || 0) === Number(item.total_elegiveis || 0)
+                    )
                 )
-                : periodos.every((item) => Boolean(item.enviado));
+                : periodos.every((item) => (
+                    Number(item.total_entregas || 0) > 0
+                    && Number(item.total_aprovados || 0) === Number(item.total_entregas || 0)
+                ));
             btnDia.classList.add(todosConcluidos ? "is-ok" : "is-pending");
         }
 
@@ -2070,6 +2238,7 @@ function registrarEventosApc() {
             void abrirPrintWizardApc(envioPreviewApc);
         }
     });
+    el("formApcReview")?.addEventListener("submit", salvarRevisaoApc);
     el("btnFecharPrintWizardApc")?.addEventListener("click", fecharPrintWizardApc);
     document.querySelectorAll("[data-apc-print-close='true']").forEach((elemento) => {
         elemento.addEventListener("click", fecharPrintWizardApc);

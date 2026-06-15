@@ -6097,6 +6097,15 @@ def _mapear_apc_envio(row) -> dict:
         "atualizado_em": str(row["atualizado_em"] or "").strip(),
         "professor_nome": str(row["professor_nome"] or "").strip(),
         "professor_email": str(row["professor_email"] or "").strip(),
+        "review_status": str(row["review_status"] or "PENDENTE").strip().upper(),
+        "review_message": str(row["review_message"] or "").strip(),
+        "reviewed_by_user_id": (
+            int(row["reviewed_by_user_id"])
+            if row["reviewed_by_user_id"] is not None
+            else None
+        ),
+        "reviewed_by_name": str(row["reviewed_by_name"] or "").strip(),
+        "reviewed_at": str(row["reviewed_at"] or "").strip(),
     }
 
 
@@ -6120,12 +6129,18 @@ def _consultar_apc_envios(cursor, *, filtros_sql=None, params=None):
             ae.arquivo_tipo,
             ae.enviado_em,
             ae.atualizado_em,
+            ae.review_status,
+            ae.review_message,
+            ae.reviewed_by_user_id,
+            ae.reviewed_at,
             COALESCE(u.nome, '') AS professor_nome,
             COALESCE(u.email, '') AS professor_email,
+            COALESCE(reviewer.nome, '') AS reviewed_by_name,
             COALESCE(t.nome, '') AS turma_nome,
             COALESCE(d.nome, '') AS disciplina_nome
         FROM apc_envios ae
         INNER JOIN usuarios u ON u.id = ae.professor_usuario_id
+        LEFT JOIN usuarios reviewer ON reviewer.id = ae.reviewed_by_user_id
         LEFT JOIN turmas t ON t.id = ae.turma_id
         LEFT JOIN disciplinas d ON d.id = ae.disciplina_id
         {clausula_where}
@@ -6277,6 +6292,10 @@ def atualizar_apc_envio(
             arquivo_path = ?,
             arquivo_tamanho = ?,
             arquivo_tipo = ?,
+            review_status = 'PENDENTE',
+            review_message = '',
+            reviewed_by_user_id = NULL,
+            reviewed_at = NULL,
             enviado_em = datetime('now'),
             atualizado_em = datetime('now')
         WHERE id = ?

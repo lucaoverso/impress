@@ -1265,6 +1265,51 @@ body.apc-print-wizard-open {
     overflow-wrap: anywhere;
 }
 
+.apc-review-panel {
+    display: grid;
+    gap: 14px;
+    padding: 14px;
+    border: 1px solid var(--apc-border-soft);
+    border-radius: 14px;
+    background: var(--apc-surface-muted);
+}
+
+.apc-review-summary,
+.apc-review-form {
+    display: grid;
+    gap: 9px;
+}
+
+.apc-review-summary p,
+.apc-review-summary small {
+    margin: 0;
+}
+
+.apc-review-summary p {
+    color: var(--text-main);
+    line-height: 1.45;
+}
+
+.apc-review-summary small {
+    color: var(--text-muted);
+}
+
+.apc-review-form label {
+    color: var(--text-main);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.apc-review-form select,
+.apc-review-form textarea {
+    width: 100%;
+}
+
+.apc-review-form textarea {
+    min-height: 110px;
+    resize: vertical;
+}
+
 .apc-file-preview-content {
     min-height: 0;
     overflow: hidden;
@@ -1687,6 +1732,21 @@ body.apc-print-wizard-open {
 .apc-status.is-closed {
     background: rgba(185, 28, 28, 0.1);
     color: #b91c1c;
+}
+
+.apc-status.is-adjustment {
+    background: #ffedd5;
+    color: #9a3412;
+}
+
+.apc-review-guidance {
+    margin: 0;
+    padding: 11px 12px;
+    border: 1px solid #fed7aa;
+    border-radius: 12px;
+    background: #fff7ed;
+    color: #7c2d12;
+    line-height: 1.45;
 }
 
 .apc-chip-row {

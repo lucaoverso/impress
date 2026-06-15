@@ -25,6 +25,8 @@ from db.docencia import listar_atribuicoes_docentes
 from db.horario_escolar import listar_anos_letivos_horario_escolar, listar_horarios_escolares
 from db.usuarios import listar_professores_agendamento
 from models import ApcEnvioOut, ApcPeriodoIn, ApcPeriodoOut, ApcPeriodoUpdateIn
+from modules.apc_review.schemas import ApcReviewUpdateIn
+from modules.apc_review.service import update_submission_review
 from modules.audit.models import AuditCategory, AuditOutcome
 from modules.audit.service import record_event
 from modules.printing.attachment_printing import imprimir_anexo_pdf
@@ -378,6 +380,11 @@ def _montar_resumo_calendario_para_usuario(periodo: dict, usuario: dict, visao: 
             "total_elegiveis": painel["total_elegiveis"],
             "total_enviados": painel["total_enviados"],
             "total_pendentes": painel["total_pendentes"],
+            "total_aprovados": int(painel.get("total_aprovados") or 0),
+            "total_ajustes": int(painel.get("total_ajustes") or 0),
+            "total_aguardando_revisao": int(
+                painel.get("total_aguardando_revisao") or 0
+            ),
             "enviado": False,
             "total_aulas": 0,
             "total_entregas": painel["total_elegiveis"],
@@ -400,6 +407,11 @@ def _montar_resumo_calendario_para_usuario(periodo: dict, usuario: dict, visao: 
         "total_elegiveis": int(painel_professor.get("total_entregas") or 0),
         "total_enviados": int(painel_professor.get("total_enviadas") or 0),
         "total_pendentes": int(painel_professor.get("total_pendentes") or 0),
+        "total_aprovados": int(painel_professor.get("total_aprovados") or 0),
+        "total_ajustes": int(painel_professor.get("total_ajustes") or 0),
+        "total_aguardando_revisao": int(
+            painel_professor.get("total_aguardando_revisao") or 0
+        ),
         "enviado": int(painel_professor.get("total_pendentes") or 0) == 0,
         "total_aulas": int(painel_professor["total_aulas"]),
         "total_entregas": int(painel_professor.get("total_entregas") or 0),
@@ -434,6 +446,11 @@ def _montar_resumo_gestao_apc(periodo: dict) -> dict:
         "total_elegiveis": painel["total_elegiveis"],
         "total_enviados": painel["total_enviados"],
         "total_pendentes": painel["total_pendentes"],
+        "total_aprovados": int(painel.get("total_aprovados") or 0),
+        "total_ajustes": int(painel.get("total_ajustes") or 0),
+        "total_aguardando_revisao": int(
+            painel.get("total_aguardando_revisao") or 0
+        ),
         "professores": valores_unicos("professor_nome"),
         "disciplinas": valores_unicos("disciplina_nome"),
         "turmas": valores_unicos("turma_nome"),
@@ -823,6 +840,38 @@ def enviar_arquivo_apc_api(
             "file_name": nome_cliente,
             "file_size": len(conteudo),
             "replaced_existing": bool(envio_existente),
+        },
+    )
+    return envio
+
+
+@router.put("/apc/envios/{envio_id}/revisao", response_model=ApcEnvioOut)
+def revisar_envio_apc_api(
+    envio_id: int,
+    payload: ApcReviewUpdateIn,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestao_apc(usuario)
+    envio = update_submission_review(
+        submission_id=envio_id,
+        status=payload.status,
+        message=payload.mensagem,
+        reviewer=usuario,
+    )
+    record_event(
+        category=AuditCategory.ATTACHMENTS,
+        action="attachment.reviewed",
+        outcome=AuditOutcome.SUCCESS,
+        actor=usuario,
+        description=(
+            f"Anexo de {envio.get('professor_nome') or 'professor'} revisado: "
+            f"{envio.get('review_status')}."
+        ),
+        entity_type="apc_submission",
+        entity_id=envio_id,
+        metadata={
+            "review_status": envio.get("review_status"),
+            "target_user_id": envio.get("professor_id"),
         },
     )
     return envio

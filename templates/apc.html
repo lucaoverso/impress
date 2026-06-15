@@ -272,6 +272,23 @@
                     <p class="apc-section-eyebrow">Visualizacao do anexo</p>
                     <h2 id="apcArquivoPreviewTitulo">Arquivo enviado</h2>
                 </div>
+                <section id="apcReviewPanel" class="apc-review-panel" hidden>
+                    <div id="apcReviewSummary" class="apc-review-summary"></div>
+                    <form id="formApcReview" class="apc-review-form" hidden>
+                        <label for="apcReviewStatus">Situacao da revisao</label>
+                        <select id="apcReviewStatus" required>
+                            <option value="PENDENTE">Aguardando analise</option>
+                            <option value="APROVADO">Aprovado</option>
+                            <option value="AJUSTE_SOLICITADO">Realizar ajuste</option>
+                        </select>
+                        <label for="apcReviewMessage">Orientacao ao professor (opcional)</label>
+                        <textarea id="apcReviewMessage" rows="5" maxlength="1200"
+                            placeholder="Explique o que deve ser mantido ou ajustado."></textarea>
+                        <button class="btn-destaque" type="submit">Salvar revisao</button>
+                    </form>
+                    <p id="apcReviewMessageState" class="apc-toolbar-message"
+                        role="status" aria-live="polite"></p>
+                </section>
                 <div class="apc-inline-actions">
                     <button id="btnApcImprimirArquivo" class="btn-destaque" type="button" hidden>Imprimir</button>
                     <button id="btnApcBaixarArquivo" type="button" hidden>Baixar arquivo</button>

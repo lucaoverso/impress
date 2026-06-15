@@ -225,6 +225,11 @@ def enriquecer_envio_apc(item: dict) -> dict:
         "professor_email": str(envio.get("professor_email") or "").strip(),
         "enviado_em": str(envio.get("enviado_em") or "").strip(),
         "atualizado_em": str(envio.get("atualizado_em") or "").strip(),
+        "review_status": str(envio.get("review_status") or "PENDENTE").strip().upper(),
+        "review_message": str(envio.get("review_message") or "").strip(),
+        "reviewed_by_user_id": envio.get("reviewed_by_user_id"),
+        "reviewed_by_name": str(envio.get("reviewed_by_name") or "").strip(),
+        "reviewed_at": str(envio.get("reviewed_at") or "").strip(),
     }
 
 
@@ -394,6 +399,22 @@ def montar_painel_periodo_apc(periodo: dict, elegiveis: list[dict], envios: list
         "total_elegiveis": len(itens),
         "total_enviados": sum(1 for item in itens if item["enviado"]),
         "total_pendentes": sum(1 for item in itens if not item["enviado"]),
+        "total_aprovados": sum(
+            1
+            for item in itens
+            if (item.get("envio") or {}).get("review_status") == "APROVADO"
+        ),
+        "total_ajustes": sum(
+            1
+            for item in itens
+            if (item.get("envio") or {}).get("review_status") == "AJUSTE_SOLICITADO"
+        ),
+        "total_aguardando_revisao": sum(
+            1
+            for item in itens
+            if item["enviado"]
+            and (item.get("envio") or {}).get("review_status") == "PENDENTE"
+        ),
         "itens": itens,
     }
 
@@ -471,6 +492,22 @@ def montar_painel_professor_apc(
         "total_entregas": len(itens),
         "total_enviadas": sum(1 for item in itens if item["enviado"]),
         "total_pendentes": sum(1 for item in itens if not item["enviado"]),
+        "total_aprovados": sum(
+            1
+            for item in itens
+            if (item.get("envio") or {}).get("review_status") == "APROVADO"
+        ),
+        "total_ajustes": sum(
+            1
+            for item in itens
+            if (item.get("envio") or {}).get("review_status") == "AJUSTE_SOLICITADO"
+        ),
+        "total_aguardando_revisao": sum(
+            1
+            for item in itens
+            if item["enviado"]
+            and (item.get("envio") or {}).get("review_status") == "PENDENTE"
+        ),
         "envio": itens[0]["envio"] if len(itens) == 1 else None,
         "itens": itens,
     }
