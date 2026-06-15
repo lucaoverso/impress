@@ -322,6 +322,5 @@ class SchemaMigrationsTest(unittest.TestCase):
             [("MATUTINO", 1, 5), ("VESPERTINO", 7, 9)],
         )
 
-
 if __name__ == "__main__":
     unittest.main()

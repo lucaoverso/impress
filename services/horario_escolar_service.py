@@ -190,13 +190,15 @@ def enriquecer_horario_escolar(
 ) -> dict:
     turno = str((item or {}).get("turno") or "").strip().upper()
     aula_numero = int((item or {}).get("aula_numero") or 0)
+    faixa_armazenada = int((item or {}).get("faixa_global") or 0)
     configuracoes = configuracoes_aulas or []
     aula_config = find_lesson_by_number(configuracoes, aula_numero)
-    faixa_global = (
-        aula_numero
-        if aula_config
-        else (faixa_global_por_turno_e_aula(turno, aula_numero) if aula_numero > 0 else 0)
-    )
+    if aula_config:
+        faixa_global = aula_numero
+    elif faixa_armazenada > 0:
+        faixa_global = faixa_armazenada
+    else:
+        faixa_global = faixa_global_por_turno_e_aula(turno, aula_numero) if aula_numero > 0 else 0
     return {
         **dict(item or {}),
         "dia_semana": normalizar_dia_semana((item or {}).get("dia_semana")),

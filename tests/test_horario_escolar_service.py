@@ -34,6 +34,25 @@ class HorarioEscolarServiceTest(unittest.TestCase):
         self.assertEqual(item["aula_label"], "1a aula (faixa 6)")
         self.assertEqual(item["turno_nome"], "Vespertino E.M.")
 
+    def test_enriquecer_preserva_faixa_global_armazenada_sem_grade(self):
+        item = service.enriquecer_horario_escolar(
+            {
+                "id": 11,
+                "ano_letivo": 2031,
+                "turma_id": 4,
+                "disciplina_id": 9,
+                "professor_id": 6,
+                "dia_semana": "sexta",
+                "aula_numero": 6,
+                "faixa_global": 6,
+                "turno": "VESPERTINO",
+            },
+            configuracoes_aulas=[],
+        )
+
+        self.assertEqual(item["aula_numero"], 6)
+        self.assertEqual(item["faixa_global"], 6)
+
 
 if __name__ == "__main__":
     unittest.main()

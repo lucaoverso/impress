@@ -1444,12 +1444,7 @@ function obterEstadoWizardAgendamento() {
     const aulasValidas = aulasSelecionadas.every((aula) => {
         const turmaAula = obterTurmaPorNome(aula.turma_nome || aula.turmaNome);
         const aulaNumero = Number(aula.aula_numero || aula.aulaNumero || 0);
-        return Boolean(
-            turmaAula
-            && turmaAula.turno_valido
-            && aulaNumero > 0
-            && aulaNumero <= Number(turmaAula.aulas || 0)
-        );
+        return turmaPermiteAula(turmaAula, aulaNumero);
     });
 
     const etapaSelecaoConcluida = Boolean(possuiSelecao && data && aulasValidas);
@@ -1685,6 +1680,26 @@ function definirEstadoEnvioAgendamento(ativo) {
 function obterTurmaPorNome(nomeTurma) {
     const nome = String(nomeTurma || "").trim();
     return turmas.find((turma) => turma.nome === nome) || null;
+}
+
+function turmaPermiteAula(turma, aulaNumero) {
+    const aula = Number(aulaNumero || 0);
+    if (!turma || !turma.turno_valido || !Number.isInteger(aula) || aula <= 0) {
+        return false;
+    }
+
+    const aulasPermitidas = new Set(
+        (Array.isArray(turma.aulas_disponiveis) ? turma.aulas_disponiveis : [])
+            .map((item) => Number(item?.aula_numero || 0))
+            .filter((numero) => numero > 0)
+    );
+    if (aulasPermitidas.size > 0) {
+        return aulasPermitidas.has(aula);
+    }
+
+    const inicio = Number(turma.aula_inicial || 0);
+    const fim = Number(turma.aula_final || 0);
+    return inicio > 0 && fim >= inicio && aula >= inicio && aula <= fim;
 }
 
 function usuarioEhAdmin() {
@@ -3819,12 +3834,7 @@ async function agendarRecurso() {
             return;
         }
 
-        const aulasPermitidas = new Set(
-            (Array.isArray(turma.aulas_disponiveis) ? turma.aulas_disponiveis : [])
-                .map((item) => Number(item?.aula_numero || 0))
-                .filter((numero) => numero > 0)
-        );
-        if (!Number.isInteger(aulaNumero) || aulaNumero < 1 || !aulasPermitidas.has(aulaNumero)) {
+        if (!turmaPermiteAula(turma, aulaNumero)) {
             setMensagem(`A aula ${obterTituloAulaAgendamento(aula)} está fora da janela configurada para a turma.`, "erro");
             return;
         }
