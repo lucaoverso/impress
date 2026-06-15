@@ -1706,10 +1706,13 @@ function usuarioEhAdmin() {
 
 function atualizarVisibilidadeProfessorReserva() {
     const grupo = el("grupoProfessorAgendaFiltro");
-    if (!grupo) {
+    const select = el("professorAgendaFiltro");
+    if (!grupo || !select) {
         return;
     }
-    grupo.hidden = true;
+    const exibirParaAdmin = usuarioEhAdmin();
+    grupo.hidden = !exibirParaAdmin;
+    select.required = exibirParaAdmin;
 }
 
 function faixaGlobalReserva(reserva) {
@@ -2041,13 +2044,15 @@ async function carregarProfessoresAgendamentoAdmin() {
 
     if (!usuarioEhAdmin()) {
         grupo.hidden = true;
+        select.required = false;
         professoresAgendamento = [];
         select.innerHTML = "";
         sincronizarWizardAgendamento();
         return;
     }
 
-    grupo.hidden = true;
+    grupo.hidden = false;
+    select.required = true;
 
     const res = await fetchComAuth("/agendamento/professores", { headers });
     if (!res.ok) {
@@ -2072,6 +2077,7 @@ async function carregarProfessoresAgendamentoAdmin() {
         select.appendChild(option);
     });
     select.disabled = !Array.isArray(professoresAgendamento) || professoresAgendamento.length === 0;
+    grupo.hidden = false;
     sincronizarWizardAgendamento();
 }
 

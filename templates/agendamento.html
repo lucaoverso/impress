@@ -119,8 +119,10 @@
                         </div>
                         <div id="grupoProfessorAgendaFiltro" class="scheduler-day-filters" hidden>
                             <div class="scheduler-day-professor-filter">
-                                <label for="professorAgendaFiltro">Professor</label>
-                                <select id="professorAgendaFiltro"></select>
+                                <label for="professorAgendaFiltro">Professor solicitante</label>
+                                <select id="professorAgendaFiltro" name="professor_solicitante" required
+                                    aria-describedby="professorAgendaAjuda"></select>
+                                <small id="professorAgendaAjuda">Selecione o professor para carregar a grade de aulas.</small>
                             </div>
                         </div>
                     </header>

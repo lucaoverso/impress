@@ -667,6 +667,29 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     margin-bottom: 0;
 }
 
+.scheduler-day-professor-filter {
+    display: grid;
+    gap: 6px;
+}
+
+.scheduler-day-professor-filter label {
+    color: var(--scheduler-text);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.scheduler-day-professor-filter select {
+    min-width: 240px;
+    min-height: 44px;
+}
+
+.scheduler-day-professor-filter small {
+    max-width: 32ch;
+    color: var(--scheduler-muted);
+    font-size: 11px;
+    line-height: 1.35;
+}
+
 .scheduler-day-agenda-list {
     gap: 18px;
 }
@@ -1057,6 +1080,11 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     .scheduler-flow-page .scheduler-week-header {
         grid-template-columns: 1fr;
         align-items: stretch;
+    }
+
+    .scheduler-day-professor-filter select {
+        width: 100%;
+        min-width: 0;
     }
 
     .scheduler-flow-page .scheduler-week-header > div:first-child {
