@@ -1936,10 +1936,6 @@ body.print-preview-modal-open {
         flex-wrap: wrap;
     }
 
-    .print-step-actions .btn-destaque,
-    .print-step-actions .print-secondary-btn {
-        flex: 1 1 100%;
-    }
 
     #etapaConfiguracoes .print-options {
         flex-direction: column;
