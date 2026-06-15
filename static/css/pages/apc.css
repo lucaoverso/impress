@@ -506,6 +506,13 @@ body.apc-calendar-drawer-open {
     box-shadow: var(--focus-ring);
 }
 
+.apc-destinatario-item.is-inactive-link {
+    border-style: dashed;
+    border-color: #f59e0b;
+    background: #fffbeb;
+    color: #78350f;
+}
+
 .apc-inline-actions {
     display: flex;
     gap: 8px;

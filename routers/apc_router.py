@@ -25,6 +25,8 @@ from db.docencia import listar_atribuicoes_docentes
 from db.horario_escolar import listar_anos_letivos_horario_escolar, listar_horarios_escolares
 from db.usuarios import listar_professores_agendamento
 from models import ApcEnvioOut, ApcPeriodoIn, ApcPeriodoOut, ApcPeriodoUpdateIn
+from modules.audit.models import AuditCategory, AuditOutcome
+from modules.audit.service import record_event
 from modules.printing.attachment_printing import imprimir_anexo_pdf
 from services.apc_service import (
     APC_PUBLICO_ALVO_HORARIO_DIA,
@@ -56,6 +58,10 @@ from services.apc_service import (
     APC_TIPO_ENTREGA_PROVA_BIMESTRAL,
 )
 from services.apc_preview_service import gerar_preview_pdf_apc
+from services.apc_recipient_service import (
+    group_recipient_options,
+    merge_recipient_options,
+)
 from services.file_service import arquivo_suportado
 from services.horario_escolar_service import validar_ano_letivo
 
@@ -200,6 +206,7 @@ def _normalizar_destinatarios_payload(
     *,
     ano_letivo: int,
     publico_alvo: str,
+    periodo_id: int | None = None,
 ) -> list[dict]:
     itens = []
     vistos: set[tuple[int, int, int]] = set()
@@ -210,6 +217,13 @@ def _normalizar_destinatarios_payload(
     opcoes_validas = {
         _chave_destinatario(item): item for item in _listar_vinculos_destinatarios_ano(ano_letivo)
     }
+    if periodo_id is not None:
+        opcoes_validas.update(
+            {
+                _chave_destinatario(item): item
+                for item in listar_apc_destinatarios(periodo_id=int(periodo_id))
+            }
+        )
 
     for bruto in list(payload.destinatarios or []):
         item = {
@@ -481,6 +495,7 @@ def obter_contexto_apc_api(usuario=Depends(get_usuario_logado)):
 @router.get("/apc/destinatarios/opcoes")
 def listar_opcoes_destinatarios_apc_api(
     ano_letivo: int,
+    periodo_id: int | None = None,
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestao_apc(usuario)
@@ -489,36 +504,21 @@ def listar_opcoes_destinatarios_apc_api(
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 
-    vinculos = _listar_vinculos_destinatarios_ano(int(ano_letivo_validado))
-    professores: dict[int, dict] = {}
-    for item in vinculos:
-        professor_id = int(item.get("professor_id") or 0)
-        grupo = professores.setdefault(
-            professor_id,
-            {
-                "professor_id": professor_id,
-                "professor_nome": str(item.get("professor_nome") or "").strip(),
-                "professor_email": str(item.get("professor_email") or "").strip(),
-                "destinatarios": [],
-            },
-        )
-        grupo["destinatarios"].append(
-            {
-                "professor_id": professor_id,
-                "turma_id": int(item.get("turma_id") or 0),
-                "turma_nome": str(item.get("turma_nome") or "").strip(),
-                "disciplina_id": int(item.get("disciplina_id") or 0),
-                "disciplina_nome": str(item.get("disciplina_nome") or "").strip(),
-                "label": (
-                    f'{str(item.get("disciplina_nome") or "").strip()} - '
-                    f'{str(item.get("turma_nome") or "").strip()}'
-                ).strip(" -"),
-            }
-        )
+    configurados = []
+    if periodo_id is not None:
+        periodo = buscar_apc_periodo_por_id(int(periodo_id))
+        if not periodo:
+            raise HTTPException(404, "Solicitacao de entrega nao encontrada.")
+        configurados = listar_apc_destinatarios(periodo_id=int(periodo_id))
 
     return {
         "ano_letivo": int(ano_letivo_validado),
-        "professores": list(professores.values()),
+        "professores": group_recipient_options(
+            merge_recipient_options(
+                _listar_vinculos_destinatarios_ano(int(ano_letivo_validado)),
+                configurados,
+            )
+        ),
     }
 
 
@@ -659,6 +659,7 @@ def atualizar_periodo_apc_api(
         payload,
         ano_letivo=int(dados["ano_letivo"]),
         publico_alvo=str(dados["publico_alvo"] or ""),
+        periodo_id=periodo_id,
     )
     try:
         periodo = atualizar_apc_periodo(
@@ -807,6 +808,23 @@ def enviar_arquivo_apc_api(
     if not envio:
         _remover_arquivo_se_existir(caminho_destino)
         raise HTTPException(500, "Falha ao registrar o envio do arquivo.")
+    record_event(
+        category=AuditCategory.ATTACHMENTS,
+        action="attachment.submitted",
+        outcome=AuditOutcome.SUCCESS,
+        actor=usuario,
+        description=f"Anexo enviado por {usuario.get('nome') or 'professor'}: {nome_cliente}.",
+        entity_type="apc_submission",
+        entity_id=envio.get("id"),
+        metadata={
+            "period_id": periodo_id,
+            "class_id": item_envio.get("turma_id"),
+            "subject_id": item_envio.get("disciplina_id"),
+            "file_name": nome_cliente,
+            "file_size": len(conteudo),
+            "replaced_existing": bool(envio_existente),
+        },
+    )
     return envio
 
 

@@ -9,6 +9,8 @@ from db.usuarios import (
     revogar_tokens_usuario,
 )
 from models import ProfessorCreateIn, ProfessorRecuperarSenhaIn
+from modules.audit.models import AuditCategory, AuditOutcome
+from modules.audit.service import record_event
 from security.nt_hash import generate_nt_hash
 from services.auth_service import hash_senha
 
@@ -54,6 +56,21 @@ def criar_professor_publico(payload: ProfessorCreateIn):
 @router.post("/professores/recuperar-senha")
 def recuperar_senha_professor(payload: ProfessorRecuperarSenhaIn):
     email = str(payload.email or "").strip().lower()
+    try:
+        return _recuperar_senha_professor(payload, email)
+    except HTTPException as exc:
+        record_event(
+            category=AuditCategory.PASSWORD,
+            action="password.reset",
+            outcome=AuditOutcome.FAILURE,
+            actor_email=email,
+            description=f"Tentativa de redefinicao de senha recusada para {email or 'email nao informado'}.",
+            metadata={"status_code": exc.status_code},
+        )
+        raise
+
+
+def _recuperar_senha_professor(payload: ProfessorRecuperarSenhaIn, email: str):
     if not email:
         raise HTTPException(400, "Email e obrigatorio.")
 
@@ -83,4 +100,13 @@ def recuperar_senha_professor(payload: ProfessorRecuperarSenhaIn):
         raise HTTPException(404, "Professor nao encontrado.")
 
     revogar_tokens_usuario(int(professor["id"]))
+    record_event(
+        category=AuditCategory.PASSWORD,
+        action="password.reset",
+        outcome=AuditOutcome.SUCCESS,
+        actor=professor,
+        description=f"Senha redefinida por {professor.get('nome') or email}.",
+        entity_type="user",
+        entity_id=professor["id"],
+    )
     return {"mensagem": "Senha redefinida com sucesso. Faca login com a nova senha."}

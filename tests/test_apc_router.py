@@ -448,6 +448,125 @@ class ApcRouterTest(unittest.TestCase):
 
             self.assertEqual(int(ctx.exception.status_code), 403)
 
+    def test_edicao_exibe_e_remove_destinatario_sem_vinculo_atual(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            apc_dir = os.path.join(tmp_dir, "apc")
+            database, models, apc_router = _reload_modules(db_path, apc_dir)
+            database.criar_tabelas()
+
+            turma_id = int(database.criar_turma("8A", "MATUTINO", 30))
+            matematica_id = int(database.criar_disciplina("Matematica", 5))
+            historia_id = int(database.criar_disciplina("Historia", 3))
+            antiga_id = int(
+                database.criar_professor(
+                    nome="Professora Antiga",
+                    email="antiga@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1987-04-10",
+                    aulas_semanais=10,
+                    turmas_quantidade=1,
+                    turmas=["8A"],
+                    disciplinas=["Matematica"],
+                )
+            )
+            atual_id = int(
+                database.criar_professor(
+                    nome="Professora Atual",
+                    email="atual@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1988-05-11",
+                    aulas_semanais=10,
+                    turmas_quantidade=1,
+                    turmas=["8A"],
+                    disciplinas=["Historia"],
+                )
+            )
+
+            vinculo_antigo = database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_id,
+                disciplina_id=matematica_id,
+                carga_horaria=5,
+                professor_usuario_id=antiga_id,
+            )
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_id,
+                disciplina_id=historia_id,
+                carga_horaria=3,
+                professor_usuario_id=atual_id,
+            )
+
+            periodo = apc_router.criar_periodo_apc_api(
+                payload=models.ApcPeriodoIn(
+                    ano_letivo=2033,
+                    data_referencia="2033-09-20",
+                    prazo_envio="2033-09-21T18:00",
+                    titulo="Documentos",
+                    publico_alvo="PROFESSORES_SELECIONADOS",
+                    destinatarios=[
+                        models.ApcDestinatarioIn(
+                            professor_id=antiga_id,
+                            turma_id=turma_id,
+                            disciplina_id=matematica_id,
+                        ),
+                        models.ApcDestinatarioIn(
+                            professor_id=atual_id,
+                            turma_id=turma_id,
+                            disciplina_id=historia_id,
+                        ),
+                    ],
+                ),
+                usuario=self._usuario_coord(),
+            )
+
+            database.atualizar_turma_disciplina(
+                int(vinculo_antigo["id"]),
+                carga_horaria=5,
+                professor_usuario_id=None,
+            )
+
+            opcoes = apc_router.listar_opcoes_destinatarios_apc_api(
+                ano_letivo=2033,
+                periodo_id=int(periodo["id"]),
+                usuario=self._usuario_coord(),
+            )
+            itens = [
+                item
+                for professor in opcoes["professores"]
+                for item in professor["destinatarios"]
+            ]
+            antigo = next(
+                item
+                for item in itens
+                if int(item["professor_id"]) == antiga_id
+            )
+            self.assertFalse(antigo["vinculo_ativo"])
+
+            apc_router.atualizar_periodo_apc_api(
+                periodo_id=int(periodo["id"]),
+                payload=models.ApcPeriodoUpdateIn(
+                    ano_letivo=2033,
+                    data_referencia="2033-09-20",
+                    prazo_envio="2033-09-21T18:00",
+                    titulo="Documentos",
+                    publico_alvo="PROFESSORES_SELECIONADOS",
+                    destinatarios=[
+                        models.ApcDestinatarioIn(
+                            professor_id=atual_id,
+                            turma_id=turma_id,
+                            disciplina_id=historia_id,
+                        )
+                    ],
+                ),
+                usuario=self._usuario_coord(),
+            )
+
+            destinatarios = database.listar_apc_destinatarios(
+                periodo_id=int(periodo["id"])
+            )
+            self.assertEqual(len(destinatarios), 1)
+            self.assertEqual(int(destinatarios[0]["professor_id"]), atual_id)
+
     def test_central_filtra_entregas_por_flag_da_disciplina_e_tipo_da_solicitacao(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")

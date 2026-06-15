@@ -1,0 +1,62 @@
+<section id="tab-auditoria" class="admin-tab-panel admin-only"
+    data-admin-only="true" data-admin-tab-panel="auditoria" hidden>
+    <article class="admin-card admin-card-wide audit-shell">
+        <div class="audit-heading">
+            <div>
+                <h2>Historico de atividades</h2>
+                <p class="booking-detail">
+                    Acompanhe acessos e operacoes importantes sem expor senhas ou tokens.
+                </p>
+            </div>
+            <strong id="auditTotal" class="audit-total">0 eventos</strong>
+        </div>
+
+        <form id="formAuditFilters" class="audit-filters">
+            <label>
+                <span>De</span>
+                <input id="auditDateFrom" type="date">
+            </label>
+            <label>
+                <span>Ate</span>
+                <input id="auditDateTo" type="date">
+            </label>
+            <label>
+                <span>Categoria</span>
+                <select id="auditCategory">
+                    <option value="">Todas</option>
+                    <option value="auth">Login</option>
+                    <option value="password">Senha</option>
+                    <option value="printing">Impressao</option>
+                    <option value="scheduling">Agendamento</option>
+                    <option value="attachments">Anexos</option>
+                </select>
+            </label>
+            <label>
+                <span>Resultado</span>
+                <select id="auditOutcome">
+                    <option value="">Todos</option>
+                    <option value="success">Sucesso</option>
+                    <option value="failure">Falha</option>
+                </select>
+            </label>
+            <label class="audit-search-field">
+                <span>Buscar</span>
+                <input id="auditSearch" type="search"
+                    placeholder="Nome, email ou atividade">
+            </label>
+            <div class="audit-filter-actions">
+                <button class="btn-destaque" type="submit">Filtrar</button>
+                <button id="btnClearAuditFilters" type="button">Limpar</button>
+            </div>
+        </form>
+
+        <p id="auditMessage" class="booking-detail" role="status"></p>
+        <div id="auditEventList" class="audit-event-list" aria-live="polite"></div>
+
+        <div class="audit-pagination">
+            <button id="btnAuditPrevious" type="button">Anterior</button>
+            <span id="auditPageInfo">Pagina 1</span>
+            <button id="btnAuditNext" type="button">Proxima</button>
+        </div>
+    </article>
+</section>

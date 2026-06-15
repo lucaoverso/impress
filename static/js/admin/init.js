@@ -20,6 +20,7 @@ function registrarEventos() {
     el("btnBuscarHistorico").addEventListener("click", buscarHistorico);
 
     if (usuarioEhAdmin) {
+        registerAuditEvents();
         el("formProfessor").addEventListener("submit", cadastrarProfessor);
         el("formAtribuicaoDocente").addEventListener("submit", cadastrarAtribuicaoDocente);
         el("formImportarAtribuicoesDocentes").addEventListener("submit", importarAtribuicoesDocentesArquivo);
@@ -92,6 +93,7 @@ async function init() {
         ];
         if (usuarioEhAdmin) {
             tarefas.push(
+                loadAuditEvents(),
                 carregarProfessores(),
                 carregarCoordenadores(),
                 carregarAtribuicoesDocentes(),

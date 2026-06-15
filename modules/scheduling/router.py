@@ -1,6 +1,8 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from auth import get_usuario_logado
+from modules.audit.models import AuditCategory, AuditOutcome
+from modules.audit.service import record_event
 from modules.scheduling.dependencies import (
     TURNOS_CONFIG,
     require_admin_for_scheduling,
@@ -80,17 +82,47 @@ def criar_reserva_agendamento(
     payload: SchedulingReservationCreate,
     usuario=Depends(get_usuario_logado),
 ):
-    return create_scheduling_reservation(
-        payload=payload,
-        usuario=usuario,
-        turnos_config=TURNOS_CONFIG,
-        grade_entries=listar_configuracoes_aulas(include_inactive=False),
-        validar_data_agendamento=validar_data_agendamento,
-        validar_turma=validar_turma,
-        validar_tema_aula=validar_tema_aula,
-        validar_aula=validar_aula,
-        resolver_usuario_professor_selecionado=resolve_scheduling_teacher,
+    metadata = {
+        "resource_id": payload.recurso_id,
+        "date": payload.data,
+        "lesson": payload.aula,
+        "class": payload.turma,
+        "teacher_id": payload.professor_id,
+    }
+    try:
+        resultado = create_scheduling_reservation(
+            payload=payload,
+            usuario=usuario,
+            turnos_config=TURNOS_CONFIG,
+            grade_entries=listar_configuracoes_aulas(include_inactive=False),
+            validar_data_agendamento=validar_data_agendamento,
+            validar_turma=validar_turma,
+            validar_tema_aula=validar_tema_aula,
+            validar_aula=validar_aula,
+            resolver_usuario_professor_selecionado=resolve_scheduling_teacher,
+        )
+    except HTTPException as exc:
+        record_event(
+            category=AuditCategory.SCHEDULING,
+            action="reservation.create",
+            outcome=AuditOutcome.FAILURE,
+            actor=usuario,
+            description=f"Tentativa de agendamento recusada para {payload.data}.",
+            metadata={**metadata, "status_code": exc.status_code},
+        )
+        raise
+
+    record_event(
+        category=AuditCategory.SCHEDULING,
+        action="reservation.create",
+        outcome=AuditOutcome.SUCCESS,
+        actor=usuario,
+        description=f"Agendamento criado por {usuario.get('nome') or 'usuario'}.",
+        entity_type="reservation",
+        entity_id=resultado["agendamento_id"],
+        metadata=metadata,
     )
+    return resultado
 
 
 @router.post("/agendamento/reservas/{agendamento_id}/cancelar", response_model=SchedulingOperationResponse)

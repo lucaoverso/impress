@@ -42,6 +42,7 @@
             <button class="admin-tab-btn" data-admin-tab-trigger="relatorios" aria-controls="tab-relatorios" aria-selected="false" type="button">
                 Relatórios
             </button>
+            {% include "includes/admin_audit_nav.html" %}
         </nav>
 
         <section class="admin-tab-panels">
@@ -359,6 +360,7 @@
                     </article>
                 </div>
             </section>
+            {% include "includes/admin_audit_panel.html" %}
         </section>
     </main>
 
@@ -371,6 +373,7 @@
     <script src="{{ request.url_for('static', path='js/admin/atribuicoes.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/admin/estrutura.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/admin/operacao.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/audit.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/admin/init.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/admin.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>

@@ -98,6 +98,8 @@ from models import (
 from security.nt_hash import generate_nt_hash
 from services.atribuicoes_docentes_import_service import importar_atribuicoes_docentes_arquivo
 from services.auth_service import hash_senha
+from modules.audit.models import AuditCategory, AuditOutcome
+from modules.audit.service import record_event
 
 from .common import (
     CARGO_PROFESSOR,
@@ -1044,6 +1046,16 @@ def redefinir_senha_professor_painel(
         raise HTTPException(404, "Professor nao encontrado.")
 
     revogar_tokens_usuario(professor_id)
+    record_event(
+        category=AuditCategory.PASSWORD,
+        action="password.reset.admin",
+        outcome=AuditOutcome.SUCCESS,
+        actor=usuario,
+        description=f"Senha de {professor.get('nome') or 'professor'} redefinida pelo painel.",
+        entity_type="user",
+        entity_id=professor_id,
+        metadata={"target_user_name": professor.get("nome")},
+    )
     return {"mensagem": "Senha redefinida com sucesso."}
 
 

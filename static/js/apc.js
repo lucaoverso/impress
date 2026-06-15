@@ -751,7 +751,11 @@ async function carregarOpcoesDestinatariosApc(force = false) {
         renderDestinatariosApc();
         return;
     }
-    const resposta = await fetchJson(`/apc/destinatarios/opcoes?ano_letivo=${anoLetivo}`, {
+    const params = new URLSearchParams({ ano_letivo: String(anoLetivo) });
+    if (periodoEmEdicaoApcId) {
+        params.set("periodo_id", String(periodoEmEdicaoApcId));
+    }
+    const resposta = await fetchJson(`/apc/destinatarios/opcoes?${params.toString()}`, {
         headers: headersApc,
     });
     opcoesDestinatariosApc = Array.isArray(resposta?.professores) ? resposta.professores : [];
@@ -821,6 +825,9 @@ function renderDestinatariosApc() {
             const chave = chaveDestinatarioApc(item);
             const label = document.createElement("label");
             label.className = "apc-destinatario-item";
+            if (item.vinculo_ativo === false) {
+                label.classList.add("is-inactive-link");
+            }
 
             const input = document.createElement("input");
             input.type = "checkbox";
@@ -835,7 +842,9 @@ function renderDestinatariosApc() {
             });
 
             const texto = document.createElement("span");
-            texto.innerText = item.label || `${item.disciplina_nome} - ${item.turma_nome}`;
+            texto.innerText = item.vinculo_ativo === false
+                ? `${item.label || `${item.disciplina_nome} - ${item.turma_nome}`} · sem vinculo atual`
+                : item.label || `${item.disciplina_nome} - ${item.turma_nome}`;
 
             label.appendChild(input);
             label.appendChild(texto);

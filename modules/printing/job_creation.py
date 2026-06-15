@@ -7,6 +7,8 @@ from pathlib import Path
 
 from fastapi import HTTPException
 
+from modules.audit.models import AuditCategory, AuditOutcome
+from modules.audit.service import record_event
 from modules.printing import repository
 from modules.printing.job_access import get_job_with_access
 from modules.printing.policies import (
@@ -136,7 +138,7 @@ def create_job_from_ready_pdf(
     validate_required_tags(tags_normalizadas)
 
     try:
-        criar_job_fn(
+        job_id = criar_job_fn(
             usuario_id=usuario_responsavel["id"],
             arquivo=nome_arquivo_exibicao,
             arquivo_path=str(caminho_arquivo),
@@ -164,6 +166,26 @@ def create_job_from_ready_pdf(
             "Falha ao registrar o job de impressao.",
         ) from exc
 
+    record_event(
+        category=AuditCategory.PRINTING,
+        action="print.submitted",
+        outcome=AuditOutcome.SUCCESS,
+        actor=usuario_responsavel,
+        description=(
+            f"Impressao enviada por {usuario_responsavel.get('nome') or 'usuario'}: "
+            f"{nome_arquivo_exibicao}."
+        ),
+        entity_type="print_job",
+        entity_id=job_id,
+        metadata={
+            "file_name": nome_arquivo_exibicao,
+            "copies": copias,
+            "pages_consumed": paginas_totais,
+            "pages_per_sheet": paginas_por_folha,
+            "duplex": duplex,
+            "tags": tags_normalizadas,
+        },
+    )
     return {
         "mensagem": "Job criado com sucesso",
         "paginas_documento": paginas_pdf,

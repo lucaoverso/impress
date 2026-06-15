@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException, Header
 from models import LoginIn
+from modules.audit.models import AuditCategory, AuditOutcome
+from modules.audit.service import record_event
 from services.auth_service import autenticar_usuario, validar_token, obter_ttl_token_dias
 
 router = APIRouter()
@@ -20,12 +22,27 @@ def normalizar_cargo(usuario: dict) -> str:
 
 @router.post("/login")
 def login(dados: LoginIn):
-    resultado = autenticar_usuario(dados.email, dados.senha)
+    email = str(dados.email or "").strip().lower()
+    resultado = autenticar_usuario(email, dados.senha)
 
     if not resultado:
+        record_event(
+            category=AuditCategory.AUTH,
+            action="login.attempt",
+            outcome=AuditOutcome.FAILURE,
+            actor_email=email,
+            description=f"Tentativa de login recusada para {email or 'email nao informado'}.",
+        )
         raise HTTPException(401, "Credenciais inválidas")
 
     token, usuario, expira_em = resultado
+    record_event(
+        category=AuditCategory.AUTH,
+        action="login.success",
+        outcome=AuditOutcome.SUCCESS,
+        actor=usuario,
+        description=f"Login realizado por {usuario.get('nome') or email}.",
+    )
     cargo = normalizar_cargo(usuario)
     return {
         "token": token,
