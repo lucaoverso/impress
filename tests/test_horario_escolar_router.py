@@ -308,6 +308,33 @@ class HorarioEscolarRouterTest(unittest.TestCase):
             )
             self.assertEqual(int(vespertino["faixa_global"]), 6)
 
+            with self.assertRaises(HTTPException) as ctx_integral_seis:
+                horario_router.criar_horario_escolar_api(
+                    payload=models.HorarioEscolarRegistroIn(
+                        ano_letivo=2033,
+                        turma_id=turma_integral_id,
+                        disciplina_id=disciplina_id,
+                        professor_id=professor_id,
+                        dia_semana="segunda",
+                        aula_numero=6,
+                    ),
+                    usuario=self._usuario_coord(),
+                )
+            self.assertEqual(int(ctx_integral_seis.exception.status_code), 400)
+
+            integral_vespertino = horario_router.criar_horario_escolar_api(
+                payload=models.HorarioEscolarRegistroIn(
+                    ano_letivo=2033,
+                    turma_id=turma_integral_id,
+                    disciplina_id=disciplina_id,
+                    professor_id=professor_id,
+                    dia_semana="segunda",
+                    aula_numero=7,
+                ),
+                usuario=self._usuario_coord(),
+            )
+            self.assertEqual(int(integral_vespertino["faixa_global"]), 7)
+
             with self.assertRaises(HTTPException) as ctx:
                 horario_router.criar_horario_escolar_api(
                     payload=models.HorarioEscolarRegistroIn(

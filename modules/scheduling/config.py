@@ -8,7 +8,17 @@ JANELA_AULAS_PADRAO_POR_TURNO = {
     "MATUTINO": (1, 5),
     "VESPERTINO": (6, 10),
     "VESPERTINO_EM": (6, 11),
-    "INTEGRAL": (1, 8),
+    "INTEGRAL": (1, 9),
+}
+SEGMENTOS_FAIXA_GLOBAL_POR_TURNO = {
+    "MATUTINO": ((1, 5),),
+    "VESPERTINO": ((6, 10),),
+    "VESPERTINO_EM": ((6, 11),),
+    "INTEGRAL": ((1, 5), (7, 9)),
 }
 
-__all__ = ["JANELA_AULAS_PADRAO_POR_TURNO", "TURNOS_CONFIG"]
+__all__ = [
+    "JANELA_AULAS_PADRAO_POR_TURNO",
+    "SEGMENTOS_FAIXA_GLOBAL_POR_TURNO",
+    "TURNOS_CONFIG",
+]

@@ -4,7 +4,10 @@ from types import SimpleNamespace
 from fastapi import HTTPException
 
 from modules.scheduling.schemas import SchedulingReservationCreate
-from modules.scheduling.lesson_config import normalize_schedule_entries
+from modules.scheduling.lesson_config import (
+    list_lessons_for_class,
+    normalize_schedule_entries,
+)
 from modules.scheduling.service import (
     build_scheduling_options,
     cancel_scheduling_reservation,
@@ -113,6 +116,35 @@ class SchedulingServiceTest(unittest.TestCase):
         )
 
         self.assertEqual(aula["periodo"], "VESPERTINO")
+
+    def test_integral_skips_global_slot_six_and_starts_afternoon_at_seven(self):
+        entries = [
+            {
+                "id": lesson_number,
+                "ordem_visual": lesson_number,
+                "tipo": "AULA",
+                "aula_numero": lesson_number,
+                "nome": f"Aula {lesson_number}",
+                "horario_inicio": "07:00" if lesson_number <= 5 else "13:00",
+                "horario_fim": "07:50" if lesson_number <= 5 else "13:50",
+                "ativo": 1,
+            }
+            for lesson_number in range(1, 10)
+        ]
+
+        lessons = list_lessons_for_class(
+            {
+                "turno": "INTEGRAL",
+                "aula_inicial": 1,
+                "aula_final": 9,
+            },
+            entries,
+        )
+
+        self.assertEqual(
+            [item["aula_numero"] for item in lessons],
+            [1, 2, 3, 4, 5, 7, 8, 9],
+        )
 
     def test_create_scheduling_reservation_calls_repository_functions(self):
         payload = SchedulingReservationCreate(

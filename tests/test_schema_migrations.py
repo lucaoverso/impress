@@ -258,6 +258,70 @@ class SchemaMigrationsTest(unittest.TestCase):
 
         self.assertEqual([(1, 1, 1), (2, 2, 2)], [(int(row["id"]), int(row["aula_numero"]), int(row["faixa_global"])) for row in rows])
 
+    def test_migration_20260615_cria_segmentos_sem_alterar_registros(self):
+        migration = _load_migration_module("20260615_create_shift_segments.py")
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        try:
+            conn.executescript(
+                """
+                CREATE TABLE turmas (
+                    id INTEGER PRIMARY KEY,
+                    turno TEXT NOT NULL,
+                    aula_inicial INTEGER NOT NULL,
+                    aula_final INTEGER NOT NULL
+                );
+                CREATE TABLE horarios_escolares (
+                    id INTEGER PRIMARY KEY,
+                    turma_id INTEGER NOT NULL,
+                    aula_numero INTEGER NOT NULL,
+                    faixa_global INTEGER NOT NULL
+                );
+                CREATE TABLE agendamentos (
+                    id INTEGER PRIMARY KEY,
+                    turno TEXT NOT NULL,
+                    aula TEXT NOT NULL,
+                    faixa_global INTEGER NOT NULL
+                );
+                INSERT INTO turmas VALUES (1, 'INTEGRAL', 1, 8);
+                INSERT INTO horarios_escolares VALUES (1, 1, 6, 6);
+                INSERT INTO agendamentos VALUES (1, 'INTEGRAL', '6', 6);
+                """
+            )
+
+            migration.upgrade(conn)
+
+            turma = conn.execute(
+                "SELECT aula_inicial, aula_final FROM turmas WHERE id = 1"
+            ).fetchone()
+            horario = conn.execute(
+                "SELECT aula_numero, faixa_global FROM horarios_escolares WHERE id = 1"
+            ).fetchone()
+            agendamento = conn.execute(
+                "SELECT aula, faixa_global FROM agendamentos WHERE id = 1"
+            ).fetchone()
+            segmentos = conn.execute(
+                """
+                SELECT periodo, faixa_inicial, faixa_final
+                FROM configuracao_turnos_segmentos
+                WHERE turno = 'INTEGRAL'
+                ORDER BY ordem
+                """
+            ).fetchall()
+        finally:
+            conn.close()
+
+        self.assertEqual((int(turma["aula_inicial"]), int(turma["aula_final"])), (1, 9))
+        self.assertEqual((int(horario["aula_numero"]), int(horario["faixa_global"])), (6, 6))
+        self.assertEqual((agendamento["aula"], int(agendamento["faixa_global"])), ("6", 6))
+        self.assertEqual(
+            [
+                (row["periodo"], int(row["faixa_inicial"]), int(row["faixa_final"]))
+                for row in segmentos
+            ],
+            [("MATUTINO", 1, 5), ("VESPERTINO", 7, 9)],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

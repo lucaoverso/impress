@@ -2,7 +2,10 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from modules.scheduling.config import JANELA_AULAS_PADRAO_POR_TURNO
+from modules.scheduling.config import (
+    JANELA_AULAS_PADRAO_POR_TURNO,
+    SEGMENTOS_FAIXA_GLOBAL_POR_TURNO,
+)
 
 TIPO_GRADE_AULA = "AULA"
 TIPO_GRADE_INTERVALO = "INTERVALO"
@@ -22,6 +25,15 @@ def resolve_class_lesson_window(class_item: dict | None) -> tuple[int, int]:
     if start_lesson > 0 and end_lesson >= start_lesson:
         return start_lesson, end_lesson
     return lesson_window_from_turn(item.get("turno", ""))
+
+
+def lesson_number_is_allowed_for_turn(turn: str, lesson_number: int) -> bool:
+    turn_norm = str(turn or "").strip().upper()
+    lesson_value = int(lesson_number or 0)
+    segments = SEGMENTOS_FAIXA_GLOBAL_POR_TURNO.get(turn_norm)
+    if not segments:
+        return lesson_value > 0
+    return any(int(start) <= lesson_value <= int(end) for start, end in segments)
 
 
 def build_lesson_display_label(
@@ -149,15 +161,23 @@ def find_lesson_by_number(entries: list[dict] | None, lesson_number: int) -> dic
 
 def list_lessons_for_class(class_item: dict | None, entries: list[dict] | None) -> list[dict]:
     start_lesson, end_lesson = resolve_class_lesson_window(class_item)
+    turn = str((class_item or {}).get("turno") or "").strip().upper()
     return [
         item
         for item in list_global_lessons(entries, only_active=True)
-        if start_lesson <= int(item.get("aula_numero") or 0) <= end_lesson
+        if (
+            start_lesson <= int(item.get("aula_numero") or 0) <= end_lesson
+            and lesson_number_is_allowed_for_turn(
+                turn,
+                int(item.get("aula_numero") or 0),
+            )
+        )
     ]
 
 
 def list_visual_schedule_items_for_class(class_item: dict | None, entries: list[dict] | None) -> list[dict]:
     start_lesson, end_lesson = resolve_class_lesson_window(class_item)
+    turn = str((class_item or {}).get("turno") or "").strip().upper()
     normalized = normalize_schedule_entries(entries)
     visible = []
 
@@ -166,7 +186,10 @@ def list_visual_schedule_items_for_class(class_item: dict | None, entries: list[
             continue
         if item["tipo"] == TIPO_GRADE_AULA:
             lesson_number = int(item.get("aula_numero") or 0)
-            if start_lesson <= lesson_number <= end_lesson:
+            if (
+                start_lesson <= lesson_number <= end_lesson
+                and lesson_number_is_allowed_for_turn(turn, lesson_number)
+            ):
                 visible.append(item)
             continue
 
@@ -182,7 +205,13 @@ def list_visual_schedule_items_for_class(class_item: dict | None, entries: list[
         ]
         previous_lesson = previous_lessons[-1] if previous_lessons else 0
         next_lesson = next_lessons[0] if next_lessons else 0
-        if previous_lesson and next_lesson and start_lesson <= previous_lesson < next_lesson <= end_lesson:
+        if (
+            previous_lesson
+            and next_lesson
+            and start_lesson <= previous_lesson < next_lesson <= end_lesson
+            and lesson_number_is_allowed_for_turn(turn, previous_lesson)
+            and lesson_number_is_allowed_for_turn(turn, next_lesson)
+        ):
             visible.append(item)
 
     return visible
