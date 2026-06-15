@@ -2779,8 +2779,8 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-flow-stepper ol {
     display: grid;
-    grid-template-columns: repeat(4, minmax(120px, 1fr));
-    min-width: 560px;
+    grid-template-columns: repeat(5, minmax(116px, 1fr));
+    min-width: 640px;
     padding: 0;
     margin: 0;
     list-style: none;

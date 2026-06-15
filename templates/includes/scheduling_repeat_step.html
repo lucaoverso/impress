@@ -1,0 +1,36 @@
+<article id="etapaAgendamentoRepetir" class="scheduler-flow-step" hidden>
+    <header class="scheduler-flow-heading">
+        <div>
+            <p class="print-step-kicker">Etapa 5 de 5</p>
+            <h2>Deseja repetir em outras aulas?</h2>
+            <p>Marque somente as aulas em que pretende usar os mesmos recursos. Esta etapa é opcional.</p>
+        </div>
+    </header>
+
+    <section class="scheduler-repeat-final" aria-labelledby="tituloAulasRepeticao">
+        <div class="scheduler-repeat-final-heading">
+            <div>
+                <h3 id="tituloAulasRepeticao">Aulas com recursos disponíveis</h3>
+                <p id="resumoRepeticaoAgendamento" aria-live="polite"></p>
+            </div>
+            <span id="quantidadeRepeticaoAgendamento" class="scheduler-repeat-count">0 selecionadas</span>
+        </div>
+        <div id="listaAulasRepeticaoAgendamento" class="scheduler-repeat-options" role="group"
+            aria-label="Outras aulas disponíveis para repetir o agendamento"></div>
+    </section>
+
+    <section id="detalhesRepeticaoAgendamento" class="scheduler-repeat-details" hidden>
+        <header>
+            <h3>Descreva as aulas adicionais</h3>
+            <p>O tema é obrigatório para cada aula marcada. A observação é opcional.</p>
+        </header>
+        <div id="listaDetalhesRepeticaoAgendamento" class="scheduler-lesson-details-list"></div>
+    </section>
+
+    <div class="scheduler-flow-actions scheduler-flow-actions-split">
+        <button id="btnVoltarAgendamentoRepetir" class="print-secondary-btn" type="button">
+            Voltar ao resumo
+        </button>
+        <button id="btnAgendar" class="btn-destaque" type="button">Confirmar reserva</button>
+    </div>
+</article>

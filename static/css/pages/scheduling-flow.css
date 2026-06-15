@@ -125,8 +125,8 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-flow-stepper ol {
     display: grid;
-    grid-template-columns: repeat(4, minmax(128px, 1fr));
-    min-width: 580px;
+    grid-template-columns: repeat(5, minmax(116px, 1fr));
+    min-width: 640px;
     padding: 0;
     margin: 0;
     list-style: none;
@@ -471,8 +471,55 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 }
 
 .scheduler-day-overview-shift h4 {
-    font-size: 14px;
+    font-size: 13px;
     line-height: 1.4;
+    color: var(--scheduler-primary-strong);
+}
+
+.scheduler-upcoming-overview {
+    margin-top: 0;
+}
+
+.scheduler-upcoming-overview .scheduler-day-overview-header {
+    align-items: flex-start;
+}
+
+.scheduler-upcoming-overview .scheduler-day-overview-header > div {
+    display: grid;
+    gap: 3px;
+}
+
+.scheduler-upcoming-count {
+    flex: 0 0 auto;
+    border-radius: 999px;
+    background: var(--scheduler-primary-soft);
+    padding: 6px 10px;
+    color: var(--scheduler-primary-strong);
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.scheduler-upcoming-list,
+.scheduler-upcoming-date,
+.scheduler-upcoming-lessons {
+    display: grid;
+    gap: 10px;
+}
+
+.scheduler-upcoming-date {
+    padding-top: 4px;
+}
+
+.scheduler-upcoming-date + .scheduler-upcoming-date {
+    padding-top: 16px;
+    border-top: 1px solid var(--scheduler-border);
+}
+
+.scheduler-upcoming-date-title {
+    margin: 0;
+    font-size: 15px;
+    line-height: 1.35;
+    color: var(--scheduler-text);
 }
 
 .scheduler-day-overview-rows {
@@ -483,10 +530,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 }
 
 .scheduler-day-overview-row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
+    display: block;
     min-height: 58px;
     padding: 10px 14px;
 }
@@ -513,16 +557,10 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     line-height: 1.3;
 }
 
-.scheduler-day-overview-copy span,
-.scheduler-day-overview-lesson {
+.scheduler-day-overview-copy span {
     font-size: 12px;
     line-height: 1.35;
     color: var(--scheduler-muted);
-}
-
-.scheduler-day-overview-lesson {
-    flex: 0 0 auto;
-    white-space: nowrap;
 }
 
 .scheduler-day-overview-empty {
@@ -1056,6 +1094,15 @@ html[data-scheduler-current-step] .scheduler-flow-page {
         font-size: 16px;
     }
 
+    .scheduler-upcoming-overview .scheduler-day-overview-header {
+        display: grid;
+        gap: 8px;
+    }
+
+    .scheduler-upcoming-count {
+        width: fit-content;
+    }
+
     .scheduler-day-overview-row {
         min-height: 56px;
         padding: 9px 12px;
@@ -1072,8 +1119,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
         font-size: 14px;
     }
 
-    .scheduler-day-overview-copy span,
-    .scheduler-day-overview-lesson {
+    .scheduler-day-overview-copy span {
         font-size: 12px;
     }
 

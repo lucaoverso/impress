@@ -41,6 +41,7 @@ let turmas = [];
 let gradeAulas = [];
 let aulasGlobais = [];
 let reservasMes = [];
+let reservasProximosDias = [];
 let professoresAgendamento = [];
 let mesAtual = new Date();
 let dataSelecionada = paraIso(new Date());
@@ -524,95 +525,6 @@ function registrarCarrosselRecursosEtapaInicial() {
     }, true);
 }
 
-function renderVisaoGeralAgendamentosDia() {
-    const container = el("schedulerDayOverviewList");
-    const dataResumo = el("schedulerDayOverviewDate");
-    if (!container) {
-        return;
-    }
-
-    container.innerHTML = "";
-    if (dataResumo) {
-        dataResumo.innerText = paraDataBr(dataSelecionada);
-    }
-
-    const reservasDia = (Array.isArray(reservasMes) ? reservasMes : [])
-        .filter((reserva) => reserva.data === dataSelecionada)
-        .sort((a, b) => {
-            const diferencaTurno = ordemTurno(a.turno) - ordemTurno(b.turno);
-            if (diferencaTurno !== 0) {
-                return diferencaTurno;
-            }
-            return numeroAulaReserva(a) - numeroAulaReserva(b);
-        });
-
-    if (reservasDia.length === 0) {
-        const vazio = document.createElement("p");
-        vazio.className = "scheduler-day-overview-empty";
-        vazio.innerText = "Nenhum recurso agendado neste dia.";
-        container.appendChild(vazio);
-        return;
-    }
-
-    const grupos = new Map([
-        ["MATUTINO", []],
-        ["VESPERTINO", []]
-    ]);
-    reservasDia.forEach((reserva) => {
-        const periodo = periodoAulaPorFaixa(faixaGlobalReserva(reserva), reserva.turno);
-        grupos.get(periodo).push(reserva);
-    });
-
-    grupos.forEach((reservasPeriodo, periodo) => {
-        if (reservasPeriodo.length === 0) {
-            return;
-        }
-
-        const grupo = document.createElement("section");
-        grupo.className = "scheduler-day-overview-shift";
-
-        const titulo = document.createElement("h4");
-        titulo.innerText = nomePeriodoAgendamento(periodo);
-        grupo.appendChild(titulo);
-
-        const lista = document.createElement("div");
-        lista.className = "scheduler-day-overview-rows";
-
-        reservasPeriodo.forEach((reserva) => {
-            const linha = document.createElement("div");
-            linha.className = "scheduler-day-overview-row";
-
-            const recurso = document.createElement("strong");
-            recurso.innerText = textoPadraoDetalheReserva(
-                reserva.recurso_nome,
-                "Recurso não informado"
-            );
-
-            const professor = document.createElement("span");
-            professor.innerText = textoPadraoDetalheReserva(
-                reserva.professor_nome,
-                "Responsável não informado"
-            );
-
-            const copy = document.createElement("div");
-            copy.className = "scheduler-day-overview-copy";
-            copy.appendChild(recurso);
-            copy.appendChild(professor);
-
-            const aula = document.createElement("span");
-            aula.className = "scheduler-day-overview-lesson";
-            aula.innerText = aulaLabel(numeroAulaReserva(reserva));
-
-            linha.appendChild(copy);
-            linha.appendChild(aula);
-            lista.appendChild(linha);
-        });
-
-        grupo.appendChild(lista);
-        container.appendChild(grupo);
-    });
-}
-
 function renderRecursosEtapaInicial() {
     const container = el("recursoCardsEtapaInicial");
     const resumo = el("resumoRecursosEtapaInicial");
@@ -622,6 +534,7 @@ function renderRecursosEtapaInicial() {
 
     container.innerHTML = "";
     renderVisaoGeralAgendamentosDia();
+    renderVisaoProximosAgendamentos();
 
     if (!Array.isArray(recursos) || recursos.length === 0) {
         const vazio = document.createElement("p");
@@ -747,13 +660,13 @@ function atualizarContextoRecursoAgendamento(state) {
             : `${aulasDisponiveis} aulas disponíveis`;
     }
     if (tituloEtapa) {
-        tituloEtapa.innerText = recurso?.nome || "Escolha as aulas";
+        tituloEtapa.innerText = recurso?.nome || "Escolha a aula principal";
     }
     if (copyEtapa) {
         const total = obterAulasSelecionadasAgendamento().length;
         copyEtapa.innerText = total > 0
-            ? `${total} aula(s) selecionada(s). Marque quantas precisar.`
-            : "Marque todas as aulas em que deseja utilizar este recurso.";
+            ? "Aula principal selecionada. Você poderá repetir o agendamento na etapa final."
+            : "Escolha a primeira aula. As demais aulas compatíveis serão oferecidas ao final.";
     }
 }
 
@@ -1320,6 +1233,7 @@ function renderCamposDetalhesAulasAgendamento() {
 }
 
 function limparCamposFluxoAgendamento() {
+    limparEstadoRepeticaoAgendamento();
     aulasAdicionaisAgendamento.clear();
     Object.keys(detalhesAulasAgendamento).forEach((chave) => {
         delete detalhesAulasAgendamento[chave];
@@ -1370,6 +1284,7 @@ function selecionarAulaParaAgendamento(item) {
     }
 
     const chave = chaveAulaAgendamento(item);
+    limparEstadoRepeticaoAgendamento();
     if (aulasAdicionaisAgendamento.has(chave)) {
         aulasAdicionaisAgendamento.delete(chave);
     } else {
@@ -1458,17 +1373,16 @@ function obterEstadoWizardAgendamento() {
             observacao: String(detalhes.observacao || "").trim()
         };
     });
-    const etapaDetalhesLiberada = Boolean(
-        etapaSelecaoConcluida
-        && detalhesAulas.length > 0
-        && detalhesAulas.every((aula) => aula.tema)
-    );
+    const chaveAulaBase = selecaoAulaAgendamento.chave;
+    const detalheAulaBase = detalhesAulas.find((aula) => aula.chave === chaveAulaBase);
+    const etapaDetalhesLiberada = Boolean(etapaSelecaoConcluida && detalheAulaBase?.tema);
+    const repeticoesValidas = detalhesAulas.every((aula) => aula.tema);
     let maxEtapa = 1;
     if (etapaRecursosConcluida) {
         maxEtapa = 2;
     }
     if (etapaSelecaoConcluida && etapaRecursosConcluida) {
-        maxEtapa = etapaDetalhesLiberada ? 4 : 3;
+        maxEtapa = etapaDetalhesLiberada ? 5 : 3;
     }
 
     const etapaAtual = Math.min(
@@ -1486,7 +1400,7 @@ function obterEstadoWizardAgendamento() {
         resourceStepReady: etapaRecursosConcluida,
         repeatStepReady: etapaSelecaoConcluida && etapaRecursosConcluida,
         detailsStepReady: etapaDetalhesLiberada,
-        canSubmit: etapaDetalhesLiberada && !agendamentoWizard.submitting,
+        canSubmit: etapaDetalhesLiberada && repeticoesValidas && !agendamentoWizard.submitting,
         selectedLessons: detalhesAulas,
         summary: {
             recurso: formatarResumoRecursosSelecionados(recursosSelecionados),
@@ -1565,7 +1479,8 @@ function atualizarStepperAgendamento(state) {
         ["stepperAgendamentoRecursos", 1],
         ["stepperAgendamentoAula", 2],
         ["stepperAgendamentoDetalhes", 3],
-        ["stepperAgendamentoResumo", 4]
+        ["stepperAgendamentoResumo", 4],
+        ["stepperAgendamentoRepetir", 5]
     ].forEach(([id, step]) => {
         const item = el(id);
         if (!item) {
@@ -1598,7 +1513,8 @@ function renderEtapaAtualAgendamento(state) {
     const currentStep = Number(state.currentStep || 1);
     const cards = {
         3: el("etapaAgendamentoDetalhes"),
-        4: el("etapaAgendamentoResumo")
+        4: el("etapaAgendamentoResumo"),
+        5: el("etapaAgendamentoRepetir")
     };
 
     Object.entries(cards).forEach(([step, card]) => {
@@ -1623,6 +1539,7 @@ function renderEtapaAtualAgendamento(state) {
 function atualizarAcoesWizardAgendamento(state) {
     const btnContinuarRepeticao = el("btnContinuarAgendamentoRepeticao");
     const btnContinuarDetalhes = el("btnContinuarAgendamentoDetalhes");
+    const btnContinuarResumo = el("btnContinuarAgendamentoResumo");
     const btnAgendar = el("btnAgendar");
     const quantidadeRecursos = recursosSelecionadosAgendamento.size;
     const quantidadeAulas = obterAulasSelecionadasAgendamento().length || 1;
@@ -1633,6 +1550,9 @@ function atualizarAcoesWizardAgendamento(state) {
     }
     if (btnContinuarDetalhes) {
         btnContinuarDetalhes.disabled = !state.detailsStepReady;
+    }
+    if (btnContinuarResumo) {
+        btnContinuarResumo.disabled = !state.detailsStepReady;
     }
     if (btnAgendar) {
         btnAgendar.disabled = !state.canSubmit;
@@ -3475,7 +3395,10 @@ async function selecionarDataAgendamento(dataIso, { fecharCalendarioAoFinal = fa
         await carregarReservasMes();
     }
 
+    await carregarReservasProximosDias();
     await carregarAulasProfessorDia();
+    renderVisaoGeralAgendamentosDia();
+    renderVisaoProximosAgendamentos();
     renderSemanaAgendamento();
     renderCalendario();
     renderReservasDia();
@@ -3760,7 +3683,10 @@ function renderMinhasReservas() {
 
 async function atualizarTelaAgendamento() {
     await carregarReservasMes();
+    await carregarReservasProximosDias();
     await carregarAulasProfessorDia();
+    renderVisaoGeralAgendamentosDia();
+    renderVisaoProximosAgendamentos();
     sincronizarSemanaVisivelComDataSelecionada();
     renderSemanaAgendamento();
     renderCalendario();
@@ -4088,6 +4014,11 @@ function registrarEventos() {
     el("btnVoltarAgendamentoDetalhes").addEventListener("click", () => irParaEtapaAgendamento(2));
     el("btnContinuarAgendamentoDetalhes").addEventListener("click", () => irParaEtapaAgendamento(4));
     el("btnVoltarAgendamentoResumo").addEventListener("click", () => irParaEtapaAgendamento(3));
+    el("btnContinuarAgendamentoResumo").addEventListener("click", () => {
+        prepararEtapaRepeticaoAgendamento();
+        irParaEtapaAgendamento(5);
+    });
+    el("btnVoltarAgendamentoRepetir").addEventListener("click", () => irParaEtapaAgendamento(4));
 
     registrarControlesOrdenacao();
     el("btnAgendar").addEventListener("click", agendarRecurso);

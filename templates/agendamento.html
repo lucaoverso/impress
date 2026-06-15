@@ -36,9 +36,10 @@
             <nav class="scheduler-flow-stepper" aria-label="Etapas do agendamento">
                 <ol>
                     <li id="stepperAgendamentoRecursos" class="is-current" aria-current="step"><span>1</span><strong>Recurso</strong></li>
-                    <li id="stepperAgendamentoAula"><span>2</span><strong>Aulas</strong></li>
+                    <li id="stepperAgendamentoAula"><span>2</span><strong>Aula</strong></li>
                     <li id="stepperAgendamentoDetalhes"><span>3</span><strong>Detalhes</strong></li>
                     <li id="stepperAgendamentoResumo"><span>4</span><strong>Resumo</strong></li>
+                    <li id="stepperAgendamentoRepetir"><span>5</span><strong>Repetir</strong></li>
                 </ol>
             </nav>
 
@@ -60,7 +61,7 @@
                 <article id="etapaAgendamentoRecursos" class="scheduler-flow-step scheduler-resource-stage-card">
                     <header class="scheduler-flow-heading">
                         <div>
-                            <p class="print-step-kicker">Etapa 1 de 4</p>
+                            <p class="print-step-kicker">Etapa 1 de 5</p>
                             <h2>Escolha o recurso</h2>
                             <p>Selecione o equipamento para consultar as datas e aulas disponíveis.</p>
                         </div>
@@ -76,14 +77,26 @@
                         </header>
                         <div id="schedulerDayOverviewList" class="scheduler-day-overview-list" aria-live="polite"></div>
                     </section>
+
+                    <section class="scheduler-day-overview scheduler-upcoming-overview"
+                        aria-labelledby="schedulerUpcomingOverviewTitle">
+                        <header class="scheduler-day-overview-header">
+                            <div>
+                                <h3 id="schedulerUpcomingOverviewTitle">Agendamentos dos próximos dias</h3>
+                                <p>Próximos 30 dias a partir da data selecionada</p>
+                            </div>
+                            <span id="schedulerUpcomingOverviewCount" class="scheduler-upcoming-count"></span>
+                        </header>
+                        <div id="schedulerUpcomingOverviewList" class="scheduler-upcoming-list" aria-live="polite"></div>
+                    </section>
                 </article>
 
             <article id="schedulerLessonStage" class="scheduler-flow-step scheduler-lesson-stage" hidden>
                 <header class="scheduler-flow-heading">
                     <div>
-                        <p class="print-step-kicker">Etapa 2 de 4</p>
-                        <h2 id="schedulerLessonStageTitle">Escolha as aulas</h2>
-                        <p id="schedulerLessonStageCopy">Marque todas as aulas em que deseja utilizar este recurso.</p>
+                        <p class="print-step-kicker">Etapa 2 de 5</p>
+                        <h2 id="schedulerLessonStageTitle">Escolha a aula principal</h2>
+                        <p id="schedulerLessonStageCopy">Escolha a primeira aula. Ao final, você poderá repetir em outras aulas disponíveis.</p>
                     </div>
                 </header>
 
@@ -141,7 +154,7 @@
                     <article id="etapaAgendamentoDetalhes" class="scheduler-flow-step" hidden>
                         <header class="scheduler-flow-heading">
                             <div>
-                                <p class="print-step-kicker">Etapa 3 de 4</p>
+                                <p class="print-step-kicker">Etapa 3 de 5</p>
                                 <h2>Descreva as aulas</h2>
                                 <p>Informe o tema e, se necessário, uma observação para cada aula selecionada.</p>
                             </div>
@@ -171,7 +184,7 @@
                     <article id="etapaAgendamentoResumo" class="scheduler-flow-step" hidden>
                         <header class="scheduler-flow-heading">
                             <div>
-                                <p class="print-step-kicker">Etapa 4 de 4</p>
+                                <p class="print-step-kicker">Etapa 4 de 5</p>
                                 <h2>Confira o agendamento</h2>
                                 <p>Revise os recursos, as aulas e os temas antes de confirmar.</p>
                             </div>
@@ -202,9 +215,13 @@
 
                         <div class="scheduler-flow-actions scheduler-flow-actions-split">
                             <button id="btnVoltarAgendamentoResumo" class="print-secondary-btn" type="button">Editar detalhes</button>
-                            <button id="btnAgendar" class="btn-destaque" type="button">Confirmar reserva</button>
+                            <button id="btnContinuarAgendamentoResumo" class="btn-destaque" type="button">
+                                Ver outras aulas disponíveis
+                            </button>
                         </div>
                     </article>
+
+                    {% include "includes/scheduling_repeat_step.html" %}
                 </div>
 
                 <section class="scheduler-feedback-panel scheduler-feedback-panel-inline" aria-live="polite">
@@ -375,6 +392,8 @@
     <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/scheduling/day_overview.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/scheduling/repeat_step.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/agendamento.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>
 
