@@ -688,9 +688,9 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-lesson-list-columns {
     display: grid;
-    grid-template-columns: 72px minmax(150px, 0.9fr) minmax(190px, 1.1fr) minmax(180px, 1fr);
+    grid-template-columns: minmax(120px, 0.75fr) minmax(130px, 0.7fr) minmax(180px, 1.25fr) minmax(120px, 0.8fr);
     gap: 14px;
-    padding: 7px 10px 7px 34px;
+    padding: 7px 10px 7px 46px;
     border-top: 1px solid var(--scheduler-border);
     color: var(--scheduler-muted);
     font-size: 11px;
@@ -704,7 +704,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-lesson-option-row {
     display: grid;
-    grid-template-columns: 20px 72px minmax(150px, 0.9fr) minmax(190px, 1.1fr) minmax(180px, 1fr);
+    grid-template-columns: 22px minmax(120px, 0.75fr) minmax(130px, 0.7fr) minmax(180px, 1.25fr) minmax(120px, 0.8fr);
     gap: 14px;
     align-items: center;
     min-height: 48px;
@@ -739,6 +739,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 }
 
 .scheduler-lesson-list-period,
+.scheduler-lesson-list-time,
 .scheduler-lesson-list-subject,
 .scheduler-lesson-list-class {
     min-width: 0;
@@ -751,19 +752,26 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     color: var(--scheduler-text);
 }
 
-.scheduler-lesson-list-subject {
+.scheduler-lesson-list-time {
     grid-column: 3;
     font-size: 12px;
-    color: var(--scheduler-text);
+    color: var(--scheduler-muted);
 }
 
-.scheduler-lesson-list-class {
+.scheduler-lesson-list-subject {
     grid-column: 4;
     font-size: 12px;
     color: var(--scheduler-text);
 }
 
+.scheduler-lesson-list-class {
+    grid-column: 5;
+    font-size: 12px;
+    color: var(--scheduler-text);
+}
+
 .scheduler-lesson-option-row.is-disabled .scheduler-lesson-list-period,
+.scheduler-lesson-option-row.is-disabled .scheduler-lesson-list-time,
 .scheduler-lesson-option-row.is-disabled .scheduler-lesson-list-subject,
 .scheduler-lesson-option-row.is-disabled .scheduler-lesson-list-class {
     color: var(--scheduler-muted);
@@ -1116,7 +1124,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
         grid-template-columns: 22px minmax(0, 1fr) auto;
         grid-template-areas:
             "radio subject period"
-            "radio class status";
+            "radio class time";
         gap: 2px 10px;
         min-height: 64px;
         padding: 9px 12px;
@@ -1148,6 +1156,14 @@ html[data-scheduler-current-step] .scheduler-flow-page {
         grid-column: auto;
         grid-area: class;
         font-size: 12px;
+        color: var(--scheduler-muted);
+    }
+
+    .scheduler-lesson-list-time {
+        grid-column: auto;
+        grid-area: time;
+        justify-self: end;
+        font-size: 11px;
         color: var(--scheduler-muted);
     }
 

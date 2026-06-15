@@ -1373,6 +1373,7 @@ function selecionarAulaParaAgendamento(item) {
     if (aulasAdicionaisAgendamento.has(chave)) {
         aulasAdicionaisAgendamento.delete(chave);
     } else {
+        aulasAdicionaisAgendamento.clear();
         aulasAdicionaisAgendamento.add(chave);
     }
 
@@ -2248,6 +2249,7 @@ function renderEstadoAulasDia(texto) {
 
 async function carregarAulasProfessorDia() {
     const diaSemana = obterDiaSemanaApiPorData(dataSelecionada);
+    const professorId = obterProfessorAgendaAtivoId();
 
     aulasProfessorDia = [];
 
@@ -2255,11 +2257,16 @@ async function carregarAulasProfessorDia() {
         limparSelecaoAulaAgendamento({ manterFormulario: true, limparRecursos: false });
         return;
     }
+    if (professorId <= 0) {
+        limparSelecaoAulaAgendamento({ manterFormulario: true, limparRecursos: false });
+        return;
+    }
 
     const anoLetivo = Number(String(dataSelecionada || "").slice(0, 4));
     const params = new URLSearchParams({
         ano_letivo: String(anoLetivo),
-        dia_semana: diaSemana
+        dia_semana: diaSemana,
+        professor_id: String(professorId)
     });
 
     const res = await fetchComAuth(`/horario-escolar/registros?${params.toString()}`, { headers });
@@ -3191,13 +3198,17 @@ function criarLinhaAgendaDia({
     }
 
     const radio = document.createElement("input");
-    radio.type = "checkbox";
+    radio.type = "radio";
     radio.name = "aulasAgendamento";
     radio.className = "scheduler-lesson-radio";
     radio.checked = Boolean(selecionada);
     radio.disabled = !podeSelecionar;
     const aulaNumeroLinha = Number(linhaGrade.aula_numero || linhaGrade.aula || 0);
-    const aulaRotuloLinha = String(linhaGrade.label || aulaLabel(aulaNumeroLinha));
+    const aulaRotuloLinha = String(
+        linhaGrade.label_curta
+        || linhaGrade.nome
+        || aulaLabel(aulaNumeroLinha)
+    );
     radio.setAttribute("aria-label", `${selecionada ? "Remover" : "Selecionar"} ${aulaRotuloLinha}`);
     radio.addEventListener("change", () => {
         if (aulaPrincipal) {
@@ -3209,13 +3220,17 @@ function criarLinhaAgendaDia({
     aula.className = "scheduler-lesson-list-period";
     aula.innerText = aulaRotuloLinha;
 
+    const horarioInicio = String(linhaGrade?.horario_inicio || aulaPrincipal?.horario_inicio || "").trim();
+    const horarioFim = String(linhaGrade?.horario_fim || aulaPrincipal?.horario_fim || "").trim();
+    const horario = document.createElement("span");
+    horario.className = "scheduler-lesson-list-time";
+    horario.innerText = horarioInicio && horarioFim
+        ? `${horarioInicio} - ${horarioFim}`
+        : "Horário não informado";
+
     const turmaNome = textoPadraoDetalheReserva(
         aulaPrincipal?.turma_nome || aulaPrincipal?.turmaNome,
         "Turma não informada"
-    );
-    const professorNome = textoPadraoDetalheReserva(
-        aulaPrincipal?.professor_nome || aulaPrincipal?.professorNome,
-        "Professor não informado"
     );
     const disciplinaNome = textoPadraoDetalheReserva(
         aulaPrincipal?.disciplina_nome || aulaPrincipal?.disciplinaNome,
@@ -3224,33 +3239,17 @@ function criarLinhaAgendaDia({
 
     const disciplina = document.createElement("span");
     disciplina.className = "scheduler-lesson-list-subject";
-    disciplina.innerText = turmaNome;
+    disciplina.innerText = disciplinaNome;
 
     const turma = document.createElement("span");
     turma.className = "scheduler-lesson-list-class";
-    turma.innerText = `${professorNome} · ${disciplinaNome}`;
-
-    const status = document.createElement("span");
-    status.className = "scheduler-lesson-list-status";
-    if (selecionada) {
-        status.dataset.variant = "selected";
-        status.innerText = "Selecionada";
-    } else if (!recursoDisponivel) {
-        status.dataset.variant = "warning";
-        status.innerText = "Recurso já agendado";
-    } else if (!podeSelecionar) {
-        status.dataset.variant = "muted";
-        status.innerText = "Aula de outro professor";
-    } else {
-        status.dataset.variant = "available";
-        status.innerText = "Disponível";
-    }
+    turma.innerText = turmaNome;
 
     linha.appendChild(radio);
     linha.appendChild(aula);
+    linha.appendChild(horario);
     linha.appendChild(disciplina);
     linha.appendChild(turma);
-    linha.appendChild(status);
     return linha;
 }
 
@@ -3263,7 +3262,11 @@ function renderAgendaDiaAulas() {
     }
 
     const diaSemana = obterDiaSemanaApiPorData(dataSelecionada);
-    const subtituloPartes = [paraDataBr(dataSelecionada), "todas as aulas da escola"];
+    const professor = obterProfessorAgendaAtivo();
+    const subtituloPartes = [
+        paraDataBr(dataSelecionada),
+        professor?.nome || "Selecione um professor"
+    ];
     if (!Array.isArray(aulasProfessorDia) || aulasProfessorDia.length === 0) {
         subtituloPartes.push("sem aulas registradas");
     }
@@ -3273,60 +3276,68 @@ function renderAgendaDiaAulas() {
         renderEstadoAulasDia("A agenda por aula está disponível apenas para dias letivos.");
         return;
     }
+    if (!professor) {
+        renderEstadoAulasDia("Selecione um professor para visualizar as aulas do dia.");
+        return;
+    }
 
     const reservasPorCelula = mapearReservasDiaPorCelula();
-    const aulasPorCelula = mapearAulasProfessorDiaPorCelula();
-    const grade = obterLinhasAulasGradeSemanal();
+    const aulasPorPeriodo = new Map([
+        ["MATUTINO", []],
+        ["VESPERTINO", []]
+    ]);
+    (Array.isArray(aulasProfessorDia) ? aulasProfessorDia : []).forEach((aula) => {
+        const periodo = periodoAulaPorFaixa(
+            Number(aula.faixa_global || aula.aula_numero || 0),
+            aula.turno
+        );
+        aulasPorPeriodo.get(periodo)?.push(aula);
+    });
     lista.innerHTML = "";
 
-    const secao = document.createElement("section");
-    secao.className = "scheduler-shift-section";
-
-    const cabecalho = document.createElement("header");
-    cabecalho.className = "scheduler-shift-header";
-
-    const tituloSecao = document.createElement("h4");
-    tituloSecao.innerText = "GRADE GLOBAL";
-    cabecalho.appendChild(tituloSecao);
-
-    const colunas = document.createElement("div");
-    colunas.className = "scheduler-lesson-list-columns";
-    ["Aula", "Turma", "Professor e disciplina", "Disponibilidade"].forEach((texto) => {
-        const coluna = document.createElement("span");
-        coluna.innerText = texto;
-        colunas.appendChild(coluna);
-    });
-    cabecalho.appendChild(colunas);
-    secao.appendChild(cabecalho);
-
-    const corpoGrade = document.createElement("div");
-    corpoGrade.className = "scheduler-shift-slots";
-    secao.appendChild(corpoGrade);
-    lista.appendChild(secao);
-
-    grade.forEach((linhaGrade) => {
-        if (String(linhaGrade?.tipo || "").toUpperCase() === "INTERVALO") {
-            const divisor = document.createElement("div");
-            divisor.className = "scheduler-resource-empty";
-            divisor.innerText = linhaGrade.label || linhaGrade.nome || "Intervalo";
-            corpoGrade.appendChild(divisor);
+    [["MATUTINO", 5], ["VESPERTINO", 6]].forEach(([periodo, limite]) => {
+        const aulasPeriodo = (aulasPorPeriodo.get(periodo) || [])
+            .sort((a, b) => Number(a.faixa_global || 0) - Number(b.faixa_global || 0))
+            .slice(0, limite);
+        if (aulasPeriodo.length === 0) {
             return;
         }
 
-        const aulaNumero = Number(linhaGrade.aula_numero || linhaGrade.aula || 0);
-        const chave = chaveCelulaAgendaDia(aulaNumero);
-        const aulasCelula = aulasPorCelula.get(chave) || [];
-        if (aulasCelula.length === 0) {
-            return;
-        }
+        const secao = document.createElement("section");
+        secao.className = "scheduler-shift-section";
 
-        aulasCelula.forEach((aula) => {
+        const cabecalho = document.createElement("header");
+        cabecalho.className = "scheduler-shift-header";
+
+        const tituloSecao = document.createElement("h4");
+        tituloSecao.innerText = nomePeriodoAgendamento(periodo);
+        cabecalho.appendChild(tituloSecao);
+
+        const colunas = document.createElement("div");
+        colunas.className = "scheduler-lesson-list-columns";
+        ["Aula", "Horário", "Disciplina", "Turma"].forEach((texto) => {
+            const coluna = document.createElement("span");
+            coluna.innerText = texto;
+            colunas.appendChild(coluna);
+        });
+        cabecalho.appendChild(colunas);
+        secao.appendChild(cabecalho);
+
+        const corpoGrade = document.createElement("div");
+        corpoGrade.className = "scheduler-shift-slots";
+
+        aulasPeriodo.forEach((aula) => {
+            const aulaNumero = Number(aula.faixa_global || aula.aula_numero || 0);
+            const linhaGrade = obterAulaGlobalPorNumero(aulaNumero) || aula;
+            const chave = chaveCelulaAgendaDia(aulaNumero);
             corpoGrade.appendChild(criarLinhaAgendaDia({
                 linhaGrade,
                 aula,
                 reservasCelula: reservasPorCelula.get(chave) || []
             }));
         });
+        secao.appendChild(corpoGrade);
+        lista.appendChild(secao);
     });
 
     if (!lista.querySelector(".scheduler-lesson-option-row")) {
