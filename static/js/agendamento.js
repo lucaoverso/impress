@@ -166,6 +166,30 @@ function obterAulaGlobalPorNumero(numeroAula) {
     return aulasGlobaisAtivas().find((item) => Number(item?.aula_numero || 0) === aula) || null;
 }
 
+function periodoAulaPorFaixa(faixaGlobal, turnoReserva = "") {
+    const faixa = Number(faixaGlobal || 0);
+    const aulaConfig = obterAulaGlobalPorNumero(faixa);
+    const periodoConfigurado = String(aulaConfig?.periodo || "").trim().toUpperCase();
+    if (periodoConfigurado === "MATUTINO" || periodoConfigurado === "VESPERTINO") {
+        return periodoConfigurado;
+    }
+
+    const horarioInicio = String(aulaConfig?.horario_inicio || "").trim();
+    const horaInicio = Number(horarioInicio.split(":", 1)[0]);
+    if (horarioInicio && Number.isInteger(horaInicio)) {
+        return horaInicio < 12 ? "MATUTINO" : "VESPERTINO";
+    }
+
+    if (faixa > 0) {
+        return faixa <= MAX_AULAS_EXIBICAO ? "MATUTINO" : "VESPERTINO";
+    }
+    return normalizarTurnoId(turnoReserva) === "MATUTINO" ? "MATUTINO" : "VESPERTINO";
+}
+
+function nomePeriodoAgendamento(periodo) {
+    return String(periodo || "").toUpperCase() === "MATUTINO" ? "Matutino" : "Vespertino";
+}
+
 function aulaLabel(aula) {
     const aulaConfig = obterAulaGlobalPorNumero(aula);
     if (aulaConfig?.label_curta) {
@@ -530,27 +554,31 @@ function renderVisaoGeralAgendamentosDia() {
         return;
     }
 
-    const grupos = new Map();
+    const grupos = new Map([
+        ["MATUTINO", []],
+        ["VESPERTINO", []]
+    ]);
     reservasDia.forEach((reserva) => {
-        const turnoId = normalizarTurnoId(reserva.turno);
-        if (!grupos.has(turnoId)) {
-            grupos.set(turnoId, []);
-        }
-        grupos.get(turnoId).push(reserva);
+        const periodo = periodoAulaPorFaixa(faixaGlobalReserva(reserva), reserva.turno);
+        grupos.get(periodo).push(reserva);
     });
 
-    grupos.forEach((reservasTurno, turnoId) => {
+    grupos.forEach((reservasPeriodo, periodo) => {
+        if (reservasPeriodo.length === 0) {
+            return;
+        }
+
         const grupo = document.createElement("section");
         grupo.className = "scheduler-day-overview-shift";
 
         const titulo = document.createElement("h4");
-        titulo.innerText = nomeTurno(turnoId);
+        titulo.innerText = nomePeriodoAgendamento(periodo);
         grupo.appendChild(titulo);
 
         const lista = document.createElement("div");
         lista.className = "scheduler-day-overview-rows";
 
-        reservasTurno.forEach((reserva) => {
+        reservasPeriodo.forEach((reserva) => {
             const linha = document.createElement("div");
             linha.className = "scheduler-day-overview-row";
 
@@ -967,11 +995,17 @@ function obterReservasDaAulaSelecionada(item = selecaoAulaAgendamento) {
     });
 }
 
+function obterVagasRestantesRecurso(recurso, item = selecaoAulaAgendamento) {
+    const recursoId = Number(recurso?.id || 0);
+    const capacidade = Math.max(Number(recurso?.quantidade_itens || 1), 1);
+    const reservasAtivas = obterReservasDaAulaSelecionada(item).filter(
+        (reserva) => Number(reserva?.recurso_id || 0) === recursoId
+    ).length;
+    return Math.max(capacidade - reservasAtivas, 0);
+}
+
 function obterRecursosDisponiveisParaSelecao(item = selecaoAulaAgendamento) {
-    const recursosReservados = new Set(
-        obterReservasDaAulaSelecionada(item).map((reserva) => Number(reserva.recurso_id || 0))
-    );
-    return recursos.filter((recurso) => !recursosReservados.has(Number(recurso.id)));
+    return recursos.filter((recurso) => obterVagasRestantesRecurso(recurso, item) > 0);
 }
 
 function aulaSuportaRecursosSelecionados(item, recursosSelecionados = obterRecursosSelecionadosAgendamento()) {

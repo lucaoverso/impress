@@ -642,6 +642,9 @@ function renderListaConfiguracoesAulasAdmin() {
             tipoConfiguracaoAula(item) === "AULA" && Number(item.aula_numero || 0) > 0
                 ? `Numero global: ${Number(item.aula_numero)}`
                 : null,
+            tipoConfiguracaoAula(item) === "AULA" && String(item.periodo || "").trim()
+                ? `Periodo: ${String(item.periodo).toUpperCase() === "MATUTINO" ? "Matutino" : "Vespertino"}`
+                : null,
             textoHorarioConfiguracaoAula(item),
             item.ativo ? "Ativo" : "Inativo"
         ].filter(Boolean).join(" | ");

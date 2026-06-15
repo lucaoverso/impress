@@ -4,6 +4,7 @@ from types import SimpleNamespace
 from fastapi import HTTPException
 
 from modules.scheduling.schemas import SchedulingReservationCreate
+from modules.scheduling.lesson_config import normalize_schedule_entries
 from modules.scheduling.service import (
     build_scheduling_options,
     cancel_scheduling_reservation,
@@ -66,9 +67,52 @@ class SchedulingServiceTest(unittest.TestCase):
         capacidade = ensure_slot_has_capacity(recurso, reservas_ativas_faixa=1)
         self.assertEqual(capacidade, 2)
 
+    def test_ensure_slot_has_capacity_accepts_fourth_item(self):
+        recurso = {"quantidade_itens": 4}
+        capacidade = ensure_slot_has_capacity(recurso, reservas_ativas_faixa=3)
+        self.assertEqual(capacidade, 4)
+
     def test_ensure_slot_has_capacity_rejects_full_slot(self):
         with self.assertRaises(HTTPException):
             ensure_slot_has_capacity({"quantidade_itens": 1}, reservas_ativas_faixa=1)
+
+    def test_normalize_schedule_entries_uses_admin_lesson_name_in_labels(self):
+        [aula] = normalize_schedule_entries(
+            [
+                {
+                    "id": 1,
+                    "ordem_visual": 1,
+                    "tipo": "AULA",
+                    "aula_numero": 1,
+                    "nome": "Acolhida e leitura",
+                    "horario_inicio": "07:00",
+                    "horario_fim": "07:50",
+                    "ativo": 1,
+                }
+            ]
+        )
+
+        self.assertEqual(aula["label_curta"], "Acolhida e leitura")
+        self.assertEqual(aula["label"], "Acolhida e leitura (07:00 - 07:50)")
+        self.assertEqual(aula["periodo"], "MATUTINO")
+
+    def test_normalize_schedule_entries_classifies_afternoon_by_start_time(self):
+        [aula] = normalize_schedule_entries(
+            [
+                {
+                    "id": 6,
+                    "ordem_visual": 6,
+                    "tipo": "AULA",
+                    "aula_numero": 6,
+                    "nome": "Aula vespertina",
+                    "horario_inicio": "13:00",
+                    "horario_fim": "13:50",
+                    "ativo": 1,
+                }
+            ]
+        )
+
+        self.assertEqual(aula["periodo"], "VESPERTINO")
 
     def test_create_scheduling_reservation_calls_repository_functions(self):
         payload = SchedulingReservationCreate(

@@ -42,6 +42,7 @@ class SchedulingLessonConfigOut(BaseModel):
     horario_inicio: str = ""
     horario_fim: str = ""
     ativo: bool = True
+    periodo: str = ""
     faixa_global: int = 0
     label: str = ""
     label_curta: str = ""

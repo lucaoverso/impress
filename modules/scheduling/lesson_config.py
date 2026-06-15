@@ -6,6 +6,8 @@ from modules.scheduling.config import JANELA_AULAS_PADRAO_POR_TURNO
 
 TIPO_GRADE_AULA = "AULA"
 TIPO_GRADE_INTERVALO = "INTERVALO"
+PERIODO_MATUTINO = "MATUTINO"
+PERIODO_VESPERTINO = "VESPERTINO"
 
 
 def lesson_window_from_turn(turn: str) -> tuple[int, int]:
@@ -22,13 +24,34 @@ def resolve_class_lesson_window(class_item: dict | None) -> tuple[int, int]:
     return lesson_window_from_turn(item.get("turno", ""))
 
 
-def build_lesson_display_label(lesson_number: int, start_time: str = "", end_time: str = "") -> str:
-    lesson_label = f"{int(lesson_number)}a aula"
+def build_lesson_display_label(
+    lesson_number: int,
+    start_time: str = "",
+    end_time: str = "",
+    name: str = "",
+) -> str:
+    lesson_label = str(name or "").strip() or f"{int(lesson_number)}a aula"
     clean_start = str(start_time or "").strip()
     clean_end = str(end_time or "").strip()
     if clean_start and clean_end:
         return f"{lesson_label} ({clean_start} - {clean_end})"
     return lesson_label
+
+
+def resolve_lesson_period(lesson_number: int | None, start_time: str = "") -> str:
+    clean_start = str(start_time or "").strip()
+    try:
+        start_hour = int(clean_start.split(":", 1)[0])
+    except (TypeError, ValueError):
+        start_hour = -1
+
+    if 0 <= start_hour <= 23:
+        return PERIODO_MATUTINO if start_hour < 12 else PERIODO_VESPERTINO
+
+    lesson_value = int(lesson_number or 0)
+    if lesson_value > 0:
+        return PERIODO_MATUTINO if lesson_value <= 5 else PERIODO_VESPERTINO
+    return ""
 
 
 def normalize_schedule_entries(entries: list[dict] | None) -> list[dict]:
@@ -49,10 +72,15 @@ def normalize_schedule_entries(entries: list[dict] | None) -> list[dict]:
         active = bool(int(item.get("ativo", 1) or 0))
 
         if entry_type == TIPO_GRADE_AULA and lesson_number:
-            short_label = f"{lesson_number}a aula"
-            display_label = build_lesson_display_label(lesson_number, start_time, end_time)
             if not name:
                 name = f"Aula {lesson_number}"
+            short_label = name
+            display_label = build_lesson_display_label(
+                lesson_number,
+                start_time,
+                end_time,
+                name,
+            )
         else:
             short_label = name or "Intervalo"
             display_label = short_label
@@ -68,6 +96,7 @@ def normalize_schedule_entries(entries: list[dict] | None) -> list[dict]:
                 "horario_inicio": start_time,
                 "horario_fim": end_time,
                 "ativo": active,
+                "periodo": resolve_lesson_period(lesson_number, start_time),
                 "faixa_global": int(lesson_number or 0),
                 "label_curta": short_label,
                 "label": display_label,
