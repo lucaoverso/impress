@@ -904,6 +904,11 @@ TipoRegistroOcorrencia = Literal[
     "geral",
 ]
 
+QuemAssinaOcorrencia = Literal[
+    "estudante",
+    "responsavel",
+]
+
 
 class OcorrenciaEstudanteVinculadoIn(BaseModel):
     estudante_id: int | None = None
@@ -933,6 +938,7 @@ class OcorrenciaProfessorVinculadoOut(BaseModel):
 class OcorrenciaCreateIn(BaseModel):
     pre_registration_id: int | None = None
     tipo_registro: TipoRegistroOcorrencia = "estudante"
+    quem_assina: QuemAssinaOcorrencia | None = None
     nome_estudante: str | None = None
     estudante_id: int | None = None
     estudantes_vinculados: list[OcorrenciaEstudanteVinculadoIn] = Field(default_factory=list)
@@ -953,6 +959,7 @@ class OcorrenciaCreateIn(BaseModel):
 
 class OcorrenciaUpdateIn(BaseModel):
     tipo_registro: TipoRegistroOcorrencia | None = None
+    quem_assina: QuemAssinaOcorrencia | None = None
     nome_estudante: str | None = None
     estudante_id: int | None = None
     estudantes_vinculados: list[OcorrenciaEstudanteVinculadoIn] | None = None
@@ -974,6 +981,7 @@ class OcorrenciaUpdateIn(BaseModel):
 class OcorrenciaOut(BaseModel):
     id: int
     tipo_registro: str = "estudante"
+    quem_assina: str | None = None
     nome_estudante: str
     estudante_id: int | None = None
     estudantes_vinculados: list[OcorrenciaEstudanteVinculadoOut] = Field(default_factory=list)

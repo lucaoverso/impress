@@ -47,6 +47,7 @@ class RegimentoOcorrenciasTest(unittest.TestCase):
 
             ocorrencia_id = database.criar_ocorrencia(
                 tipo_registro="estudante",
+                quem_assina="responsavel",
                 nome_estudante="Estudante Teste",
                 estudante_id=None,
                 turma_id=turma_id,
@@ -111,6 +112,7 @@ class RegimentoOcorrenciasTest(unittest.TestCase):
             )
             ocorrencia_id = database.criar_ocorrencia(
                 tipo_registro="estudante",
+                quem_assina="responsavel",
                 nome_estudante="Outro Estudante",
                 estudante_id=None,
                 turma_id=turma_id,
@@ -145,6 +147,7 @@ class RegimentoOcorrenciasTest(unittest.TestCase):
             )
             ocorrencia_id = database.criar_ocorrencia(
                 tipo_registro="estudante",
+                quem_assina="responsavel",
                 nome_estudante="Estudante Protegido",
                 estudante_id=None,
                 turma_id=turma_id,
@@ -211,6 +214,7 @@ class RegimentoOcorrenciasTest(unittest.TestCase):
             )
             ocorrencia_id = database.criar_ocorrencia(
                 tipo_registro="estudante",
+                quem_assina="responsavel",
                 nome_estudante="Estudante Migracao",
                 estudante_id=None,
                 turma_id=turma_id,

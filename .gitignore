@@ -28,6 +28,6 @@ spool/
 # IDE
 .vscode/
 .idea/
-
+.codex/
 # Sistema
 .DS_Store

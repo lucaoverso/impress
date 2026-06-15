@@ -13,6 +13,9 @@ from db.catalogos import (
 )
 from db.ocorrencias import (
     ACAO_OCORRENCIA_VALIDAS,
+    QUEM_ASSINA_OCORRENCIA_ESTUDANTE,
+    QUEM_ASSINA_OCORRENCIA_RESPONSAVEL,
+    QUEM_ASSINA_OCORRENCIA_VALIDOS,
     STATUS_OCORRENCIA_REGISTRADO,
     STATUS_OCORRENCIA_VALIDOS,
     TIPOS_REGISTRO_OCORRENCIA,
@@ -122,6 +125,10 @@ _TIPOS_REGISTRO_ROTULOS = {
     TIPO_REGISTRO_ESTUDANTE: "Registro de estudante",
     TIPO_REGISTRO_PROFESSOR: "Registro individual de professor",
     TIPO_REGISTRO_GERAL: "Orientacao geral aos professores",
+}
+_QUEM_ASSINA_ROTULOS = {
+    QUEM_ASSINA_OCORRENCIA_ESTUDANTE: "Estudante",
+    QUEM_ASSINA_OCORRENCIA_RESPONSAVEL: "Responsável",
 }
 _TURNOS_CONFIG = {
     "INTEGRAL": {"nome": "Periodo integral", "aulas": 8},
@@ -238,6 +245,18 @@ def _registro_exige_base_legal(tipo_registro: str) -> bool:
 
 def _registro_exige_aula(tipo_registro: str) -> bool:
     return tipo_registro == TIPO_REGISTRO_ESTUDANTE
+
+
+def _validar_quem_assina(valor: str | None, tipo_registro: str) -> str | None:
+    if tipo_registro != TIPO_REGISTRO_ESTUDANTE:
+        return None
+
+    quem_assina = str(valor or "").strip().lower()
+    if not quem_assina:
+        return QUEM_ASSINA_OCORRENCIA_RESPONSAVEL
+    if quem_assina not in QUEM_ASSINA_OCORRENCIA_VALIDOS:
+        raise HTTPException(400, "Quem assina invalido.")
+    return quem_assina
 
 
 def _resumir_nomes_vinculados(itens: list[dict], *, campo_nome: str = "nome") -> str:
@@ -829,6 +848,10 @@ def listar_opcoes_ocorrencias(usuario=Depends(get_usuario_logado)):
             {"id": tipo, "nome": _TIPOS_REGISTRO_ROTULOS.get(tipo, tipo)}
             for tipo in TIPOS_REGISTRO_OCORRENCIA
         ],
+        "quem_assina": [
+            {"id": valor, "nome": _QUEM_ASSINA_ROTULOS.get(valor, valor)}
+            for valor in QUEM_ASSINA_OCORRENCIA_VALIDOS
+        ],
         "acoes_aplicadas": listar_acoes_aplicadas(),
         "status": [
             {"id": status, "nome": _STATUS_ROTULOS.get(status, status)}
@@ -932,6 +955,7 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
     if tipo_registro == TIPO_REGISTRO_ESTUDANTE and regimento_itens:
         _validar_acao_compativel_com_base_legal(acao_aplicada, regimento_itens)
     descricao = _texto_obrigatorio(payload.descricao, "Descricao", max_len=5000)
+    quem_assina = _validar_quem_assina(payload.quem_assina, tipo_registro)
     contexto = _resolver_contexto_registro(
         tipo_registro=tipo_registro,
         nome_estudante=payload.nome_estudante,
@@ -969,6 +993,7 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
     try:
         ocorrencia_id = criar_ocorrencia(
             tipo_registro=tipo_registro,
+            quem_assina=quem_assina,
             nome_estudante=contexto["nome_estudante"],
             estudante_id=contexto["estudante_id"],
             turma_id=turma_id,
@@ -1082,6 +1107,11 @@ def atualizar_ocorrencia_parcial_api(
 
     if "tipo_registro" in dados_brutos:
         dados_validados["tipo_registro"] = tipo_registro_merge
+    if "quem_assina" in dados_brutos or "tipo_registro" in dados_brutos:
+        dados_validados["quem_assina"] = _validar_quem_assina(
+            dados_brutos.get("quem_assina", atual.get("quem_assina")),
+            tipo_registro_merge,
+        )
 
     campos_contexto = {
         "tipo_registro",

@@ -254,6 +254,7 @@ function montarPayloadOcorrencia() {
     return {
         pre_registration_id: preRegistroEmComplementacaoId || null,
         tipo_registro: tipoRegistro,
+        quem_assina: tipoRegistro === "estudante" ? obterQuemAssinaFormulario() : null,
         nome_estudante: tipoRegistro === "geral"
             ? (assuntoOuPauta || null)
             : (tipoRegistro === "estudante" ? (resumoNomesVinculados(estudantesVinculados) || null) : null),

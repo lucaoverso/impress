@@ -5,8 +5,10 @@ from pypdf import PdfReader
 
 from services.ocorrencia_pdf_service import (
     _montar_blocos_base_legal,
+    _obter_identificacao_ata,
     _obter_runs_descricao_formatada,
     _obter_gravidade_ocorrencia,
+    _obter_titulo_assinatura_estudante,
     _obter_titulo_documento,
     gerar_pdf_ocorrencia_registro,
 )
@@ -48,6 +50,35 @@ class OcorrenciaPdfServiceTest(unittest.TestCase):
         self.assertEqual(
             _obter_titulo_documento(ocorrencia),
             "REGISTRO INDIVIDUAL DE PROFESSOR",
+        )
+
+    def test_obtem_identificacao_ata_com_id_e_ano_da_ocorrencia(self):
+        ocorrencia = _ocorrencia_base("Descricao qualquer.")
+        ocorrencia["id"] = 1
+        ocorrencia["data_ocorrencia"] = "2026-03-10"
+        self.assertEqual(_obter_identificacao_ata(ocorrencia), "ATA Nº 01/2026")
+
+    def test_obtem_identificacao_ata_respeita_numero_explicitado(self):
+        ocorrencia = _ocorrencia_base("Descricao qualquer.")
+        ocorrencia["numero_ata"] = 27
+        ocorrencia["ano_ata"] = "2027"
+        self.assertEqual(_obter_identificacao_ata(ocorrencia), "ATA Nº 27/2027")
+
+    def test_obtem_titulo_assinatura_estudante_respeita_quem_assina(self):
+        ocorrencia = _ocorrencia_base("Descricao qualquer.")
+        ocorrencia["tipo_registro"] = "estudante"
+        ocorrencia["quem_assina"] = "estudante"
+        self.assertEqual(_obter_titulo_assinatura_estudante(ocorrencia), "Estudante")
+        self.assertEqual(
+            _obter_titulo_assinatura_estudante(ocorrencia, plural=True),
+            "ASSINATURAS DOS ESTUDANTES",
+        )
+
+        ocorrencia["quem_assina"] = "responsavel"
+        self.assertEqual(_obter_titulo_assinatura_estudante(ocorrencia), "Responsável")
+        self.assertEqual(
+            _obter_titulo_assinatura_estudante(ocorrencia, plural=True),
+            "ASSINATURAS DOS RESPONSÁVEIS",
         )
 
     def test_gravidade_fica_nula_para_registro_de_professor(self):
@@ -301,6 +332,18 @@ class OcorrenciaPdfServiceTest(unittest.TestCase):
 
         if texto.strip():
             self.assertIn("BASE LEGAL", texto.upper())
+
+    def test_pdf_renderiza_identificacao_ata_no_corpo(self):
+        ocorrencia = _ocorrencia_base("Descricao curta para validar a identificacao da ata.")
+        ocorrencia["id"] = 1
+        ocorrencia["data_ocorrencia"] = "2026-03-10"
+
+        pdf_bytes = gerar_pdf_ocorrencia_registro(ocorrencia, turma={"turno": "MATUTINO"})
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        texto = "\n".join((pagina.extract_text() or "") for pagina in reader.pages)
+
+        if texto.strip():
+            self.assertIn("ATA Nº 01/2026", texto)
 
     def test_paginas_adicionais_quando_descricao_ultrapassa_uma_folha(self):
         descricao_longa = " ".join(

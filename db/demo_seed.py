@@ -837,6 +837,7 @@ def _sync_ocorrencias(
     for item in itens:
         database.criar_ocorrencia(
             tipo_registro="estudante",
+            quem_assina="responsavel",
             nome_estudante=item["nome_estudante"],
             estudante_id=int(estudantes[(item["turma"], item["nome_estudante"])]),
             turma_id=int(turmas[item["turma"]]),

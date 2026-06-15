@@ -278,6 +278,7 @@ async function carregarOpcoesOcorrencias() {
         incisos: Array.isArray(opcoesApi.incisos) ? opcoesApi.incisos : [],
         alineas: Array.isArray(opcoesApi.alineas) ? opcoesApi.alineas : [],
         status: Array.isArray(opcoesApi.status) ? opcoesApi.status : [],
+        quem_assina: Array.isArray(opcoesApi.quem_assina) ? opcoesApi.quem_assina : [],
         acoes_aplicadas: Array.isArray(opcoesApi.acoes_aplicadas) ? opcoesApi.acoes_aplicadas : [],
         regimento_itens: Array.isArray(opcoesApi.regimento_itens) ? opcoesApi.regimento_itens : [],
         status_padrao: opcoesApi.status_padrao || "registrado"
@@ -321,6 +322,10 @@ async function carregarOpcoesOcorrencias() {
     preencherSelect("ocorrenciaStatus", opcoesOcorrencias.status, {
         placeholder: "Selecione o status",
         valorPadrao: opcoesOcorrencias.status_padrao || "registrado"
+    });
+    preencherSelect("ocorrenciaQuemAssina", opcoesOcorrencias.quem_assina, {
+        placeholder: "Selecione quem assina",
+        valorPadrao: "responsavel"
     });
     preencherSelect("filtroStatus", opcoesOcorrencias.status, { incluirTodos: true });
     preencherSelect("relatorioStatus", opcoesOcorrencias.status, { incluirTodos: true });

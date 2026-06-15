@@ -29,7 +29,7 @@ COR_BORDA = (123, 132, 143)
 
 MOLDURA_INSET = 105
 MARGEM_X = 205
-MARGEM_TOPO = 150
+MARGEM_TOPO = 120
 MARGEM_BASE = 170
 RODAPE_RESERVA = 330
 
@@ -38,11 +38,14 @@ SUBTITULO_REGISTRO = "COORDENA\u00c7\u00c3O PEDAG\u00d3GICA - CENTRAL DE REGISTR
 TITULO_REGISTRO = "REGISTRO DISCIPLINAR DO ESTUDANTE"
 TITULO_CONTINUACAO = "CONTINUA\u00c7\u00c3O DO REGISTRO"
 SECAO_DESCRICAO = "DESCRI\u00c7\u00c3O DA OCORR\u00caNCIA"
+TITULO_ATA = "ATA N\u00ba"
 SECAO_REGIMENTO = "BASE LEGAL"
 ALTURA_AREA_REGIMENTO = 280
 TIPO_REGISTRO_ESTUDANTE = "estudante"
 TIPO_REGISTRO_PROFESSOR = "professor"
 TIPO_REGISTRO_GERAL = "geral"
+QUEM_ASSINA_ESTUDANTE = "estudante"
+QUEM_ASSINA_RESPONSAVEL = "responsavel"
 
 ACOES_ROTULOS = {
     "orientacao_verbal": "Orientacao verbal",
@@ -154,16 +157,16 @@ def _carregar_fonte(candidatos: tuple[str, ...], tamanho: int) -> ImageFont.Imag
 
 def _carregar_fontes() -> _FontPack:
     return _FontPack(
-        escola=_carregar_fonte(FONTES_REGULARES, 58),
-        subtitulo=_carregar_fonte(FONTES_REGULARES, 43),
-        titulo=_carregar_fonte(FONTES_SERIF_BOLD, 50),
+        escola=_carregar_fonte(FONTES_REGULARES, 46),
+        subtitulo=_carregar_fonte(FONTES_REGULARES, 31),
+        titulo=_carregar_fonte(FONTES_SERIF_BOLD, 40),
         secao=_carregar_fonte(FONTES_SERIF_BOLD, 48),
         corpo=_carregar_fonte(FONTES_SERIF_REGULARES, 50),
         corpo_bold=_carregar_fonte(FONTES_SERIF_BOLD, 50),
         corpo_italico=_carregar_fonte(FONTES_SERIF_ITALIC, 50),
         corpo_bold_italico=_carregar_fonte(FONTES_SERIF_BOLD_ITALIC, 50),
-        pequeno=_carregar_fonte(FONTES_SERIF_REGULARES, 42),
-        pequeno_bold=_carregar_fonte(FONTES_SERIF_BOLD, 42),
+        pequeno=_carregar_fonte(FONTES_SERIF_REGULARES, 38),
+        pequeno_bold=_carregar_fonte(FONTES_SERIF_BOLD, 38),
         rodape=_carregar_fonte(FONTES_SERIF_REGULARES, 36),
         rodape_italico=_carregar_fonte(FONTES_SERIF_ITALIC, 34),
     )
@@ -316,6 +319,35 @@ def _formatar_data_hora_br(valor: str | None) -> str:
         return texto
 
 
+def _obter_ano_documento(ocorrencia: dict) -> str:
+    ano_explicitado = str(ocorrencia.get("ano_ata") or "").strip()
+    if ano_explicitado.isdigit() and len(ano_explicitado) == 4:
+        return ano_explicitado
+
+    for campo in ("data_ocorrencia", "criado_em"):
+        texto = str(ocorrencia.get(campo) or "").strip()
+        match = re.match(r"^(\d{4})", texto)
+        if match:
+            return match.group(1)
+
+    return str(datetime.now().year)
+
+
+def _obter_identificacao_ata(ocorrencia: dict) -> str:
+    numero = str(
+        ocorrencia.get("numero_ata")
+        or ocorrencia.get("sequencia_ata")
+        or ocorrencia.get("id")
+        or ""
+    ).strip()
+    ano = _obter_ano_documento(ocorrencia)
+    if numero.isdigit():
+        numero = f"{int(numero):02d}"
+    elif not numero:
+        numero = "--"
+    return f"{TITULO_ATA} {numero}/{ano}"
+
+
 def _rotulo_acao(valor: str | None) -> str:
     return rotulo_acao_ocorrencia(valor)
 
@@ -419,6 +451,26 @@ def _obter_observacao_final(ocorrencia: dict) -> str:
         acao,
         f"OBS.: Documento emitido para registro e acompanhamento da ação aplicada: {_rotulo_acao(acao)}.",
     )
+
+
+def _obter_quem_assina_estudante(ocorrencia: dict) -> str:
+    if _obter_tipo_registro(ocorrencia) != TIPO_REGISTRO_ESTUDANTE:
+        return ""
+    quem_assina = str(ocorrencia.get("quem_assina") or "").strip().lower()
+    if quem_assina == QUEM_ASSINA_ESTUDANTE:
+        return QUEM_ASSINA_ESTUDANTE
+    return QUEM_ASSINA_RESPONSAVEL
+
+
+def _obter_titulo_assinatura_estudante(ocorrencia: dict, *, plural: bool = False) -> str:
+    quem_assina = _obter_quem_assina_estudante(ocorrencia)
+    if plural:
+        return (
+            "ASSINATURAS DOS ESTUDANTES"
+            if quem_assina == QUEM_ASSINA_ESTUDANTE
+            else "ASSINATURAS DOS RESPONSÁVEIS"
+        )
+    return "Estudante" if quem_assina == QUEM_ASSINA_ESTUDANTE else "Responsável"
 
 
 def _obter_gravidade_ocorrencia(ocorrencia: dict) -> str | None:
@@ -799,7 +851,7 @@ def _carregar_logo() -> Image.Image | None:
 
     with Image.open(LOGO_ESCOLA_PATH) as logo_origem:
         logo = ImageOps.exif_transpose(logo_origem).convert("RGBA")
-        logo.thumbnail((500, 500), Image.Resampling.LANCZOS)
+        logo.thumbnail((240, 240), Image.Resampling.LANCZOS)
         return logo.copy()
 
 
@@ -894,11 +946,11 @@ class _RenderizadorRegistroOcorrencia:
         return altura
 
     def _desenhar_titulo_destacado(self, texto: str, y: int) -> int:
-        padding_x = 24
-        padding_y = 14
+        padding_x = 20
+        padding_y = 10
         largura_max = max(200, self.largura - (MARGEM_X * 2) - padding_x * 2)
         linhas = self._quebrar_linhas(texto, self.fontes.titulo, largura_max)
-        altura_linha = self._altura_linha(self.fontes.titulo, fator=1.08)
+        altura_linha = self._altura_linha(self.fontes.titulo, fator=1.0)
         largura_bloco = max(self._medir_texto(linha, self.fontes.titulo)[0] for linha in linhas)
         altura_bloco = max(len(linhas), 1) * altura_linha
         x = (self.largura - largura_bloco) / 2 - padding_x
@@ -926,15 +978,21 @@ class _RenderizadorRegistroOcorrencia:
             y,
             fill=(52, 57, 64),
         )
-        y += 18
+        y += 10
+        y += self._desenhar_texto_centralizado(
+            SUBTITULO_REGISTRO,
+            self.fontes.subtitulo,
+            y,
+        )
+        y += 10
 
-        if self.logo is not None:
+        if not continuacao and self.logo is not None:
             logo_x = self.centro_x - (self.logo.width // 2)
             if self.logo.mode == "RGBA":
                 self.pagina_atual.paste(self.logo, (logo_x, y), self.logo)
             else:
                 self.pagina_atual.paste(self.logo, (logo_x, y))
-            y += self.logo.height + 24
+            y += self.logo.height + 16
 
         if continuacao:
             y += self._desenhar_texto_centralizado(
@@ -943,26 +1001,20 @@ class _RenderizadorRegistroOcorrencia:
                 y,
                 fill=COR_TEXTO_MUTED,
             )
-            y += 14
+            y += 10
 
-        y += self._desenhar_texto_centralizado(
-            SUBTITULO_REGISTRO,
-            self.fontes.subtitulo,
-            y,
-        )
-        y += 8
         y += self._desenhar_titulo_destacado(_obter_titulo_documento(self.ocorrencia), y)
 
         gravidade = _obter_gravidade_ocorrencia(self.ocorrencia)
         texto_gravidade = f"Gravidade: {rotulo_gravidade_ocorrencia(gravidade)}"
-        y += 12
+        y += 8
         y += self._desenhar_texto_centralizado(
             texto_gravidade,
             self.fontes.pequeno_bold,
             y,
             fill=COR_TEXTO_MUTED,
         )
-        return y + 28
+        return y + 18
 
     def _quebrar_linhas(
         self,
@@ -1147,6 +1199,7 @@ class _RenderizadorRegistroOcorrencia:
         destaque_primeira_linha: bool = False,
         recuo: int = 0,
         espaco_final: int = 8,
+        justificar: bool = False,
     ):
         x_inicio = self.esquerda + max(0, int(recuo))
         largura_disponivel = self.direita - x_inicio
@@ -1158,15 +1211,64 @@ class _RenderizadorRegistroOcorrencia:
             if destaque_primeira_linha and indice == 0 and linhas:
                 linhas[0] = linhas[0]
 
-            for linha in linhas:
+            for indice_linha, linha in enumerate(linhas):
                 self._garantir_espaco(altura_linha + 2)
-                self.draw.text((x_inicio, self.y), linha, fill=COR_TEXTO, font=fonte)
+                self._desenhar_linha_paragrafo(
+                    linha,
+                    fonte,
+                    x_inicio=x_inicio,
+                    y=self.y,
+                    largura_disponivel=largura_disponivel,
+                    justificar=justificar and indice_linha < len(linhas) - 1,
+                )
                 self.y += altura_linha
 
             if indice != len(paragrafos) - 1:
                 self.y += altura_linha // 2
 
         self.y += max(0, int(espaco_final))
+
+    def _desenhar_linha_paragrafo(
+        self,
+        texto: str,
+        fonte: ImageFont.ImageFont,
+        *,
+        x_inicio: int,
+        y: int,
+        largura_disponivel: int,
+        justificar: bool,
+    ):
+        texto_limpo = str(texto or "").strip()
+        if not texto_limpo:
+            return
+
+        if not justificar:
+            self.draw.text((x_inicio, y), texto_limpo, fill=COR_TEXTO, font=fonte)
+            return
+
+        palavras = texto_limpo.split()
+        if len(palavras) < 2:
+            self.draw.text((x_inicio, y), texto_limpo, fill=COR_TEXTO, font=fonte)
+            return
+
+        largura_espaco, _ = self._medir_texto(" ", fonte)
+        larguras_palavras = [self._medir_texto(palavra, fonte)[0] for palavra in palavras]
+        largura_palavras = sum(larguras_palavras)
+        quantidade_espacos = len(palavras) - 1
+        largura_minima = largura_palavras + (largura_espaco * quantidade_espacos)
+        espaco_extra = largura_disponivel - largura_minima
+
+        if espaco_extra <= 0:
+            self.draw.text((x_inicio, y), texto_limpo, fill=COR_TEXTO, font=fonte)
+            return
+
+        incremento_espaco = espaco_extra / quantidade_espacos
+        x_atual = float(x_inicio)
+        for indice, (palavra, largura_palavra) in enumerate(zip(palavras, larguras_palavras)):
+            self.draw.text((x_atual, y), palavra, fill=COR_TEXTO, font=fonte)
+            x_atual += largura_palavra
+            if indice < quantidade_espacos:
+                x_atual += largura_espaco + incremento_espaco
 
     def _fonte_run_formatado(self, run: _TextoFormatadoRun) -> ImageFont.ImageFont:
         if run.negrito and run.italico:
@@ -1395,7 +1497,7 @@ class _RenderizadorRegistroOcorrencia:
         if len(estudantes_vinculados) > 1:
             self._desenhar_assinaturas_corridas(
                 y_base=y_base,
-                titulo="ASSINATURAS DOS ESTUDANTES",
+                titulo=_obter_titulo_assinatura_estudante(self.ocorrencia, plural=True),
                 quantidade_linhas=len(estudantes_vinculados),
             )
             return
@@ -1405,7 +1507,11 @@ class _RenderizadorRegistroOcorrencia:
             self.centro_x,
             self.direita - ((self.direita - self.esquerda) * 0.18),
         ]
-        titulos = ["Responsável", "Coordenação Pedagógica", "Direção"]
+        titulos = [
+            _obter_titulo_assinatura_estudante(self.ocorrencia),
+            "Coordenação Pedagógica",
+            "Direção",
+        ]
         for centro, titulo in zip(centros, titulos):
             self._desenhar_linha_assinatura(int(centro), y_base + 54, 420, titulo)
         self._desenhar_emitido_em(y_base + 142)
@@ -1485,7 +1591,16 @@ class _RenderizadorRegistroOcorrencia:
 
         self._adicionar_espaco(6)
         self._adicionar_titulo_secao(SECAO_DESCRICAO)
-        self._adicionar_paragrafos(descricao, fonte=self.fontes.corpo)
+        self._adicionar_paragrafos(
+            _obter_identificacao_ata(self.ocorrencia),
+            fonte=self.fontes.pequeno_bold,
+            espaco_final=14,
+        )
+        self._adicionar_paragrafos(
+            descricao,
+            fonte=self.fontes.corpo,
+            justificar=True,
+        )
         self._desenhar_linha()
         if regimento_itens:
             self._adicionar_secao_regimento(regimento_itens)

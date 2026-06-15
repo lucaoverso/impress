@@ -599,8 +599,8 @@
 .coordenacao-occurrence-modal-panel {
     position: relative;
     z-index: 1;
-    width: min(1460px, 96vw);
-    height: min(920px, 94vh);
+    width: min(1520px, 97vw);
+    height: min(940px, 96vh);
     padding: 0;
     border: 1px solid var(--line-soft);
     border-radius: 20px;
@@ -858,7 +858,7 @@ body.coordenacao-modal-open {
 
 .coordenacao-ocorrencia-workspace {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(560px, 620px);
+    grid-template-columns: minmax(0, 1fr) minmax(620px, 700px);
     gap: 0;
     min-height: 0;
     overflow: hidden;
@@ -885,11 +885,11 @@ body.coordenacao-modal-open {
 .coordenacao-preview-shell {
     display: grid;
     grid-template-rows: auto minmax(0, 1fr);
-    gap: 16px;
+    gap: 18px;
     min-height: 0;
     height: 100%;
     overflow: hidden;
-    padding: 24px 22px 20px;
+    padding: 24px 24px 22px;
     border: 0;
     border-left: 1px solid var(--line-soft);
     border-radius: 0;
@@ -942,15 +942,18 @@ body.coordenacao-modal-open {
     border: 0;
     border-radius: 0;
     background: linear-gradient(180deg, #edf4fb 0%, #f7fbff 100%);
-    padding: 6px 0 0;
+    padding: 16px 18px 20px;
+    scrollbar-gutter: stable both-edges;
 }
 
 .coordenacao-preview-page {
-    width: min(100%, calc((min(920px, 94vh) - 150px) * 210 / 297));
+    width: min(100%, 620px);
     max-width: 100%;
     height: auto;
     aspect-ratio: 210 / 297;
     margin: 0;
+    justify-self: center;
+    align-self: start;
     border: 1px solid #d5dde8;
     background: #fff;
     border-radius: 0;
@@ -959,7 +962,9 @@ body.coordenacao-modal-open {
 }
 
 .coordenacao-preview-page-inner {
-    min-height: 100%;
+    box-sizing: border-box;
+    height: 100%;
+    min-height: 0;
     padding: 28px 26px 24px;
     display: flex;
     flex-direction: column;
@@ -1053,6 +1058,15 @@ body.coordenacao-modal-open {
     text-align: center;
 }
 
+.coordenacao-preview-ata {
+    margin: 0;
+    color: #1d2f44;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.04em;
+    text-align: center;
+}
+
 .coordenacao-preview-paragraph {
     min-height: 112px;
     border-top: 1px solid #dbe3ec;
@@ -1060,7 +1074,12 @@ body.coordenacao-modal-open {
     color: #2c3b4e;
     font-size: 12px;
     line-height: 1.6;
+    text-align: justify;
     white-space: pre-wrap;
+}
+
+.coordenacao-preview-paragraph p {
+    text-align: justify;
 }
 
 .coordenacao-preview-legal-box {
@@ -2000,11 +2019,11 @@ body.coordenacao-modal-open {
 
 @media (max-width: 1320px) {
     .coordenacao-occurrence-modal-panel {
-        width: min(1240px, 96vw);
+        width: min(1320px, 96vw);
     }
 
     .coordenacao-ocorrencia-workspace {
-        grid-template-columns: minmax(0, 1fr) minmax(460px, 500px);
+        grid-template-columns: minmax(0, 1fr) minmax(520px, 580px);
     }
 }
 
@@ -2052,7 +2071,7 @@ body.coordenacao-modal-open {
     }
 
     .coordenacao-preview-page {
-        width: min(100%, 480px);
+        width: min(100%, 520px);
         height: auto;
     }
 }

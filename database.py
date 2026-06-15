@@ -41,6 +41,12 @@ TIPOS_REGISTRO_OCORRENCIA = (
     TIPO_REGISTRO_OCORRENCIA_PROFESSOR,
     TIPO_REGISTRO_OCORRENCIA_GERAL,
 )
+QUEM_ASSINA_OCORRENCIA_ESTUDANTE = "estudante"
+QUEM_ASSINA_OCORRENCIA_RESPONSAVEL = "responsavel"
+QUEM_ASSINA_OCORRENCIA_VALIDOS = (
+    QUEM_ASSINA_OCORRENCIA_ESTUDANTE,
+    QUEM_ASSINA_OCORRENCIA_RESPONSAVEL,
+)
 TIPO_BASE_LEGAL_ARTIGO = "artigo"
 TIPO_BASE_LEGAL_INCISO = "inciso"
 TIPO_BASE_LEGAL_ALINEA = "alinea"
@@ -687,6 +693,7 @@ def criar_tabelas():
             aula TEXT NOT NULL,
             horario_ocorrencia TEXT NOT NULL,
             descricao TEXT NOT NULL,
+            quem_assina TEXT CHECK (quem_assina IN {QUEM_ASSINA_OCORRENCIA_VALIDOS} OR quem_assina IS NULL),
             acao_aplicada TEXT NOT NULL CHECK (acao_aplicada IN {ACAO_OCORRENCIA_VALIDAS}),
             status TEXT NOT NULL DEFAULT '{STATUS_OCORRENCIA_REGISTRADO}' CHECK (status IN {STATUS_OCORRENCIA_VALIDOS}),
             criado_em TEXT NOT NULL DEFAULT (datetime('now')),
@@ -2154,6 +2161,8 @@ def _garantir_colunas_ocorrencias(cursor):
         )
     if "descricao" not in colunas:
         cursor.execute("ALTER TABLE ocorrencias ADD COLUMN descricao TEXT NOT NULL DEFAULT ''")
+    if "quem_assina" not in colunas:
+        cursor.execute("ALTER TABLE ocorrencias ADD COLUMN quem_assina TEXT")
     if "acao_aplicada" not in colunas:
         cursor.execute("ALTER TABLE ocorrencias ADD COLUMN acao_aplicada TEXT NOT NULL DEFAULT ''")
     if "status" not in colunas:
@@ -2192,6 +2201,14 @@ def _garantir_colunas_ocorrencias(cursor):
         SET atualizado_em = datetime('now')
         WHERE TRIM(COALESCE(atualizado_em, '')) = ''
     """)
+    cursor.execute(
+        f"""
+        UPDATE ocorrencias
+        SET quem_assina = NULL
+        WHERE TRIM(COALESCE(quem_assina, '')) <> ''
+          AND TRIM(COALESCE(quem_assina, '')) NOT IN {QUEM_ASSINA_OCORRENCIA_VALIDOS}
+    """
+    )
 
     _recriar_tabela_ocorrencias_se_necessario(cursor)
 
@@ -2235,6 +2252,7 @@ def _recriar_tabela_ocorrencias_se_necessario(cursor):
             aula TEXT NOT NULL,
             horario_ocorrencia TEXT NOT NULL,
             descricao TEXT NOT NULL,
+            quem_assina TEXT CHECK (quem_assina IN {QUEM_ASSINA_OCORRENCIA_VALIDOS} OR quem_assina IS NULL),
             acao_aplicada TEXT NOT NULL CHECK (acao_aplicada IN {ACAO_OCORRENCIA_VALIDAS}),
             status TEXT NOT NULL DEFAULT '{STATUS_OCORRENCIA_REGISTRADO}' CHECK (status IN {STATUS_OCORRENCIA_VALIDOS}),
             criado_em TEXT NOT NULL DEFAULT (datetime('now')),
@@ -2259,6 +2277,7 @@ def _recriar_tabela_ocorrencias_se_necessario(cursor):
             aula,
             horario_ocorrencia,
             descricao,
+            quem_assina,
             acao_aplicada,
             status,
             criado_em,
@@ -2281,6 +2300,11 @@ def _recriar_tabela_ocorrencias_se_necessario(cursor):
             COALESCE(aula, ''),
             COALESCE(horario_ocorrencia, ''),
             COALESCE(descricao, ''),
+            CASE
+                WHEN TRIM(COALESCE(quem_assina, '')) IN {QUEM_ASSINA_OCORRENCIA_VALIDOS}
+                    THEN TRIM(quem_assina)
+                ELSE NULL
+            END,
             CASE
                 WHEN TRIM(COALESCE(acao_aplicada, '')) = '' THEN 'registro_informativo'
                 ELSE TRIM(acao_aplicada)
@@ -9562,8 +9586,22 @@ def _validar_tipo_registro_banco(tipo_registro: str | None) -> str:
     return tipo_norm
 
 
+def _validar_quem_assina_banco(valor: str | None, tipo_registro: str) -> str | None:
+    tipo_norm = _validar_tipo_registro_banco(tipo_registro)
+    if tipo_norm != TIPO_REGISTRO_OCORRENCIA_ESTUDANTE:
+        return None
+
+    quem_assina = _normalizar_nome_catalogo(valor).lower()
+    if not quem_assina:
+        return QUEM_ASSINA_OCORRENCIA_RESPONSAVEL
+    if quem_assina not in QUEM_ASSINA_OCORRENCIA_VALIDOS:
+        raise ValueError("Quem assina invalido.")
+    return quem_assina
+
+
 def criar_ocorrencia(
     tipo_registro: str,
+    quem_assina: str | None,
     nome_estudante: str,
     estudante_id: int | None,
     turma_id: int | None,
@@ -9581,6 +9619,7 @@ def criar_ocorrencia(
     professores_vinculados: list[dict] | None = None,
 ):
     tipo_registro_limpo = _validar_tipo_registro_banco(tipo_registro)
+    quem_assina_limpo = _validar_quem_assina_banco(quem_assina, tipo_registro_limpo)
     nome_estudante_limpo = _normalizar_nome_catalogo(nome_estudante)
     professor_requerente_limpo = _normalizar_nome_catalogo(professor_requerente)
     disciplina_limpa = _normalizar_nome_catalogo(disciplina)
@@ -9697,6 +9736,7 @@ def criar_ocorrencia(
             """
             INSERT INTO ocorrencias (
                 tipo_registro,
+                quem_assina,
                 nome_estudante,
                 estudante_id,
                 turma_id,
@@ -9712,10 +9752,11 @@ def criar_ocorrencia(
                 criado_em,
                 atualizado_em
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
         """,
             (
                 tipo_registro_limpo,
+                quem_assina_limpo,
                 nome_estudante_limpo,
                 estudante_id_valor,
                 turma_id_valor,
@@ -9785,6 +9826,7 @@ def listar_ocorrencias(
             o.aula,
             o.horario_ocorrencia,
             o.descricao,
+            o.quem_assina,
             o.acao_aplicada,
             o.status,
             o.criado_em,
@@ -9861,6 +9903,7 @@ def buscar_ocorrencia_por_id(ocorrencia_id: int):
             o.aula,
             o.horario_ocorrencia,
             o.descricao,
+            o.quem_assina,
             o.acao_aplicada,
             o.status,
             o.criado_em,
@@ -9884,6 +9927,7 @@ def buscar_ocorrencia_por_id(ocorrencia_id: int):
 def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
     campos_permitidos = {
         "tipo_registro",
+        "quem_assina",
         "nome_estudante",
         "estudante_id",
         "turma_id",
@@ -9900,8 +9944,15 @@ def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
     if not isinstance(dados, dict):
         return False
 
+    ocorrencia_atual = buscar_ocorrencia_por_id(int(ocorrencia_id))
+    if not ocorrencia_atual:
+        return False
+
     atualizacoes = []
     parametros = []
+    tipo_registro_destino = _validar_tipo_registro_banco(
+        dados.get("tipo_registro", ocorrencia_atual.get("tipo_registro"))
+    )
 
     for campo, valor in dados.items():
         if campo not in campos_permitidos:
@@ -9909,7 +9960,12 @@ def atualizar_ocorrencia(ocorrencia_id: int, dados: dict):
 
         if campo == "tipo_registro":
             atualizacoes.append("tipo_registro = ?")
-            parametros.append(_validar_tipo_registro_banco(valor))
+            parametros.append(tipo_registro_destino)
+            continue
+
+        if campo == "quem_assina":
+            atualizacoes.append("quem_assina = ?")
+            parametros.append(_validar_quem_assina_banco(valor, tipo_registro_destino))
             continue
 
         if campo == "turma_id":
