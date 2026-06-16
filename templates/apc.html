@@ -329,61 +329,97 @@
             </ol>
 
             <form id="formApcImpressao" class="apc-print-wizard-form">
-                <section data-apc-print-step="1" class="apc-print-step">
-                    <header>
-                        <h3>Dados da solicitacao</h3>
-                        <p>Defina a quantidade de copias para este anexo.</p>
-                    </header>
-                    <label for="apcPrintCopias">Copias</label>
-                    <input id="apcPrintCopias" type="number" min="1" max="999" value="1" required>
-                </section>
+                <div class="apc-print-wizard-layout">
+                    <div class="apc-print-wizard-fields">
+                        <section data-apc-print-step="1" class="apc-print-step">
+                            <header>
+                                <h3>Dados da solicitacao</h3>
+                                <p>Escolha a turma para preencher as copias automaticamente.</p>
+                            </header>
+                            <div class="apc-print-config-grid">
+                                <div class="apc-field">
+                                    <label for="apcPrintTurma">Turma</label>
+                                    <select id="apcPrintTurma">
+                                        <option value="">Carregando turmas...</option>
+                                    </select>
+                                    <p id="apcPrintTurmaResumo" class="apc-inline-hint">
+                                        Selecione uma turma para preencher as copias.
+                                    </p>
+                                </div>
+                                <div class="apc-field">
+                                    <label for="apcPrintCopias">Copias</label>
+                                    <input id="apcPrintCopias" type="number" min="1" max="999" value="1" required>
+                                    <p class="apc-inline-hint">Voce pode ajustar manualmente se necessario.</p>
+                                </div>
+                            </div>
+                        </section>
 
-                <section data-apc-print-step="2" class="apc-print-step" hidden>
-                    <header>
-                        <h3>Configuracoes de impressao</h3>
-                        <p>Escolha paginas, layout, orientacao e tipo de material.</p>
-                    </header>
+                        <section data-apc-print-step="2" class="apc-print-step" hidden>
+                            <header>
+                                <h3>Configuracoes de impressao</h3>
+                                <p>Escolha paginas, layout, orientacao e tipo de material.</p>
+                            </header>
 
-                    <label for="apcPrintIntervalo">Paginas</label>
-                    <input id="apcPrintIntervalo" type="text" placeholder="Todas ou ex.: 1-5, 8">
-                    <p class="apc-inline-hint">Deixe vazio para imprimir todas as paginas.</p>
+                            <label for="apcPrintIntervalo">Paginas</label>
+                            <input id="apcPrintIntervalo" type="text" placeholder="Todas ou ex.: 1-5, 8">
+                            <p id="apcPrintIntervaloInfo" class="apc-inline-hint">Deixe vazio para imprimir todas as paginas.</p>
 
-                    <div class="apc-print-config-grid">
-                        <div class="apc-field">
-                            <label for="apcPrintPaginasFolha">Layout</label>
-                            <select id="apcPrintPaginasFolha">
-                                <option value="1">1 pagina por folha</option>
-                                <option value="2">2 paginas por folha</option>
-                                <option value="4">4 paginas por folha</option>
-                            </select>
-                        </div>
-                        <div class="apc-field">
-                            <label for="apcPrintOrientacao">Orientacao</label>
-                            <select id="apcPrintOrientacao">
-                                <option value="retrato">Retrato</option>
-                                <option value="paisagem">Paisagem</option>
-                            </select>
-                        </div>
+                            <div class="apc-print-config-grid">
+                                <div class="apc-field">
+                                    <label for="apcPrintPaginasFolha">Layout</label>
+                                    <select id="apcPrintPaginasFolha">
+                                        <option value="1">1 pagina por folha</option>
+                                        <option value="2">2 paginas por folha</option>
+                                        <option value="4">4 paginas por folha</option>
+                                    </select>
+                                </div>
+                                <div class="apc-field">
+                                    <label for="apcPrintOrientacao">Orientacao</label>
+                                    <select id="apcPrintOrientacao">
+                                        <option value="retrato">Retrato</option>
+                                        <option value="paisagem">Paisagem</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <label class="apc-print-checkbox">
+                                <input id="apcPrintDuplex" type="checkbox">
+                                <span>Imprimir frente e verso</span>
+                            </label>
+
+                            <fieldset class="apc-print-tags-fieldset">
+                                <legend>Tipo de material</legend>
+                                <div id="apcPrintTags" class="apc-print-tags-grid"></div>
+                            </fieldset>
+                        </section>
+
+                        <section data-apc-print-step="3" class="apc-print-step" hidden>
+                            <header>
+                                <h3>Conferir impressao</h3>
+                                <p>Revise as configuracoes antes de enviar para a fila.</p>
+                            </header>
+                            <dl id="apcPrintResumo" class="apc-print-summary"></dl>
+                        </section>
                     </div>
 
-                    <label class="apc-print-checkbox">
-                        <input id="apcPrintDuplex" type="checkbox">
-                        <span>Imprimir frente e verso</span>
-                    </label>
-
-                    <fieldset class="apc-print-tags-fieldset">
-                        <legend>Tipo de material</legend>
-                        <div id="apcPrintTags" class="apc-print-tags-grid"></div>
-                    </fieldset>
-                </section>
-
-                <section data-apc-print-step="3" class="apc-print-step" hidden>
-                    <header>
-                        <h3>Conferir impressao</h3>
-                        <p>Revise as configuracoes antes de enviar para a fila.</p>
-                    </header>
-                    <dl id="apcPrintResumo" class="apc-print-summary"></dl>
-                </section>
+                    <aside class="apc-print-preview-side" aria-label="Preview da impressao">
+                        <header class="apc-print-preview-header">
+                            <div>
+                                <h3>Preview</h3>
+                                <p>Confira como as paginas serao agrupadas.</p>
+                            </div>
+                            <div class="apc-print-preview-nav" role="group" aria-label="Navegacao do preview">
+                                <button id="btnApcPrintPreviewAnterior" type="button" aria-label="Folha anterior">&#9664;</button>
+                                <span id="apcPrintPreviewContador"></span>
+                                <button id="btnApcPrintPreviewProxima" type="button" aria-label="Proxima folha">&#9654;</button>
+                            </div>
+                        </header>
+                        <div id="apcPrintPreviewState" class="apc-print-preview-state">
+                            Preparando preview...
+                        </div>
+                        <div id="apcPrintPreviewContainer" class="apc-print-preview-container"></div>
+                    </aside>
+                </div>
 
                 <p id="apcPrintMensagem" class="apc-toolbar-message" role="status" aria-live="polite"></p>
 
@@ -404,6 +440,13 @@
     <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script>
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc =
+                "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+        }
+    </script>
     <script src="{{ request.url_for('static', path='js/apc.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>
 

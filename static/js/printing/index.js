@@ -136,7 +136,13 @@
         const selectedTags = Array.from(document.querySelectorAll("#tagsImpressao input[type='checkbox']:checked"))
             .map((input) => String(input.value || "").trim())
             .filter(Boolean);
-        const fileName = overrides?.upload?.fileName || arquivoInput?.files?.[0]?.name || "";
+        const legacySelectedFile = typeof window.obterArquivoSelecionado === "function"
+            ? window.obterArquivoSelecionado()
+            : null;
+        const fileName = overrides?.upload?.fileName
+            || arquivoInput?.files?.[0]?.name
+            || legacySelectedFile?.name
+            || "";
         const pageMode = overrides?.settings?.pageMode || getPageMode();
         const intervalo = intervaloInput?.value?.trim() || "";
         const turmaId = turmaInput?.value ? Number(turmaInput.value) : null;
@@ -320,7 +326,17 @@
         }
 
         const currentState = window.PrintingUI.state.getState();
-        const nextState = mergeDeep(currentState, readLegacyDomState(overrides));
+        const domState = readLegacyDomState(overrides);
+        if (
+            !domState.upload.fileName
+            && currentState?.upload?.source === "history"
+            && currentState?.upload?.fileName
+        ) {
+            domState.upload.fileName = currentState.upload.fileName;
+            domState.upload.source = "history";
+            domState.upload.valid = true;
+        }
+        const nextState = mergeDeep(currentState, domState);
         const workflowState = window.PrintingUI.workflow.applyWorkflowState(nextState);
         window.PrintingUI.state.replaceState(workflowState);
         return workflowState;
