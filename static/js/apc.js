@@ -39,8 +39,19 @@ let envioImpressaoApc = null;
 let etapaImpressaoApc = 1;
 let tagsImpressaoApc = [];
 let focoAntesPrintWizardApc = null;
+let apcModalScrollLocks = 0;
+let apcModalScrollY = 0;
+let apcPrintPdfDoc = null;
+let apcPrintPreviewUrl = "";
+let apcPrintFolhaAtual = 1;
+let apcPrintRenderToken = 0;
 let opcoesDestinatariosApc = [];
 let selecoesDestinatariosApc = new Set();
+
+const APC_PRINT_A4 = {
+    retrato: { largura: 794, altura: 1123 },
+    paisagem: { largura: 1123, altura: 794 },
+};
 
 function hojeIsoApc() {
     return paraIso(new Date());
@@ -115,6 +126,242 @@ function revogarPreviewArquivoApc() {
     }
 }
 
+function bloquearScrollModalApc() {
+    apcModalScrollLocks += 1;
+    if (apcModalScrollLocks > 1) return;
+
+    apcModalScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+    document.documentElement.classList.add("apc-modal-scroll-locked");
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${apcModalScrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+}
+
+function liberarScrollModalApc() {
+    if (apcModalScrollLocks <= 0) return;
+    apcModalScrollLocks -= 1;
+    if (apcModalScrollLocks > 0) return;
+
+    document.documentElement.classList.remove("apc-modal-scroll-locked");
+    document.body.style.position = "";
+    document.body.style.top = "";
+    document.body.style.left = "";
+    document.body.style.right = "";
+    document.body.style.width = "";
+    window.scrollTo(0, apcModalScrollY);
+    apcModalScrollY = 0;
+}
+
+function revogarPreviewPrintApc() {
+    apcPrintRenderToken += 1;
+    if (apcPrintPreviewUrl) {
+        window.URL.revokeObjectURL(apcPrintPreviewUrl);
+        apcPrintPreviewUrl = "";
+    }
+    apcPrintPdfDoc = null;
+    apcPrintFolhaAtual = 1;
+}
+
+function definirEstadoPreviewPrintApc(texto = "") {
+    const estado = el("apcPrintPreviewState");
+    if (!estado) return;
+    estado.hidden = !texto;
+    estado.innerText = texto || "";
+}
+
+function obterLayoutPrintApc(paginasPorFolha, orientacao = "retrato") {
+    if (paginasPorFolha === 2) {
+        return orientacao === "paisagem"
+            ? { colunas: 2, linhas: 1 }
+            : { colunas: 1, linhas: 2 };
+    }
+    if (paginasPorFolha === 4) {
+        return { colunas: 2, linhas: 2 };
+    }
+    return { colunas: 1, linhas: 1 };
+}
+
+function paginasSelecionadasPrintApc() {
+    if (!apcPrintPdfDoc) return [];
+
+    const total = apcPrintPdfDoc.numPages;
+    const texto = String(el("apcPrintIntervalo")?.value || "").trim();
+    const info = el("apcPrintIntervaloInfo");
+    if (!texto) {
+        if (info) info.innerText = `Todas as paginas (${total}).`;
+        return Array.from({ length: total }, (_, indice) => indice + 1);
+    }
+
+    const paginas = new Set();
+    texto.split(",").map((parte) => parte.trim()).filter(Boolean).forEach((parte) => {
+        if (parte.includes("-")) {
+            const [inicioTxt, fimTxt] = parte.split("-").map((valor) => valor.trim());
+            const inicio = Number(inicioTxt);
+            const fim = Number(fimTxt);
+            if (!Number.isInteger(inicio) || !Number.isInteger(fim) || inicio <= 0 || fim <= 0 || inicio > fim) {
+                throw new Error(`Intervalo invalido: "${parte}"`);
+            }
+            if (fim > total) {
+                throw new Error(`Pagina ${fim} nao existe no documento.`);
+            }
+            for (let pagina = inicio; pagina <= fim; pagina += 1) {
+                paginas.add(pagina);
+            }
+            return;
+        }
+
+        const pagina = Number(parte);
+        if (!Number.isInteger(pagina) || pagina <= 0 || pagina > total) {
+            throw new Error(`Pagina invalida: "${parte}"`);
+        }
+        paginas.add(pagina);
+    });
+
+    const resultado = Array.from(paginas).sort((a, b) => a - b);
+    if (!resultado.length) {
+        throw new Error("Nenhuma pagina valida informada.");
+    }
+    if (info) info.innerText = `${resultado.length} pagina(s) selecionada(s).`;
+    return resultado;
+}
+
+function ajustarDimensoesPrintApc(tamanhoBase, larguraMaxima, alturaMaxima) {
+    const escala = Math.min(
+        Math.max(1, larguraMaxima) / tamanhoBase.largura,
+        Math.max(1, alturaMaxima) / tamanhoBase.altura
+    );
+    const escalaSegura = Number.isFinite(escala) && escala > 0 ? escala : 1;
+    return {
+        largura: Math.max(1, Math.round(tamanhoBase.largura * escalaSegura)),
+        altura: Math.max(1, Math.round(tamanhoBase.altura * escalaSegura)),
+    };
+}
+
+function atualizarContadorPrintApc(totalFolhas = 0) {
+    const contador = el("apcPrintPreviewContador");
+    const anterior = el("btnApcPrintPreviewAnterior");
+    const proxima = el("btnApcPrintPreviewProxima");
+    if (contador) {
+        contador.innerText = totalFolhas ? `Folha ${apcPrintFolhaAtual} de ${totalFolhas}` : "";
+    }
+    if (anterior) anterior.disabled = !totalFolhas || apcPrintFolhaAtual <= 1;
+    if (proxima) proxima.disabled = !totalFolhas || apcPrintFolhaAtual >= totalFolhas;
+}
+
+async function renderPreviewPrintApc() {
+    const container = el("apcPrintPreviewContainer");
+    if (!container) return;
+    container.innerHTML = "";
+
+    if (!apcPrintPdfDoc) {
+        atualizarContadorPrintApc(0);
+        definirEstadoPreviewPrintApc("Preview indisponivel para este arquivo.");
+        return;
+    }
+
+    let paginas;
+    try {
+        paginas = paginasSelecionadasPrintApc();
+    } catch (err) {
+        atualizarContadorPrintApc(0);
+        definirEstadoPreviewPrintApc(err.message || "Revise o intervalo de paginas.");
+        return;
+    }
+
+    const paginasPorFolha = Number(el("apcPrintPaginasFolha")?.value || 1);
+    const orientacao = el("apcPrintOrientacao")?.value === "paisagem" ? "paisagem" : "retrato";
+    const tamanhoFolha = APC_PRINT_A4[orientacao];
+    const layout = obterLayoutPrintApc(paginasPorFolha, orientacao);
+    const totalFolhas = Math.max(1, Math.ceil(paginas.length / paginasPorFolha));
+    apcPrintFolhaAtual = Math.min(Math.max(1, apcPrintFolhaAtual), totalFolhas);
+    atualizarContadorPrintApc(totalFolhas);
+    definirEstadoPreviewPrintApc("");
+
+    const inicio = (apcPrintFolhaAtual - 1) * paginasPorFolha;
+    const paginasDaFolha = paginas.slice(inicio, inicio + paginasPorFolha);
+    while (paginasDaFolha.length < paginasPorFolha) {
+        paginasDaFolha.push(null);
+    }
+
+    const larguraDisponivel = Math.max(260, container.clientWidth || 420);
+    const alturaDisponivel = Math.max(300, container.clientHeight || 520);
+    const tamanho = ajustarDimensoesPrintApc(tamanhoFolha, larguraDisponivel - 24, alturaDisponivel - 24);
+    const folha = document.createElement("div");
+    folha.className = "apc-print-preview-sheet";
+    folha.style.width = `${tamanho.largura}px`;
+    folha.style.height = `${tamanho.altura}px`;
+    folha.style.aspectRatio = `${tamanhoFolha.largura} / ${tamanhoFolha.altura}`;
+    folha.style.gridTemplateColumns = `repeat(${layout.colunas}, minmax(0, 1fr))`;
+    folha.style.gridTemplateRows = `repeat(${layout.linhas}, minmax(0, 1fr))`;
+    container.appendChild(folha);
+
+    const token = ++apcPrintRenderToken;
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.35);
+    for (const numeroPagina of paginasDaFolha) {
+        if (token !== apcPrintRenderToken) return;
+        if (!numeroPagina) {
+            const cell = document.createElement("div");
+            cell.className = "apc-print-preview-cell is-empty";
+            folha.appendChild(cell);
+            continue;
+        }
+        const page = await apcPrintPdfDoc.getPage(numeroPagina);
+        const viewportBase = page.getViewport({ scale: 1 });
+        const cellWidth = (tamanho.largura - 26 - (8 * (layout.colunas - 1))) / layout.colunas;
+        const cellHeight = (tamanho.altura - 26 - (8 * (layout.linhas - 1))) / layout.linhas;
+        const escala = Math.min(cellWidth / viewportBase.width, cellHeight / viewportBase.height);
+        const viewport = page.getViewport({ scale: escala * dpr });
+
+        const cell = document.createElement("div");
+        cell.className = "apc-print-preview-cell";
+        cell.dataset.pageLabel = `Pg ${numeroPagina}`;
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        canvas.width = Math.floor(viewport.width);
+        canvas.height = Math.floor(viewport.height);
+        canvas.style.width = `${Math.floor(viewport.width / dpr)}px`;
+        canvas.style.height = `${Math.floor(viewport.height / dpr)}px`;
+        cell.appendChild(canvas);
+        folha.appendChild(cell);
+        await page.render({ canvasContext: ctx, viewport }).promise;
+    }
+}
+
+async function carregarPreviewPrintApc(envio) {
+    revogarPreviewPrintApc();
+    const container = el("apcPrintPreviewContainer");
+    if (container) container.innerHTML = "";
+    atualizarContadorPrintApc(0);
+    definirEstadoPreviewPrintApc("Preparando preview...");
+
+    if (!window.pdfjsLib || !envio?.id) {
+        definirEstadoPreviewPrintApc("Preview indisponivel neste navegador.");
+        return;
+    }
+
+    const tipoPreview = tipoPreviewArquivoApc(envio);
+    if (!["frame", "office"].includes(tipoPreview)) {
+        definirEstadoPreviewPrintApc("Preview de impressao disponivel apenas para PDF, DOC e DOCX.");
+        return;
+    }
+
+    try {
+        const endpoint = tipoPreview === "office"
+            ? `/apc/envios/${envio.id}/preview`
+            : `/apc/envios/${envio.id}/arquivo`;
+        const resposta = await fetchResposta(endpoint, { headers: headersApc });
+        const blob = await resposta.blob();
+        apcPrintPreviewUrl = window.URL.createObjectURL(blob);
+        const buffer = await blob.arrayBuffer();
+        apcPrintPdfDoc = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+        await renderPreviewPrintApc();
+    } catch (err) {
+        definirEstadoPreviewPrintApc(err.message || "Nao foi possivel preparar o preview.");
+    }
+}
+
 function limparPreviewArquivoApc(mensagem = "Selecione um arquivo para visualizar.") {
     revogarPreviewArquivoApc();
     envioPreviewApc = null;
@@ -176,6 +423,7 @@ function abrirModalPreviewApc(envio) {
     if (!modal || !painel || !envio?.id) return;
     focoAntesPreviewApc = document.activeElement;
     modal.hidden = false;
+    bloquearScrollModalApc();
     document.body.classList.add("apc-file-preview-open");
     window.requestAnimationFrame(() => {
         modal.classList.add("is-visible");
@@ -187,12 +435,14 @@ function abrirModalPreviewApc(envio) {
 function fecharModalPreviewApc() {
     const modal = el("apcArquivoPreviewModal");
     if (!modal) return;
+    const estavaAberto = !modal.hidden;
     modal.classList.remove("is-visible");
     document.body.classList.remove("apc-file-preview-open");
     window.setTimeout(() => {
         modal.hidden = true;
         limparPreviewArquivoApc();
     }, 220);
+    if (estavaAberto) liberarScrollModalApc();
     if (focoAntesPreviewApc instanceof HTMLElement) {
         focoAntesPreviewApc.focus();
     }
@@ -306,6 +556,7 @@ function renderEtapaPrintApc(etapa) {
         const numero = Number(item.dataset.apcPrintStepper);
         item.classList.toggle("is-current", numero === etapaImpressaoApc);
         item.classList.toggle("is-complete", numero < etapaImpressaoApc);
+        item.setAttribute("aria-current", numero === etapaImpressaoApc ? "step" : "false");
     });
     el("btnApcPrintVoltar").hidden = etapaImpressaoApc === 1;
     el("btnApcPrintContinuar").hidden = etapaImpressaoApc === 3;
@@ -330,11 +581,13 @@ async function abrirPrintWizardApc(envio) {
     setMensagemPrintApc("");
     renderEtapaPrintApc(1);
     modal.hidden = false;
+    bloquearScrollModalApc();
     document.body.classList.add("apc-print-wizard-open");
     fecharModalPreviewApc();
     window.requestAnimationFrame(() => {
         modal.classList.add("is-visible");
         painel.focus();
+        void carregarPreviewPrintApc(envio);
     });
 
     try {
@@ -349,13 +602,19 @@ async function abrirPrintWizardApc(envio) {
 function fecharPrintWizardApc() {
     const modal = el("apcPrintWizardModal");
     if (!modal) return;
+    const estavaAberto = !modal.hidden;
     modal.classList.remove("is-visible");
     document.body.classList.remove("apc-print-wizard-open");
+    revogarPreviewPrintApc();
+    const container = el("apcPrintPreviewContainer");
+    if (container) container.innerHTML = "";
+    atualizarContadorPrintApc(0);
     window.setTimeout(() => {
         modal.hidden = true;
         envioImpressaoApc = null;
         setMensagemPrintApc("");
     }, 220);
+    if (estavaAberto) liberarScrollModalApc();
     if (focoAntesPrintWizardApc instanceof HTMLElement) {
         focoAntesPrintWizardApc.focus();
     }
@@ -2248,6 +2507,28 @@ function registrarEventosApc() {
         setMensagemPrintApc("");
         renderEtapaPrintApc(etapaImpressaoApc - 1);
     });
+    el("btnApcPrintPreviewAnterior")?.addEventListener("click", () => {
+        apcPrintFolhaAtual = Math.max(1, apcPrintFolhaAtual - 1);
+        void renderPreviewPrintApc();
+    });
+    el("btnApcPrintPreviewProxima")?.addEventListener("click", () => {
+        apcPrintFolhaAtual += 1;
+        void renderPreviewPrintApc();
+    });
+    ["apcPrintIntervalo", "apcPrintPaginasFolha", "apcPrintOrientacao"].forEach((id) => {
+        const evento = id === "apcPrintIntervalo" ? "input" : "change";
+        el(id)?.addEventListener(evento, () => {
+            apcPrintFolhaAtual = 1;
+            if (etapaImpressaoApc === 3) atualizarResumoPrintApc();
+            void renderPreviewPrintApc();
+        });
+    });
+    ["apcPrintCopias", "apcPrintDuplex"].forEach((id) => {
+        const evento = id === "apcPrintCopias" ? "input" : "change";
+        el(id)?.addEventListener(evento, () => {
+            if (etapaImpressaoApc === 3) atualizarResumoPrintApc();
+        });
+    });
     el("formApcImpressao")?.addEventListener("submit", enviarImpressaoApc);
     [
         "apcFiltroProfessor",
@@ -2359,7 +2640,10 @@ function registrarEventosApc() {
             fecharModalFormularioApc({ limpar: true });
         }
     });
-    window.addEventListener("beforeunload", revogarPreviewArquivoApc);
+    window.addEventListener("beforeunload", () => {
+        revogarPreviewArquivoApc();
+        revogarPreviewPrintApc();
+    });
 }
 
 async function initApc() {
