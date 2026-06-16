@@ -887,8 +887,8 @@ function obterDimensoesMiniatura(tamanhoFolha, isMobile) {
 }
 
 function obterDimensoesMiniaturaDesktop(tamanhoFolha, larguraTrilha) {
-    const larguraDisponivel = Math.max(72, larguraTrilha - 28);
-    const alturaMaxima = 170;
+    const larguraDisponivel = Math.max(58, larguraTrilha - 18);
+    const alturaMaxima = 128;
     return ajustarDimensoesProporcionais(tamanhoFolha, larguraDisponivel, alturaMaxima);
 }
 
@@ -2337,10 +2337,10 @@ async function renderFolha() {
     if (!isMobile) {
         const larguraPane = Math.max(320, previewPane?.clientWidth || 640);
         const alturaPane = Math.max(320, previewPane?.clientHeight || 640);
-        const larguraTrilha = Math.min(132, Math.max(92, Math.round(larguraPane * 0.2)));
+        const larguraTrilha = Math.min(110, Math.max(76, Math.round(larguraPane * 0.14)));
         tamanhoMiniatura = obterDimensoesMiniaturaDesktop(tamanhoFolha, larguraTrilha);
-        const larguraPrincipalDisponivel = Math.max(220, larguraPane - larguraTrilha - 28);
-        const alturaPrincipalDisponivel = Math.max(260, alturaPane - 20);
+        const larguraPrincipalDisponivel = Math.max(260, larguraPane - larguraTrilha - 22);
+        const alturaPrincipalDisponivel = Math.max(340, alturaPane - 8);
         tamanhoPrincipal = ajustarDimensoesProporcionais(
             tamanhoFolha,
             larguraPrincipalDisponivel,

@@ -35,9 +35,9 @@
     --print-space-5: 24px;
     --print-space-6: 32px;
     --print-desktop-panel-height: clamp(680px, calc(100svh - 140px), 920px);
-    --print-preview-column-width: clamp(380px, 50vw, 700px);
-    --print-preview-stage-height: clamp(520px, calc(100svh - 220px), 760px);
-    --print-preview-rail-width: clamp(96px, 13vw, 128px);
+    --print-preview-column-width: clamp(520px, 56vw, 860px);
+    --print-preview-stage-height: clamp(640px, calc(100svh - 168px), 900px);
+    --print-preview-rail-width: clamp(76px, 8vw, 104px);
     --print-step-one-width: clamp(540px, 54vw, 760px);
     --print-font-xs: 12px;
     --print-font-sm: 14px;
@@ -1308,6 +1308,9 @@ html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
 
 #previewContainer .preview-cell canvas {
     display: block;
+    width: auto;
+    height: auto;
+    object-fit: contain;
 }
 
 #previewContainer .preview-cell.is-unchecked {
@@ -2405,7 +2408,7 @@ body.print-preview-modal-open {
 
 .print-wizard-stage {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(380px, 0.82fr);
+    grid-template-columns: minmax(320px, 0.72fr) minmax(520px, 1.28fr);
     gap: 0;
 }
 
@@ -2433,7 +2436,7 @@ html[data-printing-current-step="5"] .print-wizard-right {
     top: 12px;
     align-self: start;
     min-height: var(--print-preview-stage-height);
-    padding: 24px 28px 28px 0;
+    padding: 20px 28px 28px 0;
 }
 
 .print-wizard-left .print-step-card,
@@ -2585,7 +2588,7 @@ html[data-printing-current-step="1"] .print-wizard-left {
 .print-preview-stage {
     min-height: var(--print-preview-stage-height);
     height: var(--print-preview-stage-height);
-    padding-left: clamp(18px, 2vw, 28px);
+    padding-left: clamp(16px, 1.6vw, 24px);
     border-left: 1px solid var(--line);
 }
 
@@ -2602,7 +2605,7 @@ html[data-printing-current-step="1"] .print-wizard-left {
 .print-preview-pane {
     border-radius: var(--radius-md);
     background: var(--surface-1);
-    padding: 12px;
+    padding: 10px;
 }
 
 .print-preview-close-btn {
