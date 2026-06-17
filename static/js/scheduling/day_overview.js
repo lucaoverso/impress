@@ -1,9 +1,28 @@
 function chaveProfessorVisaoDia(reserva) {
     const usuarioId = Number(reserva?.usuario_id || 0);
+
     if (usuarioId > 0) {
         return `id:${usuarioId}`;
     }
-    return `nome:${String(reserva?.professor_nome || "").trim().toLowerCase()}`;
+
+    const professorNome = String(reserva?.professor_nome || "").trim();
+
+    if (!professorNome) {
+        console.log("Reserva sem identificação de professor:", reserva);
+        return "professor:sem-identificacao";
+    }
+
+    return `nome:${professorNome.toLowerCase()}`;
+}
+
+function obterTurmaReservaVisaoDia(reserva) {
+    return textoPadraoDetalheReserva(
+        reserva?.turma_nome ||
+        reserva?.turmaNome ||
+        reserva?.turma ||
+        reserva?.nome_turma,
+        "Turma não informada"
+    );
 }
 
 function agruparReservasVisaoDia(reservas = []) {
@@ -11,6 +30,7 @@ function agruparReservasVisaoDia(reservas = []) {
 
     reservas.forEach((reserva) => {
         const faixa = Number(faixaGlobalReserva(reserva) || 0);
+
         if (faixa <= 0) {
             return;
         }
@@ -25,18 +45,27 @@ function agruparReservasVisaoDia(reservas = []) {
 
         const grupoAula = aulas.get(faixa);
         const chaveProfessor = chaveProfessorVisaoDia(reserva);
+
         if (!grupoAula.professores.has(chaveProfessor)) {
             grupoAula.professores.set(chaveProfessor, {
                 nome: textoPadraoDetalheReserva(
-                    reserva.professor_nome,
+                    reserva?.professor_nome,
                     "Responsável não informado"
                 ),
+                turmas: new Set(),
                 recursos: new Set()
             });
         }
 
-        grupoAula.professores.get(chaveProfessor).recursos.add(
-            textoPadraoDetalheReserva(reserva.recurso_nome, "Recurso não informado")
+        const grupoProfessor = grupoAula.professores.get(chaveProfessor);
+
+        grupoProfessor.turmas.add(obterTurmaReservaVisaoDia(reserva));
+
+        grupoProfessor.recursos.add(
+            textoPadraoDetalheReserva(
+                reserva?.recurso_nome,
+                "Recurso não informado"
+            )
         );
     });
 
@@ -57,17 +86,27 @@ function criarLinhaProfessorVisaoDia(grupoProfessor) {
     const copy = document.createElement("div");
     copy.className = "scheduler-day-overview-copy";
 
-    const professor = document.createElement("strong");
-    professor.innerText = grupoProfessor.nome;
-
-    const recursos = document.createElement("span");
-    recursos.innerText = Array.from(grupoProfessor.recursos)
+    const recursos = document.createElement("strong");
+    recursos.innerText = Array.from(grupoProfessor.recursos || [])
         .sort(compararTextoPtBr)
         .join(", ");
 
-    copy.appendChild(professor);
+    const professor = document.createElement("span");
+
+    const turmaTexto = Array.from(grupoProfessor.turmas || [])
+        .sort(compararTextoPtBr)
+        .join(", ") || "Turma não informada";
+
+    const primeiroNomeProfessor = String(grupoProfessor.nome || "")
+        .trim()
+        .split(" ")[0] || "Responsável";
+
+    professor.innerText = `${turmaTexto} | Prof. ${primeiroNomeProfessor}`;
+
     copy.appendChild(recursos);
+    copy.appendChild(professor);
     linha.appendChild(copy);
+
     return linha;
 }
 
@@ -76,13 +115,20 @@ function agruparReservasPorPeriodoVisao(reservas = []) {
         ["MATUTINO", []],
         ["VESPERTINO", []]
     ]);
+
     reservas.forEach((reserva) => {
-        const periodo = periodoAulaPorFaixa(faixaGlobalReserva(reserva), reserva.turno);
+        const periodo = periodoAulaPorFaixa(
+            faixaGlobalReserva(reserva),
+            reserva?.turno
+        );
+
         if (periodos.has(periodo)) {
             periodos.get(periodo).push(reserva);
         }
     });
-    return Array.from(periodos.entries()).filter(([, itens]) => itens.length > 0);
+
+    return Array.from(periodos.entries())
+        .filter(([, itens]) => itens.length > 0);
 }
 
 function criarBlocoAulasPorPeriodo(reservas = []) {
@@ -100,6 +146,7 @@ function criarBlocoAulasPorPeriodo(reservas = []) {
 
         const aulasPeriodo = document.createElement("div");
         aulasPeriodo.className = "scheduler-day-overview-period-lessons";
+
         agruparReservasVisaoDia(reservasPeriodo).forEach((grupoAula) => {
             const grupo = document.createElement("section");
             grupo.className = "scheduler-day-overview-shift";
@@ -110,9 +157,11 @@ function criarBlocoAulasPorPeriodo(reservas = []) {
 
             const lista = document.createElement("div");
             lista.className = "scheduler-day-overview-rows";
+
             grupoAula.professores.forEach((professor) => {
                 lista.appendChild(criarLinhaProfessorVisaoDia(professor));
             });
+
             grupo.appendChild(lista);
             aulasPeriodo.appendChild(grupo);
         });
@@ -120,23 +169,26 @@ function criarBlocoAulasPorPeriodo(reservas = []) {
         blocoPeriodo.appendChild(aulasPeriodo);
         fragmento.appendChild(blocoPeriodo);
     });
+
     return fragmento;
 }
 
 function renderVisaoGeralAgendamentosDia() {
     const container = el("schedulerDayOverviewList");
     const dataResumo = el("schedulerDayOverviewDate");
+
     if (!container) {
         return;
     }
 
     container.innerHTML = "";
+
     if (dataResumo) {
         dataResumo.innerText = paraDataBr(dataSelecionada);
     }
 
     const reservasDia = (Array.isArray(reservasMes) ? reservasMes : [])
-        .filter((reserva) => reserva.data === dataSelecionada);
+        .filter((reserva) => reserva?.data === dataSelecionada);
 
     if (reservasDia.length === 0) {
         const vazio = document.createElement("p");
@@ -153,27 +205,34 @@ async function carregarReservasProximosDias() {
     const dataBase = criarDataLocalPorIso(dataSelecionada) || new Date();
     const inicio = paraIso(somarDiasDataLocal(dataBase, 1));
     const fim = paraIso(somarDiasDataLocal(dataBase, 30));
+
     const url = `/agendamento/reservas?data_inicio=${inicio}&data_fim=${fim}`;
     const response = await fetchComAuth(url, { headers });
 
     if (!response.ok) {
         throw new Error("Não foi possível carregar os próximos agendamentos.");
     }
+
     reservasProximosDias = await response.json();
 }
 
 function agruparReservasPorDataProxima(reservas = []) {
     const datas = new Map();
+
     reservas.forEach((reserva) => {
         const data = String(reserva?.data || "").trim();
+
         if (!data) {
             return;
         }
+
         if (!datas.has(data)) {
             datas.set(data, []);
         }
+
         datas.get(data).push(reserva);
     });
+
     return Array.from(datas.entries())
         .sort(([dataA], [dataB]) => dataA.localeCompare(dataB))
         .slice(0, 5);
@@ -181,14 +240,17 @@ function agruparReservasPorDataProxima(reservas = []) {
 
 function formatarDataProximoAgendamento(dataIso) {
     const data = criarDataLocalPorIso(dataIso);
+
     if (!data) {
         return paraDataBr(dataIso);
     }
+
     const texto = data.toLocaleDateString("pt-BR", {
         weekday: "long",
         day: "2-digit",
         month: "long"
     });
+
     return texto.charAt(0).toUpperCase() + texto.slice(1);
 }
 
@@ -206,18 +268,22 @@ function criarGrupoProximaData(dataIso, reservasData) {
     aulas.appendChild(criarBlocoAulasPorPeriodo(reservasData));
 
     grupoData.appendChild(aulas);
+
     return grupoData;
 }
 
 function renderVisaoProximosAgendamentos() {
     const container = el("schedulerUpcomingOverviewList");
     const contador = el("schedulerUpcomingOverviewCount");
+
     if (!container) {
         return;
     }
 
     const gruposData = agruparReservasPorDataProxima(reservasProximosDias);
+
     container.innerHTML = "";
+
     if (contador) {
         contador.innerText = gruposData.length > 0
             ? `${gruposData.length} dia(s) com reservas`

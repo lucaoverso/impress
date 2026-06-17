@@ -407,6 +407,79 @@ class HorarioEscolarRouterTest(unittest.TestCase):
             self.assertEqual(int(matriz["registros"][0]["aula_numero"]), 1)
             self.assertEqual(int(matriz["registros"][0]["faixa_global"]), 6)
 
+            realocado = horario_router.atualizar_horario_escolar_api(
+                registro_id=int(matriz["registros"][0]["id"]),
+                payload=models.HorarioEscolarRegistroUpdateIn(
+                    ano_letivo=2035,
+                    turma_id=turma_id,
+                    disciplina_id=disciplina_id,
+                    professor_id=professor_id,
+                    dia_semana="segunda",
+                    aula_numero=7,
+                ),
+                usuario=self._usuario_coord(),
+            )
+
+            self.assertEqual(int(realocado["aula_numero"]), 7)
+            self.assertEqual(int(realocado["faixa_global"]), 7)
+
+    def test_matriz_integral_realoca_sequencia_legada_de_tras_para_frente(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, models, horario_router = _reload_modules(db_path)
+            database.criar_tabelas()
+            _seed_grade_aulas(database)
+
+            turma_id = int(database.criar_turma("Integral B", "INTEGRAL", 28))
+            disciplina_id = int(database.criar_disciplina("Matematica", 5))
+            professor_id = int(
+                database.criar_professor(
+                    nome="Professor Sequencia",
+                    email="sequencia@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1985-04-10",
+                    aulas_semanais=20,
+                    turmas_quantidade=1,
+                    turmas=["Integral B"],
+                    disciplinas=["Matematica"],
+                )
+            )
+            database.criar_atribuicao_docente(professor_id, turma_id, disciplina_id)
+
+            registros = []
+            for aula_numero, faixa_global in ((6, 6), (7, 7), (8, 8)):
+                registros.append(
+                    database.criar_horario_escolar(
+                        ano_letivo=2036,
+                        turma_id=turma_id,
+                        disciplina_id=disciplina_id,
+                        professor_usuario_id=professor_id,
+                        dia_semana="SEGUNDA",
+                        aula_numero=aula_numero,
+                        faixa_global=faixa_global,
+                    )
+                )
+
+            for registro, nova_aula in (
+                (registros[2], 9),
+                (registros[1], 8),
+                (registros[0], 7),
+            ):
+                atualizado = horario_router.atualizar_horario_escolar_api(
+                    registro_id=int(registro["id"]),
+                    payload=models.HorarioEscolarRegistroUpdateIn(
+                        ano_letivo=2036,
+                        turma_id=turma_id,
+                        disciplina_id=disciplina_id,
+                        professor_id=professor_id,
+                        dia_semana="segunda",
+                        aula_numero=nova_aula,
+                    ),
+                    usuario=self._usuario_coord(),
+                )
+                self.assertEqual(int(atualizado["aula_numero"]), nova_aula)
+                self.assertEqual(int(atualizado["faixa_global"]), nova_aula)
+
     def test_professor_pode_visualizar_grade_com_destaque_sem_edicao(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")
