@@ -188,6 +188,11 @@ def listar_grade_turma_horario_com_registros(
         for item in faixas
         if str(item.get("tipo") or "").upper() == "AULA"
     }
+    faixas_visiveis = {
+        int(item.get("faixa_global") or item.get("aula_numero") or 0)
+        for item in faixas
+        if str(item.get("tipo") or "").upper() == "AULA"
+    }
     aulas_configuradas = {
         int(item.get("aula_numero") or 0): dict(item)
         for item in list_global_lessons(configuracoes_aulas or [], only_active=False)
@@ -195,28 +200,33 @@ def listar_grade_turma_horario_com_registros(
 
     for registro in registros or []:
         aula_numero = int(registro.get("aula_numero") or 0)
-        if aula_numero <= 0 or aula_numero in aulas_visiveis:
+        faixa_global = int(registro.get("faixa_global") or aula_numero)
+        linha_numero = faixa_global if faixa_global > 0 else aula_numero
+        if linha_numero <= 0 or linha_numero in faixas_visiveis:
             continue
 
-        aula_config = aulas_configuradas.get(aula_numero)
+        aula_config = aulas_configuradas.get(linha_numero)
         if aula_config:
             faixa = dict(aula_config)
         else:
             label_registro = str(registro.get("aula_label") or "").strip()
             faixa = {
                 "tipo": "AULA",
-                "aula_numero": aula_numero,
-                "faixa_global": int(registro.get("faixa_global") or aula_numero),
-                "label": label_registro or f"{aula_numero}a aula",
-                "label_curta": f"{aula_numero}a aula",
-                "ordem_visual": aula_numero,
+                "aula_numero": linha_numero,
+                "faixa_global": linha_numero,
+                "label": label_registro or f"{linha_numero}a aula",
+                "label_curta": f"{linha_numero}a aula",
+                "ordem_visual": linha_numero,
                 "ativo": True,
             }
+        faixa["aula_numero"] = linha_numero
+        faixa["faixa_global"] = linha_numero
         faixa["fora_janela_turma"] = True
         faixa["aceita_lancamento"] = False
-        faixa["label"] = f"{str(faixa.get('label') or f'{aula_numero}a aula').strip()} (fora da janela atual)"
+        faixa["label"] = f"{str(faixa.get('label') or f'{linha_numero}a aula').strip()} (fora da janela atual)"
         faixas.append(faixa)
-        aulas_visiveis.add(aula_numero)
+        aulas_visiveis.add(linha_numero)
+        faixas_visiveis.add(linha_numero)
 
     return sorted(
         faixas,
@@ -245,10 +255,10 @@ def enriquecer_horario_escolar(
     faixa_armazenada = int((item or {}).get("faixa_global") or 0)
     configuracoes = configuracoes_aulas or []
     aula_config = find_lesson_by_number(configuracoes, aula_numero)
-    if aula_config:
-        faixa_global = aula_numero
-    elif faixa_armazenada > 0:
+    if faixa_armazenada > 0:
         faixa_global = faixa_armazenada
+    elif aula_config:
+        faixa_global = aula_numero
     else:
         faixa_global = faixa_global_por_turno_e_aula(turno, aula_numero) if aula_numero > 0 else 0
     return {

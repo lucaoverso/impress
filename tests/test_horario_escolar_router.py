@@ -384,7 +384,7 @@ class HorarioEscolarRouterTest(unittest.TestCase):
                 disciplina_id=disciplina_id,
                 professor_usuario_id=professor_id,
                 dia_semana="SEGUNDA",
-                aula_numero=6,
+                aula_numero=1,
                 faixa_global=6,
             )
 
@@ -404,7 +404,8 @@ class HorarioEscolarRouterTest(unittest.TestCase):
             self.assertFalse(faixa_legada["aceita_lancamento"])
             self.assertIn("fora da janela", faixa_legada["label"])
             self.assertEqual(len(matriz["registros"]), 1)
-            self.assertEqual(int(matriz["registros"][0]["aula_numero"]), 6)
+            self.assertEqual(int(matriz["registros"][0]["aula_numero"]), 1)
+            self.assertEqual(int(matriz["registros"][0]["faixa_global"]), 6)
 
     def test_professor_pode_visualizar_grade_com_destaque_sem_edicao(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

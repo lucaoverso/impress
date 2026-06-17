@@ -250,30 +250,37 @@ function criarGradeFallbackTurmaHorario(grupo = {}) {
     });
 }
 
+function chaveLinhaRegistroHorario(item = {}) {
+    const faixaGlobal = Number(item?.faixa_global || 0);
+    if (faixaGlobal > 0) return faixaGlobal;
+    return Number(item?.aula_numero || 0);
+}
+
 function adicionarFaixasRegistrosOcultos(faixas, itens) {
     const resultado = Array.isArray(faixas) ? faixas.map((item) => ({ ...item })) : [];
-    const aulasVisiveis = new Set(
+    const faixasVisiveis = new Set(
         resultado
             .filter((item) => String(item?.tipo || "").trim().toUpperCase() === TIPO_GRADE_AULA)
-            .map((item) => Number(item?.aula_numero || 0))
+            .map((item) => Number(item?.faixa_global || item?.aula_numero || 0))
             .filter((numero) => numero > 0)
     );
 
     (itens || []).forEach((item) => {
-        const aulaNumero = Number(item?.aula_numero || 0);
-        if (aulaNumero <= 0 || aulasVisiveis.has(aulaNumero)) return;
+        const linhaNumero = chaveLinhaRegistroHorario(item);
+        if (linhaNumero <= 0 || faixasVisiveis.has(linhaNumero)) return;
 
+        const aulaGlobal = obterAulaGlobalHorario(linhaNumero);
         resultado.push({
             tipo: TIPO_GRADE_AULA,
-            aula_numero: aulaNumero,
-            faixa_global: Number(item?.faixa_global || aulaNumero),
-            label: `${labelAulaHorario(item) || `${aulaNumero}a aula`} (fora da janela atual)`,
-            label_curta: `${aulaNumero}a aula`,
-            ordem_visual: aulaNumero,
+            aula_numero: linhaNumero,
+            faixa_global: linhaNumero,
+            label: `${aulaGlobal?.label || `${linhaNumero}a aula`} (fora da janela atual)`,
+            label_curta: aulaGlobal?.label_curta || `${linhaNumero}a aula`,
+            ordem_visual: Number(aulaGlobal?.ordem_visual || linhaNumero),
             fora_janela_turma: true,
             aceita_lancamento: false,
         });
-        aulasVisiveis.add(aulaNumero);
+        faixasVisiveis.add(linhaNumero);
     });
 
     return resultado.sort((atual, proxima) => {
@@ -817,7 +824,7 @@ function renderizarGradeTurmaSemanal(grupo) {
 
     const mapa = new Map();
     (grupo.itens || []).forEach((item) => {
-        mapa.set(`${item.dia_semana}:${item.aula_numero}`, item);
+        mapa.set(`${item.dia_semana}:${chaveLinhaRegistroHorario(item)}`, item);
     });
 
     const tbody = document.createElement("tbody");
@@ -976,7 +983,7 @@ function renderizarGradeProfessorSemanal(grupo, { tituloCard = "", subtituloCard
     const mapa = new Map();
     (grupo.itens || []).forEach((item) => {
         mapa.set(
-            `${String(item.dia_semana || "").toUpperCase()}:${Number(item.aula_numero || item.faixa_global || 0)}`,
+            `${String(item.dia_semana || "").toUpperCase()}:${chaveLinhaRegistroHorario(item)}`,
             item
         );
     });
@@ -1355,7 +1362,7 @@ function renderizarMatrizHorario() {
     const mapaRegistros = new Map();
     (estadoMatrizHorario.registros || []).forEach((item) => {
         mapaRegistros.set(
-            `${item.dia_semana}:${item.aula_numero}`,
+            `${item.dia_semana}:${chaveLinhaRegistroHorario(item)}`,
             item
         );
     });
