@@ -70,19 +70,9 @@ function mesIsoApc(data) {
     return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function formatarDataHoraApc(valor, opcoes = {}) {
+function formatarDataHoraApc(valor) {
     const texto = String(valor || "").trim().replace("T", " ");
     if (!texto) return "";
-    if (opcoes.utc) {
-        const isoUtc = texto.endsWith("Z") ? texto.replace(" ", "T") : `${texto.replace(" ", "T")}Z`;
-        const dataUtc = new Date(isoUtc);
-        if (!Number.isNaN(dataUtc.getTime())) {
-            return dataUtc.toLocaleString("pt-BR", {
-                dateStyle: "short",
-                timeStyle: "short",
-            });
-        }
-    }
     const partes = texto.split(" ");
     if (partes.length < 2) {
         return partes[0].includes("-") ? paraDataBr(partes[0]) : texto;
@@ -1466,7 +1456,7 @@ function criarCardEnvioExistenteApc(periodo, item) {
 
     const enviadoEm = document.createElement("p");
     enviadoEm.className = "apc-envio-meta";
-    enviadoEm.innerText = `Enviado em ${formatarDataHoraApc(envio.enviado_em, { utc: true })}`;
+    enviadoEm.innerText = `Enviado em ${formatarDataHoraApc(envio.enviado_em)}`;
     topo.appendChild(enviadoEm);
     envioCard.appendChild(topo);
 
@@ -2053,7 +2043,7 @@ function renderListaGestaoApc(detalhe) {
             if (item.envio?.id) {
                 const enviadoEm = document.createElement("p");
                 enviadoEm.className = "apc-envio-meta";
-                enviadoEm.innerText = `Enviado em ${formatarDataHoraApc(item.envio.enviado_em, { utc: true })}`;
+                enviadoEm.innerText = `Enviado em ${formatarDataHoraApc(item.envio.enviado_em)}`;
                 card.appendChild(enviadoEm);
 
                 const guidance = criarOrientacaoRevisaoApc(item.envio);
@@ -2090,7 +2080,7 @@ function preencherMetaPreviewArquivoApc(envio) {
         <h4>${envio.arquivo_nome_original || "Arquivo enviado"}</h4>
         <p>${envio.professor_nome || "Professor"}${envio.professor_email ? ` • ${envio.professor_email}` : ""}</p>
         <p>${envio.disciplina_nome || "Entrega geral"}${envio.turma_nome ? ` • ${envio.turma_nome}` : ""}</p>
-        <p>Enviado em ${formatarDataHoraApc(envio.enviado_em, { utc: true })}</p>
+        <p>Enviado em ${formatarDataHoraApc(envio.enviado_em)}</p>
     `;
 }
 
@@ -2104,7 +2094,7 @@ function preencherMetaPreviewArquivoApcClaro(envio) {
         ${nomeSistema}
         <p>${envio.professor_nome || "Professor"}${envio.professor_email ? ` • ${envio.professor_email}` : ""}</p>
         <p>${envio.disciplina_nome || "Entrega geral"}${envio.turma_nome ? ` • ${envio.turma_nome}` : ""}</p>
-        <p>Enviado em ${formatarDataHoraApc(envio.enviado_em, { utc: true })}</p>
+        <p>Enviado em ${formatarDataHoraApc(envio.enviado_em)}</p>
     `;
 }
 
@@ -2132,7 +2122,7 @@ function preencherMetaModalPreviewApc(envio) {
     meta.appendChild(contexto);
 
     const data = document.createElement("p");
-    data.innerText = `Enviado em ${formatarDataHoraApc(envio.enviado_em, { utc: true })}`;
+    data.innerText = `Enviado em ${formatarDataHoraApc(envio.enviado_em)}`;
     meta.appendChild(data);
 
     if (nomeArquivoPadronizadoDivergeApc(envio)) {
@@ -2175,7 +2165,7 @@ function renderReviewPanelApc(envio) {
     if (envio.reviewed_at) {
         const reviewedAt = document.createElement("small");
         reviewedAt.innerText = [
-            `Revisado em ${formatarDataHoraApc(envio.reviewed_at, { utc: true })}`,
+            `Revisado em ${formatarDataHoraApc(envio.reviewed_at)}`,
             envio.reviewed_by_name || "",
         ].filter(Boolean).join(" por ");
         summary.appendChild(reviewedAt);

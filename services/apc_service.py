@@ -1,7 +1,7 @@
 import os
 import re
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 
 from services.horario_escolar_service import (
     dia_semana_por_data,
@@ -151,6 +151,13 @@ def _parse_sqlite_datetime(valor: str):
     return None
 
 
+def _datetime_utc_para_local_texto(valor: str) -> str:
+    data_utc = _parse_sqlite_datetime(valor)
+    if not data_utc:
+        return str(valor or "").strip()
+    return data_utc.replace(tzinfo=UTC).astimezone().strftime("%Y-%m-%d %H:%M:%S")
+
+
 def prazo_envio_input(valor: str) -> str:
     prazo = _parse_sqlite_datetime(valor)
     if not prazo:
@@ -208,6 +215,9 @@ def ordenar_periodos_apc(itens: list[dict]) -> list[dict]:
 
 def enriquecer_envio_apc(item: dict) -> dict:
     envio = dict(item or {})
+    enviado_em = _datetime_utc_para_local_texto(envio.get("enviado_em"))
+    atualizado_em = _datetime_utc_para_local_texto(envio.get("atualizado_em"))
+    reviewed_at = _datetime_utc_para_local_texto(envio.get("reviewed_at"))
     return {
         **envio,
         "id": int(envio.get("id") or 0),
@@ -223,13 +233,13 @@ def enriquecer_envio_apc(item: dict) -> dict:
         "arquivo_path": str(envio.get("arquivo_path") or "").strip(),
         "professor_nome": str(envio.get("professor_nome") or "").strip(),
         "professor_email": str(envio.get("professor_email") or "").strip(),
-        "enviado_em": str(envio.get("enviado_em") or "").strip(),
-        "atualizado_em": str(envio.get("atualizado_em") or "").strip(),
+        "enviado_em": enviado_em,
+        "atualizado_em": atualizado_em,
         "review_status": str(envio.get("review_status") or "PENDENTE").strip().upper(),
         "review_message": str(envio.get("review_message") or "").strip(),
         "reviewed_by_user_id": envio.get("reviewed_by_user_id"),
         "reviewed_by_name": str(envio.get("reviewed_by_name") or "").strip(),
-        "reviewed_at": str(envio.get("reviewed_at") or "").strip(),
+        "reviewed_at": reviewed_at,
     }
 
 
