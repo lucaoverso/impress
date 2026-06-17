@@ -38,6 +38,7 @@ let focoAntesPreviewApc = null;
 let envioImpressaoApc = null;
 let etapaImpressaoApc = 1;
 let tagsImpressaoApc = [];
+let turmasImpressaoApc = [];
 let focoAntesPrintWizardApc = null;
 let apcModalScrollLocks = 0;
 let apcModalScrollY = 0;
@@ -69,9 +70,19 @@ function mesIsoApc(data) {
     return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function formatarDataHoraApc(valor) {
+function formatarDataHoraApc(valor, opcoes = {}) {
     const texto = String(valor || "").trim().replace("T", " ");
     if (!texto) return "";
+    if (opcoes.utc) {
+        const isoUtc = texto.endsWith("Z") ? texto.replace(" ", "T") : `${texto.replace(" ", "T")}Z`;
+        const dataUtc = new Date(isoUtc);
+        if (!Number.isNaN(dataUtc.getTime())) {
+            return dataUtc.toLocaleString("pt-BR", {
+                dateStyle: "short",
+                timeStyle: "short",
+            });
+        }
+    }
     const partes = texto.split(" ");
     if (partes.length < 2) {
         return partes[0].includes("-") ? paraDataBr(partes[0]) : texto;
@@ -500,6 +511,81 @@ async function carregarTagsPrintApc() {
     renderTagsPrintApc();
 }
 
+function rotuloTurmaPrintApc(turma) {
+    const nome = String(turma?.nome || "").trim() || "Turma";
+    const turno = String(turma?.turno || "").trim();
+    const estudantes = Number(turma?.quantidade_estudantes || 0);
+    const partes = [nome];
+    if (turno) partes.push(turno);
+    if (estudantes > 0) partes.push(pluralizarApc(estudantes, "estudante", "estudantes"));
+    return partes.join(" - ");
+}
+
+function turmaPrintSelecionadaApc() {
+    const turmaId = Number(el("apcPrintTurma")?.value || 0);
+    if (!turmaId) return null;
+    return turmasImpressaoApc.find((turma) => Number(turma.id || 0) === turmaId) || null;
+}
+
+function atualizarResumoTurmaPrintApc({ preencherCopias = true } = {}) {
+    const resumo = el("apcPrintTurmaResumo");
+    const turma = turmaPrintSelecionadaApc();
+    if (!resumo) return;
+
+    if (!turma) {
+        resumo.innerText = "Selecione uma turma para preencher as copias.";
+        return;
+    }
+
+    const estudantes = Number(turma.quantidade_estudantes || 0);
+    if (estudantes > 0) {
+        if (preencherCopias) {
+            el("apcPrintCopias").value = String(estudantes);
+        }
+        resumo.innerText = `${rotuloTurmaPrintApc(turma)} selecionada. Copias sugeridas: ${estudantes}.`;
+    } else {
+        resumo.innerText = `${rotuloTurmaPrintApc(turma)} selecionada. Quantidade de estudantes nao informada.`;
+    }
+
+    if (etapaImpressaoApc === 3) atualizarResumoPrintApc();
+}
+
+function renderTurmasPrintApc(turmaIdPreferida = 0) {
+    const select = el("apcPrintTurma");
+    if (!select) return;
+    select.innerHTML = "";
+
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.innerText = turmasImpressaoApc.length
+        ? "Selecione uma turma"
+        : "Nenhuma turma cadastrada";
+    select.appendChild(placeholder);
+
+    turmasImpressaoApc.forEach((turma) => {
+        const option = document.createElement("option");
+        option.value = String(turma.id || "");
+        option.innerText = rotuloTurmaPrintApc(turma);
+        select.appendChild(option);
+    });
+
+    const preferidaExiste = turmasImpressaoApc.some(
+        (turma) => Number(turma.id || 0) === Number(turmaIdPreferida || 0)
+    );
+    select.value = preferidaExiste ? String(turmaIdPreferida) : "";
+    atualizarResumoTurmaPrintApc({ preencherCopias: preferidaExiste });
+}
+
+async function carregarTurmasPrintApc(turmaIdPreferida = 0) {
+    const select = el("apcPrintTurma");
+    if (select) {
+        select.innerHTML = '<option value="">Carregando turmas...</option>';
+    }
+    const dados = await fetchJson("/impressao/turmas", { headers: headersApc });
+    turmasImpressaoApc = Array.isArray(dados) ? dados : [];
+    renderTurmasPrintApc(turmaIdPreferida);
+}
+
 function adicionarItemResumoPrintApc(resumo, titulo, valor) {
     const termo = document.createElement("dt");
     termo.innerText = titulo;
@@ -518,6 +604,12 @@ function atualizarResumoPrintApc() {
         resumo,
         "Arquivo",
         nomeArquivoPrincipalApc(envioImpressaoApc) || "Anexo"
+    );
+    const turma = turmaPrintSelecionadaApc();
+    adicionarItemResumoPrintApc(
+        resumo,
+        "Turma",
+        turma ? rotuloTurmaPrintApc(turma) : "Nao selecionada"
     );
     adicionarItemResumoPrintApc(resumo, "Copias", el("apcPrintCopias").value);
     adicionarItemResumoPrintApc(
@@ -572,6 +664,8 @@ async function abrirPrintWizardApc(envio) {
     envioImpressaoApc = envio;
     focoAntesPrintWizardApc = document.activeElement;
     el("apcPrintWizardArquivo").innerText = nomeArquivoPrincipalApc(envio);
+    el("apcPrintTurma").innerHTML = '<option value="">Carregando turmas...</option>';
+    el("apcPrintTurmaResumo").innerText = "Carregando turmas...";
     el("apcPrintCopias").value = "1";
     el("apcPrintIntervalo").value = "";
     el("apcPrintPaginasFolha").value = "1";
@@ -590,12 +684,25 @@ async function abrirPrintWizardApc(envio) {
         void carregarPreviewPrintApc(envio);
     });
 
+    const errosCarregamento = [];
+    try {
+        await carregarTurmasPrintApc(Number(envio.turma_id || 0));
+    } catch (err) {
+        turmasImpressaoApc = [];
+        renderTurmasPrintApc(0);
+        errosCarregamento.push(err.message || "Nao foi possivel carregar as turmas.");
+    }
+
     try {
         await carregarTagsPrintApc();
     } catch (err) {
         tagsImpressaoApc = [];
         renderTagsPrintApc();
-        setMensagemPrintApc(err.message || "Nao foi possivel carregar os tipos de material.", true);
+        errosCarregamento.push(err.message || "Nao foi possivel carregar os tipos de material.");
+    }
+
+    if (errosCarregamento.length) {
+        setMensagemPrintApc(errosCarregamento.join(" "), true);
     }
 }
 
@@ -1359,7 +1466,7 @@ function criarCardEnvioExistenteApc(periodo, item) {
 
     const enviadoEm = document.createElement("p");
     enviadoEm.className = "apc-envio-meta";
-    enviadoEm.innerText = `Enviado em ${formatarDataHoraApc(envio.enviado_em)}`;
+    enviadoEm.innerText = `Enviado em ${formatarDataHoraApc(envio.enviado_em, { utc: true })}`;
     topo.appendChild(enviadoEm);
     envioCard.appendChild(topo);
 
@@ -1946,7 +2053,7 @@ function renderListaGestaoApc(detalhe) {
             if (item.envio?.id) {
                 const enviadoEm = document.createElement("p");
                 enviadoEm.className = "apc-envio-meta";
-                enviadoEm.innerText = `Enviado em ${formatarDataHoraApc(item.envio.enviado_em)}`;
+                enviadoEm.innerText = `Enviado em ${formatarDataHoraApc(item.envio.enviado_em, { utc: true })}`;
                 card.appendChild(enviadoEm);
 
                 const guidance = criarOrientacaoRevisaoApc(item.envio);
@@ -1983,7 +2090,7 @@ function preencherMetaPreviewArquivoApc(envio) {
         <h4>${envio.arquivo_nome_original || "Arquivo enviado"}</h4>
         <p>${envio.professor_nome || "Professor"}${envio.professor_email ? ` • ${envio.professor_email}` : ""}</p>
         <p>${envio.disciplina_nome || "Entrega geral"}${envio.turma_nome ? ` • ${envio.turma_nome}` : ""}</p>
-        <p>Enviado em ${formatarDataHoraApc(envio.enviado_em)}</p>
+        <p>Enviado em ${formatarDataHoraApc(envio.enviado_em, { utc: true })}</p>
     `;
 }
 
@@ -1997,7 +2104,7 @@ function preencherMetaPreviewArquivoApcClaro(envio) {
         ${nomeSistema}
         <p>${envio.professor_nome || "Professor"}${envio.professor_email ? ` • ${envio.professor_email}` : ""}</p>
         <p>${envio.disciplina_nome || "Entrega geral"}${envio.turma_nome ? ` • ${envio.turma_nome}` : ""}</p>
-        <p>Enviado em ${formatarDataHoraApc(envio.enviado_em)}</p>
+        <p>Enviado em ${formatarDataHoraApc(envio.enviado_em, { utc: true })}</p>
     `;
 }
 
@@ -2025,7 +2132,7 @@ function preencherMetaModalPreviewApc(envio) {
     meta.appendChild(contexto);
 
     const data = document.createElement("p");
-    data.innerText = `Enviado em ${formatarDataHoraApc(envio.enviado_em)}`;
+    data.innerText = `Enviado em ${formatarDataHoraApc(envio.enviado_em, { utc: true })}`;
     meta.appendChild(data);
 
     if (nomeArquivoPadronizadoDivergeApc(envio)) {
@@ -2068,7 +2175,7 @@ function renderReviewPanelApc(envio) {
     if (envio.reviewed_at) {
         const reviewedAt = document.createElement("small");
         reviewedAt.innerText = [
-            `Revisado em ${formatarDataHoraApc(envio.reviewed_at)}`,
+            `Revisado em ${formatarDataHoraApc(envio.reviewed_at, { utc: true })}`,
             envio.reviewed_by_name || "",
         ].filter(Boolean).join(" por ");
         summary.appendChild(reviewedAt);
@@ -2522,6 +2629,9 @@ function registrarEventosApc() {
             if (etapaImpressaoApc === 3) atualizarResumoPrintApc();
             void renderPreviewPrintApc();
         });
+    });
+    el("apcPrintTurma")?.addEventListener("change", () => {
+        atualizarResumoTurmaPrintApc({ preencherCopias: true });
     });
     ["apcPrintCopias", "apcPrintDuplex"].forEach((id) => {
         const evento = id === "apcPrintCopias" ? "input" : "change";
