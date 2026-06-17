@@ -351,6 +351,61 @@ class HorarioEscolarRouterTest(unittest.TestCase):
             self.assertEqual(int(ctx.exception.status_code), 409)
             self.assertIn("faixa", str(ctx.exception.detail).lower())
 
+    def test_matriz_integral_exibe_registro_legado_fora_da_janela(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, models, horario_router = _reload_modules(db_path)
+            database.criar_tabelas()
+            _seed_grade_aulas(database)
+
+            turma_id = int(database.criar_turma("Integral A", "INTEGRAL", 28))
+            disciplina_id = int(database.criar_disciplina("Matematica", 5))
+            professor_id = int(
+                database.criar_professor(
+                    nome="Professor Integral",
+                    email="integral@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1985-04-10",
+                    aulas_semanais=20,
+                    turmas_quantidade=1,
+                    turmas=["Integral A"],
+                    disciplinas=["Matematica"],
+                )
+            )
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_id,
+                disciplina_id=disciplina_id,
+                carga_horaria=8,
+                professor_usuario_id=professor_id,
+            )
+            database.criar_horario_escolar(
+                ano_letivo=2035,
+                turma_id=turma_id,
+                disciplina_id=disciplina_id,
+                professor_usuario_id=professor_id,
+                dia_semana="SEGUNDA",
+                aula_numero=6,
+                faixa_global=6,
+            )
+
+            matriz = horario_router.obter_matriz_horario_turma_api(
+                turma_id=turma_id,
+                ano_letivo=2035,
+                usuario=self._usuario_coord(),
+            )
+
+            aulas_faixas = [int(item.get("aula_numero") or 0) for item in matriz["faixas"]]
+            self.assertEqual(aulas_faixas, [1, 2, 0, 3, 4, 5, 6, 7, 0, 8, 9])
+
+            faixa_legada = next(
+                item for item in matriz["faixas"] if int(item.get("aula_numero") or 0) == 6
+            )
+            self.assertTrue(faixa_legada["fora_janela_turma"])
+            self.assertFalse(faixa_legada["aceita_lancamento"])
+            self.assertIn("fora da janela", faixa_legada["label"])
+            self.assertEqual(len(matriz["registros"]), 1)
+            self.assertEqual(int(matriz["registros"][0]["aula_numero"]), 6)
+
     def test_professor_pode_visualizar_grade_com_destaque_sem_edicao(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")

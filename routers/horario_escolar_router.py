@@ -38,8 +38,8 @@ from services.horario_escolar_service import (
     dia_semana_por_data,
     enriquecer_horario_escolar,
     listar_aulas_turma_horario,
+    listar_grade_turma_horario_com_registros,
     listar_dias_semana_horario,
-    listar_grade_turma_horario,
     montar_cards_disponiveis_turma,
     nome_dia_semana,
     normalizar_dia_semana,
@@ -331,7 +331,7 @@ def obter_matriz_horario_turma_api(
         registros,
     )
     total_aulas = total_aulas_turma_horario(turma, configuracoes_aulas)
-    faixas = listar_grade_turma_horario(turma, configuracoes_aulas)
+    faixas = listar_grade_turma_horario_com_registros(turma, configuracoes_aulas, registros)
     aulas = listar_aulas_turma_horario(turma, configuracoes_aulas)
 
     return {

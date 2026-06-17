@@ -5,6 +5,7 @@ from modules.scheduling.config import TURNOS_CONFIG
 from modules.scheduling.lesson_config import (
     build_lesson_display_label,
     find_lesson_by_number,
+    list_global_lessons,
     list_lessons_for_class,
     list_visual_schedule_items_for_class,
     total_configured_lessons,
@@ -174,6 +175,57 @@ def listar_faixas_turno_horario(turno: str) -> list[dict]:
 
 def listar_grade_turma_horario(turma: dict, configuracoes_aulas: list[dict]) -> list[dict]:
     return list_visual_schedule_items_for_class(turma, configuracoes_aulas or [])
+
+
+def listar_grade_turma_horario_com_registros(
+    turma: dict,
+    configuracoes_aulas: list[dict],
+    registros: list[dict],
+) -> list[dict]:
+    faixas = [dict(item) for item in listar_grade_turma_horario(turma, configuracoes_aulas)]
+    aulas_visiveis = {
+        int(item.get("aula_numero") or 0)
+        for item in faixas
+        if str(item.get("tipo") or "").upper() == "AULA"
+    }
+    aulas_configuradas = {
+        int(item.get("aula_numero") or 0): dict(item)
+        for item in list_global_lessons(configuracoes_aulas or [], only_active=False)
+    }
+
+    for registro in registros or []:
+        aula_numero = int(registro.get("aula_numero") or 0)
+        if aula_numero <= 0 or aula_numero in aulas_visiveis:
+            continue
+
+        aula_config = aulas_configuradas.get(aula_numero)
+        if aula_config:
+            faixa = dict(aula_config)
+        else:
+            label_registro = str(registro.get("aula_label") or "").strip()
+            faixa = {
+                "tipo": "AULA",
+                "aula_numero": aula_numero,
+                "faixa_global": int(registro.get("faixa_global") or aula_numero),
+                "label": label_registro or f"{aula_numero}a aula",
+                "label_curta": f"{aula_numero}a aula",
+                "ordem_visual": aula_numero,
+                "ativo": True,
+            }
+        faixa["fora_janela_turma"] = True
+        faixa["aceita_lancamento"] = False
+        faixa["label"] = f"{str(faixa.get('label') or f'{aula_numero}a aula').strip()} (fora da janela atual)"
+        faixas.append(faixa)
+        aulas_visiveis.add(aula_numero)
+
+    return sorted(
+        faixas,
+        key=lambda item: (
+            int(item.get("ordem_visual") or item.get("aula_numero") or 0),
+            1 if bool(item.get("fora_janela_turma")) else 0,
+            int(item.get("aula_numero") or 0),
+        ),
+    )
 
 
 def listar_aulas_turma_horario(turma: dict, configuracoes_aulas: list[dict]) -> list[dict]:

@@ -250,14 +250,51 @@ function criarGradeFallbackTurmaHorario(grupo = {}) {
     });
 }
 
+function adicionarFaixasRegistrosOcultos(faixas, itens) {
+    const resultado = Array.isArray(faixas) ? faixas.map((item) => ({ ...item })) : [];
+    const aulasVisiveis = new Set(
+        resultado
+            .filter((item) => String(item?.tipo || "").trim().toUpperCase() === TIPO_GRADE_AULA)
+            .map((item) => Number(item?.aula_numero || 0))
+            .filter((numero) => numero > 0)
+    );
+
+    (itens || []).forEach((item) => {
+        const aulaNumero = Number(item?.aula_numero || 0);
+        if (aulaNumero <= 0 || aulasVisiveis.has(aulaNumero)) return;
+
+        resultado.push({
+            tipo: TIPO_GRADE_AULA,
+            aula_numero: aulaNumero,
+            faixa_global: Number(item?.faixa_global || aulaNumero),
+            label: `${labelAulaHorario(item) || `${aulaNumero}a aula`} (fora da janela atual)`,
+            label_curta: `${aulaNumero}a aula`,
+            ordem_visual: aulaNumero,
+            fora_janela_turma: true,
+            aceita_lancamento: false,
+        });
+        aulasVisiveis.add(aulaNumero);
+    });
+
+    return resultado.sort((atual, proxima) => {
+        const ordemAtual = Number(atual?.ordem_visual || atual?.aula_numero || 0);
+        const ordemProxima = Number(proxima?.ordem_visual || proxima?.aula_numero || 0);
+        if (ordemAtual !== ordemProxima) return ordemAtual - ordemProxima;
+        return Number(atual?.aula_numero || 0) - Number(proxima?.aula_numero || 0);
+    });
+}
+
 function obterFaixasGrupoTurma(grupo = {}) {
     const itensGrade = itensGradeHorarioAtivos();
     if (itensGrade.length === 0) {
-        return criarGradeFallbackTurmaHorario(grupo);
+        return adicionarFaixasRegistrosOcultos(
+            criarGradeFallbackTurmaHorario(grupo),
+            grupo.itens || []
+        );
     }
 
     const [aulaInicial, aulaFinal] = obterJanelaAulasTurmaHorario(grupo);
-    return itensGrade.filter((item, index, lista) => {
+    const faixas = itensGrade.filter((item, index, lista) => {
         const tipo = String(item?.tipo || "").trim().toUpperCase();
         if (tipo === TIPO_GRADE_AULA) {
             const aulaNumero = Number(item?.aula_numero || 0);
@@ -288,6 +325,7 @@ function obterFaixasGrupoTurma(grupo = {}) {
             && aulaPosterior <= aulaFinal
         );
     });
+    return adicionarFaixasRegistrosOcultos(faixas, grupo.itens || []);
 }
 
 function descricaoCelulaHorarioProfessor(item) {
@@ -1353,7 +1391,11 @@ function renderizarMatrizHorario() {
         }
 
         const aulaNumero = Number(faixaInfo.aula_numero || 0);
+        const aceitaLancamento = faixaInfo?.aceita_lancamento !== false;
         const tr = document.createElement("tr");
+        if (faixaInfo?.fora_janela_turma) {
+            tr.classList.add("is-recovery-row");
+        }
         const th = document.createElement("th");
         th.innerText = faixaInfo.label || `${aulaNumero}a aula`;
         tr.appendChild(th);
@@ -1361,6 +1403,9 @@ function renderizarMatrizHorario() {
         (estadoMatrizHorario.dias_semana || []).forEach((dia) => {
             const td = document.createElement("td");
             td.className = "horario-slot";
+            if (!aceitaLancamento) {
+                td.classList.add("is-locked");
+            }
             td.dataset.diaSemana = dia.valor;
             td.dataset.aulaNumero = String(aulaNumero);
             td.dataset.faixaGlobal = String(faixaInfo.faixa_global || 0);
@@ -1380,13 +1425,15 @@ function renderizarMatrizHorario() {
             } else {
                 const hint = document.createElement("span");
                 hint.className = "horario-slot-hint";
-                hint.innerText = "Solte aqui";
+                hint.innerText = aceitaLancamento ? "Solte aqui" : "Fora da janela";
                 td.appendChild(hint);
             }
 
-            configurarDropTarget(td, async (payload) => {
-                await processarDropNaCelula(payload, dia.valor, aulaNumero, Boolean(registro));
-            });
+            if (aceitaLancamento || registro) {
+                configurarDropTarget(td, async (payload) => {
+                    await processarDropNaCelula(payload, dia.valor, aulaNumero, Boolean(registro));
+                });
+            }
             tr.appendChild(td);
         });
 

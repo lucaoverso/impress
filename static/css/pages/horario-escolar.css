@@ -157,6 +157,16 @@
     border-color: rgba(42, 87, 135, 0.2);
 }
 
+.horario-slot.is-locked {
+    background: #f8fafc;
+    border-color: rgba(148, 163, 184, 0.34);
+}
+
+.horario-slot.is-locked .horario-slot-hint {
+    color: #64748b;
+    background: rgba(241, 245, 249, 0.82);
+}
+
 .horario-slot.is-drop-target,
 .horario-drop-pool.is-drop-target {
     border-color: #0f766e;
