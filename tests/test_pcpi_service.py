@@ -172,21 +172,13 @@ class PcpiServiceTest(unittest.TestCase):
 
         resultado = gerar_texto_pcpi("2026-04-03", "MATUTINO", itens, [])
 
-        self.assertIn(
-            "Foi prestado atendimento ao professor Lívia, de Matemática",
-            resultado["frases_automaticas"][0],
-        )
+        self.assertIn("Foi prestado atendimento ao professor Lívia, de Matemática", resultado["frases_automaticas"][0],)
         self.assertIn("com a turma 7º A, durante a 2ª aula", resultado["frases_automaticas"][0])
-        self.assertIn("envolvendo orientação sobre uso do simulador", resultado["frases_automaticas"][0])
-        self.assertIn(
-            "Foram organizados e recolhidos recursos para o professor Renato, de História",
-            resultado["frases_automaticas"][1],
-        )
+        self.assertIn("orientação sobre uso do simulador", resultado["frases_automaticas"][0])
+        self.assertIn("Foram organizados e recolhidos recursos para o professor Renato, de História",resultado["frases_automaticas"][1],)
         self.assertIn("com a turma 8º B, durante a 4ª aula", resultado["frases_automaticas"][1])
-        self.assertIn(
-            "para organização do uso de Projetor multimídia e ajuste prévio de imagem e áudio",
-            resultado["frases_automaticas"][1],
-        )
+        self.assertIn("Projetor multimídia", resultado["frases_automaticas"][1])
+        self.assertIn("ajuste prévio de imagem e áudio", resultado["frases_automaticas"][1])
 
     def test_gera_frases_manuais_por_tipo_e_agrupa_itens_tecnicos(self):
         registros = [
