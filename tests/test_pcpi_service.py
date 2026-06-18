@@ -78,16 +78,23 @@ class PcpiServiceTest(unittest.TestCase):
         self.assertEqual(resultado["total_agendamentos"], 3)
         self.assertEqual(len(resultado["frases_automaticas"]), 2)
         self.assertIn(
-            "Atendimento na Sala de Tecnologia Educacional (STE) aos professores:",
+            "Atendimentos realizados na Sala de Tecnologia Educacional (STE):",
             resultado["frases_automaticas"][0],
         )
         self.assertIn(
-            "Organização e recolhimento de equipamentos audiovisuais aos professores:",
+            "Organização e recolhimento de equipamentos e recursos:",
             resultado["frases_automaticas"][1],
         )
-        self.assertIn("Bruno (Historia), com a turma 8A na 2ª aula", resultado["frases_automaticas"][1])
-        self.assertIn("Carla (Geografia), com a turma 9A na 3ª aula", resultado["frases_automaticas"][1])
-        self.assertIn("; e Carla", resultado["frases_automaticas"][1])
+        self.assertIn(
+            "Foram organizados e recolhidos recursos para o professor Bruno, de Historia",
+            resultado["frases_automaticas"][1],
+        )
+        self.assertIn("com a turma 8A, durante a 2ª aula", resultado["frases_automaticas"][1])
+        self.assertIn(
+            "Foram organizados e recolhidos recursos para o professor Carla, de Geografia",
+            resultado["frases_automaticas"][1],
+        )
+        self.assertIn("com a turma 9A, durante a 3ª aula", resultado["frases_automaticas"][1])
 
     def test_preserva_simbolos_de_turma_e_formata_aula_com_ordinal(self):
         itens = [
@@ -136,8 +143,8 @@ class PcpiServiceTest(unittest.TestCase):
         self.assertIn(f"3{SIMBOLO_ORDINAL_FEMININO} aula", frase)
         self.assertIn(f"6{SIMBOLO_ORDINAL_MASCULINO} A", frase)
         self.assertIn(f"3{SIMBOLO_ORDINAL_MASCULINO} EM A", frase)
-        self.assertIn("Ana (Matematica)", frase)
-        self.assertIn("Bianca (Fisica)", frase)
+        self.assertIn("ao professor Ana, de Matematica", frase)
+        self.assertIn("ao professor Bianca, de Fisica", frase)
 
     def test_acrescenta_texto_acao_pcpi_nos_dois_tipos_automaticos(self):
         itens = [
@@ -166,11 +173,18 @@ class PcpiServiceTest(unittest.TestCase):
         resultado = gerar_texto_pcpi("2026-04-03", "MATUTINO", itens, [])
 
         self.assertIn(
-            "Lívia (Matemática), com a turma 7º A na 2ª aula, com orientação sobre uso do simulador",
+            "Foi prestado atendimento ao professor Lívia, de Matemática",
             resultado["frases_automaticas"][0],
         )
+        self.assertIn("com a turma 7º A, durante a 2ª aula", resultado["frases_automaticas"][0])
+        self.assertIn("envolvendo orientação sobre uso do simulador", resultado["frases_automaticas"][0])
         self.assertIn(
-            "Renato (História), com a turma 8º B na 4ª aula, com organização do uso de Projetor multimídia e ajuste prévio de imagem e áudio",
+            "Foram organizados e recolhidos recursos para o professor Renato, de História",
+            resultado["frases_automaticas"][1],
+        )
+        self.assertIn("com a turma 8º B, durante a 4ª aula", resultado["frases_automaticas"][1])
+        self.assertIn(
+            "para organização do uso de Projetor multimídia e ajuste prévio de imagem e áudio",
             resultado["frases_automaticas"][1],
         )
 
