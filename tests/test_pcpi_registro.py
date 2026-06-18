@@ -128,9 +128,13 @@ class PcpiRegistroTest(unittest.TestCase):
             self.assertEqual(item["categoria_uso"], "tecnologia_educacional")
             self.assertEqual(item["componentes"], ["Matematica", "Fisica"])
             self.assertIn(
-                "Organização e recolhimento de equipamentos audiovisuais aos professores:",
+                "Organização e recolhimento de equipamentos e recursos:",
                 resposta["texto_base"],
             )
+            self.assertIn("professor Professor PCPI", resposta["texto_base"])
+            self.assertIn("Matematica e Fisica", resposta["texto_base"])
+            self.assertIn("Turma PCPI 7A", resposta["texto_base"])
+            self.assertIn("durante a 2ª aula", resposta["texto_base"])
 
     def test_criar_e_listar_registros_manuais_pcpi(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -269,7 +273,9 @@ class PcpiRegistroTest(unittest.TestCase):
                 usuario={"id": 1, "cargo": "ADMIN"},
             )
 
-            self.assertIn("Professor Vinculado (História PCPI)", resposta_texto["texto"])
+            self.assertIn("professor Professor Vinculado, de História PCPI", resposta_texto["texto"])
+            self.assertIn("com a turma 6A PCPI", resposta_texto["texto"])
+            self.assertIn("durante a 2ª aula", resposta_texto["texto"])
             self.assertIn("ligou os computadores e suporte ao uso do laboratorio na aula.", resposta_texto["texto"].lower())
             self.assertNotIn("No atendimento agendado", resposta_texto["texto"])
 
@@ -330,7 +336,9 @@ class PcpiRegistroTest(unittest.TestCase):
                 usuario={"id": 1, "cargo": "ADMIN"},
             )
 
-            self.assertIn("Alex Borges França (Matemática PCPI)", resposta["texto"])
+            self.assertIn("professor Alex Borges França, de Matemática PCPI", resposta["texto"])
+            self.assertIn("com a turma 1 E.M A PCPI", resposta["texto"])
+            self.assertIn("durante a 1ª aula", resposta["texto"])
             self.assertNotIn("Geometria PCPI", resposta["texto"])
             self.assertNotIn("R.A - Matemática", resposta["texto"])
 
@@ -418,7 +426,11 @@ class PcpiRegistroTest(unittest.TestCase):
 
             self.assertEqual(resposta["total_agendamentos"], 1)
             self.assertEqual(resposta["total_registros_manuais"], 1)
-            self.assertIn("equipamentos audiovisuais", resposta["texto"])
+            self.assertIn("equipamentos e recursos", resposta["texto"])
+            self.assertIn("professor Professor Texto", resposta["texto"])
+            self.assertIn("Ciencias", resposta["texto"])
+            self.assertIn("com a turma 8A", resposta["texto"])
+            self.assertIn("durante a 3ª aula", resposta["texto"])
             self.assertIn("Planejamento e organização", resposta["texto"])
 
     def test_preview_texto_pcpi_respeita_agendamentos_selecionados(self):
@@ -488,9 +500,13 @@ class PcpiRegistroTest(unittest.TestCase):
 
             self.assertEqual(resposta["total_agendamentos"], 1)
             self.assertIn(
-                "Organização e recolhimento de equipamentos audiovisuais aos professores:",
+                "Organização e recolhimento de equipamentos e recursos:",
                 resposta["texto"],
             )
+            self.assertIn("professor Professor Selecao", resposta["texto"])
+            self.assertIn("Biologia", resposta["texto"])
+            self.assertIn("com a turma 9A", resposta["texto"])
+            self.assertIn("durante a 1ª aula", resposta["texto"])
             self.assertNotIn("Projetor", resposta["texto"])
 
     def test_sugestoes_pcpi_agrupa_vespertino_em_no_turno_vespertino(self):
