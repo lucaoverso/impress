@@ -356,53 +356,210 @@ def _aula_pcpi(item: dict) -> str:
     return aula
 
 
-def _item_texto_automatico_ste(item: dict) -> str:
+def _chave_docente_automatico(item: dict) -> tuple[str, str]:
+    """Agrupa registros automáticos pelo docente e pela disciplina/componente."""
     professor_nome = _texto_limpo(item.get("professor_nome")) or "Professor não informado"
     disciplina = _disciplina_pcpi(item) or "disciplina não informada"
-    turma = _texto_limpo(item.get("turma")) or "turma não informada"
-    aula = _aula_pcpi(item)
-    texto = f"{professor_nome} ({disciplina}), com a turma {turma} na {aula}"
+    return professor_nome, disciplina
 
-    texto_acao_pcpi = _texto_limpo(item.get("texto_acao_pcpi"))
-    if texto_acao_pcpi:
-        texto += f", com {texto_acao_pcpi}"
+
+def _acao_automatica_limpa(texto_acao_pcpi: str) -> str:
+    """Limpa pequenos vícios vindos do banco para evitar frases como 'com acompanhou'."""
+    texto = _remover_pontuacao_final(texto_acao_pcpi)
+    if not texto:
+        return ""
+
+    texto = re.sub(r"^\s*(com|e)\s+", "", texto, flags=re.IGNORECASE)
+    texto = re.sub(r"\s+", " ", texto).strip()
     return texto
 
 
-def _item_texto_automatico_equipamento(item: dict) -> str:
-    professor_nome = _texto_limpo(item.get("professor_nome")) or "Professor não informado"
-    disciplina = _disciplina_pcpi(item) or "disciplina não informada"
-    turma = _texto_limpo(item.get("turma")) or "turma não informada"
-    aula = _aula_pcpi(item)
+def _naturalizar_acao_automatica(acao: str) -> str:
+    """Transforma ações registradas como verbos soltos em complementos narrativos."""
+    texto = _acao_automatica_limpa(acao)
+    if not texto:
+        return ""
+
+    chave = _normalizar_texto_chave(texto)
+
+    if "passar o video" in chave or "exibicao" in chave or "video" in chave:
+        if "ste" in chave or "laboratorio" in chave:
+            return "preparação e organização da STE para exibição de vídeo"
+        return "organização dos equipamentos para exibição de vídeo"
+
+    if "kahoot" in chave:
+        return "acompanhamento do desenvolvimento da aula e auxílio na plataforma Kahoot"
+
+    if "acompanhou o desenvolvimento da aula" in chave:
+        texto = re.sub(
+            r"acompanhou o desenvolvimento da aula",
+            "acompanhamento do desenvolvimento da aula",
+            texto,
+            flags=re.IGNORECASE,
+        )
+
+    if "organizou os equipamentos" in chave or "organizacao do equipamento" in chave:
+        return "organização dos equipamentos"
+
+    if texto.lower().startswith("preparou "):
+        texto = "preparação de " + texto[len("preparou ") :]
+
+    return texto
+
+
+def _acao_automatica_por_item_ste(item: dict) -> str:
+    acao = _naturalizar_acao_automatica(item.get("texto_acao_pcpi"))
+    if acao:
+        return acao
+
+    tema = _texto_limpo(item.get("tema_aula"))
+    if tema:
+        return f"acompanhamento do desenvolvimento da aula sobre {tema}"
+    return "acompanhamento do desenvolvimento da aula"
+
+
+def _acao_automatica_por_item_equipamento(item: dict) -> str:
+    acao = _naturalizar_acao_automatica(item.get("texto_acao_pcpi"))
     recurso_agendado = (
         _texto_limpo(item.get("recurso_agendado"))
         or _texto_limpo(item.get("recurso_nome"))
         or "equipamento não informado"
     )
-    texto = (
-        f"{professor_nome} ({disciplina}), com a turma {turma} na {aula}, "
-        f"com organização do uso de {recurso_agendado}"
+
+    if acao:
+        return f"organização do uso de {recurso_agendado} e {acao}"
+    return f"organização do uso de {recurso_agendado}"
+
+
+def _normalizar_acao_automatica(acao: str) -> str:
+    """Normaliza a ação apenas para comparar/agrupá-la."""
+    return _normalizar_texto_chave(acao)
+
+
+def _formatar_contextos_turma_aula(itens: list[dict]) -> str:
+    """Formata pares turma/aula de forma natural, agrupando quando há mais de um atendimento."""
+    pares = []
+    for item in itens:
+        turma = _texto_limpo(item.get("turma")) or "turma não informada"
+        aula = _aula_pcpi(item)
+        texto = f"{turma}, durante a {aula}"
+        if texto not in pares:
+            pares.append(texto)
+
+    if not pares:
+        return "com turma e aula não informadas"
+
+    if len(pares) == 1:
+        return f"com a turma {pares[0]}"
+
+    return f"com as turmas {_formatar_lista_pt_br(pares)}"
+
+
+def _formatar_contextos_turma_aula_respectivamente(itens: list[dict]) -> str:
+    """Versão um pouco mais compacta para múltiplas turmas/aulas."""
+    turmas = []
+    aulas = []
+    for item in itens:
+        turma = _texto_limpo(item.get("turma")) or "turma não informada"
+        aula = _aula_pcpi(item)
+        if turma not in turmas:
+            turmas.append(turma)
+        if aula not in aulas:
+            aulas.append(aula)
+
+    if not turmas:
+        return "com turma e aula não informadas"
+
+    if len(turmas) == 1 and len(aulas) == 1:
+        return f"com a turma {turmas[0]}, durante a {aulas[0]}"
+
+    if len(turmas) == len(aulas):
+        return (
+            f"com as turmas {_formatar_lista_pt_br(turmas)}, "
+            f"durante a {_formatar_lista_pt_br(aulas)}, respectivamente"
+        )
+
+    return _formatar_contextos_turma_aula(itens)
+
+
+def _prefixo_docente(professor_nome: str, disciplina: str) -> str:
+    if disciplina and disciplina != "disciplina não informada":
+        return f"ao professor {professor_nome}, de {disciplina}"
+    return f"ao professor {professor_nome}"
+
+
+def _referencia_docente(professor_nome: str, disciplina: str) -> str:
+    if disciplina and disciplina != "disciplina não informada":
+        return f"o professor {professor_nome}, de {disciplina}"
+    return f"o professor {professor_nome}"
+
+
+def _frase_grupo_automatico_ste(professor_nome: str, disciplina: str, itens: list[dict]) -> str:
+    grupos_por_acao: dict[str, list[dict]] = defaultdict(list)
+    acoes_por_chave = {}
+
+    for item in itens:
+        acao = _acao_automatica_por_item_ste(item)
+        chave = _normalizar_acao_automatica(acao)
+        grupos_por_acao[chave].append(item)
+        acoes_por_chave[chave] = acao
+
+    partes = []
+    for chave, itens_acao in grupos_por_acao.items():
+        contexto = _formatar_contextos_turma_aula_respectivamente(itens_acao)
+        acao = _texto_inicial_minusculo(acoes_por_chave[chave])
+        partes.append(f"{contexto}, envolvendo {acao}")
+
+    return _garantir_ponto_final(
+        f"Foi prestado atendimento {_prefixo_docente(professor_nome, disciplina)}, "
+        f"{_formatar_lista_com_ponto_e_virgula(partes)}"
     )
 
-    texto_acao_pcpi = _texto_limpo(item.get("texto_acao_pcpi"))
-    if texto_acao_pcpi:
-        texto += f" e {texto_acao_pcpi}"
-    return texto
+
+def _frase_grupo_automatico_equipamento(professor_nome: str, disciplina: str, itens: list[dict]) -> str:
+    grupos_por_acao: dict[str, list[dict]] = defaultdict(list)
+    acoes_por_chave = {}
+
+    for item in itens:
+        acao = _acao_automatica_por_item_equipamento(item)
+        chave = _normalizar_acao_automatica(acao)
+        grupos_por_acao[chave].append(item)
+        acoes_por_chave[chave] = acao
+
+    partes = []
+    for chave, itens_acao in grupos_por_acao.items():
+        contexto = _formatar_contextos_turma_aula_respectivamente(itens_acao)
+        acao = _texto_inicial_minusculo(acoes_por_chave[chave])
+        partes.append(f"{contexto}, para {acao}")
+
+    return _garantir_ponto_final(
+        f"Foram organizados e recolhidos recursos para {_referencia_docente(professor_nome, disciplina)}, "
+        f"{_formatar_lista_com_ponto_e_virgula(partes)}"
+    )
 
 
 def _frase_automatica_por_tipo(tipo_atividade: str, itens: list[dict]) -> str:
-    if tipo_atividade == "ste":
-        introducao = "Atendimento na Sala de Tecnologia Educacional (STE) aos professores:"
-        corpo = _formatar_lista_com_ponto_e_virgula(
-            [_item_texto_automatico_ste(item) for item in itens]
-        )
-        return _garantir_ponto_final(f"{introducao} {corpo}")
+    """Gera textos automáticos mais narrativos, agrupando por docente e ação."""
+    grupos_docentes: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    for item in itens:
+        grupos_docentes[_chave_docente_automatico(item)].append(item)
 
-    introducao = "Organização e recolhimento de equipamentos audiovisuais aos professores:"
-    corpo = _formatar_lista_com_ponto_e_virgula(
-        [_item_texto_automatico_equipamento(item) for item in itens]
-    )
-    return _garantir_ponto_final(f"{introducao} {corpo}")
+    frases = []
+    for (professor_nome, disciplina), itens_docente in grupos_docentes.items():
+        if tipo_atividade == "ste":
+            frases.append(_frase_grupo_automatico_ste(professor_nome, disciplina, itens_docente))
+        else:
+            frases.append(_frase_grupo_automatico_equipamento(professor_nome, disciplina, itens_docente))
+
+    if not frases:
+        return ""
+
+    if tipo_atividade == "ste":
+        titulo = "Atendimentos realizados na Sala de Tecnologia Educacional (STE):"
+    else:
+        titulo = "Organização e recolhimento de equipamentos e recursos:"
+
+    return f"{titulo} {' '.join(frases)}"
 
 
 def classificar_categoria_uso(recurso_nome: str, recurso_tipo: str) -> str:
