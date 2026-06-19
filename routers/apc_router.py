@@ -381,6 +381,7 @@ def _montar_resumo_calendario_para_usuario(periodo: dict, usuario: dict, visao: 
             "total_enviados": painel["total_enviados"],
             "total_pendentes": painel["total_pendentes"],
             "total_aprovados": int(painel.get("total_aprovados") or 0),
+            "total_impressos": int(painel.get("total_impressos") or 0),
             "total_ajustes": int(painel.get("total_ajustes") or 0),
             "total_aguardando_revisao": int(
                 painel.get("total_aguardando_revisao") or 0
@@ -408,6 +409,7 @@ def _montar_resumo_calendario_para_usuario(periodo: dict, usuario: dict, visao: 
         "total_enviados": int(painel_professor.get("total_enviadas") or 0),
         "total_pendentes": int(painel_professor.get("total_pendentes") or 0),
         "total_aprovados": int(painel_professor.get("total_aprovados") or 0),
+        "total_impressos": int(painel_professor.get("total_impressos") or 0),
         "total_ajustes": int(painel_professor.get("total_ajustes") or 0),
         "total_aguardando_revisao": int(
             painel_professor.get("total_aguardando_revisao") or 0
@@ -447,6 +449,7 @@ def _montar_resumo_gestao_apc(periodo: dict) -> dict:
         "total_enviados": painel["total_enviados"],
         "total_pendentes": painel["total_pendentes"],
         "total_aprovados": int(painel.get("total_aprovados") or 0),
+        "total_impressos": int(painel.get("total_impressos") or 0),
         "total_ajustes": int(painel.get("total_ajustes") or 0),
         "total_aguardando_revisao": int(
             painel.get("total_aguardando_revisao") or 0

@@ -1935,6 +1935,11 @@ body.apc-print-wizard-open {
     color: #9a3412;
 }
 
+.apc-status.is-printed {
+    background: #e0f2fe;
+    color: #075985;
+}
+
 .apc-review-guidance {
     margin: 0;
     padding: 11px 12px;

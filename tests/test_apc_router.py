@@ -235,6 +235,18 @@ class ApcRouterTest(unittest.TestCase):
             )
             self.assertEqual(aprovado["review_status"], "APROVADO")
 
+            impresso = apc_router.revisar_envio_apc_api(
+                envio_id=int(envio["id"]),
+                payload=importlib.import_module(
+                    "modules.apc_review.schemas"
+                ).ApcReviewUpdateIn(
+                    status="IMPRESSO",
+                    mensagem="Prova impressa pela coordenacao.",
+                ),
+                usuario=self._usuario_coord(),
+            )
+            self.assertEqual(impresso["review_status"], "IMPRESSO")
+
             with self.assertRaises(HTTPException) as review_ctx:
                 apc_router.revisar_envio_apc_api(
                     envio_id=int(envio["id"]),
@@ -255,6 +267,7 @@ class ApcRouterTest(unittest.TestCase):
             )
             self.assertEqual(int(detalhe_gestao_atualizado["total_enviados"]), 1)
             self.assertEqual(int(detalhe_gestao_atualizado["total_pendentes"]), 0)
+            self.assertEqual(int(detalhe_gestao_atualizado["total_impressos"]), 1)
             self.assertEqual(
                 int(detalhe_gestao_atualizado["itens"][0]["envio"]["id"]),
                 int(envio["id"]),

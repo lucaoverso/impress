@@ -414,6 +414,11 @@ def montar_painel_periodo_apc(periodo: dict, elegiveis: list[dict], envios: list
             for item in itens
             if (item.get("envio") or {}).get("review_status") == "APROVADO"
         ),
+        "total_impressos": sum(
+            1
+            for item in itens
+            if (item.get("envio") or {}).get("review_status") == "IMPRESSO"
+        ),
         "total_ajustes": sum(
             1
             for item in itens
@@ -506,6 +511,11 @@ def montar_painel_professor_apc(
             1
             for item in itens
             if (item.get("envio") or {}).get("review_status") == "APROVADO"
+        ),
+        "total_impressos": sum(
+            1
+            for item in itens
+            if (item.get("envio") or {}).get("review_status") == "IMPRESSO"
         ),
         "total_ajustes": sum(
             1

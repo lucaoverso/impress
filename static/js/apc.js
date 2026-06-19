@@ -1037,7 +1037,9 @@ function criarStatusApc(texto, tipo = "pending") {
             ? "is-closed"
             : tipo === "adjustment"
                 ? "is-adjustment"
-                : "is-pending";
+                : tipo === "printed"
+                    ? "is-printed"
+                    : "is-pending";
     span.className = `apc-status ${classe}`;
     span.innerText = texto;
     return span;
@@ -1047,6 +1049,9 @@ function statusRevisaoEnvioApc(envio) {
     const status = String(envio?.review_status || "PENDENTE").toUpperCase();
     if (status === "APROVADO") {
         return { status, texto: "Aprovado", tipo: "ok" };
+    }
+    if (status === "IMPRESSO") {
+        return { status, texto: "Impresso", tipo: "printed" };
     }
     if (status === "AJUSTE_SOLICITADO") {
         return { status, texto: "Realizar ajuste", tipo: "adjustment" };
@@ -1309,6 +1314,7 @@ function agruparItensGestaoPorProfessor(itens) {
                 total_enviadas: 0,
                 total_pendentes: 0,
                 total_aprovadas: 0,
+                total_impressas: 0,
                 total_ajustes: 0,
                 total_aguardando_revisao: 0,
                 turmas: [],
@@ -1322,6 +1328,7 @@ function agruparItensGestaoPorProfessor(itens) {
         grupo.total_pendentes += item.enviado ? 0 : 1;
         const reviewStatus = String(item.envio?.review_status || "PENDENTE");
         grupo.total_aprovadas += reviewStatus === "APROVADO" ? 1 : 0;
+        grupo.total_impressas += reviewStatus === "IMPRESSO" ? 1 : 0;
         grupo.total_ajustes += reviewStatus === "AJUSTE_SOLICITADO" ? 1 : 0;
         grupo.total_aguardando_revisao += item.enviado && reviewStatus === "PENDENTE" ? 1 : 0;
         if (item.turma_nome && !grupo.turmas.includes(item.turma_nome)) {
@@ -1347,6 +1354,12 @@ function statusResumoPeriodoApc(item, modoGestao = false) {
         }
         if (
             Number(item.total_elegiveis || 0) > 0
+            && Number(item.total_impressos || 0) === Number(item.total_elegiveis || 0)
+        ) {
+            return { texto: "Impresso", tipo: "printed" };
+        }
+        if (
+            Number(item.total_elegiveis || 0) > 0
             && Number(item.total_aprovados || 0) === Number(item.total_elegiveis || 0)
         ) {
             return { texto: "Aprovado", tipo: "ok" };
@@ -1361,6 +1374,12 @@ function statusResumoPeriodoApc(item, modoGestao = false) {
     }
     if (Number(item.total_ajustes || 0) > 0) {
         return { texto: "Realizar ajuste", tipo: "adjustment" };
+    }
+    if (
+        Number(item.total_entregas || 0) > 0
+        && Number(item.total_impressos || 0) === Number(item.total_entregas || 0)
+    ) {
+        return { texto: "Impresso", tipo: "printed" };
     }
     if (
         Number(item.total_entregas || 0) > 0
@@ -1753,6 +1772,7 @@ function renderDetalheDocenteApc(detalhe) {
         renderResumoCompactoApc([
             { label: "Pendentes", valor: String(detalhe.total_pendentes || 0) },
             { label: "Enviadas", valor: String(detalhe.total_enviadas || 0) },
+            { label: "Impressas", valor: String(detalhe.total_impressos || 0) },
             { label: "Prazo", valor: periodo.prazo_expirado ? "Encerrado" : "Aberto" },
         ])
     );
@@ -1983,6 +2003,11 @@ function renderListaGestaoApc(detalhe) {
         side.className = "apc-professor-group-side";
         if (grupo.total_ajustes > 0) {
             side.appendChild(criarStatusApc("Realizar ajuste", "adjustment"));
+        } else if (
+            grupo.total_entregas > 0
+            && grupo.total_impressas === grupo.total_entregas
+        ) {
+            side.appendChild(criarStatusApc("Impresso", "printed"));
         } else if (
             grupo.total_entregas > 0
             && grupo.total_aprovadas === grupo.total_entregas
@@ -2377,12 +2402,18 @@ function renderCalendarioApc() {
                 ? periodos.every(
                     (item) => (
                         Number(item.total_elegiveis || 0) > 0
-                        && Number(item.total_aprovados || 0) === Number(item.total_elegiveis || 0)
+                        && (
+                            Number(item.total_aprovados || 0) === Number(item.total_elegiveis || 0)
+                            || Number(item.total_impressos || 0) === Number(item.total_elegiveis || 0)
+                        )
                     )
                 )
                 : periodos.every((item) => (
                     Number(item.total_entregas || 0) > 0
-                    && Number(item.total_aprovados || 0) === Number(item.total_entregas || 0)
+                    && (
+                        Number(item.total_aprovados || 0) === Number(item.total_entregas || 0)
+                        || Number(item.total_impressos || 0) === Number(item.total_entregas || 0)
+                    )
                 ));
             btnDia.classList.add(todosConcluidos ? "is-ok" : "is-pending");
         }
