@@ -444,7 +444,7 @@ function abrirModalPreviewApc(envio) {
     void carregarPreviewArquivoApc(envio);
 }
 
-function fecharModalPreviewApc({ devolverFoco = true } = {}) {
+function fecharModalPreviewApc({ devolverFoco = true, liberarScroll = true } = {}) {
     const modal = el("apcArquivoPreviewModal");
     if (!modal) return;
     const estavaAberto = !modal.hidden;
@@ -454,7 +454,7 @@ function fecharModalPreviewApc({ devolverFoco = true } = {}) {
         modal.hidden = true;
         limparPreviewArquivoApc();
     }, 220);
-    if (estavaAberto) liberarScrollModalApc();
+    if (estavaAberto && liberarScroll) liberarScrollModalApc();
     if (devolverFoco && focoAntesPreviewApc instanceof HTMLElement) {
         focarSemRolagemApc(focoAntesPreviewApc);
     }
@@ -662,8 +662,10 @@ async function abrirPrintWizardApc(envio) {
     const painel = el("apcPrintWizardPanel");
     if (!modal || !painel || !envio?.id || !modoGestaoAtivoApc()) return;
 
+    const previewAberto = previewArquivoApcAberto();
+    const focoRetorno = previewAberto ? focoAntesPreviewApc : document.activeElement;
     envioImpressaoApc = envio;
-    focoAntesPrintWizardApc = document.activeElement;
+    focoAntesPrintWizardApc = focoRetorno;
     el("apcPrintWizardArquivo").innerText = nomeArquivoPrincipalApc(envio);
     el("apcPrintTurma").innerHTML = '<option value="">Carregando turmas...</option>';
     el("apcPrintTurmaResumo").innerText = "Carregando turmas...";
@@ -676,9 +678,11 @@ async function abrirPrintWizardApc(envio) {
     setMensagemPrintApc("");
     renderEtapaPrintApc(1);
     modal.hidden = false;
-    bloquearScrollModalApc();
+    if (!previewAberto) {
+        bloquearScrollModalApc();
+    }
     document.body.classList.add("apc-print-wizard-open");
-    fecharModalPreviewApc({ devolverFoco: false });
+    fecharModalPreviewApc({ devolverFoco: false, liberarScroll: !previewAberto });
     window.requestAnimationFrame(() => {
         modal.classList.add("is-visible");
         focarSemRolagemApc(painel);
@@ -2631,7 +2635,8 @@ function registrarEventosApc() {
             await baixarArquivoApc(envioPreviewApc);
         }
     });
-    el("btnApcImprimirArquivo")?.addEventListener("click", () => {
+    el("btnApcImprimirArquivo")?.addEventListener("click", (event) => {
+        event.preventDefault();
         if (envioPreviewApc) {
             void abrirPrintWizardApc(envioPreviewApc);
         }
