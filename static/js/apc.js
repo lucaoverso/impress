@@ -120,6 +120,15 @@ function printWizardApcAberto() {
     return !el("apcPrintWizardModal")?.hidden;
 }
 
+function focarSemRolagemApc(elemento) {
+    if (!(elemento instanceof HTMLElement) || !document.contains(elemento)) return;
+    try {
+        elemento.focus({ preventScroll: true });
+    } catch (_err) {
+        elemento.focus();
+    }
+}
+
 function revogarPreviewArquivoApc() {
     if (arquivoPreviewUrlApc) {
         window.URL.revokeObjectURL(arquivoPreviewUrlApc);
@@ -445,7 +454,7 @@ function fecharModalPreviewApc() {
     }, 220);
     if (estavaAberto) liberarScrollModalApc();
     if (focoAntesPreviewApc instanceof HTMLElement) {
-        focoAntesPreviewApc.focus();
+        focarSemRolagemApc(focoAntesPreviewApc);
     }
     focoAntesPreviewApc = null;
 }
@@ -713,7 +722,7 @@ function fecharPrintWizardApc() {
     }, 220);
     if (estavaAberto) liberarScrollModalApc();
     if (focoAntesPrintWizardApc instanceof HTMLElement) {
-        focoAntesPrintWizardApc.focus();
+        focarSemRolagemApc(focoAntesPrintWizardApc);
     }
     focoAntesPrintWizardApc = null;
 }
@@ -804,7 +813,7 @@ function fecharCalendarioApc({ devolverFoco = true } = {}) {
     }, 260);
 
     if (devolverFoco && focoAntesCalendarioApc instanceof HTMLElement) {
-        focoAntesCalendarioApc.focus();
+        focarSemRolagemApc(focoAntesCalendarioApc);
     }
     focoAntesCalendarioApc = null;
 }
