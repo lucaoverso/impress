@@ -154,13 +154,15 @@ function liberarScrollModalApc() {
     apcModalScrollLocks -= 1;
     if (apcModalScrollLocks > 0) return;
 
+    const scrollRestaurado = apcModalScrollY;
     document.documentElement.classList.remove("apc-modal-scroll-locked");
     document.body.style.position = "";
     document.body.style.top = "";
     document.body.style.left = "";
     document.body.style.right = "";
     document.body.style.width = "";
-    window.scrollTo(0, apcModalScrollY);
+    window.scrollTo(0, scrollRestaurado);
+    window.requestAnimationFrame(() => window.scrollTo(0, scrollRestaurado));
     apcModalScrollY = 0;
 }
 
@@ -437,12 +439,12 @@ function abrirModalPreviewApc(envio) {
     document.body.classList.add("apc-file-preview-open");
     window.requestAnimationFrame(() => {
         modal.classList.add("is-visible");
-        painel.focus();
+        focarSemRolagemApc(painel);
     });
     void carregarPreviewArquivoApc(envio);
 }
 
-function fecharModalPreviewApc() {
+function fecharModalPreviewApc({ devolverFoco = true } = {}) {
     const modal = el("apcArquivoPreviewModal");
     if (!modal) return;
     const estavaAberto = !modal.hidden;
@@ -453,7 +455,7 @@ function fecharModalPreviewApc() {
         limparPreviewArquivoApc();
     }, 220);
     if (estavaAberto) liberarScrollModalApc();
-    if (focoAntesPreviewApc instanceof HTMLElement) {
+    if (devolverFoco && focoAntesPreviewApc instanceof HTMLElement) {
         focarSemRolagemApc(focoAntesPreviewApc);
     }
     focoAntesPreviewApc = null;
@@ -676,10 +678,10 @@ async function abrirPrintWizardApc(envio) {
     modal.hidden = false;
     bloquearScrollModalApc();
     document.body.classList.add("apc-print-wizard-open");
-    fecharModalPreviewApc();
+    fecharModalPreviewApc({ devolverFoco: false });
     window.requestAnimationFrame(() => {
         modal.classList.add("is-visible");
-        painel.focus();
+        focarSemRolagemApc(painel);
         void carregarPreviewPrintApc(envio);
     });
 
@@ -733,7 +735,7 @@ function avancarPrintWizardApc() {
         const copias = Number(el("apcPrintCopias").value);
         if (!Number.isInteger(copias) || copias < 1 || copias > 999) {
             setMensagemPrintApc("Informe uma quantidade de copias entre 1 e 999.", true);
-            el("apcPrintCopias").focus();
+            focarSemRolagemApc(el("apcPrintCopias"));
             return;
         }
     }
@@ -795,7 +797,7 @@ function abrirCalendarioApc() {
     aplicarVisibilidadeApc();
     window.requestAnimationFrame(() => {
         drawer.classList.add("is-visible");
-        painel.focus();
+        focarSemRolagemApc(painel);
     });
 }
 
@@ -1009,7 +1011,7 @@ function abrirModalFormularioApc(periodo = null) {
     backdrop.hidden = false;
     document.body.classList.add("apc-modal-open");
     window.setTimeout(() => {
-        el("apcTitulo")?.focus();
+        focarSemRolagemApc(el("apcTitulo"));
     }, 0);
 }
 
