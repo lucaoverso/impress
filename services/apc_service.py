@@ -1,7 +1,8 @@
 import os
 import re
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from services.horario_escolar_service import (
     dia_semana_por_data,
@@ -31,6 +32,15 @@ APC_TIPOS_ENTREGA_VALIDOS = (
     APC_TIPO_ENTREGA_APC,
     APC_TIPO_ENTREGA_PROVA_BIMESTRAL,
 )
+
+APC_TIMEZONE = os.getenv("APP_TIMEZONE") or os.getenv("TZ") or "America/Cuiaba"
+
+
+def _timezone_local_apc():
+    try:
+        return ZoneInfo(APC_TIMEZONE)
+    except ZoneInfoNotFoundError:
+        return timezone(timedelta(hours=-4))
 APC_TIPO_ENTREGA_LABELS = {
     APC_TIPO_ENTREGA_GERAL: "Solicitacao geral",
     APC_TIPO_ENTREGA_APC: "APC",
@@ -155,7 +165,11 @@ def _datetime_utc_para_local_texto(valor: str) -> str:
     data_utc = _parse_sqlite_datetime(valor)
     if not data_utc:
         return str(valor or "").strip()
-    return data_utc.replace(tzinfo=UTC).astimezone().strftime("%Y-%m-%d %H:%M:%S")
+    return (
+        data_utc.replace(tzinfo=UTC)
+        .astimezone(_timezone_local_apc())
+        .strftime("%Y-%m-%d %H:%M:%S")
+    )
 
 
 def prazo_envio_input(valor: str) -> str:
