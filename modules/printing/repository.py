@@ -1,4 +1,5 @@
 from db.catalogos import listar_turmas_ativas
+from db.core import get_connection
 from db.impressao import (
     alterar_prioridade,
     buscar_cota,
@@ -17,6 +18,24 @@ from db.impressao import (
 
 def list_active_classes():
     return listar_turmas_ativas()
+
+
+def count_active_students_by_class():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT
+            turma_id,
+            SUM(CASE WHEN ativo = 1 THEN 1 ELSE 0 END) AS total
+        FROM estudantes
+        WHERE turma_id > 0
+        GROUP BY turma_id
+    """
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return {int(row["turma_id"]): int(row["total"] or 0) for row in rows}
 
 
 def create_job(**kwargs):

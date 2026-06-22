@@ -130,13 +130,19 @@ def prepare_uploaded_file_for_preview(
 
 def list_formatted_print_classes():
     turmas = []
+    estudantes_ativos_por_turma = repository.count_active_students_by_class()
     for turma in repository.list_active_classes():
+        turma_id = int(turma["id"])
+        quantidade_cadastrada = max(int(turma.get("quantidade_estudantes") or 0), 0)
         turmas.append(
             {
-                "id": int(turma["id"]),
+                "id": turma_id,
                 "nome": turma["nome"],
                 "turno": str(turma.get("turno") or "").strip().upper(),
-                "quantidade_estudantes": max(int(turma.get("quantidade_estudantes") or 0), 0),
+                "quantidade_estudantes": estudantes_ativos_por_turma.get(
+                    turma_id,
+                    quantidade_cadastrada,
+                ),
             }
         )
     return turmas
