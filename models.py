@@ -654,6 +654,7 @@ class ApcEnvioOut(BaseModel):
     arquivo_nome_original: str
     arquivo_tipo: str = ""
     arquivo_tamanho: int = 0
+    primeiro_envio_em: str = ""
     enviado_em: str = ""
     atualizado_em: str = ""
     review_status: str = "PENDENTE"

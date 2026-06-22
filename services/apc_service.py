@@ -215,6 +215,9 @@ def ordenar_periodos_apc(itens: list[dict]) -> list[dict]:
 
 def enriquecer_envio_apc(item: dict) -> dict:
     envio = dict(item or {})
+    primeiro_envio_em = _datetime_utc_para_local_texto(
+        envio.get("primeiro_envio_em") or envio.get("enviado_em")
+    )
     enviado_em = _datetime_utc_para_local_texto(envio.get("enviado_em"))
     atualizado_em = _datetime_utc_para_local_texto(envio.get("atualizado_em"))
     reviewed_at = _datetime_utc_para_local_texto(envio.get("reviewed_at"))
@@ -233,6 +236,7 @@ def enriquecer_envio_apc(item: dict) -> dict:
         "arquivo_path": str(envio.get("arquivo_path") or "").strip(),
         "professor_nome": str(envio.get("professor_nome") or "").strip(),
         "professor_email": str(envio.get("professor_email") or "").strip(),
+        "primeiro_envio_em": primeiro_envio_em,
         "enviado_em": enviado_em,
         "atualizado_em": atualizado_em,
         "review_status": str(envio.get("review_status") or "PENDENTE").strip().upper(),

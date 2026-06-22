@@ -11,6 +11,7 @@ excluir_apc_envio = proxy("excluir_apc_envio")
 excluir_apc_periodo = proxy("excluir_apc_periodo")
 listar_anos_letivos_apc = proxy("listar_anos_letivos_apc")
 listar_apc_destinatarios = proxy("listar_apc_destinatarios")
+listar_apc_envio_historico = proxy("listar_apc_envio_historico")
 listar_apc_envios = proxy("listar_apc_envios")
 listar_apc_periodos = proxy("listar_apc_periodos")
 substituir_apc_destinatarios = proxy("substituir_apc_destinatarios")
@@ -29,6 +30,7 @@ __all__ = [
     "excluir_apc_periodo",
     "listar_anos_letivos_apc",
     "listar_apc_destinatarios",
+    "listar_apc_envio_historico",
     "listar_apc_envios",
     "listar_apc_periodos",
     "substituir_apc_destinatarios",

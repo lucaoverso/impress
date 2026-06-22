@@ -170,8 +170,40 @@ class ApcRouterTest(unittest.TestCase):
                 arquivo=upload,
                 usuario=self._usuario_professor(professor_id),
             )
+            conn = database.get_connection()
+            try:
+                conn.execute(
+                    """
+                    UPDATE apc_envios
+                    SET primeiro_envio_em = ?, enviado_em = ?, atualizado_em = ?
+                    WHERE id = ?
+                    """,
+                    (
+                        "2031-05-08 10:00:00",
+                        "2031-05-08 10:00:00",
+                        "2031-05-08 10:00:00",
+                        int(envio["id"]),
+                    ),
+                )
+                conn.execute(
+                    """
+                    UPDATE apc_envio_historico
+                    SET enviado_em = ?, criado_em = ?
+                    WHERE envio_id = ?
+                    """,
+                    (
+                        "2031-05-08 10:00:00",
+                        "2031-05-08 10:00:00",
+                        int(envio["id"]),
+                    ),
+                )
+                conn.commit()
+            finally:
+                conn.close()
+            envio = database.buscar_apc_envio_por_id(int(envio["id"]))
             self.assertEqual(int(envio["periodo_id"]), int(quinta["id"]))
             self.assertEqual(int(envio["professor_id"]), professor_id)
+            self.assertEqual(envio["primeiro_envio_em"], "2031-05-08 10:00:00")
             self.assertEqual(envio["arquivo_nome_cliente"], "atividade.pdf")
             self.assertEqual(
                 envio["arquivo_nome_original"],
@@ -222,6 +254,11 @@ class ApcRouterTest(unittest.TestCase):
             self.assertEqual(reenviado["review_status"], "PENDENTE")
             self.assertEqual(reenviado["review_message"], "")
             self.assertIsNone(reenviado["reviewed_by_user_id"])
+            self.assertEqual(reenviado["primeiro_envio_em"], "2031-05-08 10:00:00")
+            historico = database.listar_apc_envio_historico(int(envio["id"]))
+            self.assertEqual([item["acao"] for item in historico], ["ENVIO", "SUBSTITUICAO"])
+            self.assertEqual(historico[0]["enviado_em"], "2031-05-08 10:00:00")
+            self.assertEqual(historico[1]["arquivo_nome_cliente"], "atividade-corrigida.pdf")
 
             aprovado = apc_router.revisar_envio_apc_api(
                 envio_id=int(envio["id"]),

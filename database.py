@@ -830,6 +830,7 @@ def _aplicar_compatibilidade_schema_legada(cursor):
     _garantir_colunas_disciplinas(cursor)
     _garantir_colunas_turmas_disciplinas(cursor)
     _garantir_colunas_estudantes(cursor)
+    _garantir_tabelas_apc_envios_historico(cursor)
     _garantir_colunas_pre_conselho_periodos(cursor)
     _garantir_colunas_pre_conselho_motivos(cursor)
     _garantir_colunas_pre_conselho_registros(cursor)
@@ -939,6 +940,16 @@ def _criar_indices_schema(cursor):
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_pcpi_registros_manuais_criado_por
         ON pcpi_registros_manuais(criado_por_usuario_id)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_apc_envio_historico_envio
+        ON apc_envio_historico(envio_id, enviado_em)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_apc_envio_historico_periodo
+        ON apc_envio_historico(periodo_id, professor_usuario_id, turma_id, disciplina_id)
     """)
 
     cursor.execute("""
@@ -1908,6 +1919,52 @@ def _garantir_colunas_estudantes(cursor):
         UPDATE estudantes
         SET ativo = 1
         WHERE ativo IS NULL
+    """)
+
+
+def _garantir_tabelas_apc_envios_historico(cursor):
+    cursor.execute("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'apc_envios'
+    """)
+    if not cursor.fetchone():
+        return
+
+    cursor.execute("PRAGMA table_info(apc_envios)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+    if "primeiro_envio_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE apc_envios ADD COLUMN primeiro_envio_em TEXT NOT NULL DEFAULT ''"
+        )
+
+    cursor.execute("""
+        UPDATE apc_envios
+        SET primeiro_envio_em = COALESCE(NULLIF(TRIM(enviado_em), ''), datetime('now'))
+        WHERE TRIM(COALESCE(primeiro_envio_em, '')) = ''
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS apc_envio_historico (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            envio_id INTEGER NOT NULL,
+            periodo_id INTEGER NOT NULL,
+            professor_usuario_id INTEGER NOT NULL,
+            turma_id INTEGER NOT NULL DEFAULT 0,
+            disciplina_id INTEGER NOT NULL DEFAULT 0,
+            arquivo_nome_cliente TEXT NOT NULL DEFAULT '',
+            arquivo_nome_original TEXT NOT NULL DEFAULT '',
+            arquivo_path TEXT NOT NULL DEFAULT '',
+            arquivo_tamanho INTEGER NOT NULL DEFAULT 0,
+            arquivo_tipo TEXT NOT NULL DEFAULT '',
+            acao TEXT NOT NULL DEFAULT 'ENVIO',
+            enviado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(envio_id) REFERENCES apc_envios(id) ON DELETE CASCADE,
+            FOREIGN KEY(periodo_id) REFERENCES apc_periodos(id),
+            FOREIGN KEY(professor_usuario_id) REFERENCES usuarios(id)
+        )
     """)
 
 
@@ -6093,6 +6150,7 @@ def _mapear_apc_envio(row) -> dict:
         "arquivo_path": str(row["arquivo_path"] or "").strip(),
         "arquivo_tamanho": int(row["arquivo_tamanho"] or 0),
         "arquivo_tipo": str(row["arquivo_tipo"] or "").strip(),
+        "primeiro_envio_em": str(row["primeiro_envio_em"] or row["enviado_em"] or "").strip(),
         "enviado_em": str(row["enviado_em"] or "").strip(),
         "atualizado_em": str(row["atualizado_em"] or "").strip(),
         "professor_nome": str(row["professor_nome"] or "").strip(),
@@ -6127,6 +6185,7 @@ def _consultar_apc_envios(cursor, *, filtros_sql=None, params=None):
             ae.arquivo_path,
             ae.arquivo_tamanho,
             ae.arquivo_tipo,
+            ae.primeiro_envio_em,
             ae.enviado_em,
             ae.atualizado_em,
             ae.review_status,
@@ -6224,6 +6283,105 @@ def buscar_apc_envio_por_chave(
     return itens[0] if itens else None
 
 
+def _registrar_apc_envio_historico(
+    cursor,
+    *,
+    envio_id: int,
+    periodo_id: int,
+    professor_usuario_id: int,
+    turma_id: int,
+    disciplina_id: int,
+    arquivo_nome_cliente: str,
+    arquivo_nome_original: str,
+    arquivo_path: str,
+    arquivo_tamanho: int,
+    arquivo_tipo: str,
+    acao: str,
+):
+    cursor.execute(
+        """
+        INSERT INTO apc_envio_historico (
+            envio_id,
+            periodo_id,
+            professor_usuario_id,
+            turma_id,
+            disciplina_id,
+            arquivo_nome_cliente,
+            arquivo_nome_original,
+            arquivo_path,
+            arquivo_tamanho,
+            arquivo_tipo,
+            acao,
+            enviado_em,
+            criado_em
+        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        """,
+        (
+            int(envio_id),
+            int(periodo_id),
+            int(professor_usuario_id),
+            int(turma_id or 0),
+            int(disciplina_id or 0),
+            str(arquivo_nome_cliente or "").strip(),
+            str(arquivo_nome_original or "").strip(),
+            str(arquivo_path or "").strip(),
+            int(arquivo_tamanho or 0),
+            str(arquivo_tipo or "").strip(),
+            str(acao or "ENVIO").strip().upper(),
+        ),
+    )
+
+
+def listar_apc_envio_historico(envio_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT
+            id,
+            envio_id,
+            periodo_id,
+            professor_usuario_id,
+            turma_id,
+            disciplina_id,
+            arquivo_nome_cliente,
+            arquivo_nome_original,
+            arquivo_path,
+            arquivo_tamanho,
+            arquivo_tipo,
+            acao,
+            enviado_em,
+            criado_em
+        FROM apc_envio_historico
+        WHERE envio_id = ?
+        ORDER BY id ASC
+        """,
+        (int(envio_id),),
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return [
+        {
+            "id": int(row["id"]),
+            "envio_id": int(row["envio_id"] or 0),
+            "periodo_id": int(row["periodo_id"] or 0),
+            "professor_id": int(row["professor_usuario_id"] or 0),
+            "turma_id": int(row["turma_id"] or 0),
+            "disciplina_id": int(row["disciplina_id"] or 0),
+            "arquivo_nome_cliente": str(row["arquivo_nome_cliente"] or "").strip(),
+            "arquivo_nome_original": str(row["arquivo_nome_original"] or "").strip(),
+            "arquivo_path": str(row["arquivo_path"] or "").strip(),
+            "arquivo_tamanho": int(row["arquivo_tamanho"] or 0),
+            "arquivo_tipo": str(row["arquivo_tipo"] or "").strip(),
+            "acao": str(row["acao"] or "").strip().upper(),
+            "enviado_em": str(row["enviado_em"] or "").strip(),
+            "criado_em": str(row["criado_em"] or "").strip(),
+        }
+        for row in rows
+    ]
+
+
 def criar_apc_envio(
     *,
     periodo_id: int,
@@ -6250,10 +6408,11 @@ def criar_apc_envio(
             arquivo_path,
             arquivo_tamanho,
             arquivo_tipo,
+            primeiro_envio_em,
             enviado_em,
             atualizado_em
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), datetime('now'))
         """,
         (
             int(periodo_id),
@@ -6268,6 +6427,20 @@ def criar_apc_envio(
         ),
     )
     envio_id = int(cursor.lastrowid)
+    _registrar_apc_envio_historico(
+        cursor,
+        envio_id=envio_id,
+        periodo_id=periodo_id,
+        professor_usuario_id=professor_usuario_id,
+        turma_id=turma_id,
+        disciplina_id=disciplina_id,
+        arquivo_nome_cliente=arquivo_nome_cliente,
+        arquivo_nome_original=arquivo_nome_original,
+        arquivo_path=arquivo_path,
+        arquivo_tamanho=arquivo_tamanho,
+        arquivo_tipo=arquivo_tipo,
+        acao="ENVIO",
+    )
     conn.commit()
     conn.close()
     return buscar_apc_envio_por_id(envio_id)
@@ -6286,6 +6459,19 @@ def atualizar_apc_envio(
     cursor = conn.cursor()
     cursor.execute(
         """
+        SELECT id, periodo_id, professor_usuario_id, turma_id, disciplina_id
+        FROM apc_envios
+        WHERE id = ?
+        """,
+        (int(envio_id),),
+    )
+    envio_atual = cursor.fetchone()
+    if not envio_atual:
+        conn.close()
+        return None
+
+    cursor.execute(
+        """
         UPDATE apc_envios
         SET arquivo_nome_cliente = ?,
             arquivo_nome_original = ?,
@@ -6296,6 +6482,7 @@ def atualizar_apc_envio(
             review_message = '',
             reviewed_by_user_id = NULL,
             reviewed_at = NULL,
+            primeiro_envio_em = COALESCE(NULLIF(TRIM(primeiro_envio_em), ''), enviado_em, datetime('now')),
             enviado_em = datetime('now'),
             atualizado_em = datetime('now')
         WHERE id = ?
@@ -6310,6 +6497,21 @@ def atualizar_apc_envio(
         ),
     )
     alterado = cursor.rowcount > 0
+    if alterado:
+        _registrar_apc_envio_historico(
+            cursor,
+            envio_id=envio_id,
+            periodo_id=int(envio_atual["periodo_id"] or 0),
+            professor_usuario_id=int(envio_atual["professor_usuario_id"] or 0),
+            turma_id=int(envio_atual["turma_id"] or 0),
+            disciplina_id=int(envio_atual["disciplina_id"] or 0),
+            arquivo_nome_cliente=arquivo_nome_cliente,
+            arquivo_nome_original=arquivo_nome_original,
+            arquivo_path=arquivo_path,
+            arquivo_tamanho=arquivo_tamanho,
+            arquivo_tipo=arquivo_tipo,
+            acao="SUBSTITUICAO",
+        )
     conn.commit()
     conn.close()
     if not alterado:
@@ -7444,7 +7646,9 @@ def _rotulo_situacao_relatorio_anexos(prazo_envio: str, envio: dict | None) -> d
         return {"id": "pendente", "label": "Pendente", "ordem": 2}
 
     prazo_dt = _parse_datetime_relatorios(prazo_envio)
-    enviado_dt = _parse_datetime_relatorios(envio.get("enviado_em"))
+    enviado_dt = _parse_datetime_relatorios(
+        envio.get("primeiro_envio_em") or envio.get("enviado_em")
+    )
     if prazo_dt and enviado_dt and enviado_dt > prazo_dt:
         return {"id": "atrasado", "label": "Atrasado", "ordem": 1}
     return {"id": "no_prazo", "label": "No prazo", "ordem": 0}
@@ -7583,6 +7787,11 @@ def gerar_relatorio_anexos(data_inicio: str | None = None, data_fim: str | None 
                     "professor": str(item.get("professor_nome") or "").strip() or "Professor nao informado",
                     "documento": _descricao_documento_relatorio_anexos(periodo_painel, item),
                     "prazo": str(periodo_painel.get("prazo_envio") or "").strip(),
+                    "primeiro_envio": str(
+                        (envio or {}).get("primeiro_envio_em")
+                        or (envio or {}).get("enviado_em")
+                        or ""
+                    ).strip(),
                     "data_envio": str((envio or {}).get("enviado_em") or "").strip(),
                     "situacao": situacao["label"],
                     "situacao_id": situacao["id"],
@@ -7616,6 +7825,7 @@ def gerar_relatorio_anexos(data_inicio: str | None = None, data_fim: str | None 
         {
             "professor": item["professor"],
             "documento": item["documento"],
+            "primeiro_envio": item["primeiro_envio"],
             "data_envio": item["data_envio"],
             "prazo": item["prazo"],
             "situacao": item["situacao"],

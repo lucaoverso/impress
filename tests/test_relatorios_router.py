@@ -563,18 +563,28 @@ class RelatoriosRouterTest(unittest.TestCase):
                 conn.execute(
                     """
                     UPDATE apc_envios
-                    SET enviado_em = ?, atualizado_em = ?
+                    SET primeiro_envio_em = ?, enviado_em = ?, atualizado_em = ?
                     WHERE id = ?
                     """,
-                    ("2032-08-02 20:00:00", "2032-08-02 20:00:00", int(envio_no_prazo["id"])),
+                    (
+                        "2032-08-02 20:00:00",
+                        "2032-08-03 08:00:00",
+                        "2032-08-03 08:00:00",
+                        int(envio_no_prazo["id"]),
+                    ),
                 )
                 conn.execute(
                     """
                     UPDATE apc_envios
-                    SET enviado_em = ?, atualizado_em = ?
+                    SET primeiro_envio_em = ?, enviado_em = ?, atualizado_em = ?
                     WHERE id = ?
                     """,
-                    ("2032-08-10 08:00:00", "2032-08-10 08:00:00", int(envio_atrasado["id"])),
+                    (
+                        "2032-08-10 08:00:00",
+                        "2032-08-10 08:00:00",
+                        "2032-08-10 08:00:00",
+                        int(envio_atrasado["id"]),
+                    ),
                 )
                 conn.commit()
             finally:
@@ -613,6 +623,12 @@ class RelatoriosRouterTest(unittest.TestCase):
 
             recentes = resposta["tabelas"]["entregas_recentes"]
             self.assertEqual(len(recentes), 4)
+            entrega_ana = next(
+                item for item in recentes
+                if item["professor"] == "Ana Souza" and item["situacao"] == "No prazo"
+            )
+            self.assertEqual(entrega_ana["primeiro_envio"], "2032-08-02 16:00:00")
+            self.assertEqual(entrega_ana["data_envio"], "2032-08-03 04:00:00")
             self.assertEqual(
                 {item["situacao"] for item in recentes},
                 {"No prazo", "Atrasado", "Pendente"},
