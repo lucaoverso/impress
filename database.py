@@ -831,6 +831,7 @@ def _aplicar_compatibilidade_schema_legada(cursor):
     _garantir_colunas_turmas_disciplinas(cursor)
     _garantir_colunas_estudantes(cursor)
     _garantir_tabelas_apc_envios_historico(cursor)
+    _garantir_tabela_apc_preview_jobs(cursor)
     _garantir_colunas_pre_conselho_periodos(cursor)
     _garantir_colunas_pre_conselho_motivos(cursor)
     _garantir_colunas_pre_conselho_registros(cursor)
@@ -1965,6 +1966,38 @@ def _garantir_tabelas_apc_envios_historico(cursor):
             FOREIGN KEY(periodo_id) REFERENCES apc_periodos(id),
             FOREIGN KEY(professor_usuario_id) REFERENCES usuarios(id)
         )
+    """)
+
+
+def _garantir_tabela_apc_preview_jobs(cursor):
+    cursor.execute("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'apc_envios'
+    """)
+    if not cursor.fetchone():
+        return
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS apc_preview_jobs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            envio_id INTEGER NOT NULL UNIQUE,
+            arquivo_path TEXT NOT NULL DEFAULT '',
+            arquivo_nome_original TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL DEFAULT 'PENDENTE',
+            preview_pdf_path TEXT NOT NULL DEFAULT '',
+            erro_mensagem TEXT NOT NULL DEFAULT '',
+            tentativas INTEGER NOT NULL DEFAULT 0,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            processado_em TEXT,
+            FOREIGN KEY(envio_id) REFERENCES apc_envios(id) ON DELETE CASCADE
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_apc_preview_jobs_status
+        ON apc_preview_jobs(status, atualizado_em, id)
     """)
 
 
@@ -6527,6 +6560,187 @@ def excluir_apc_envio(envio_id: int):
     conn.commit()
     conn.close()
     return removido
+
+
+def _mapear_apc_preview_job(row):
+    if not row:
+        return None
+    return {
+        "id": int(row["id"]),
+        "envio_id": int(row["envio_id"] or 0),
+        "arquivo_path": str(row["arquivo_path"] or "").strip(),
+        "arquivo_nome_original": str(row["arquivo_nome_original"] or "").strip(),
+        "status": str(row["status"] or "").strip().upper(),
+        "preview_pdf_path": str(row["preview_pdf_path"] or "").strip(),
+        "erro_mensagem": str(row["erro_mensagem"] or "").strip(),
+        "tentativas": int(row["tentativas"] or 0),
+        "criado_em": str(row["criado_em"] or "").strip(),
+        "atualizado_em": str(row["atualizado_em"] or "").strip(),
+        "processado_em": str(row["processado_em"] or "").strip(),
+    }
+
+
+def buscar_apc_preview_job_por_envio(envio_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT *
+        FROM apc_preview_jobs
+        WHERE envio_id = ?
+        """,
+        (int(envio_id),),
+    )
+    job = _mapear_apc_preview_job(cursor.fetchone())
+    conn.close()
+    return job
+
+
+def agendar_apc_preview_job(
+    *,
+    envio_id: int,
+    arquivo_path: str,
+    arquivo_nome_original: str,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT id
+            FROM apc_preview_jobs
+            WHERE envio_id = ?
+            """,
+            (int(envio_id),),
+        )
+        existente = cursor.fetchone()
+        if existente:
+            cursor.execute(
+                """
+                UPDATE apc_preview_jobs
+                SET arquivo_path = ?,
+                    arquivo_nome_original = ?,
+                    status = 'PENDENTE',
+                    preview_pdf_path = '',
+                    erro_mensagem = '',
+                    tentativas = 0,
+                    atualizado_em = datetime('now'),
+                    processado_em = NULL
+                WHERE envio_id = ?
+                """,
+                (
+                    str(arquivo_path or "").strip(),
+                    str(arquivo_nome_original or "").strip(),
+                    int(envio_id),
+                ),
+            )
+        else:
+            cursor.execute(
+                """
+                INSERT INTO apc_preview_jobs (
+                    envio_id,
+                    arquivo_path,
+                    arquivo_nome_original,
+                    status,
+                    criado_em,
+                    atualizado_em
+                )
+                VALUES (?, ?, ?, 'PENDENTE', datetime('now'), datetime('now'))
+                """,
+                (
+                    int(envio_id),
+                    str(arquivo_path or "").strip(),
+                    str(arquivo_nome_original or "").strip(),
+                ),
+            )
+        conn.commit()
+    finally:
+        conn.close()
+    return buscar_apc_preview_job_por_envio(envio_id)
+
+
+def buscar_proximo_apc_preview_job():
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT *
+        FROM apc_preview_jobs
+        WHERE status IN ('PENDENTE', 'ERRO')
+          AND tentativas < 3
+        ORDER BY
+            CASE status WHEN 'PENDENTE' THEN 0 ELSE 1 END,
+            atualizado_em ASC,
+            id ASC
+        LIMIT 1
+        """
+    )
+    job = _mapear_apc_preview_job(cursor.fetchone())
+    conn.close()
+    return job
+
+
+def marcar_apc_preview_job_processando(job_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE apc_preview_jobs
+        SET status = 'PROCESSANDO',
+            tentativas = tentativas + 1,
+            erro_mensagem = '',
+            atualizado_em = datetime('now')
+        WHERE id = ?
+          AND status IN ('PENDENTE', 'ERRO')
+          AND tentativas < 3
+        """,
+        (int(job_id),),
+    )
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def concluir_apc_preview_job(job_id: int, preview_pdf_path: str):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE apc_preview_jobs
+        SET status = 'CONCLUIDO',
+            preview_pdf_path = ?,
+            erro_mensagem = '',
+            atualizado_em = datetime('now'),
+            processado_em = datetime('now')
+        WHERE id = ?
+        """,
+        (str(preview_pdf_path or "").strip(), int(job_id)),
+    )
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def falhar_apc_preview_job(job_id: int, erro_mensagem: str):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE apc_preview_jobs
+        SET status = 'ERRO',
+            erro_mensagem = ?,
+            atualizado_em = datetime('now'),
+            processado_em = datetime('now')
+        WHERE id = ?
+        """,
+        (str(erro_mensagem or "").strip()[:500], int(job_id)),
+    )
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
 
 
 def listar_turmas(incluir_inativas: bool = False):

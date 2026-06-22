@@ -11,6 +11,7 @@ from db.impressao import (
     listar_arquivo_paths_jobs_em_andamento,
 )
 from services.printer import imprimir_job
+from services.apc_preview_worker import processar_proximo_apc_preview_job
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 INTERVALO = 2  # segundos
@@ -166,6 +167,14 @@ def limpar_spool_expirado_se_necessario():
         )
 
 
+def processar_preview_apc_se_disponivel() -> bool:
+    try:
+        return processar_proximo_apc_preview_job()
+    except Exception:
+        logger.exception("Falha inesperada ao processar fila de previews APC")
+        return False
+
+
 def worker_loop():
     try:
         normalizacao = normalizar_jobs_impressao_pendentes()
@@ -203,5 +212,7 @@ def worker_loop():
                 logger.exception("Erro ao imprimir job %s", job["id"])
                 atualizar_erro_job(job["id"], str(exc))
                 atualizar_status(job["id"], "ERRO")
+        elif processar_preview_apc_se_disponivel():
+            continue
         else:
             time.sleep(INTERVALO)

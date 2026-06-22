@@ -1,4 +1,5 @@
 import sqlite3
+import logging
 from datetime import datetime
 from pathlib import Path
 
@@ -7,10 +8,13 @@ from fastapi.responses import FileResponse, Response
 
 from auth import get_usuario_logado
 from db.apc import (
+    agendar_apc_preview_job,
     atualizar_apc_envio,
     atualizar_apc_periodo,
     buscar_apc_envio_por_id,
     buscar_apc_periodo_por_id,
+    buscar_apc_preview_job_por_envio,
+    concluir_apc_preview_job,
     criar_apc_envio,
     criar_apc_periodo,
     excluir_apc_envio,
@@ -71,6 +75,7 @@ from .common import normalizar_cargo_usuario, usuario_eh_professor, usuario_tem_
 from .config import APC_DIR, FORMATOS_UPLOAD_DESCRICAO
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 def _pode_gerir_apc(usuario: dict) -> bool:
@@ -85,6 +90,12 @@ def _exigir_gestao_apc(usuario: dict):
 
 def _garantir_diretorio_apc() -> Path:
     caminho = Path(APC_DIR)
+    caminho.mkdir(parents=True, exist_ok=True)
+    return caminho
+
+
+def _garantir_diretorio_preview_apc() -> Path:
+    caminho = _garantir_diretorio_apc() / "previews"
     caminho.mkdir(parents=True, exist_ok=True)
     return caminho
 
@@ -109,6 +120,72 @@ def _resolver_caminho_envio_seguro(caminho_arquivo: str) -> Path:
     if not caminho.exists() or not caminho.is_file():
         raise HTTPException(404, "Arquivo do envio nao encontrado.")
     return caminho
+
+
+def _resolver_caminho_preview_seguro(caminho_arquivo: str) -> Path | None:
+    caminho_bruto = str(caminho_arquivo or "").strip()
+    if not caminho_bruto:
+        return None
+
+    caminho_base = _garantir_diretorio_preview_apc().resolve(strict=False)
+    caminho = Path(caminho_bruto).resolve(strict=False)
+    try:
+        caminho.relative_to(caminho_base)
+    except ValueError:
+        return None
+
+    if not caminho.exists() or not caminho.is_file():
+        return None
+    return caminho
+
+
+def _caminho_preview_cache(job: dict) -> Path:
+    return _garantir_diretorio_preview_apc() / (
+        f"apc_preview_{int(job.get('envio_id') or 0)}_{int(job.get('id') or 0)}.pdf"
+    )
+
+
+def _buscar_preview_cache_pronto(envio_id: int) -> Path | None:
+    job = buscar_apc_preview_job_por_envio(int(envio_id))
+    if not job or str(job.get("status") or "").upper() != "CONCLUIDO":
+        return None
+    return _resolver_caminho_preview_seguro(str(job.get("preview_pdf_path") or ""))
+
+
+def _remover_preview_cache_envio(envio_id: int):
+    job = buscar_apc_preview_job_por_envio(int(envio_id))
+    if not job:
+        return
+    caminho = _resolver_caminho_preview_seguro(str(job.get("preview_pdf_path") or ""))
+    if caminho:
+        _remover_arquivo_se_existir(caminho)
+
+
+def _agendar_preview_apc(envio: dict):
+    try:
+        agendar_apc_preview_job(
+            envio_id=int(envio["id"]),
+            arquivo_path=str(envio.get("arquivo_path") or ""),
+            arquivo_nome_original=str(envio.get("arquivo_nome_original") or ""),
+        )
+    except Exception:
+        logger.exception("Falha ao agendar preview APC para envio %s", envio.get("id"))
+
+
+def _salvar_preview_cache(envio: dict, conteudo_pdf: bytes):
+    try:
+        job = buscar_apc_preview_job_por_envio(int(envio["id"]))
+        if not job:
+            job = agendar_apc_preview_job(
+                envio_id=int(envio["id"]),
+                arquivo_path=str(envio.get("arquivo_path") or ""),
+                arquivo_nome_original=str(envio.get("arquivo_nome_original") or ""),
+            )
+        caminho_pdf = _caminho_preview_cache(job)
+        caminho_pdf.write_bytes(conteudo_pdf)
+        concluir_apc_preview_job(int(job["id"]), str(caminho_pdf))
+    except Exception:
+        logger.exception("Falha ao salvar cache de preview APC para envio %s", envio.get("id"))
 
 
 def _dados_periodo_payload(payload: ApcPeriodoIn | ApcPeriodoUpdateIn) -> dict:
@@ -828,6 +905,10 @@ def enviar_arquivo_apc_api(
     if not envio:
         _remover_arquivo_se_existir(caminho_destino)
         raise HTTPException(500, "Falha ao registrar o envio do arquivo.")
+
+    _remover_preview_cache_envio(int(envio["id"]))
+    _agendar_preview_apc(envio)
+
     record_event(
         category=AuditCategory.ATTACHMENTS,
         action="attachment.submitted",
@@ -907,6 +988,8 @@ def excluir_envio_apc_api(envio_id: int, usuario=Depends(get_usuario_logado)):
         if int(exc.status_code) != 404:
             raise
 
+    _remover_preview_cache_envio(envio_id)
+
     if not excluir_apc_envio(envio_id):
         raise HTTPException(404, "Envio nao encontrado.")
 
@@ -947,6 +1030,14 @@ def visualizar_arquivo_apc_api(envio_id: int, usuario=Depends(get_usuario_logado
 
     caminho = _resolver_caminho_envio_seguro(envio.get("arquivo_path"))
     nome_arquivo = str(envio.get("arquivo_nome_original") or caminho.name)
+    caminho_preview = _buscar_preview_cache_pronto(envio_id)
+    if caminho_preview:
+        return FileResponse(
+            path=str(caminho_preview),
+            media_type="application/pdf",
+            headers={"Cache-Control": "no-store"},
+        )
+
     try:
         conteudo_pdf = gerar_preview_pdf_apc(caminho, nome_arquivo)
     except ValueError as exc:
@@ -956,6 +1047,7 @@ def visualizar_arquivo_apc_api(envio_id: int, usuario=Depends(get_usuario_logado
     except OSError as exc:
         raise HTTPException(500, "Nao foi possivel preparar a visualizacao do anexo.") from exc
 
+    _salvar_preview_cache(envio, conteudo_pdf)
     return Response(
         content=conteudo_pdf,
         media_type="application/pdf",
@@ -983,7 +1075,12 @@ def imprimir_arquivo_apc_api(
     caminho = _resolver_caminho_envio_seguro(envio.get("arquivo_path"))
     nome_arquivo = str(envio.get("arquivo_nome_original") or caminho.name)
     try:
-        conteudo_pdf = gerar_preview_pdf_apc(caminho, nome_arquivo)
+        caminho_preview = _buscar_preview_cache_pronto(envio_id)
+        if caminho_preview:
+            conteudo_pdf = caminho_preview.read_bytes()
+        else:
+            conteudo_pdf = gerar_preview_pdf_apc(caminho, nome_arquivo)
+            _salvar_preview_cache(envio, conteudo_pdf)
         return imprimir_anexo_pdf(
             conteudo_pdf=conteudo_pdf,
             nome_arquivo=nome_arquivo,

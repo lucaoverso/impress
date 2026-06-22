@@ -20,8 +20,10 @@ def _reload_modules(db_path: str, apc_dir: str):
         "services.auth_service",
         "services.horario_escolar_service",
         "services.apc_service",
+        "services.apc_preview_worker",
         "auth",
         "database",
+        "db.apc",
         "models",
         "routers.config",
         "routers.apc_router",
@@ -70,6 +72,48 @@ class ApcRouterTest(unittest.TestCase):
             "cargo": "PROFESSOR",
             "acesso_coordenacao": 1,
         }
+
+    def _criar_envio_preview_fixture(
+        self,
+        database,
+        caminho_arquivo: Path,
+        *,
+        nome_original: str,
+        arquivo_tipo: str = "application/pdf",
+    ) -> dict:
+        professor_id = int(
+            database.criar_professor(
+                nome="Professor Preview",
+                email=f"preview-{caminho_arquivo.stem}@escola.local",
+                senha_hash=database.hash_senha("Senha@123"),
+                data_nascimento="1990-01-01",
+                aulas_semanais=10,
+                turmas_quantidade=1,
+            )
+        )
+        periodo = database.criar_apc_periodo(
+            ano_letivo=2035,
+            data_referencia="2035-11-14",
+            prazo_envio="2035-11-14T23:59",
+            titulo="Atividade",
+            observacao="",
+            publico_alvo="TODOS_PROFESSORES",
+            tipo_entrega="GERAL",
+            criado_por_usuario_id=professor_id,
+        )
+        turma_id = int(database.criar_turma(f"Preview {caminho_arquivo.stem}", "MATUTINO", 30))
+        disciplina_id = int(database.criar_disciplina(f"Disciplina {caminho_arquivo.stem}", 1))
+        return database.criar_apc_envio(
+            periodo_id=int(periodo["id"]),
+            professor_usuario_id=professor_id,
+            turma_id=turma_id,
+            disciplina_id=disciplina_id,
+            arquivo_nome_cliente=caminho_arquivo.name,
+            arquivo_nome_original=nome_original,
+            arquivo_path=str(caminho_arquivo),
+            arquivo_tamanho=caminho_arquivo.stat().st_size,
+            arquivo_tipo=arquivo_tipo,
+        )
 
     def test_fluxo_apc_filtra_professor_por_horario_e_registra_envio(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -169,6 +213,14 @@ class ApcRouterTest(unittest.TestCase):
                 periodo_id=int(quinta["id"]),
                 arquivo=upload,
                 usuario=self._usuario_professor(professor_id),
+            )
+            preview_job = database.buscar_apc_preview_job_por_envio(int(envio["id"]))
+            self.assertIsNotNone(preview_job)
+            self.assertEqual(preview_job["status"], "PENDENTE")
+            self.assertEqual(preview_job["arquivo_path"], envio["arquivo_path"])
+            self.assertEqual(
+                preview_job["arquivo_nome_original"],
+                "Atividade pedagogica semanal - Professor APC - 2031-05-08.pdf",
             )
             conn = database.get_connection()
             try:
@@ -1144,20 +1196,20 @@ class ApcRouterTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")
             apc_dir = os.path.join(tmp_dir, "apc")
-            _database, _models, apc_router = _reload_modules(db_path, apc_dir)
+            database, _models, apc_router = _reload_modules(db_path, apc_dir)
+            database.criar_tabelas()
 
             caminho_docx = Path(apc_dir) / "atividade.docx"
             caminho_docx.parent.mkdir(parents=True, exist_ok=True)
             caminho_docx.write_bytes(b"conteudo docx")
-            envio = {
-                "id": 91,
-                "professor_id": 44,
-                "arquivo_path": str(caminho_docx),
-                "arquivo_nome_original": "Atividade - Professor - 2035-11-14.docx",
-                "arquivo_tipo": (
+            envio = self._criar_envio_preview_fixture(
+                database,
+                caminho_docx,
+                nome_original="Atividade - Professor - 2035-11-14.docx",
+                arquivo_tipo=(
                     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 ),
-            }
+            )
 
             with (
                 patch.object(apc_router, "buscar_apc_envio_por_id", return_value=envio),
@@ -1168,8 +1220,8 @@ class ApcRouterTest(unittest.TestCase):
                 ) as gerar_preview,
             ):
                 resposta = apc_router.visualizar_arquivo_apc_api(
-                    envio_id=91,
-                    usuario=self._usuario_professor(44),
+                    envio_id=int(envio["id"]),
+                    usuario=self._usuario_professor(int(envio["professor_id"])),
                 )
 
             self.assertEqual(resposta.media_type, "application/pdf")
@@ -1180,22 +1232,109 @@ class ApcRouterTest(unittest.TestCase):
                 "Atividade - Professor - 2035-11-14.docx",
             )
 
+    def test_preview_reutiliza_pdf_pre_convertido_quando_disponivel(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            apc_dir = os.path.join(tmp_dir, "apc")
+            database, _models, apc_router = _reload_modules(db_path, apc_dir)
+            database.criar_tabelas()
+
+            caminho_docx = Path(apc_dir) / "atividade.docx"
+            caminho_docx.parent.mkdir(parents=True, exist_ok=True)
+            caminho_docx.write_bytes(b"conteudo docx")
+            envio = self._criar_envio_preview_fixture(
+                database,
+                caminho_docx,
+                nome_original="Atividade - Professor - 2035-11-14.docx",
+                arquivo_tipo=(
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                ),
+            )
+            job = database.agendar_apc_preview_job(
+                envio_id=int(envio["id"]),
+                arquivo_path=str(caminho_docx),
+                arquivo_nome_original="Atividade - Professor - 2035-11-14.docx",
+            )
+            caminho_preview = (
+                Path(apc_dir) / "previews" / f"apc_preview_{envio['id']}_{job['id']}.pdf"
+            )
+            caminho_preview.parent.mkdir(parents=True, exist_ok=True)
+            caminho_preview.write_bytes(b"%PDF-cache")
+            database.concluir_apc_preview_job(int(job["id"]), str(caminho_preview))
+
+            with (
+                patch.object(apc_router, "buscar_apc_envio_por_id", return_value=envio),
+                patch.object(apc_router, "gerar_preview_pdf_apc") as gerar_preview,
+            ):
+                resposta = apc_router.visualizar_arquivo_apc_api(
+                    envio_id=int(envio["id"]),
+                    usuario=self._usuario_professor(int(envio["professor_id"])),
+                )
+
+            self.assertEqual(resposta.media_type, "application/pdf")
+            self.assertEqual(Path(str(resposta.path)).resolve(), caminho_preview.resolve())
+            self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
+            gerar_preview.assert_not_called()
+
+    def test_worker_processa_preview_apc_pendente(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            apc_dir = os.path.join(tmp_dir, "apc")
+            database, _models, _apc_router = _reload_modules(db_path, apc_dir)
+            database.criar_tabelas()
+
+            caminho_docx = Path(apc_dir) / "atividade.docx"
+            caminho_docx.parent.mkdir(parents=True, exist_ok=True)
+            caminho_docx.write_bytes(b"conteudo docx")
+            envio = self._criar_envio_preview_fixture(
+                database,
+                caminho_docx,
+                nome_original="Atividade.docx",
+                arquivo_tipo=(
+                    "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                ),
+            )
+            envio_id = int(envio["id"])
+
+            job = database.agendar_apc_preview_job(
+                envio_id=envio_id,
+                arquivo_path=str(caminho_docx),
+                arquivo_nome_original="Atividade.docx",
+            )
+            preview_worker = importlib.import_module("services.apc_preview_worker")
+
+            with patch.object(
+                preview_worker,
+                "gerar_preview_pdf_apc",
+                return_value=b"%PDF-worker",
+            ) as gerar_preview:
+                processou = preview_worker.processar_proximo_apc_preview_job()
+
+            job_final = database.buscar_apc_preview_job_por_envio(envio_id)
+            self.assertTrue(processou)
+            self.assertEqual(job_final["status"], "CONCLUIDO")
+            self.assertTrue(Path(job_final["preview_pdf_path"]).exists())
+            self.assertEqual(Path(job_final["preview_pdf_path"]).read_bytes(), b"%PDF-worker")
+            gerar_preview.assert_called_once_with(
+                caminho_docx.resolve(),
+                "Atividade.docx",
+            )
+
     def test_coordenador_imprime_anexo_usando_fluxo_de_impressao(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")
             apc_dir = os.path.join(tmp_dir, "apc")
-            _database, _models, apc_router = _reload_modules(db_path, apc_dir)
+            database, _models, apc_router = _reload_modules(db_path, apc_dir)
+            database.criar_tabelas()
 
             caminho_pdf = Path(apc_dir) / "prova.pdf"
             caminho_pdf.parent.mkdir(parents=True, exist_ok=True)
             caminho_pdf.write_bytes(b"%PDF-anexo")
-            envio = {
-                "id": 92,
-                "professor_id": 44,
-                "arquivo_path": str(caminho_pdf),
-                "arquivo_nome_original": "Prova bimestral.pdf",
-                "arquivo_tipo": "application/pdf",
-            }
+            envio = self._criar_envio_preview_fixture(
+                database,
+                caminho_pdf,
+                nome_original="Prova bimestral.pdf",
+            )
             resultado = {"mensagem": "Impressao enviada", "job_id": 123}
 
             with (
@@ -1212,7 +1351,7 @@ class ApcRouterTest(unittest.TestCase):
                 ) as imprimir,
             ):
                 resposta = apc_router.imprimir_arquivo_apc_api(
-                    envio_id=92,
+                    envio_id=int(envio["id"]),
                     copias=3,
                     paginas_por_folha=2,
                     duplex=True,
