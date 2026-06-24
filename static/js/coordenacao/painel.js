@@ -394,76 +394,126 @@ function criarCelulaTabela(rotulo, conteudo = "") {
     return td;
 }
 
+function criarMetaOcorrencia(icone, texto, classeExtra = "") {
+    const item = document.createElement("span");
+    if (classeExtra) {
+        item.className = classeExtra;
+    }
+
+    const icon = document.createElement("i");
+    icon.className = `bi bi-${icone}`;
+    icon.setAttribute("aria-hidden", "true");
+
+    const label = document.createElement("span");
+    label.innerText = texto || "Não informado";
+
+    item.appendChild(icon);
+    item.appendChild(label);
+    return item;
+}
+
+function criarBotaoOcorrencia(rotulo, classe, onClick) {
+    const botao = document.createElement("button");
+    botao.type = "button";
+    botao.innerText = rotulo;
+    if (classe) {
+        botao.className = classe;
+    }
+    botao.addEventListener("click", (event) => {
+        event.stopPropagation();
+        onClick();
+    });
+    return botao;
+}
+
 function renderTabelaOcorrencias() {
-    const tbody = el("tbodyOcorrencias");
+    const lista = el("tbodyOcorrencias");
     atualizarResumoOcorrencias();
-    tbody.innerHTML = "";
+    lista.innerHTML = "";
 
     if (!Array.isArray(ocorrenciasCache) || ocorrenciasCache.length === 0) {
-        const tr = document.createElement("tr");
-        const td = document.createElement("td");
-        td.colSpan = 7;
-        td.className = "booking-empty";
-        td.innerText = "Nenhum registro encontrado.";
-        tr.appendChild(td);
-        tbody.appendChild(tr);
+        const vazio = document.createElement("p");
+        vazio.className = "coordenacao-record-empty";
+        vazio.innerText = "Nenhum registro encontrado.";
+        lista.appendChild(vazio);
         return;
     }
 
     ocorrenciasCache.forEach((ocorrencia) => {
-        const tr = document.createElement("tr");
+        const card = document.createElement("article");
         const selecionada = Number(ocorrencia.id) === Number(ocorrenciaSelecionadaId);
-        tr.classList.toggle("is-selected", selecionada);
-        tr.addEventListener("click", () => {
+        card.className = "coordenacao-record-card";
+        card.classList.toggle("is-selected", selecionada);
+        card.tabIndex = 0;
+        card.setAttribute("aria-label", `Selecionar registro de ${obterReferenciaRegistro(ocorrencia) || "ocorrência"}`);
+        card.addEventListener("click", () => {
             selecionarOcorrencia(ocorrencia);
         });
+        card.addEventListener("keydown", (event) => {
+            if (event.key === "Enter" || event.key === " ") {
+                event.preventDefault();
+                selecionarOcorrencia(ocorrencia);
+            }
+        });
 
-        tr.appendChild(criarCelulaTabela("Data", formatarDataBr(ocorrencia.data_ocorrencia)));
-        tr.appendChild(criarCelulaTabela("Tipo", rotuloTipoRegistro(ocorrencia.tipo_registro)));
-        tr.appendChild(criarCelulaTabela("Referência", obterReferenciaRegistro(ocorrencia)));
-        tr.appendChild(criarCelulaTabela("Contexto", obterContextoRegistro(ocorrencia)));
-        tr.appendChild(criarCelulaTabela("Ação aplicada", rotuloAcao(ocorrencia.acao_aplicada)));
+        const main = document.createElement("div");
+        main.className = "coordenacao-record-main";
 
+        const avatar = document.createElement("span");
+        avatar.className = "coordenacao-record-avatar";
+        avatar.innerHTML = '<i class="bi bi-person" aria-hidden="true"></i>';
+        main.appendChild(avatar);
+
+        const content = document.createElement("div");
+        content.className = "coordenacao-record-content";
+
+        const titleRow = document.createElement("div");
+        titleRow.className = "coordenacao-record-title-row";
+
+        const title = document.createElement("h3");
+        title.className = "coordenacao-record-title";
+        title.innerText = obterReferenciaRegistro(ocorrencia) || "Registro sem referência";
+        titleRow.appendChild(title);
         const statusBadge = document.createElement("span");
         statusBadge.className = `status-chip ${classeStatus(ocorrencia.status)}`;
         statusBadge.innerText = rotuloStatus(ocorrencia.status);
-        tr.appendChild(criarCelulaTabela("Status", statusBadge));
+        titleRow.appendChild(statusBadge);
+        content.appendChild(titleRow);
 
-        const linhaAcoes = document.createElement("div");
-        linhaAcoes.className = "coordenacao-inline";
+        const meta = document.createElement("div");
+        meta.className = "coordenacao-record-meta";
+        meta.appendChild(criarMetaOcorrencia("calendar3", formatarDataBr(ocorrencia.data_ocorrencia)));
+        meta.appendChild(criarMetaOcorrencia("mortarboard", obterContextoRegistro(ocorrencia)));
+        meta.appendChild(criarMetaOcorrencia("bookmark", rotuloTipoRegistro(ocorrencia.tipo_registro), "is-primary"));
+        meta.appendChild(criarMetaOcorrencia("check2-square", rotuloAcao(ocorrencia.acao_aplicada)));
+        content.appendChild(meta);
 
-        const btnPdf = document.createElement("button");
-        btnPdf.type = "button";
-        btnPdf.innerText = "PDF";
-        btnPdf.addEventListener("click", (event) => {
-            event.stopPropagation();
+        const descricao = document.createElement("p");
+        descricao.className = "coordenacao-record-description";
+        descricao.innerText = ocorrencia.descricao || "Sem descrição registrada.";
+        content.appendChild(descricao);
+
+        main.appendChild(content);
+        card.appendChild(main);
+
+        const actions = document.createElement("div");
+        actions.className = "coordenacao-record-actions";
+
+        actions.appendChild(criarBotaoOcorrencia("Ver PDF", "btn-destaque", () => {
             abrirPdfOcorrencia(ocorrencia);
-        });
+        }));
 
-        const btnEditar = document.createElement("button");
-        btnEditar.type = "button";
-        btnEditar.innerText = "Editar";
-        btnEditar.addEventListener("click", (event) => {
-            event.stopPropagation();
+        actions.appendChild(criarBotaoOcorrencia("Editar", "", () => {
             selecionarOcorrencia(ocorrencia);
             preencherFormularioOcorrencia(ocorrencia);
-        });
+        }));
 
-        const btnExcluir = document.createElement("button");
-        btnExcluir.type = "button";
-        btnExcluir.className = "coordenacao-btn-danger";
-        btnExcluir.innerText = "Excluir";
-        btnExcluir.addEventListener("click", (event) => {
-            event.stopPropagation();
+        actions.appendChild(criarBotaoOcorrencia("Excluir", "coordenacao-btn-danger", () => {
             excluirOcorrencia(ocorrencia);
-        });
+        }));
 
-        linhaAcoes.appendChild(btnPdf);
-        linhaAcoes.appendChild(btnEditar);
-        linhaAcoes.appendChild(btnExcluir);
-        tr.appendChild(criarCelulaTabela("Ações", linhaAcoes));
-
-        tbody.appendChild(tr);
+        card.appendChild(actions);
+        lista.appendChild(card);
     });
 }
 

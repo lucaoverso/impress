@@ -1,0 +1,18 @@
+{% set section_title = section_title | default("") %}
+{% set section_description = section_description | default("") %}
+{% set section_kicker = section_kicker | default("") %}
+{% set section_header_class = section_header_class | default("") %}
+
+<div class="suite-section-header{% if section_header_class %} {{ section_header_class }}{% endif %}">
+    <div>
+        {% if section_kicker %}
+        <span class="suite-section-kicker">{{ section_kicker }}</span>
+        {% endif %}
+        {% if section_title %}
+        <h2>{{ section_title }}</h2>
+        {% endif %}
+        {% if section_description %}
+        <p>{{ section_description }}</p>
+        {% endif %}
+    </div>
+</div>

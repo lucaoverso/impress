@@ -1,0 +1,46 @@
+{% set page_header_title = page_header_title | default("") %}
+{% set page_header_description = page_header_description | default("") %}
+{% set page_header_breadcrumbs = page_header_breadcrumbs | default([]) %}
+{% set page_header_actions = page_header_actions | default([]) %}
+
+<header class="suite-page-header">
+    <div class="suite-page-header-main">
+        {% if page_header_breadcrumbs %}
+        <nav class="suite-breadcrumbs" aria-label="Breadcrumb">
+            <ol>
+                {% for crumb in page_header_breadcrumbs %}
+                <li>
+                    {% if crumb.href | default("") and not loop.last %}
+                    <a href="{{ crumb.href }}">{{ crumb.label }}</a>
+                    {% else %}
+                    <span{% if loop.last %} aria-current="page"{% endif %}>{{ crumb.label }}</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ol>
+        </nav>
+        {% endif %}
+
+        {% if page_header_title %}
+        <h1>{{ page_header_title }}</h1>
+        {% endif %}
+
+        {% if page_header_description %}
+        <p>{{ page_header_description }}</p>
+        {% endif %}
+    </div>
+
+    {% if page_header_actions %}
+    <div class="suite-page-header-actions">
+        {% for action in page_header_actions %}
+        <a class="suite-page-header-action{% if action.variant | default("") == "primary" %} is-primary{% endif %}"
+            href="{{ action.href }}">
+            {% if action.icon | default("") %}
+            <i class="bi bi-{{ action.icon }}" aria-hidden="true"></i>
+            {% endif %}
+            <span>{{ action.label }}</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% endif %}
+</header>

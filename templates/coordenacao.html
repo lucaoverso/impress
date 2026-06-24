@@ -8,16 +8,75 @@
     {% include "includes/style_bundle.html" %}
 </head>
 
-<body>
-    {% set navbar_context = "Gestão escolar" %}
-    {% set navbar_current = "coordenacao" %}
-    {% include "includes/app_navbar.html" %}
-    <main class="coordenacao-page">
-        <section class="coordenacao-workspace">
-            <header class="admin-header admin-header-shell coordenacao-page-header">
-                <div class="admin-header-main">
-                    <h1>Central de registros da coordenação</h1>
-                    <p>Centralize pendências, acompanhe históricos e mantenha a base legal pronta para cada registro.</p>
+<body class="coordenacao-ui">
+    {% set sidenav_context = "Modulo de coordenacao" %}
+    {% set sidenav_current = "ocorrencias" %}
+    {% set sidenav_sections = [
+        {
+            "label": "Coordenacao",
+            "description": "Rotinas do modulo",
+            "links": [
+                {"key": "ocorrencias", "href": "#coord-tab-ocorrencias", "label": "Ocorrencias", "icon": "grid-1x2"},
+                {"key": "regimento", "href": "#coord-tab-regimento", "label": "Base legal", "icon": "journal-text"},
+                {"key": "estudantes", "href": "#coord-tab-estudantes", "label": "Cadastro de estudantes", "icon": "person"},
+                {"key": "relatorios", "href": "#coord-tab-relatorios", "label": "Relatorios", "icon": "bar-chart"},
+                {"key": "pre-registros", "href": "#coord-tab-pre-registros", "label": "Fluxo do professor", "icon": "send"}
+            ]
+        }
+    ] %}
+    {% set sidenav_action = {"href": "#painelFormOcorrencia", "label": "Novo registro", "icon": "plus-circle"} %}
+    {% set sidenav_secondary_links = [
+        {"href": "/servicos", "label": "Servicos", "icon": "grid"},
+        {"href": "/admin", "label": "Administracao", "icon": "gear"}
+    ] %}
+    {% include "includes/layout/side_navbar.html" %}
+
+    <main class="coordenacao-app-main">
+        {% set topnav_brand = "Suite Escolar" %}
+        {% set topnav_show_search = true %}
+        {% set topnav_search_placeholder = "Procurar estudante ou registro..." %}
+        {% set topnav_notifications_count = 1 %}
+        {% set topnav_profile_name = "Coord. Ana Paula" %}
+        {% set topnav_profile_meta = "School Admin" %}
+        {% set topnav_profile_initials = "AP" %}
+        {% set topnav_calendar_href = "#" %}
+        {% set topnav_classes = "coordenacao-topnav" %}
+        {% include "includes/layout/top_navbar.html" %}
+
+        <section class="coordenacao-page">
+        <div class="coordenacao-workspace">
+            <header class="coordenacao-page-header">
+                <div class="coordenacao-page-title">
+                    <span class="coordenacao-page-kicker">Suite Escolar</span>
+                    <h1>Central de Coordenação</h1>
+                    <p>Gestão e registro de ocorrências escolares com fila, histórico e base legal no mesmo fluxo.</p>
+                </div>
+                <div class="coordenacao-header-metrics" aria-label="Resumo das ocorrências">
+                    {% set metric_label = "Ocorrências" %}
+                    {% set metric_value_id = "resumoOcorrenciasTotal" %}
+                    {% set metric_value = "0" %}
+                    {% set metric_meta_id = "resumoOcorrenciasPeriodo" %}
+                    {% set metric_meta = "Sem filtro aplicado." %}
+                    {% set metric_icon = "clipboard2-data" %}
+                    {% set metric_variant = "primary" %}
+                    {% include "includes/ui/metric_card.html" %}
+
+                    {% set metric_label = "Pendentes" %}
+                    {% set metric_value_id = "resumoOcorrenciasAcompanhamento" %}
+                    {% set metric_value = "0" %}
+                    {% set metric_meta_id = "" %}
+                    {% set metric_meta = "Em acompanhamento" %}
+                    {% set metric_icon = "hourglass-split" %}
+                    {% set metric_variant = "warning" %}
+                    {% include "includes/ui/metric_card.html" %}
+
+                    {% set metric_label = "Concluídas" %}
+                    {% set metric_value_id = "resumoOcorrenciasResolvido" %}
+                    {% set metric_value = "0" %}
+                    {% set metric_meta = "Registros finalizados" %}
+                    {% set metric_icon = "check2-circle" %}
+                    {% set metric_variant = "success" %}
+                    {% include "includes/ui/metric_card.html" %}
                 </div>
             </header>
 
@@ -105,42 +164,18 @@
                                 <p>Resolva o que chegou da sala e acompanhe os registros já tratados sem trocar de área.</p>
                             </div>
                             <div class="coordenacao-ocorrencias-hub-side">
-                                <button id="btnNovaOcorrencia" class="btn-destaque" type="button"
-                                    aria-controls="painelFormOcorrencia" aria-expanded="false">
-                                    Novo registro manual
-                                </button>
+                                {% set button_id = "btnNovaOcorrencia" %}
+                                {% set button_label = "Novo registro manual" %}
+                                {% set button_icon = "plus-circle" %}
+                                {% set button_class = "btn-destaque suite-action-button" %}
+                                {% set button_aria_controls = "painelFormOcorrencia" %}
+                                {% set button_aria_expanded = "false" %}
+                                {% include "includes/ui/icon_button.html" %}
                                 <p class="coordenacao-field-hint">Use este atalho quando o caso começar diretamente na coordenação.</p>
                                 <p id="msgOcorrencias" class="coordenacao-status-copy"></p>
                             </div>
                         </div>
 
-                        <div class="coordenacao-ocorrencias-summary">
-                            <article class="coordenacao-ocorrencias-summary-card is-primary">
-                                <span class="coordenacao-ocorrencias-summary-label">Total no painel</span>
-                                <strong id="resumoOcorrenciasTotal"
-                                    class="coordenacao-ocorrencias-summary-value">0</strong>
-                                <span id="resumoOcorrenciasPeriodo" class="coordenacao-ocorrencias-summary-meta">Sem
-                                    filtro aplicado.</span>
-                            </article>
-                            <article class="coordenacao-ocorrencias-summary-card">
-                                <span class="coordenacao-ocorrencias-summary-label">Em acompanhamento</span>
-                                <strong id="resumoOcorrenciasAcompanhamento"
-                                    class="coordenacao-ocorrencias-summary-value">0</strong>
-                                <span class="coordenacao-ocorrencias-summary-meta">Casos que seguem em tratativa.</span>
-                            </article>
-                            <article class="coordenacao-ocorrencias-summary-card">
-                                <span class="coordenacao-ocorrencias-summary-label">Aguardando responsável</span>
-                                <strong id="resumoOcorrenciasAguardando"
-                                    class="coordenacao-ocorrencias-summary-value">0</strong>
-                                <span class="coordenacao-ocorrencias-summary-meta">Dependem de retorno externo.</span>
-                            </article>
-                            <article class="coordenacao-ocorrencias-summary-card">
-                                <span class="coordenacao-ocorrencias-summary-label">Resolvidas</span>
-                                <strong id="resumoOcorrenciasResolvido"
-                                    class="coordenacao-ocorrencias-summary-value">0</strong>
-                                <span class="coordenacao-ocorrencias-summary-meta">Registros finalizados.</span>
-                            </article>
-                        </div>
                     </article>
 
                     <section class="coordenacao-triagem-layout">
@@ -172,35 +207,33 @@
 
                     <section class="coordenacao-ocorrencias-board">
                         <article class="coordenacao-card coordenacao-ocorrencias-list-card">
-                            <div class="coordenacao-panel-header">
-                                <div>
-                                    <h2>Histórico de ocorrências</h2>
-                                    <p>Use os filtros para localizar registros sem perder a fila principal de vista.</p>
-                                </div>
-                            </div>
+                            {% set section_title = "Histórico de ocorrências" %}
+                            {% set section_description = "Use os filtros para localizar registros sem perder a fila principal de vista." %}
+                            {% set section_header_class = "coordenacao-panel-header" %}
+                            {% include "includes/ui/section_header.html" %}
 
                             <form id="formFiltrosOcorrencias" class="coordenacao-filter-grid">
                                 <label class="coordenacao-field" for="filtroNomeEstudante">
                                     <span>Referência</span>
                                     <input id="filtroNomeEstudante" type="text" placeholder="Estudante, professor ou título">
                                 </label>
-                                <label class="coordenacao-field" for="filtroTipoRegistro">
+                                <label class="coordenacao-field coordenacao-filter-field-compact" for="filtroTipoRegistro">
                                     <span>Tipo</span>
                                     <select id="filtroTipoRegistro"></select>
                                 </label>
-                                <label class="coordenacao-field" for="filtroTurmaId">
+                                <label class="coordenacao-field coordenacao-filter-field-compact" for="filtroTurmaId">
                                     <span>Turma</span>
                                     <select id="filtroTurmaId"></select>
                                 </label>
-                                <label class="coordenacao-field" for="filtroStatus">
+                                <label class="coordenacao-field coordenacao-filter-field-compact" for="filtroStatus">
                                     <span>Status</span>
                                     <select id="filtroStatus"></select>
                                 </label>
-                                <label class="coordenacao-field" for="filtroDataInicial">
+                                <label class="coordenacao-field coordenacao-filter-field-compact" for="filtroDataInicial">
                                     <span>Data inicial</span>
                                     <input id="filtroDataInicial" type="date">
                                 </label>
-                                <label class="coordenacao-field" for="filtroDataFinal">
+                                <label class="coordenacao-field coordenacao-filter-field-compact" for="filtroDataFinal">
                                     <span>Data final</span>
                                     <input id="filtroDataFinal" type="date">
                                 </label>
@@ -210,22 +243,7 @@
                                 </div>
                             </form>
 
-                            <div class="coordenacao-table-wrap">
-                                <table class="coordenacao-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Data</th>
-                                            <th>Tipo</th>
-                                            <th>Referência</th>
-                                            <th>Contexto</th>
-                                            <th>Ação aplicada</th>
-                                            <th>Status</th>
-                                            <th>Ações</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="tbodyOcorrencias"></tbody>
-                                </table>
-                            </div>
+                            <div class="coordenacao-record-list" id="tbodyOcorrencias" aria-live="polite"></div>
                         </article>
                     </section>
 
@@ -597,7 +615,6 @@
                         </article>
                     </section>
                 </section>
-            </section>
 
             <section id="coord-tab-relatorios" class="coordenacao-tab-panel" data-coord-tab-panel="relatorios" hidden>
                 <section class="coordenacao-report-layout">
@@ -1079,8 +1096,17 @@
                     </section>
                 </section>
             </section>
+        </div>
         </section>
     </main>
+
+    <div class="coordenacao-fab-shell">
+        <button id="btnNovaOcorrenciaFab" class="coordenacao-fab" type="button"
+            aria-controls="painelFormOcorrencia" aria-expanded="false" aria-label="Registrar nova ocorrência">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span>Registrar Nova Ocorrência</span>
+        </button>
+    </div>
 
     <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>

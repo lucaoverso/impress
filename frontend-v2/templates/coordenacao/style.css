@@ -1,0 +1,707 @@
+@layer templates {
+    .coordenacao-template .app-shell__content {
+        background: var(--color-background);
+    }
+
+    .coordenacao-page {
+        padding-top: var(--space-8);
+        padding-bottom: var(--space-12);
+    }
+
+    .coordenacao-page__inner {
+        display: grid;
+        gap: var(--space-5);
+        width: min(100%, 75rem);
+        margin-inline: auto;
+    }
+
+    .coordenacao-hero {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: var(--space-5);
+    }
+
+    .coordenacao-hero__copy {
+        display: grid;
+        gap: var(--space-1);
+        min-width: 0;
+    }
+
+    .coordenacao-hero h1 {
+        color: var(--color-primary);
+    }
+
+    .coordenacao-hero p {
+        color: var(--color-secondary);
+        font-size: var(--type-body-size);
+        line-height: var(--type-body-line);
+    }
+
+    .coordenacao-metrics {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: var(--space-3);
+    }
+
+    .coordenacao-metric {
+        display: grid;
+        gap: var(--space-1);
+        min-width: 8.75rem;
+        padding: var(--space-3);
+        border: var(--border-subtle);
+        border-radius: var(--radius-xl);
+        background: var(--color-surface-container-lowest);
+        box-shadow: var(--shadow-sm);
+        text-align: center;
+    }
+
+    .coordenacao-metric__label {
+        color: var(--color-secondary);
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-extrabold);
+        line-height: var(--type-caption-line);
+    }
+
+    .coordenacao-metric__value {
+        color: var(--color-primary);
+        font-size: var(--type-heading-size);
+        line-height: var(--type-heading-line);
+    }
+
+    .coordenacao-metric--danger .coordenacao-metric__value {
+        color: var(--color-error);
+    }
+
+    .coordenacao-metric--success .coordenacao-metric__value {
+        color: var(--color-success);
+    }
+
+    .coordenacao-filter-card {
+        padding: var(--space-4);
+        border: var(--border-subtle);
+        border-radius: var(--radius-xl);
+        background: var(--color-surface-container-lowest);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .coordenacao-filter-grid {
+        display: grid;
+        grid-template-columns: minmax(13rem, 1fr) repeat(3, minmax(9rem, 12rem)) auto;
+        gap: var(--space-3);
+        align-items: end;
+    }
+
+    .coordenacao-filter-grid__button {
+        min-width: 7.5rem;
+    }
+
+    .coordenacao-panel-view {
+        display: grid;
+        gap: var(--space-5);
+    }
+
+    .coordenacao-records {
+        display: grid;
+        gap: var(--space-3);
+    }
+
+    .coordenacao-panel-view[hidden],
+    .coordenacao-records[hidden],
+    .coordenacao-section[hidden] {
+        display: none;
+    }
+
+    .coordenacao-record {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-5);
+        padding: var(--space-4);
+        border: var(--border-subtle);
+        border-radius: var(--radius-xl);
+        background: var(--color-surface-container-lowest);
+        box-shadow: var(--shadow-sm);
+        transition:
+            border-color var(--transition-fast),
+            box-shadow var(--transition-fast),
+            transform var(--duration-fast) var(--ease-out);
+    }
+
+    .coordenacao-record:hover {
+        border-color: var(--color-border);
+        box-shadow: var(--shadow-md);
+        transform: translateY(-1px);
+    }
+
+    .coordenacao-record.is-resolved {
+        opacity: 0.82;
+    }
+
+    .coordenacao-record__main {
+        display: flex;
+        gap: var(--space-4);
+        min-width: 0;
+    }
+
+    .coordenacao-record__avatar {
+        display: inline-grid;
+        flex: 0 0 auto;
+        width: 3rem;
+        height: 3rem;
+        place-items: center;
+        border-radius: var(--radius-full);
+        background: var(--color-primary-soft);
+        color: var(--color-primary);
+    }
+
+    .coordenacao-record__avatar .ui-icon {
+        width: 1.75rem;
+        height: 1.75rem;
+        font-size: 1.75rem;
+    }
+
+    .coordenacao-record__avatar.is-muted {
+        background: var(--color-surface-container-low);
+        color: var(--color-secondary);
+    }
+
+    .coordenacao-record__content {
+        display: grid;
+        gap: var(--space-3);
+        min-width: 0;
+    }
+
+    .coordenacao-record__title-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: var(--space-2);
+    }
+
+    .coordenacao-record h2 {
+        color: var(--color-on-surface);
+        font-size: var(--type-title-size);
+        line-height: var(--type-title-line);
+    }
+
+    .coordenacao-record__meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2) var(--space-4);
+        margin: 0;
+        color: var(--color-secondary);
+        font-size: var(--font-size-sm);
+    }
+
+    .coordenacao-record__meta div {
+        display: contents;
+    }
+
+    .coordenacao-record__meta dt {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+        border: 0;
+    }
+
+    .coordenacao-record__meta dd {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        margin: 0;
+        font-weight: var(--font-weight-semibold);
+    }
+
+    .coordenacao-record__meta .ui-icon {
+        width: 1rem;
+        height: 1rem;
+        font-size: 1rem;
+    }
+
+    .coordenacao-record__meta .is-primary {
+        color: var(--color-primary);
+    }
+
+    .coordenacao-record__meta .is-tertiary {
+        color: var(--color-tertiary-container);
+    }
+
+    .coordenacao-record p {
+        max-width: 44rem;
+        color: var(--color-on-surface-variant);
+        font-size: var(--type-body-size);
+        line-height: var(--type-body-line);
+    }
+
+    .coordenacao-record__actions {
+        display: grid;
+        gap: var(--space-2);
+        flex: 0 0 11rem;
+    }
+
+    .coordenacao-pagination {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: var(--space-4);
+        padding-top: var(--space-5);
+        border-top: var(--border-subtle);
+    }
+
+    .coordenacao-pagination p {
+        color: var(--color-secondary);
+        font-size: var(--type-label-size);
+        font-weight: var(--font-weight-bold);
+    }
+
+    .coordenacao-pagination__nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-1);
+    }
+
+    .coordenacao-page-button {
+        display: inline-grid;
+        width: 2.5rem;
+        height: 2.5rem;
+        min-height: 2.5rem;
+        place-items: center;
+        border: var(--border-default);
+        border-radius: var(--radius-lg);
+        background: var(--color-surface-container-lowest);
+        color: var(--color-secondary);
+        font-weight: var(--font-weight-bold);
+        transition:
+            background-color var(--transition-fast),
+            border-color var(--transition-fast),
+            color var(--transition-fast),
+            box-shadow var(--transition-fast);
+    }
+
+    .coordenacao-page-button:hover {
+        border-color: var(--color-surface-tint);
+        background: var(--color-primary-soft);
+        color: var(--color-primary);
+    }
+
+    .coordenacao-page-button:focus-visible {
+        outline: none;
+        box-shadow: var(--focus-ring);
+    }
+
+    .coordenacao-page-button.is-active {
+        border-color: var(--color-primary);
+        background: var(--color-primary);
+        color: var(--color-on-primary);
+    }
+
+    .coordenacao-section {
+        display: grid;
+        gap: var(--space-4);
+        scroll-margin-top: calc(var(--layout-topbar-height) + var(--space-6));
+    }
+
+    .coordenacao-section__header {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: var(--space-4);
+        padding-top: var(--space-5);
+    }
+
+    .coordenacao-section__header > div,
+    .coordenacao-panel__header {
+        display: grid;
+        gap: var(--space-1);
+        min-width: 0;
+    }
+
+    .coordenacao-section__header h2,
+    .coordenacao-panel__header h3 {
+        color: var(--color-on-surface);
+    }
+
+    .coordenacao-section__header p,
+    .coordenacao-panel__header p {
+        color: var(--color-secondary);
+        font-size: var(--type-body-size);
+        line-height: var(--type-body-line);
+    }
+
+    .coordenacao-panel {
+        display: grid;
+        gap: var(--space-4);
+        min-width: 0;
+        padding: var(--space-4);
+        border: var(--border-subtle);
+        border-radius: var(--radius-xl);
+        background: var(--color-surface-container-lowest);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .coordenacao-panel--soft {
+        background: var(--color-surface-container-low);
+    }
+
+    .coordenacao-legal-grid,
+    .coordenacao-flow-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(18rem, 0.65fr);
+        gap: var(--space-4);
+        align-items: start;
+    }
+
+    .coordenacao-form-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: var(--space-3);
+        align-items: end;
+    }
+
+    .coordenacao-form-grid__wide {
+        grid-column: 1 / -1;
+    }
+
+    .coordenacao-flow-list {
+        display: grid;
+        gap: var(--space-3);
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .coordenacao-flow-list li {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 0 var(--space-3);
+        align-items: center;
+        padding: var(--space-3);
+        border: var(--border-subtle);
+        border-radius: var(--radius-lg);
+        background: var(--color-surface-container-lowest);
+    }
+
+    .coordenacao-flow-list span {
+        grid-row: span 2;
+        display: inline-grid;
+        width: 2rem;
+        height: 2rem;
+        place-items: center;
+        border-radius: var(--radius-full);
+        background: var(--color-primary-soft);
+        color: var(--color-primary);
+        font-size: var(--font-size-sm);
+        font-weight: var(--font-weight-extrabold);
+    }
+
+    .coordenacao-flow-list strong {
+        color: var(--color-on-surface);
+        line-height: var(--line-height-snug);
+    }
+
+    .coordenacao-flow-list small {
+        color: var(--color-secondary);
+        line-height: var(--type-caption-line);
+    }
+
+    .coordenacao-table-wrap {
+        min-width: 0;
+        overflow-x: auto;
+    }
+
+    .coordenacao-table {
+        width: 100%;
+        min-width: 42rem;
+        border-collapse: collapse;
+        font-size: var(--font-size-sm);
+    }
+
+    .coordenacao-table th,
+    .coordenacao-table td {
+        padding: var(--space-3);
+        border-bottom: var(--border-subtle);
+        text-align: left;
+        vertical-align: middle;
+    }
+
+    .coordenacao-table th {
+        color: var(--color-on-surface-variant);
+        font-size: var(--font-size-xs);
+        font-weight: var(--font-weight-extrabold);
+    }
+
+    .coordenacao-table td {
+        color: var(--color-on-surface);
+    }
+
+    .coordenacao-table tr:last-child td {
+        border-bottom: 0;
+    }
+
+    .coordenacao-student-toolbar {
+        display: grid;
+        grid-template-columns: minmax(14rem, 1fr) minmax(10rem, 14rem) auto;
+        gap: var(--space-3);
+        align-items: end;
+    }
+
+    .coordenacao-report-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: var(--space-4);
+    }
+
+    .coordenacao-report-card {
+        grid-template-columns: auto minmax(0, 1fr);
+        align-items: start;
+    }
+
+    .coordenacao-report-card > .ui-icon {
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: var(--radius-full);
+        background: var(--color-primary-soft);
+        color: var(--color-primary);
+        font-size: 1.5rem;
+    }
+
+    .coordenacao-report-card h3 {
+        color: var(--color-on-surface);
+        font-size: var(--type-label-size);
+        line-height: var(--type-label-line);
+    }
+
+    .coordenacao-report-card strong {
+        display: block;
+        margin-top: var(--space-1);
+        color: var(--color-primary);
+        font-size: var(--type-title-size);
+        line-height: var(--type-title-line);
+    }
+
+    .coordenacao-report-card p {
+        margin-top: var(--space-1);
+        color: var(--color-secondary);
+        font-size: var(--font-size-sm);
+        line-height: var(--line-height-md);
+    }
+
+    .coordenacao-queue-list {
+        display: grid;
+        gap: var(--space-3);
+    }
+
+    .coordenacao-queue-item {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-3);
+        padding: var(--space-3);
+        border: var(--border-subtle);
+        border-radius: var(--radius-lg);
+        background: var(--color-surface-container-low);
+    }
+
+    .coordenacao-queue-item div {
+        display: grid;
+        gap: var(--space-1);
+        min-width: 0;
+    }
+
+    .coordenacao-queue-item strong {
+        color: var(--color-on-surface);
+        line-height: var(--line-height-snug);
+    }
+
+    .coordenacao-queue-item p {
+        color: var(--color-secondary);
+        font-size: var(--font-size-sm);
+        line-height: var(--line-height-md);
+    }
+
+    .coordenacao-reason-form {
+        display: grid;
+        gap: var(--space-3);
+    }
+
+    .coordenacao-chip-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+    }
+
+    .coordenacao-fab {
+        position: fixed;
+        right: var(--space-8);
+        bottom: var(--space-8);
+        z-index: var(--z-sticky);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 3.5rem;
+        height: 3.5rem;
+        border-radius: var(--radius-full);
+        background: var(--color-primary);
+        color: var(--color-on-primary);
+        box-shadow: var(--shadow-lg);
+        text-decoration: none;
+        transition:
+            background-color var(--transition-fast),
+            box-shadow var(--transition-fast),
+            transform var(--duration-fast) var(--ease-out);
+    }
+
+    .coordenacao-fab:hover {
+        background: var(--color-primary-hover);
+        color: var(--color-on-primary);
+        text-decoration: none;
+        transform: translateY(-1px);
+    }
+
+    .coordenacao-fab:focus-visible {
+        outline: none;
+        box-shadow: var(--focus-ring), var(--shadow-lg);
+    }
+
+    .coordenacao-fab .ui-icon {
+        width: 2rem;
+        height: 2rem;
+        font-size: 2rem;
+    }
+
+    .coordenacao-fab__label {
+        position: absolute;
+        right: calc(100% + var(--space-3));
+        max-width: 14rem;
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-lg);
+        background: var(--color-primary);
+        color: var(--color-on-primary);
+        font-size: var(--type-label-size);
+        font-weight: var(--font-weight-bold);
+        line-height: var(--type-label-line);
+        opacity: 0;
+        pointer-events: none;
+        transform: translateX(var(--space-2));
+        transition:
+            opacity var(--transition-fast),
+            transform var(--transition-fast);
+        white-space: nowrap;
+    }
+
+    .coordenacao-fab:hover .coordenacao-fab__label,
+    .coordenacao-fab:focus-visible .coordenacao-fab__label {
+        opacity: 1;
+        transform: translateX(0);
+    }
+
+    @media (max-width: 70rem) {
+        .coordenacao-hero {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .coordenacao-metrics {
+            justify-content: flex-start;
+            width: 100%;
+        }
+
+        .coordenacao-filter-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .coordenacao-filter-grid__search {
+            grid-column: 1 / -1;
+        }
+
+        .coordenacao-legal-grid,
+        .coordenacao-flow-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .coordenacao-student-toolbar {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .coordenacao-report-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 48rem) {
+        .coordenacao-page {
+            padding: var(--space-5) var(--space-4) var(--space-10);
+        }
+
+        .coordenacao-metrics,
+        .coordenacao-filter-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .coordenacao-metric,
+        .coordenacao-filter-grid__button {
+            width: 100%;
+        }
+
+        .coordenacao-record {
+            flex-direction: column;
+        }
+
+        .coordenacao-record__main {
+            flex-direction: column;
+        }
+
+        .coordenacao-record__actions {
+            grid-template-columns: 1fr;
+            width: 100%;
+            flex-basis: auto;
+        }
+
+        .coordenacao-pagination {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .coordenacao-section__header,
+        .coordenacao-queue-item {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .coordenacao-section__header > .ui-button {
+            width: 100%;
+        }
+
+        .coordenacao-form-grid,
+        .coordenacao-student-toolbar {
+            grid-template-columns: 1fr;
+        }
+
+        .coordenacao-table {
+            min-width: 38rem;
+        }
+
+        .coordenacao-fab {
+            right: var(--space-4);
+            bottom: var(--space-4);
+        }
+
+        .coordenacao-fab__label {
+            display: none;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .coordenacao-record:hover,
+        .coordenacao-fab:hover {
+            transform: none;
+        }
+    }
+}

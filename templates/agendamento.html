@@ -15,7 +15,7 @@
         {"id": "btnAbrirCalendarioGeralNavbar", "label": "Calendario geral"},
         {"id": "btnAbrirMeusAgendamentosNavbar", "label": "Meus agendamentos"}
     ] %}
-    {% include "includes/app_navbar.html" %}
+    {% include "includes/layout/app_navbar.html" %}
     <main class="scheduler-page scheduler-flow-page">
         <input id="dataReserva" type="hidden">
         <p id="agendamentoUsuario" hidden></p>
@@ -223,7 +223,7 @@
                         </div>
                     </article>
 
-                    {% include "includes/scheduling_repeat_step.html" %}
+                    {% include "includes/features/scheduling_repeat_step.html" %}
                 </div>
 
                 <section class="scheduler-feedback-panel scheduler-feedback-panel-inline" aria-live="polite">

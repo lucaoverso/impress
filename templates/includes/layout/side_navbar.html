@@ -1,0 +1,112 @@
+{% set sidenav_brand = sidenav_brand | default("Suite Escolar") %}
+{% set sidenav_context = sidenav_context | default("") %}
+{% set sidenav_current = sidenav_current | default("") %}
+{% set sidenav_links = sidenav_links | default([]) %}
+{% set sidenav_sections = sidenav_sections | default([]) %}
+{% set sidenav_secondary_links = sidenav_secondary_links | default([]) %}
+{% set sidenav_action = sidenav_action | default(None) %}
+{% set sidenav_label = sidenav_label | default("Navegacao principal") %}
+{% set sidenav_show_logout = sidenav_show_logout | default(true) %}
+{% set sidenav_logout_id = sidenav_logout_id | default("btnSair") %}
+{% set sidenav_logout_label = sidenav_logout_label | default("Sair") %}
+{% set sidenav_logout_icon = sidenav_logout_icon | default("box-arrow-right") %}
+{% if not sidenav_sections and sidenav_links %}
+{% set sidenav_sections = [{"label": "", "links": sidenav_links}] %}
+{% endif %}
+
+<aside class="suite-sidenav" aria-label="{{ sidenav_label }}">
+    <div class="suite-sidenav-brand">
+        <strong>{{ sidenav_brand }}</strong>
+        {% if sidenav_context %}
+        <span>{{ sidenav_context }}</span>
+        {% endif %}
+    </div>
+
+    <nav class="suite-sidenav-main" aria-label="{{ sidenav_label }}">
+        {% for section in sidenav_sections %}
+        <section class="suite-sidenav-section">
+            {% if section.label | default("") or section.description | default("") %}
+            <div class="suite-sidenav-section-head">
+                {% if section.label | default("") %}
+                <span class="suite-sidenav-section-title">{{ section.label }}</span>
+                {% endif %}
+                {% if section.description | default("") %}
+                <small>{{ section.description }}</small>
+                {% endif %}
+            </div>
+            {% endif %}
+            <div class="suite-sidenav-links">
+                {% for link in section.links | default([]) %}
+                {% set is_active = link.active | default(false) or (sidenav_current and link.key | default("") == sidenav_current) %}
+                <a class="suite-sidenav-link{% if is_active %} is-active{% endif %}" href="{{ link.href }}"
+                    {% if is_active %}aria-current="page"{% endif %}>
+                    {% if link.icon | default("") %}
+                    <i class="bi bi-{{ link.icon }}" aria-hidden="true"></i>
+                    {% endif %}
+                    <span>{{ link.label }}</span>
+                    {% if link.badge | default("") %}
+                    <small>{{ link.badge }}</small>
+                    {% endif %}
+                </a>
+                {% endfor %}
+            </div>
+        </section>
+        {% endfor %}
+
+        {% if sidenav_action %}
+        <a class="suite-sidenav-action" href="{{ sidenav_action.href }}">
+            {% if sidenav_action.icon | default("") %}
+            <i class="bi bi-{{ sidenav_action.icon }}" aria-hidden="true"></i>
+            {% endif %}
+            <span>{{ sidenav_action.label }}</span>
+        </a>
+        {% endif %}
+    </nav>
+
+    <div class="suite-sidenav-footer">
+        {% if sidenav_secondary_links %}
+        <nav class="suite-sidenav-links suite-sidenav-links-secondary" aria-label="Acoes secundarias">
+            {% for link in sidenav_secondary_links %}
+            <a class="suite-sidenav-link" href="{{ link.href }}">
+                {% if link.icon | default("") %}
+                <i class="bi bi-{{ link.icon }}" aria-hidden="true"></i>
+                {% endif %}
+                <span>{{ link.label }}</span>
+            </a>
+            {% endfor %}
+        </nav>
+        {% endif %}
+
+        {% if sidenav_show_logout %}
+        <button id="{{ sidenav_logout_id }}" class="suite-sidenav-logout" type="button" data-suite-logout>
+            {% if sidenav_logout_icon %}
+            <i class="bi bi-{{ sidenav_logout_icon }}" aria-hidden="true"></i>
+            {% endif %}
+            <span>{{ sidenav_logout_label }}</span>
+        </button>
+        {% endif %}
+    </div>
+</aside>
+
+{% if sidenav_show_logout %}
+<script>
+    window.SuiteSidenav = window.SuiteSidenav || {};
+    if (!window.SuiteSidenav.logoutBound) {
+        window.SuiteSidenav.logoutBound = true;
+        document.addEventListener("click", function (event) {
+            var button = event.target.closest("[data-suite-logout]");
+            if (!button) return;
+            event.preventDefault();
+            event.stopPropagation();
+            if (window.AppAuth && typeof window.AppAuth.encerrarSessao === "function") {
+                window.AppAuth.encerrarSessao();
+                return;
+            }
+            localStorage.removeItem("token");
+            localStorage.removeItem("token_expira_em");
+            sessionStorage.removeItem("usuario_atual");
+            window.location.href = "/login-page";
+        }, true);
+    }
+</script>
+{% endif %}

@@ -1,0 +1,16 @@
+{% set button_id = button_id | default("") %}
+{% set button_label = button_label | default("") %}
+{% set button_icon = button_icon | default("") %}
+{% set button_type = button_type | default("button") %}
+{% set button_class = button_class | default("suite-icon-button") %}
+{% set button_aria_controls = button_aria_controls | default("") %}
+{% set button_aria_expanded = button_aria_expanded | default("") %}
+
+<button{% if button_id %} id="{{ button_id }}"{% endif %} class="{{ button_class }}" type="{{ button_type }}"
+    {% if button_aria_controls %}aria-controls="{{ button_aria_controls }}"{% endif %}
+    {% if button_aria_expanded %}aria-expanded="{{ button_aria_expanded }}"{% endif %}>
+    {% if button_icon %}
+    <i class="bi bi-{{ button_icon }}" aria-hidden="true"></i>
+    {% endif %}
+    <span>{{ button_label }}</span>
+</button>

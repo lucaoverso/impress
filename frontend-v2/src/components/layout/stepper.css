@@ -1,0 +1,49 @@
+@layer components {
+    .stepper {
+        display: flex;
+        flex-wrap: wrap;
+        gap: var(--space-2);
+        padding: 0;
+        list-style: none;
+    }
+
+    .stepper__item {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2);
+        min-height: var(--layout-control-height-sm);
+        color: var(--color-secondary);
+        font-size: var(--type-label-size);
+        font-weight: var(--font-weight-bold);
+        line-height: var(--type-label-line);
+    }
+
+    .stepper__marker {
+        display: inline-grid;
+        width: 1.75rem;
+        height: 1.75rem;
+        place-items: center;
+        border: var(--border-default);
+        border-radius: var(--radius-full);
+        background: var(--color-surface-container-lowest);
+        color: var(--color-secondary);
+        font-size: var(--font-size-xs);
+    }
+
+    .stepper__item[aria-current="step"] {
+        color: var(--color-primary);
+    }
+
+    .stepper__item[aria-current="step"] .stepper__marker {
+        border-color: var(--color-primary);
+        background: var(--color-primary-soft);
+        color: var(--color-primary);
+    }
+
+    .stepper__item.is-complete .stepper__marker {
+        border-color: var(--color-primary);
+        background: var(--color-primary);
+        color: var(--color-on-primary);
+    }
+}
+

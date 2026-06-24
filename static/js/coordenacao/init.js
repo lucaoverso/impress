@@ -14,6 +14,28 @@ function registrarEventosAbas() {
             ativarAbaCoordenacao(botao.dataset.coordTabTrigger);
         });
     });
+
+    document.querySelectorAll(".suite-sidenav-link[href^='#coord-tab-']").forEach((link) => {
+        link.addEventListener("click", (event) => {
+            const aba = link.getAttribute("href").replace("#coord-tab-", "");
+            if (!aba) return;
+            event.preventDefault();
+            ativarAbaCoordenacao(aba);
+            document.querySelectorAll(".suite-sidenav-link").forEach((item) => {
+                item.classList.toggle("is-active", item === link);
+            });
+        });
+    });
+
+    document.querySelectorAll(".suite-sidenav-link[href='#'], .suite-topnav-icon-btn[href='#']").forEach((link) => {
+        link.addEventListener("click", (event) => {
+            event.preventDefault();
+        });
+    });
+
+    document.querySelector(".suite-topnav-search")?.addEventListener("submit", (event) => {
+        event.preventDefault();
+    });
 }
 
 function registrarEventosEditorDescricao() {
@@ -54,6 +76,15 @@ function registrarEventosOcorrencias() {
     registrarEventosEditorDescricao();
     el("btnLimparFiltros").addEventListener("click", limparFiltrosOcorrencias);
     el("btnNovaOcorrencia").addEventListener("click", () => {
+        limparFormularioOcorrencia({ manterAberto: true });
+        el("ocorrenciaBuscaEstudante").focus();
+    });
+    el("btnNovaOcorrenciaFab")?.addEventListener("click", () => {
+        limparFormularioOcorrencia({ manterAberto: true });
+        el("ocorrenciaBuscaEstudante").focus();
+    });
+    document.querySelector(".suite-sidenav-action[href='#painelFormOcorrencia']")?.addEventListener("click", (event) => {
+        event.preventDefault();
         limparFormularioOcorrencia({ manterAberto: true });
         el("ocorrenciaBuscaEstudante").focus();
     });
@@ -210,7 +241,7 @@ function registrarEventosGerais() {
         if (event.target.closest(".coordenacao-autocomplete-shell")) return;
         ocultarTodasSugestoes();
     });
-    el("btnVoltarServicos").addEventListener("click", () => {
+    el("btnVoltarServicos")?.addEventListener("click", () => {
         window.location.href = "/servicos";
     });
     const btnIrAdmin = el("btnIrAdmin");
@@ -219,7 +250,7 @@ function registrarEventosGerais() {
             window.location.href = "/admin";
         });
     }
-    el("btnSair").addEventListener("click", () => {
+    el("btnSair")?.addEventListener("click", () => {
         localStorage.removeItem("token");
         localStorage.removeItem("token_expira_em");
         window.location.href = "/login-page";

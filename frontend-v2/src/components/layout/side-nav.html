@@ -1,0 +1,63 @@
+<!--
+  Side navbar v2
+
+  Contract:
+  - Brand is stable across the product.
+  - Context changes per module.
+  - Sections and links are provided by the current module.
+  - The only global action in this sidebar is logout.
+  - Icons can be Lucide, Bootstrap Icons, Material Symbols or inline SVG,
+    as long as the wrapper uses .ui-icon and aria-hidden="true".
+-->
+
+<aside class="side-navbar" aria-label="Navegacao do modulo">
+    <div class="side-navbar__brand">
+        <span class="side-navbar__brand-mark" aria-hidden="true">SE</span>
+        <div class="side-navbar__brand-copy">
+            <strong class="side-navbar__title">Suite Escolar</strong>
+            <span class="side-navbar__context">Modulo de coordenacao</span>
+        </div>
+    </div>
+
+    <nav class="side-navbar__body" aria-label="Acoes do modulo">
+        <section class="side-navbar__section">
+            <div class="side-navbar__section-head">
+                <span class="side-navbar__section-title">Coordenacao</span>
+                <span class="side-navbar__section-description">Rotinas do modulo</span>
+            </div>
+
+            <div class="side-navbar__links">
+                <a class="side-navbar__link is-active" href="#ocorrencias" aria-current="page">
+                    <span class="ui-icon" aria-hidden="true">grid_view</span>
+                    <span class="side-navbar__label">Ocorrencias</span>
+                </a>
+                <a class="side-navbar__link" href="#base-legal">
+                    <span class="ui-icon" aria-hidden="true">article</span>
+                    <span class="side-navbar__label">Base legal</span>
+                </a>
+                <a class="side-navbar__link" href="#relatorios">
+                    <span class="ui-icon" aria-hidden="true">bar_chart</span>
+                    <span class="side-navbar__label">Relatorios</span>
+                </a>
+                <a class="side-navbar__link" href="#fluxo-professor">
+                    <span class="ui-icon" aria-hidden="true">send</span>
+                    <span class="side-navbar__label">Fluxo do professor</span>
+                    <span class="side-navbar__badge">3</span>
+                </a>
+            </div>
+        </section>
+
+        <a class="ui-button ui-button--primary side-navbar__primary-action" href="#novo-registro">
+            <span class="ui-icon" aria-hidden="true">add_circle</span>
+            <span>Novo registro</span>
+        </a>
+    </nav>
+
+    <div class="side-navbar__footer">
+        <button class="side-navbar__logout" type="button" data-app-logout>
+            <span class="ui-icon" aria-hidden="true">logout</span>
+            <span class="side-navbar__label">Sair</span>
+        </button>
+    </div>
+</aside>
+

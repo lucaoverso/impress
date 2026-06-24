@@ -1,0 +1,58 @@
+{% set topnav_brand = topnav_brand | default("Suite Escolar") %}
+{% set topnav_logo_src = topnav_logo_src | default(request.url_for('static', path='img/logo_escola.PNG')) %}
+{% set topnav_logo_alt = topnav_logo_alt | default("Suite Escolar") %}
+{% set topnav_home_href = topnav_home_href | default("/servicos") %}
+{% set topnav_show_search = topnav_show_search | default(true) %}
+{% set topnav_search_placeholder = topnav_search_placeholder | default("Buscar no sistema") %}
+{% set topnav_search_action = topnav_search_action | default("") %}
+{% set topnav_notifications_count = topnav_notifications_count | default(0) %}
+{% set topnav_profile_name = topnav_profile_name | default("Usuario") %}
+{% set topnav_profile_meta = topnav_profile_meta | default("") %}
+{% set topnav_profile_avatar_src = topnav_profile_avatar_src | default("") %}
+{% set topnav_profile_initials = topnav_profile_initials | default("US") %}
+{% set topnav_calendar_href = topnav_calendar_href | default("") %}
+{% set topnav_classes = topnav_classes | default("") %}
+
+<header class="suite-topnav{% if topnav_classes %} {{ topnav_classes }}{% endif %}">
+    <a class="suite-topnav-brand" href="{{ topnav_home_href }}" aria-label="Ir para {{ topnav_brand }}">
+        <img src="{{ topnav_logo_src }}" alt="{{ topnav_logo_alt }}">
+        <span>{{ topnav_brand }}</span>
+    </a>
+
+    {% if topnav_show_search %}
+    <form class="suite-topnav-search" role="search" {% if topnav_search_action %}action="{{ topnav_search_action }}"{% endif %}>
+        <label class="sr-only" for="suiteTopnavSearch">Busca global</label>
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input id="suiteTopnavSearch" type="search" name="q" placeholder="{{ topnav_search_placeholder }}">
+    </form>
+    {% endif %}
+
+    <div class="suite-topnav-actions">
+        <button class="suite-topnav-icon-btn" type="button" aria-label="Notificacoes">
+            <i class="bi bi-bell" aria-hidden="true"></i>
+            {% if topnav_notifications_count %}
+            <span>{{ topnav_notifications_count }}</span>
+            {% endif %}
+        </button>
+
+        {% if topnav_calendar_href %}
+        <a class="suite-topnav-icon-btn" href="{{ topnav_calendar_href }}" aria-label="Abrir calendario">
+            <i class="bi bi-calendar3" aria-hidden="true"></i>
+        </a>
+        {% endif %}
+
+        <button class="suite-topnav-profile" type="button" aria-label="Perfil de {{ topnav_profile_name }}">
+            <span class="suite-topnav-profile-copy">
+                <strong>{{ topnav_profile_name }}</strong>
+                {% if topnav_profile_meta %}
+                <small>{{ topnav_profile_meta }}</small>
+                {% endif %}
+            </span>
+            {% if topnav_profile_avatar_src %}
+            <img src="{{ topnav_profile_avatar_src }}" alt="">
+            {% else %}
+            <span class="suite-topnav-avatar" aria-hidden="true">{{ topnav_profile_initials }}</span>
+            {% endif %}
+        </button>
+    </div>
+</header>

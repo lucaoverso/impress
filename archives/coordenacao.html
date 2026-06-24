@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-br">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+  <title>Suíte Escolar - Central de Coordenação</title>
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;600;700;800&amp;display=swap"
+    rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+    rel="stylesheet" />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap"
+    rel="stylesheet" />
+  <script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "surface-container-low": "#f1f4f3",
+            "on-tertiary": "#ffffff",
+            "primary-fixed": "#a7f0e6",
+            "on-primary-fixed-variant": "#00504a",
+            "success": "#16a34a",
+            "primary": "#00433d",
+            "on-secondary": "#ffffff",
+            "on-primary": "#ffffff",
+            "primary-fixed-dim": "#8cd4ca",
+            "inverse-surface": "#2d3130",
+            "surface-container-highest": "#e0e3e1",
+            "tertiary-fixed-dim": "#ffb598",
+            "background": "#f7faf8",
+            "primary-strong": "#0b5b55",
+            "tertiary": "#622a11",
+            "tertiary-fixed": "#ffdbce",
+            "outline": "#6f7977",
+            "on-tertiary-container": "#ffb395",
+            "on-secondary-container": "#556678",
+            "primary-soft": "#d6f2ef",
+            "on-secondary-fixed-variant": "#37485a",
+            "on-primary-fixed": "#00201d",
+            "surface-bright": "#f7faf8",
+            "on-surface": "#191c1c",
+            "error-container": "#ffdad6",
+            "secondary-container": "#d2e4fa",
+            "on-primary-container": "#8ad2c8",
+            "on-secondary-fixed": "#0b1d2c",
+            "tertiary-container": "#7f4025",
+            "secondary": "#4f6072",
+            "inverse-on-surface": "#eff1f0",
+            "surface-container-high": "#e6e9e7",
+            "on-tertiary-fixed": "#370e00",
+            "secondary-fixed-dim": "#b7c8dd",
+            "on-surface-variant": "#3f4947",
+            "error": "#ba1a1a",
+            "primary-container": "#005c55",
+            "on-error-container": "#93000a",
+            "border-soft": "#d8e1ec",
+            "danger": "#dc2626",
+            "surface-dim": "#d8dbd9",
+            "surface-container-lowest": "#ffffff",
+            "on-error": "#ffffff",
+            "inverse-primary": "#8cd4ca",
+            "surface-tint": "#1a6962",
+            "outline-variant": "#bec9c6",
+            "surface-variant": "#e0e3e1",
+            "surface": "#f7faf8",
+            "surface-container": "#eceeed",
+            "on-background": "#191c1c",
+            "secondary-fixed": "#d2e4fa",
+            "on-tertiary-fixed-variant": "#72361b"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "xs": "4px",
+            "md": "12px",
+            "lg": "16px",
+            "gutter": "16px",
+            "sm": "8px",
+            "margin": "24px",
+            "xxl": "32px",
+            "xl": "24px"
+          },
+          "fontFamily": {
+            "title-sm": ["Nunito Sans"],
+            "display-lg": ["Nunito Sans"],
+            "label-sm": ["Nunito Sans"],
+            "display-lg-mobile": ["Nunito Sans"],
+            "body-md": ["Nunito Sans"],
+            "headline-md": ["Nunito Sans"]
+          },
+          "fontSize": {
+            "title-sm": ["18px", { "lineHeight": "22px", "fontWeight": "700" }],
+            "display-lg": ["34px", { "lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "label-sm": ["14px", { "lineHeight": "18px", "fontWeight": "700" }],
+            "display-lg-mobile": ["28px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+            "headline-md": ["24px", { "lineHeight": "28px", "letterSpacing": "-0.01em", "fontWeight": "700" }]
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Nunito Sans', sans-serif;
+    }
+
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    }
+
+    .bento-card {
+      transition: transform 0.2s ease, shadow 0.2s ease;
+    }
+
+    .bento-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #005c55;
+      border-radius: 10px;
+    }
+  </style>
+</head>
+
+<body class="bg-background text-on-background min-h-screen">
+  <!-- SideNavBar (Shared Component) -->
+  <aside
+    class="fixed left-0 top-0 h-full w-64 bg-surface-container-lowest dark:bg-inverse-surface border-r border-border-soft dark:border-outline-variant shadow-sm hidden md:flex flex-col p-lg z-50">
+    <div class="mb-xxl">
+      <h1 class="font-title-sm text-title-sm text-primary dark:text-primary-fixed mb-xs">Suite Escolar</h1>
+      <p class="text-secondary text-label-sm opacity-70">Admin Coordination</p>
+    </div>
+    <nav class="flex-1 flex flex-col gap-sm">
+      <a class="flex items-center gap-md bg-primary-soft dark:bg-primary-container text-primary-strong dark:text-on-primary-container rounded-xl px-4 py-2 hover:bg-surface-container transition-colors active:scale-95 duration-150"
+        href="#">
+        <span class="material-symbols-outlined" data-icon="dashboard">dashboard</span>
+        <span class="font-body-md text-body-md">Dashboard</span>
+      </a>
+      <a class="flex items-center gap-md text-secondary dark:text-secondary-fixed-dim px-4 py-2 hover:bg-surface-container transition-colors active:scale-95 duration-150"
+        href="#">
+        <span class="material-symbols-outlined" data-icon="person">person</span>
+        <span class="font-body-md text-body-md">Students</span>
+      </a>
+      <a class="flex items-center gap-md text-secondary dark:text-secondary-fixed-dim px-4 py-2 hover:bg-surface-container transition-colors active:scale-95 duration-150"
+        href="#">
+        <span class="material-symbols-outlined" data-icon="groups">groups</span>
+        <span class="font-body-md text-body-md">Classes</span>
+      </a>
+      <a class="flex items-center gap-md text-secondary dark:text-secondary-fixed-dim px-4 py-2 hover:bg-surface-container transition-colors active:scale-95 duration-150"
+        href="#">
+        <span class="material-symbols-outlined" data-icon="grade">grade</span>
+        <span class="font-body-md text-body-md">Grades</span>
+      </a>
+      <a class="flex items-center gap-md text-secondary dark:text-secondary-fixed-dim px-4 py-2 hover:bg-surface-container transition-colors active:scale-95 duration-150"
+        href="#">
+        <span class="material-symbols-outlined" data-icon="assessment">assessment</span>
+        <span class="font-body-md text-body-md">Reports</span>
+      </a>
+    </nav>
+    <button
+      class="mt-auto mb-lg bg-primary-container text-white rounded-xl py-3 px-4 flex items-center justify-center gap-md font-label-sm hover:bg-primary-strong transition-all shadow-md">
+      <span class="material-symbols-outlined">add_circle</span>
+      New Record
+    </button>
+    <div class="border-t border-border-soft pt-lg flex flex-col gap-sm">
+      <a class="flex items-center gap-md text-secondary px-4 py-2 hover:bg-surface-container rounded-xl transition-colors"
+        href="#">
+        <span class="material-symbols-outlined" data-icon="settings">settings</span>
+        <span class="font-body-md text-body-md">Settings</span>
+      </a>
+      <a class="flex items-center gap-md text-secondary px-4 py-2 hover:bg-surface-container rounded-xl transition-colors"
+        href="#">
+        <span class="material-symbols-outlined" data-icon="help">help</span>
+        <span class="font-body-md text-body-md">Help</span>
+      </a>
+    </div>
+  </aside>
+  <!-- Main Content Area -->
+  <main class="md:ml-64 min-h-screen">
+    <!-- TopNavBar (Shared Component) -->
+    <header
+      class="fixed top-0 right-0 w-full md:w-[calc(100%-256px)] h-16 bg-surface dark:bg-surface-dim bg-surface-bright dark:bg-surface-container-high z-40 flex justify-between items-center px-gutter h-16">
+      <div class="flex items-center gap-md w-full max-w-xl">
+        <span class="md:hidden font-title-sm text-title-sm text-primary">Suite Escolar</span>
+        <div
+          class="hidden md:flex items-center bg-surface-container-low rounded-full px-4 py-2 w-full focus-within:ring-2 focus-within:ring-primary transition-all">
+          <span class="material-symbols-outlined text-secondary opacity-60">search</span>
+          <input class="bg-transparent border-none focus:ring-0 w-full text-body-md outline-none px-md"
+            placeholder="Search student or record..." type="text" />
+        </div>
+      </div>
+      <div class="flex items-center gap-lg">
+        <button class="relative p-2 text-secondary hover:text-primary-strong transition-all">
+          <span class="material-symbols-outlined" data-icon="notifications">notifications</span>
+          <span class="absolute top-2 right-2 w-2 h-2 bg-error rounded-full"></span>
+        </button>
+        <button class="p-2 text-secondary hover:text-primary-strong transition-all">
+          <span class="material-symbols-outlined" data-icon="calendar_today">calendar_today</span>
+        </button>
+        <div class="flex items-center gap-md border-l border-border-soft pl-lg">
+          <div class="hidden sm:block text-right">
+            <p class="font-label-sm text-on-surface">Coord. Ana Paula</p>
+            <p class="text-xs text-secondary">School Admin</p>
+          </div>
+          <img class="w-10 h-10 rounded-full object-cover border-2 border-primary-soft"
+            data-alt="A professional profile headshot of a female school coordinator in a bright, modern office setting. She has a friendly, authoritative expression, wearing professional attire. The lighting is soft and natural, emphasizing a calm and organized educational environment."
+            src="https://lh3.googleusercontent.com/aida-public/AB6AXuDqoFomB33MTsOe-1OfztRRvSFPJP9GZ8oaCmyAUhl4CXNm92lMolpKG97fqlk5eYbrCT3R6HwNMM8a3Q8syNVm_ZF-tZ3gDW7E9EqR4fwy8YbrX_AF9W6fALGF5eiXkkYAwHC7FTQQTNQ3SMrTQXR3aeWnRREPGRmTjrpvW7N9rYcXAt1HLK0l6nrcrwo5YFPm4AsC3j5G0ULMJd3kBNdpR6lo_OyDvx7ntqHZhn5XD3DMtVy8EzGUe-MGjwTi-x6q-FKlSeuW6J4d" />
+        </div>
+      </div>
+    </header>
+    <!-- Content Canvas -->
+    <div class="pt-24 pb-12 px-gutter max-w-[1200px] mx-auto">
+      <!-- Page Header & Metrics Bento -->
+      <div class="mb-xl flex flex-col md:flex-row md:items-end justify-between gap-lg">
+        <div>
+          <h2 class="font-display-lg text-display-lg text-primary mb-xs">Central de Coordenação</h2>
+          <p class="text-secondary font-body-md">Gestão e registro de ocorrências escolares</p>
+        </div>
+        <div class="flex gap-md">
+          <div
+            class="bg-surface-container-lowest p-md rounded-xl border border-border-soft shadow-sm min-w-[140px] text-center">
+            <p class="text-xs text-secondary uppercase tracking-wider font-bold">Ocorrências</p>
+            <p class="text-headline-md text-primary mt-1">1,248</p>
+          </div>
+          <div
+            class="bg-surface-container-lowest p-md rounded-xl border border-border-soft shadow-sm min-w-[140px] text-center">
+            <p class="text-xs text-secondary uppercase tracking-wider font-bold">Pendentes</p>
+            <p class="text-headline-md text-error mt-1">42</p>
+          </div>
+          <div
+            class="bg-surface-container-lowest p-md rounded-xl border border-border-soft shadow-sm min-w-[140px] text-center">
+            <p class="text-xs text-secondary uppercase tracking-wider font-bold">Concluídas</p>
+            <p class="text-headline-md text-success mt-1">1,206</p>
+          </div>
+        </div>
+      </div>
+      <!-- Filters Section -->
+      <div
+        class="bg-surface-container-lowest rounded-xl border border-border-soft p-lg mb-lg shadow-sm flex flex-wrap items-center gap-md">
+        <div class="flex-1 min-w-[200px]">
+          <label class="block text-xs font-bold text-secondary mb-1">Filtrar por Estudante</label>
+          <div class="relative">
+            <input
+              class="w-full bg-background border-outline-variant rounded-xl text-body-md py-2 px-md focus:ring-primary focus:border-primary"
+              placeholder="Nome do aluno..." type="text" />
+          </div>
+        </div>
+        <div class="w-48">
+          <label class="block text-xs font-bold text-secondary mb-1">Turma</label>
+          <select
+            class="w-full bg-background border-outline-variant rounded-xl text-body-md py-2 px-md focus:ring-primary">
+            <option>Todas as Turmas</option>
+            <option>9º Ano A</option>
+            <option>1º EM B</option>
+            <option>6º Ano C</option>
+          </select>
+        </div>
+        <div class="w-48">
+          <label class="block text-xs font-bold text-secondary mb-1">Tipo</label>
+          <select
+            class="w-full bg-background border-outline-variant rounded-xl text-body-md py-2 px-md focus:ring-primary">
+            <option>Todos os Tipos</option>
+            <option>Pedagógico</option>
+            <option>Disciplinar</option>
+          </select>
+        </div>
+        <div class="w-48">
+          <label class="block text-xs font-bold text-secondary mb-1">Período</label>
+          <input
+            class="w-full bg-background border-outline-variant rounded-xl text-body-md py-2 px-md focus:ring-primary"
+            type="date" />
+        </div>
+        <button
+          class="self-end bg-primary-soft text-primary px-lg py-2.5 rounded-xl font-bold hover:bg-primary-container hover:text-white transition-all flex items-center gap-xs">
+          <span class="material-symbols-outlined text-[18px]">filter_list</span>
+          Filtrar
+        </button>
+      </div>
+      <!-- Records List (Card Layout) -->
+      <div class="grid grid-cols-1 gap-md">
+        <!-- Record 1 (Pending) -->
+        <div
+          class="bg-surface-container-lowest border border-border-soft rounded-xl p-lg bento-card flex items-start justify-between">
+          <div class="flex gap-lg">
+            <div class="w-12 h-12 bg-primary-soft rounded-full flex items-center justify-center text-primary-strong">
+              <span class="material-symbols-outlined text-[28px]">person</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-sm mb-1">
+                <h3 class="font-title-sm text-on-surface">Gabrieli Fernandes Da Silva</h3>
+                <span
+                  class="bg-error-container text-on-error-container text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">Pendente</span>
+              </div>
+              <div class="flex flex-wrap gap-x-gutter gap-y-xs text-secondary text-sm">
+                <span class="flex items-center gap-xs"><span class="material-symbols-outlined text-[16px]">school</span>
+                  1º EM B</span>
+                <span class="flex items-center gap-xs"><span
+                    class="material-symbols-outlined text-[16px]">calendar_today</span> 24/05/2024</span>
+                <span class="flex items-center gap-xs text-primary font-bold"><span
+                    class="material-symbols-outlined text-[16px]">warning</span> Disciplinar</span>
+              </div>
+              <p class="mt-md text-on-surface-variant text-body-md max-w-2xl leading-relaxed">
+                Estudante apresentou comportamento disruptivo em sala de aula, recusando-se a realizar as atividades
+                propostas e ignorando as orientações do docente.
+              </p>
+            </div>
+          </div>
+          <div class="flex flex-col gap-sm">
+            <button
+              class="bg-primary text-white px-lg py-2 rounded-xl font-bold hover:bg-primary-strong transition-all flex items-center gap-xs justify-center">
+              <span class="material-symbols-outlined text-[20px]">visibility</span>
+              Ver Detalhes
+            </button>
+            <button
+              class="border border-outline-variant text-secondary px-lg py-2 rounded-xl font-bold hover:bg-surface-container transition-all flex items-center gap-xs justify-center">
+              <span class="material-symbols-outlined text-[20px]">edit</span>
+              Editar
+            </button>
+          </div>
+        </div>
+        <!-- Record 2 (Resolved) -->
+        <div
+          class="bg-surface-container-lowest border border-border-soft rounded-xl p-lg bento-card flex items-start justify-between opacity-80">
+          <div class="flex gap-lg">
+            <div
+              class="w-12 h-12 bg-surface-container-low rounded-full flex items-center justify-center text-secondary">
+              <span class="material-symbols-outlined text-[28px]">person</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-sm mb-1">
+                <h3 class="font-title-sm text-on-surface">Luis Fernando Araujo Costa</h3>
+                <span
+                  class="bg-secondary-container text-on-secondary-container text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">Concluído</span>
+              </div>
+              <div class="flex flex-wrap gap-x-gutter gap-y-xs text-secondary text-sm">
+                <span class="flex items-center gap-xs"><span class="material-symbols-outlined text-[16px]">school</span>
+                  9º Ano A</span>
+                <span class="flex items-center gap-xs"><span
+                    class="material-symbols-outlined text-[16px]">calendar_today</span> 22/05/2024</span>
+                <span class="flex items-center gap-xs text-tertiary-container font-bold"><span
+                    class="material-symbols-outlined text-[16px]">book</span> Pedagógico</span>
+              </div>
+              <p class="mt-md text-on-surface-variant text-body-md max-w-2xl leading-relaxed">
+                Dificuldade técnica em acessar plataforma de ensino. Realizada reunião com o responsável para orientação
+                sobre o uso correto das ferramentas digitais.
+              </p>
+            </div>
+          </div>
+          <div class="flex flex-col gap-sm">
+            <button
+              class="border border-primary text-primary px-lg py-2 rounded-xl font-bold hover:bg-primary-soft transition-all flex items-center gap-xs justify-center">
+              <span class="material-symbols-outlined text-[20px]">description</span>
+              Ver Ata
+            </button>
+          </div>
+        </div>
+        <!-- Record 3 (Pending) -->
+        <div
+          class="bg-surface-container-lowest border border-border-soft rounded-xl p-lg bento-card flex items-start justify-between">
+          <div class="flex gap-lg">
+            <div class="w-12 h-12 bg-primary-soft rounded-full flex items-center justify-center text-primary-strong">
+              <span class="material-symbols-outlined text-[28px]">person</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-sm mb-1">
+                <h3 class="font-title-sm text-on-surface">Diego Gomes Leal</h3>
+                <span
+                  class="bg-error-container text-on-error-container text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">Pendente</span>
+              </div>
+              <div class="flex flex-wrap gap-x-gutter gap-y-xs text-secondary text-sm">
+                <span class="flex items-center gap-xs"><span class="material-symbols-outlined text-[16px]">school</span>
+                  1º EM B</span>
+                <span class="flex items-center gap-xs"><span
+                    class="material-symbols-outlined text-[16px]">calendar_today</span> 21/05/2024</span>
+                <span class="flex items-center gap-xs text-primary font-bold"><span
+                    class="material-symbols-outlined text-[16px]">warning</span> Disciplinar</span>
+              </div>
+              <p class="mt-md text-on-surface-variant text-body-md max-w-2xl leading-relaxed">
+                Atraso recorrente para o início das aulas no período matutino. Requer intervenção da coordenação com a
+                família.
+              </p>
+            </div>
+          </div>
+          <div class="flex flex-col gap-sm">
+            <button
+              class="bg-primary text-white px-lg py-2 rounded-xl font-bold hover:bg-primary-strong transition-all flex items-center gap-xs justify-center">
+              <span class="material-symbols-outlined text-[20px]">visibility</span>
+              Ver Detalhes
+            </button>
+            <button
+              class="border border-outline-variant text-secondary px-lg py-2 rounded-xl font-bold hover:bg-surface-container transition-all flex items-center gap-xs justify-center">
+              <span class="material-symbols-outlined text-[20px]">edit</span>
+              Editar
+            </button>
+          </div>
+        </div>
+        <!-- Record 4 (Pending) -->
+        <div
+          class="bg-surface-container-lowest border border-border-soft rounded-xl p-lg bento-card flex items-start justify-between">
+          <div class="flex gap-lg">
+            <div class="w-12 h-12 bg-primary-soft rounded-full flex items-center justify-center text-primary-strong">
+              <span class="material-symbols-outlined text-[28px]">person</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-sm mb-1">
+                <h3 class="font-title-sm text-on-surface">Ana Lara Batista Da Silva</h3>
+                <span
+                  class="bg-error-container text-on-error-container text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">Pendente</span>
+              </div>
+              <div class="flex flex-wrap gap-x-gutter gap-y-xs text-secondary text-sm">
+                <span class="flex items-center gap-xs"><span class="material-symbols-outlined text-[16px]">school</span>
+                  6º Ano C</span>
+                <span class="flex items-center gap-xs"><span
+                    class="material-symbols-outlined text-[16px]">calendar_today</span> 20/05/2024</span>
+                <span class="flex items-center gap-xs text-tertiary-container font-bold"><span
+                    class="material-symbols-outlined text-[16px]">book</span> Pedagógico</span>
+              </div>
+              <p class="mt-md text-on-surface-variant text-body-md max-w-2xl leading-relaxed">
+                Rendimento acadêmico abaixo da média em Matemática. Necessário acompanhamento pedagógico
+                individualizado.
+              </p>
+            </div>
+          </div>
+          <div class="flex flex-col gap-sm">
+            <button
+              class="bg-primary text-white px-lg py-2 rounded-xl font-bold hover:bg-primary-strong transition-all flex items-center gap-xs justify-center">
+              <span class="material-symbols-outlined text-[20px]">visibility</span>
+              Ver Detalhes
+            </button>
+            <button
+              class="border border-outline-variant text-secondary px-lg py-2 rounded-xl font-bold hover:bg-surface-container transition-all flex items-center gap-xs justify-center">
+              <span class="material-symbols-outlined text-[20px]">edit</span>
+              Editar
+            </button>
+          </div>
+        </div>
+        <!-- Record 5 (Resolved) -->
+        <div
+          class="bg-surface-container-lowest border border-border-soft rounded-xl p-lg bento-card flex items-start justify-between opacity-80">
+          <div class="flex gap-lg">
+            <div
+              class="w-12 h-12 bg-surface-container-low rounded-full flex items-center justify-center text-secondary">
+              <span class="material-symbols-outlined text-[28px]">person</span>
+            </div>
+            <div>
+              <div class="flex items-center gap-sm mb-1">
+                <h3 class="font-title-sm text-on-surface">Rafael Garcia Soares</h3>
+                <span
+                  class="bg-secondary-container text-on-secondary-container text-[10px] px-2 py-0.5 rounded-full font-bold uppercase">Concluído</span>
+              </div>
+              <div class="flex flex-wrap gap-x-gutter gap-y-xs text-secondary text-sm">
+                <span class="flex items-center gap-xs"><span class="material-symbols-outlined text-[16px]">school</span>
+                  7º Ano B</span>
+                <span class="flex items-center gap-xs"><span
+                    class="material-symbols-outlined text-[16px]">calendar_today</span> 19/05/2024</span>
+                <span class="flex items-center gap-xs text-primary font-bold"><span
+                    class="material-symbols-outlined text-[16px]">warning</span> Disciplinar</span>
+              </div>
+              <p class="mt-md text-on-surface-variant text-body-md max-w-2xl leading-relaxed">
+                Uso indevido de aparelhos eletrônicos durante a avaliação de Geografia. Suspensão de 3 dias aplicada
+                conforme regimento escolar.
+              </p>
+            </div>
+          </div>
+          <div class="flex flex-col gap-sm">
+            <button
+              class="border border-primary text-primary px-lg py-2 rounded-xl font-bold hover:bg-primary-soft transition-all flex items-center gap-xs justify-center">
+              <span class="material-symbols-outlined text-[20px]">description</span>
+              Ver Ata
+            </button>
+          </div>
+        </div>
+      </div>
+      <!-- Pagination -->
+      <div class="mt-xxl flex items-center justify-between border-t border-border-soft pt-lg">
+        <p class="text-secondary text-label-sm">Mostrando 5 de 1,248 ocorrências</p>
+        <div class="flex gap-xs">
+          <button
+            class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant text-secondary hover:bg-surface-container transition-all">
+            <span class="material-symbols-outlined">chevron_left</span>
+          </button>
+          <button
+            class="w-10 h-10 flex items-center justify-center rounded-lg bg-primary text-white font-bold">1</button>
+          <button
+            class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant text-secondary hover:bg-surface-container transition-all">2</button>
+          <button
+            class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant text-secondary hover:bg-surface-container transition-all">3</button>
+          <button
+            class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant text-secondary hover:bg-surface-container transition-all">...</button>
+          <button
+            class="w-10 h-10 flex items-center justify-center rounded-lg border border-outline-variant text-secondary hover:bg-surface-container transition-all">
+            <span class="material-symbols-outlined">chevron_right</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+  <!-- Floating Action Button (FAB) -->
+  <div class="fixed bottom-gutter right-gutter md:bottom-xxl md:right-xxl z-50">
+    <button
+      class="w-14 h-14 bg-primary text-white rounded-full shadow-lg flex items-center justify-center hover:scale-110 active:scale-95 transition-all group overflow-hidden">
+      <span class="material-symbols-outlined text-[32px] group-hover:rotate-90 transition-transform">add</span>
+      <div
+        class="absolute right-full mr-4 bg-primary text-white px-4 py-2 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap font-bold shadow-md">
+        Registrar Nova Ocorrência
+      </div>
+    </button>
+  </div>
+</body>
+
+</html>

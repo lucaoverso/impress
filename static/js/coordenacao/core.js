@@ -435,6 +435,15 @@ function ativarAbaCoordenacao(abaId) {
         botao.classList.toggle("is-active", ativa);
         botao.setAttribute("aria-selected", ativa ? "true" : "false");
     });
+    document.querySelectorAll(".suite-sidenav-link[href^='#coord-tab-']").forEach((link) => {
+        const hrefAba = link.getAttribute("href").replace("#coord-tab-", "");
+        link.classList.toggle("is-active", hrefAba === abaId);
+        if (hrefAba === abaId) {
+            link.setAttribute("aria-current", "page");
+        } else {
+            link.removeAttribute("aria-current");
+        }
+    });
     listarPaineisAbasCoord().forEach((painel) => {
         const ativo = painel.dataset.coordTabPanel === abaId;
         painel.hidden = !ativo;
@@ -527,15 +536,17 @@ function atualizarBotaoNovaOcorrencia() {
     if (!botao) return;
 
     const painelAberto = painelFormularioOcorrenciaAberto();
+    const rotulo = botao.querySelector("span") || botao;
     if (!painelAberto) {
-        botao.innerText = "Novo registro";
+        rotulo.innerText = "Novo registro";
     } else if (ocorrenciaEmEdicaoId) {
-        botao.innerText = "Novo registro";
+        rotulo.innerText = "Novo registro";
     } else {
-        botao.innerText = "Ocultar formulário";
+        rotulo.innerText = "Ocultar formulário";
     }
 
     botao.setAttribute("aria-expanded", painelAberto ? "true" : "false");
+    el("btnNovaOcorrenciaFab")?.setAttribute("aria-expanded", painelAberto ? "true" : "false");
 }
 
 function mostrarPainelFormularioOcorrencia({ scroll = false } = {}) {

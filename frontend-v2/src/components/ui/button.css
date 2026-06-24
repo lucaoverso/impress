@@ -1,0 +1,81 @@
+@layer components {
+    .ui-button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: var(--space-2);
+        min-height: var(--layout-control-height);
+        padding: 0 var(--space-4);
+        border: var(--border-default);
+        border-radius: var(--radius-lg);
+        background: var(--color-surface-container-lowest);
+        color: var(--color-on-surface);
+        font-size: var(--type-label-size);
+        font-weight: var(--type-label-weight);
+        line-height: var(--type-label-line);
+        text-decoration: none;
+        white-space: nowrap;
+        transition:
+            background-color var(--transition-fast),
+            border-color var(--transition-fast),
+            color var(--transition-fast),
+            box-shadow var(--transition-fast),
+            transform var(--duration-fast) var(--ease-out);
+    }
+
+    .ui-button:hover {
+        border-color: var(--color-surface-tint);
+        background: var(--color-primary-soft);
+        color: var(--color-primary);
+        text-decoration: none;
+    }
+
+    .ui-button:active {
+        transform: translateY(1px);
+    }
+
+    .ui-button:focus-visible {
+        outline: none;
+        box-shadow: var(--focus-ring);
+    }
+
+    .ui-button:disabled,
+    .ui-button[aria-disabled="true"] {
+        border-color: transparent;
+        background: var(--color-disabled-container);
+        color: var(--color-disabled);
+        transform: none;
+    }
+
+    .ui-button--primary {
+        border-color: var(--color-primary);
+        background: var(--color-primary);
+        color: var(--color-on-primary);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .ui-button--primary:hover {
+        border-color: var(--color-primary-hover);
+        background: var(--color-primary-hover);
+        color: var(--color-on-primary);
+    }
+
+    .ui-button--subtle {
+        border-color: transparent;
+        background: var(--color-primary-soft);
+        color: var(--color-primary);
+    }
+
+    .ui-button--ghost {
+        border-color: transparent;
+        background: transparent;
+        color: var(--color-secondary);
+    }
+
+    .ui-button--danger {
+        border-color: transparent;
+        background: var(--color-error-container);
+        color: var(--color-on-error-container);
+    }
+}
+

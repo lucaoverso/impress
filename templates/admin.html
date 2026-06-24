@@ -11,7 +11,7 @@
 <body>
     {% set navbar_context = "Painel de gestao" %}
     {% set navbar_current = "gestao" %}
-    {% include "includes/app_navbar.html" %}
+    {% include "includes/layout/app_navbar.html" %}
     <main class="admin-page">
         <header class="admin-header admin-header-shell">
             <div class="admin-header-main">
@@ -42,7 +42,7 @@
             <button class="admin-tab-btn" data-admin-tab-trigger="relatorios" aria-controls="tab-relatorios" aria-selected="false" type="button">
                 Relatórios
             </button>
-            {% include "includes/admin_audit_nav.html" %}
+            {% include "includes/features/admin_audit_nav.html" %}
         </nav>
 
         <section class="admin-tab-panels">
@@ -360,7 +360,7 @@
                     </article>
                 </div>
             </section>
-            {% include "includes/admin_audit_panel.html" %}
+            {% include "includes/features/admin_audit_panel.html" %}
         </section>
     </main>
 

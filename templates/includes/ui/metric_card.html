@@ -1,0 +1,24 @@
+{% set metric_label = metric_label | default("") %}
+{% set metric_value = metric_value | default("0") %}
+{% set metric_value_id = metric_value_id | default("") %}
+{% set metric_meta = metric_meta | default("") %}
+{% set metric_meta_id = metric_meta_id | default("") %}
+{% set metric_icon = metric_icon | default("") %}
+{% set metric_variant = metric_variant | default("") %}
+
+<article class="suite-metric-card{% if metric_variant %} is-{{ metric_variant }}{% endif %}">
+    {% if metric_icon %}
+    <span class="suite-metric-card-icon" aria-hidden="true">
+        <i class="bi bi-{{ metric_icon }}"></i>
+    </span>
+    {% endif %}
+    <span class="suite-metric-card-label">{{ metric_label }}</span>
+    <strong{% if metric_value_id %} id="{{ metric_value_id }}"{% endif %} class="suite-metric-card-value">
+        {{ metric_value }}
+    </strong>
+    {% if metric_meta or metric_meta_id %}
+    <span{% if metric_meta_id %} id="{{ metric_meta_id }}"{% endif %} class="suite-metric-card-meta">
+        {{ metric_meta }}
+    </span>
+    {% endif %}
+</article>
