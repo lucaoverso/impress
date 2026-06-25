@@ -56,13 +56,13 @@ class OcorrenciaPdfServiceTest(unittest.TestCase):
         ocorrencia = _ocorrencia_base("Descricao qualquer.")
         ocorrencia["id"] = 1
         ocorrencia["data_ocorrencia"] = "2026-03-10"
-        self.assertEqual(_obter_identificacao_ata(ocorrencia), "ATA Nº 01/2026")
+        self.assertEqual(_obter_identificacao_ata(ocorrencia), "ATA 01/2026")
 
     def test_obtem_identificacao_ata_respeita_numero_explicitado(self):
         ocorrencia = _ocorrencia_base("Descricao qualquer.")
         ocorrencia["numero_ata"] = 27
         ocorrencia["ano_ata"] = "2027"
-        self.assertEqual(_obter_identificacao_ata(ocorrencia), "ATA Nº 27/2027")
+        self.assertEqual(_obter_identificacao_ata(ocorrencia), "ATA 27/2027")
 
     def test_obtem_titulo_assinatura_estudante_respeita_quem_assina(self):
         ocorrencia = _ocorrencia_base("Descricao qualquer.")
@@ -79,6 +79,16 @@ class OcorrenciaPdfServiceTest(unittest.TestCase):
         self.assertEqual(
             _obter_titulo_assinatura_estudante(ocorrencia, plural=True),
             "ASSINATURAS DOS RESPONSÁVEIS",
+        )
+
+        ocorrencia["quem_assina"] = "ambos"
+        self.assertEqual(
+            _obter_titulo_assinatura_estudante(ocorrencia),
+            "Estudante e responsável",
+        )
+        self.assertEqual(
+            _obter_titulo_assinatura_estudante(ocorrencia, plural=True),
+            "ASSINATURAS DOS ESTUDANTES E RESPONSÁVEIS",
         )
 
     def test_gravidade_fica_nula_para_registro_de_professor(self):
@@ -288,6 +298,16 @@ class OcorrenciaPdfServiceTest(unittest.TestCase):
         reader = PdfReader(io.BytesIO(pdf_bytes))
         self.assertEqual(len(reader.pages), 1)
 
+    def test_gera_pdf_valido_com_assinatura_de_estudante_e_responsavel(self):
+        ocorrencia = _ocorrencia_base("Descricao para assinatura conjunta.")
+        ocorrencia["tipo_registro"] = "estudante"
+        ocorrencia["quem_assina"] = "ambos"
+
+        pdf_bytes = gerar_pdf_ocorrencia_registro(ocorrencia, turma={"turno": "MATUTINO"})
+        self.assertTrue(pdf_bytes.startswith(b"%PDF"))
+        reader = PdfReader(io.BytesIO(pdf_bytes))
+        self.assertGreaterEqual(len(reader.pages), 1)
+
     def test_gera_pdf_valido_com_itens_do_regimento(self):
         ocorrencia = _ocorrencia_base("Descricao com apoio do regimento escolar.")
         ocorrencia["regimento_itens"] = [
@@ -343,7 +363,7 @@ class OcorrenciaPdfServiceTest(unittest.TestCase):
         texto = "\n".join((pagina.extract_text() or "") for pagina in reader.pages)
 
         if texto.strip():
-            self.assertIn("ATA Nº 01/2026", texto)
+            self.assertIn("ATA 01/2026", texto)
 
     def test_paginas_adicionais_quando_descricao_ultrapassa_uma_folha(self):
         descricao_longa = " ".join(

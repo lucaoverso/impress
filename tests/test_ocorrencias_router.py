@@ -144,6 +144,53 @@ class OcorrenciasRouterTest(unittest.TestCase):
 
             self.assertEqual(resposta["quem_assina"], "estudante")
 
+    def test_criar_ocorrencia_permite_assinatura_estudante_e_responsavel(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, ocorrencias_router = _reload_modulos(db_path)
+            database.criar_tabelas()
+
+            turma_id = int(database.criar_turma("Turma Ambos Assinam", "MATUTINO", 30))
+            item_id = database.criar_regimento_item(
+                lei_nome="Regimento Interno",
+                artigo_numero="76",
+                artigo_descricao="Dos deveres do estudante.",
+            )
+
+            payload = ocorrencias_router.OcorrenciaCreateIn(
+                tipo_registro="estudante",
+                quem_assina="ambos",
+                nome_estudante="Estudante Com Responsavel",
+                estudante_id=None,
+                turma_id=turma_id,
+                professor_requerente="Professor Teste",
+                professor_requerente_id=None,
+                disciplina="Portugues",
+                data_ocorrencia="2026-03-20",
+                aula="2",
+                horario_ocorrencia="07:30",
+                descricao="Descricao em que estudante e responsavel assinam.",
+                regimento_item_ids=[item_id],
+                acao_aplicada="advertencia",
+                status="registrado",
+            )
+
+            resposta = ocorrencias_router.criar_ocorrencia_api(
+                payload,
+                usuario={"cargo": "ADMIN"},
+            )
+
+            self.assertEqual(resposta["quem_assina"], "ambos")
+
+            conn = database.get_connection()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT quem_assina FROM ocorrencias WHERE id = ?",
+                (int(resposta["id"]),),
+            )
+            self.assertEqual(cursor.fetchone()["quem_assina"], "ambos")
+            conn.close()
+
     def test_criar_registro_individual_de_professor_sem_turma_ou_base_legal(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")

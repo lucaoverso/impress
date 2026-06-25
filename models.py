@@ -913,6 +913,7 @@ TipoRegistroOcorrencia = Literal[
 QuemAssinaOcorrencia = Literal[
     "estudante",
     "responsavel",
+    "ambos",
 ]
 
 

@@ -41,7 +41,10 @@ function obterTurmaOpcaoPorId(turmaId) {
 
 function normalizarQuemAssina(valor) {
     const quemAssina = String(valor || "").trim().toLowerCase();
-    return quemAssina === "estudante" ? "estudante" : "responsavel";
+    if (quemAssina === "estudante" || quemAssina === "ambos") {
+        return quemAssina;
+    }
+    return "responsavel";
 }
 
 function obterQuemAssinaFormulario() {
@@ -55,13 +58,17 @@ function obterQuemAssinaOcorrencia(ocorrencia) {
 }
 
 function rotuloQuemAssina(quemAssina) {
-    return normalizarQuemAssina(quemAssina) === "estudante" ? "Estudante" : "Responsável";
+    const normalizado = normalizarQuemAssina(quemAssina);
+    if (normalizado === "estudante") return "Estudante";
+    if (normalizado === "ambos") return "Estudante e responsável";
+    return "Responsável";
 }
 
 function rotuloAssinaturasQuemAssina(quemAssina) {
-    return normalizarQuemAssina(quemAssina) === "estudante"
-        ? "Assinaturas dos estudantes"
-        : "Assinaturas dos responsáveis";
+    const normalizado = normalizarQuemAssina(quemAssina);
+    if (normalizado === "estudante") return "Assinaturas dos estudantes";
+    if (normalizado === "ambos") return "Assinaturas dos estudantes e responsáveis";
+    return "Assinaturas dos responsáveis";
 }
 
 function obterAnoAtaPreview(ocorrencia, dataOcorrencia) {
@@ -1386,7 +1393,10 @@ function renderizarAssinaturasPreview(tipoRegistro) {
     if (assinaturaIndividual && tipoRegistro === "estudante") {
         const grade = document.createElement("div");
         grade.className = "coordenacao-preview-signature-grid";
-        [rotuloQuemAssina(quemAssina), "Coordenação Pedagógica", "Direção"].forEach((titulo) => {
+        const titulosAssinatura = quemAssina === "ambos"
+            ? ["Estudante", "Responsável", "Coordenação Pedagógica", "Direção"]
+            : [rotuloQuemAssina(quemAssina), "Coordenação Pedagógica", "Direção"];
+        titulosAssinatura.forEach((titulo) => {
             grade.appendChild(criarItem(titulo));
         });
         container.appendChild(grade);

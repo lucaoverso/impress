@@ -43,9 +43,11 @@ TIPOS_REGISTRO_OCORRENCIA = (
 )
 QUEM_ASSINA_OCORRENCIA_ESTUDANTE = "estudante"
 QUEM_ASSINA_OCORRENCIA_RESPONSAVEL = "responsavel"
+QUEM_ASSINA_OCORRENCIA_AMBOS = "ambos"
 QUEM_ASSINA_OCORRENCIA_VALIDOS = (
     QUEM_ASSINA_OCORRENCIA_ESTUDANTE,
     QUEM_ASSINA_OCORRENCIA_RESPONSAVEL,
+    QUEM_ASSINA_OCORRENCIA_AMBOS,
 )
 TIPO_BASE_LEGAL_ARTIGO = "artigo"
 TIPO_BASE_LEGAL_INCISO = "inciso"
@@ -2349,96 +2351,112 @@ def _recriar_tabela_ocorrencias_se_necessario(cursor):
     if sql_tabela:
         sql_tabela_upper = sql_tabela.upper()
         tem_acoes_atualizadas = all(acao in sql_tabela for acao in ACAO_OCORRENCIA_VALIDAS)
+        tem_quem_assina_atualizado = all(
+            quem_assina in sql_tabela for quem_assina in QUEM_ASSINA_OCORRENCIA_VALIDOS
+        )
         tem_tipo_registro = "TIPO_REGISTRO" in sql_tabela_upper
         turma_aceita_nulo = "TURMA_ID INTEGER NOT NULL" not in sql_tabela_upper
-        precisa_recriar = not (tem_acoes_atualizadas and tem_tipo_registro and turma_aceita_nulo)
+        precisa_recriar = not (
+            tem_acoes_atualizadas
+            and tem_quem_assina_atualizado
+            and tem_tipo_registro
+            and turma_aceita_nulo
+        )
 
     if not precisa_recriar:
         return
 
+    conn = cursor.connection
+    conn.commit()
     cursor.execute("PRAGMA foreign_keys = OFF")
-    cursor.execute("DROP TABLE IF EXISTS ocorrencias__tmp")
-    cursor.execute(f"""
-        CREATE TABLE ocorrencias__tmp (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tipo_registro TEXT NOT NULL DEFAULT '{TIPO_REGISTRO_OCORRENCIA_ESTUDANTE}' CHECK (tipo_registro IN {TIPOS_REGISTRO_OCORRENCIA}),
-            nome_estudante TEXT NOT NULL,
-            estudante_id INTEGER,
-            turma_id INTEGER,
-            professor_requerente TEXT NOT NULL,
-            professor_requerente_id INTEGER,
-            disciplina TEXT NOT NULL,
-            data_ocorrencia TEXT NOT NULL,
-            aula TEXT NOT NULL,
-            horario_ocorrencia TEXT NOT NULL,
-            descricao TEXT NOT NULL,
-            quem_assina TEXT CHECK (quem_assina IN {QUEM_ASSINA_OCORRENCIA_VALIDOS} OR quem_assina IS NULL),
-            acao_aplicada TEXT NOT NULL CHECK (acao_aplicada IN {ACAO_OCORRENCIA_VALIDAS}),
-            status TEXT NOT NULL DEFAULT '{STATUS_OCORRENCIA_REGISTRADO}' CHECK (status IN {STATUS_OCORRENCIA_VALIDOS}),
-            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
-            atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
-            FOREIGN KEY(estudante_id) REFERENCES estudantes(id),
-            FOREIGN KEY(turma_id) REFERENCES turmas(id),
-            FOREIGN KEY(professor_requerente_id) REFERENCES usuarios(id)
+    try:
+        cursor.execute("DROP TABLE IF EXISTS ocorrencias__tmp")
+        cursor.execute(f"""
+            CREATE TABLE ocorrencias__tmp (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                tipo_registro TEXT NOT NULL DEFAULT '{TIPO_REGISTRO_OCORRENCIA_ESTUDANTE}' CHECK (tipo_registro IN {TIPOS_REGISTRO_OCORRENCIA}),
+                nome_estudante TEXT NOT NULL,
+                estudante_id INTEGER,
+                turma_id INTEGER,
+                professor_requerente TEXT NOT NULL,
+                professor_requerente_id INTEGER,
+                disciplina TEXT NOT NULL,
+                data_ocorrencia TEXT NOT NULL,
+                aula TEXT NOT NULL,
+                horario_ocorrencia TEXT NOT NULL,
+                descricao TEXT NOT NULL,
+                quem_assina TEXT CHECK (quem_assina IN {QUEM_ASSINA_OCORRENCIA_VALIDOS} OR quem_assina IS NULL),
+                acao_aplicada TEXT NOT NULL CHECK (acao_aplicada IN {ACAO_OCORRENCIA_VALIDAS}),
+                status TEXT NOT NULL DEFAULT '{STATUS_OCORRENCIA_REGISTRADO}' CHECK (status IN {STATUS_OCORRENCIA_VALIDOS}),
+                criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+                atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
+                FOREIGN KEY(estudante_id) REFERENCES estudantes(id),
+                FOREIGN KEY(turma_id) REFERENCES turmas(id),
+                FOREIGN KEY(professor_requerente_id) REFERENCES usuarios(id)
+            )
+        """)
+        cursor.execute(
+            f"""
+            INSERT INTO ocorrencias__tmp (
+                id,
+                tipo_registro,
+                nome_estudante,
+                estudante_id,
+                turma_id,
+                professor_requerente,
+                professor_requerente_id,
+                disciplina,
+                data_ocorrencia,
+                aula,
+                horario_ocorrencia,
+                descricao,
+                quem_assina,
+                acao_aplicada,
+                status,
+                criado_em,
+                atualizado_em
+            )
+            SELECT
+                id,
+                CASE
+                    WHEN TRIM(COALESCE(tipo_registro, '')) IN {TIPOS_REGISTRO_OCORRENCIA}
+                        THEN TRIM(tipo_registro)
+                    ELSE '{TIPO_REGISTRO_OCORRENCIA_ESTUDANTE}'
+                END,
+                COALESCE(nome_estudante, ''),
+                estudante_id,
+                turma_id,
+                COALESCE(professor_requerente, ''),
+                professor_requerente_id,
+                COALESCE(disciplina, ''),
+                COALESCE(data_ocorrencia, ''),
+                COALESCE(aula, ''),
+                COALESCE(horario_ocorrencia, ''),
+                COALESCE(descricao, ''),
+                CASE
+                    WHEN TRIM(COALESCE(quem_assina, '')) IN {QUEM_ASSINA_OCORRENCIA_VALIDOS}
+                        THEN TRIM(quem_assina)
+                    ELSE NULL
+                END,
+                CASE
+                    WHEN TRIM(COALESCE(acao_aplicada, '')) = '' THEN 'registro_informativo'
+                    ELSE TRIM(acao_aplicada)
+                END,
+                COALESCE(status, ?),
+                COALESCE(criado_em, datetime('now')),
+                COALESCE(atualizado_em, datetime('now'))
+            FROM ocorrencias
+        """,
+            (STATUS_OCORRENCIA_REGISTRADO,),
         )
-    """)
-    cursor.execute(
-        """
-        INSERT INTO ocorrencias__tmp (
-            id,
-            tipo_registro,
-            nome_estudante,
-            estudante_id,
-            turma_id,
-            professor_requerente,
-            professor_requerente_id,
-            disciplina,
-            data_ocorrencia,
-            aula,
-            horario_ocorrencia,
-            descricao,
-            quem_assina,
-            acao_aplicada,
-            status,
-            criado_em,
-            atualizado_em
-        )
-        SELECT
-            id,
-            CASE
-                WHEN TRIM(COALESCE(tipo_registro, '')) IN {TIPOS_REGISTRO_OCORRENCIA}
-                    THEN TRIM(tipo_registro)
-                ELSE '{TIPO_REGISTRO_OCORRENCIA_ESTUDANTE}'
-            END,
-            COALESCE(nome_estudante, ''),
-            estudante_id,
-            turma_id,
-            COALESCE(professor_requerente, ''),
-            professor_requerente_id,
-            COALESCE(disciplina, ''),
-            COALESCE(data_ocorrencia, ''),
-            COALESCE(aula, ''),
-            COALESCE(horario_ocorrencia, ''),
-            COALESCE(descricao, ''),
-            CASE
-                WHEN TRIM(COALESCE(quem_assina, '')) IN {QUEM_ASSINA_OCORRENCIA_VALIDOS}
-                    THEN TRIM(quem_assina)
-                ELSE NULL
-            END,
-            CASE
-                WHEN TRIM(COALESCE(acao_aplicada, '')) = '' THEN 'registro_informativo'
-                ELSE TRIM(acao_aplicada)
-            END,
-            COALESCE(status, ?),
-            COALESCE(criado_em, datetime('now')),
-            COALESCE(atualizado_em, datetime('now'))
-        FROM ocorrencias
-    """,
-        (STATUS_OCORRENCIA_REGISTRADO,),
-    )
-    cursor.execute("DROP TABLE ocorrencias")
-    cursor.execute("ALTER TABLE ocorrencias__tmp RENAME TO ocorrencias")
-    cursor.execute("PRAGMA foreign_keys = ON")
+        cursor.execute("DROP TABLE ocorrencias")
+        cursor.execute("ALTER TABLE ocorrencias__tmp RENAME TO ocorrencias")
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        cursor.execute("PRAGMA foreign_keys = ON")
 
 
 def _codificar_regimento_item_id(tipo: str, entidade_id: int) -> int:
