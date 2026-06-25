@@ -4,6 +4,7 @@ import unittest
 from pypdf import PdfReader
 
 from services.ocorrencia_pdf_service import (
+    _formatar_aula,
     _montar_blocos_base_legal,
     _obter_identificacao_ata,
     _obter_runs_descricao_formatada,
@@ -63,6 +64,13 @@ class OcorrenciaPdfServiceTest(unittest.TestCase):
         ocorrencia["numero_ata"] = 27
         ocorrencia["ano_ata"] = "2027"
         self.assertEqual(_obter_identificacao_ata(ocorrencia), "ATA 27/2027")
+
+    def test_formata_aula_do_pdf_sem_exibir_faixa_global(self):
+        ocorrencia = _ocorrencia_base("Descricao qualquer.")
+        ocorrencia["aula"] = "7"
+
+        self.assertEqual(_formatar_aula(ocorrencia, {"turno": "INTEGRAL"}), "6ª aula")
+        self.assertEqual(_formatar_aula(ocorrencia, {"turno": "VESPERTINO"}), "2ª aula")
 
     def test_obtem_titulo_assinatura_estudante_respeita_quem_assina(self):
         ocorrencia = _ocorrencia_base("Descricao qualquer.")

@@ -374,19 +374,19 @@ def _formatar_aula(ocorrencia: dict, turma: dict | None) -> str:
     turno = str((turma or {}).get("turno") or "").strip().upper()
     offset = OFFSET_TURNO.get(turno)
     if offset is None:
-        return f"Faixa {faixa}"
+        return f"{faixa}ª aula"
 
     if turno == "INTEGRAL":
         if 1 <= faixa <= 5:
-            return f"{faixa}ª aula (faixa {faixa})"
+            return f"{faixa}ª aula"
         if faixa >= 7:
-            return f"{faixa - 1}ª aula (faixa {faixa})"
-        return f"Faixa {faixa}"
+            return f"{faixa - 1}ª aula"
+        return f"{faixa}ª aula"
 
     aula_turno = faixa - offset
     if aula_turno > 0:
-        return f"{aula_turno}ª aula (faixa {faixa})"
-    return f"Faixa {faixa}"
+        return f"{aula_turno}ª aula"
+    return f"{faixa}ª aula"
 
 
 def _obter_tipo_registro(ocorrencia: dict) -> str:
@@ -930,6 +930,10 @@ class _RenderizadorRegistroOcorrencia:
     def limite_corpo(self) -> int:
         return self.altura - MARGEM_BASE - self._reserva_rodape()
 
+    @property
+    def limite_pagina_util(self) -> int:
+        return self.altura - MARGEM_BASE
+
     def _nova_pagina(self, *, continuacao: bool):
         pagina = Image.new("RGB", A4_RETRATO_PIXELS_300_DPI, COR_FUNDO)
         draw = ImageDraw.Draw(pagina)
@@ -1065,8 +1069,9 @@ class _RenderizadorRegistroOcorrencia:
                 linhas.append(atual)
         return linhas or [""]
 
-    def _garantir_espaco(self, altura_necessaria: int):
-        if self.y + altura_necessaria <= self.limite_corpo:
+    def _garantir_espaco(self, altura_necessaria: int, *, reservar_rodape: bool = True):
+        limite = self.limite_corpo if reservar_rodape else self.limite_pagina_util
+        if self.y + altura_necessaria <= limite:
             return
         self._nova_pagina(continuacao=True)
 
@@ -1104,7 +1109,7 @@ class _RenderizadorRegistroOcorrencia:
         self.y += ALTURA_AREA_REGIMENTO + 18
 
     def _adicionar_secao_regimento(self, itens: list[dict]):
-        self._adicionar_titulo_secao(SECAO_REGIMENTO)
+        self._adicionar_titulo_secao(SECAO_REGIMENTO, reservar_rodape=False)
         blocos = _montar_blocos_base_legal(itens)
         for indice, bloco in enumerate(blocos):
             tipo = str(bloco.get("tipo") or "").strip().lower()
@@ -1113,20 +1118,43 @@ class _RenderizadorRegistroOcorrencia:
                 continue
 
             if tipo == "lei":
-                self._adicionar_paragrafos(texto, fonte=self.fontes.pequeno_bold, espaco_final=4)
+                self._adicionar_paragrafos(
+                    texto,
+                    fonte=self.fontes.pequeno_bold,
+                    espaco_final=4,
+                    reservar_rodape=False,
+                )
                 self._adicionar_espaco(4)
             elif tipo == "artigo":
-                self._adicionar_paragrafos(texto, fonte=self.fontes.pequeno_bold, espaco_final=2)
+                self._adicionar_paragrafos(
+                    texto,
+                    fonte=self.fontes.pequeno_bold,
+                    espaco_final=2,
+                    reservar_rodape=False,
+                )
             elif tipo == "inciso":
                 self._adicionar_paragrafos(
-                    texto, fonte=self.fontes.pequeno, recuo=RECUO_INCISO, espaco_final=2
+                    texto,
+                    fonte=self.fontes.pequeno,
+                    recuo=RECUO_INCISO,
+                    espaco_final=2,
+                    reservar_rodape=False,
                 )
             elif tipo == "alinea":
                 self._adicionar_paragrafos(
-                    texto, fonte=self.fontes.pequeno, recuo=RECUO_ALINEA, espaco_final=2
+                    texto,
+                    fonte=self.fontes.pequeno,
+                    recuo=RECUO_ALINEA,
+                    espaco_final=2,
+                    reservar_rodape=False,
                 )
             else:
-                self._adicionar_paragrafos(texto, fonte=self.fontes.pequeno, espaco_final=2)
+                self._adicionar_paragrafos(
+                    texto,
+                    fonte=self.fontes.pequeno,
+                    espaco_final=2,
+                    reservar_rodape=False,
+                )
 
             proximo_tipo = (
                 str(blocos[indice + 1].get("tipo") or "").strip().lower()
@@ -1250,7 +1278,7 @@ class _RenderizadorRegistroOcorrencia:
         linhas = [
             ((rotulo_referencia, referencia), None),
             ((rotulo_contexto, contexto), ("Data", data)),
-            (("Professor requerente", professor), ("Aula", aula)),
+            (("Requerente", professor), ("Aula", aula)),
             ((rotulo_assunto, disciplina), ("Horário", horario)),
         ]
 
@@ -1299,9 +1327,9 @@ class _RenderizadorRegistroOcorrencia:
             )
             self.y += altura_linha
 
-    def _adicionar_titulo_secao(self, texto: str):
+    def _adicionar_titulo_secao(self, texto: str, *, reservar_rodape: bool = True):
         altura = self._altura_linha(self.fontes.secao, fator=1.2)
-        self._garantir_espaco(altura + 18)
+        self._garantir_espaco(altura + 18, reservar_rodape=reservar_rodape)
         largura, _ = self._medir_texto(texto, self.fontes.secao)
         self.draw.text(
             ((self.largura - largura) / 2, self.y),
@@ -1320,6 +1348,7 @@ class _RenderizadorRegistroOcorrencia:
         recuo: int = 0,
         espaco_final: int = 8,
         justificar: bool = False,
+        reservar_rodape: bool = True,
     ):
         x_inicio = self.esquerda + max(0, int(recuo))
         largura_disponivel = self.direita - x_inicio
@@ -1332,7 +1361,7 @@ class _RenderizadorRegistroOcorrencia:
                 linhas[0] = linhas[0]
 
             for indice_linha, linha in enumerate(linhas):
-                self._garantir_espaco(altura_linha + 2)
+                self._garantir_espaco(altura_linha + 2, reservar_rodape=reservar_rodape)
                 self._desenhar_linha_paragrafo(
                     linha,
                     fonte,
