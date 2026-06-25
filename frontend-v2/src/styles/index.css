@@ -8,4 +8,5 @@
 @import "../components/layout/side-nav.css";
 @import "../components/layout/top-nav.css";
 @import "../components/layout/stepper.css";
+@import "../components/features/scheduling/booking-flow.css";
 @import "./utilities.css";

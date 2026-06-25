@@ -1,0 +1,149 @@
+@layer templates {
+    .agendamento-template .app-shell__content {
+        background: var(--color-background);
+    }
+
+    .agendamento-page {
+        padding-top: var(--space-8);
+        padding-bottom: var(--space-12);
+    }
+
+    .agendamento-page__inner {
+        display: grid;
+        gap: var(--space-5);
+        width: min(100%, 78rem);
+        margin-inline: auto;
+    }
+
+    .agendamento-hero {
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        gap: var(--space-4);
+    }
+
+    .agendamento-hero__copy {
+        display: grid;
+        gap: var(--space-2);
+    }
+
+    .agendamento-hero h1 {
+        color: var(--color-primary);
+    }
+
+    .agendamento-hero p {
+        color: var(--color-secondary);
+        max-width: 64ch;
+    }
+
+    .agendamento-hero__meta {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: var(--space-2);
+        color: var(--color-secondary);
+        font-size: var(--type-label-size);
+        line-height: var(--type-label-line);
+    }
+
+    .agendamento-hero__meta span {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-1);
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-full);
+        background: var(--color-surface-container-lowest);
+        border: var(--border-subtle);
+        box-shadow: var(--shadow-xs);
+        white-space: nowrap;
+    }
+
+    .agendamento-hero__meta strong {
+        color: var(--color-primary);
+    }
+
+    .agendamento-panel-view {
+        display: grid;
+        gap: var(--space-4);
+    }
+
+    .agendamento-panel-view[hidden] {
+        display: none;
+    }
+
+    .agendamento-inline-note,
+    .agendamento-section-copy,
+    .agendamento-panel-header p,
+    .agendamento-history__item p {
+        color: var(--color-secondary);
+    }
+
+    .agendamento-history,
+    .agendamento-resources {
+        display: grid;
+        gap: var(--space-4);
+        padding: var(--space-5);
+    }
+
+    .agendamento-panel-header {
+        display: grid;
+        gap: var(--space-2);
+    }
+
+    .agendamento-history__list {
+        display: grid;
+        gap: var(--space-3);
+    }
+
+    .agendamento-history__item {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: var(--space-4);
+        padding: var(--space-4);
+        border: var(--border-subtle);
+        border-radius: var(--radius-xl);
+        background: var(--color-surface-container-low);
+    }
+
+    .agendamento-history__item h3 {
+        font-size: var(--type-title-size);
+        line-height: var(--type-title-line);
+    }
+
+    .agendamento-history__meta {
+        display: grid;
+        gap: var(--space-2);
+        justify-items: end;
+        color: var(--color-secondary);
+        font-size: var(--type-caption-size);
+        line-height: var(--type-caption-line);
+        white-space: nowrap;
+    }
+
+    @media (max-width: 64rem) {
+        .agendamento-hero {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .agendamento-hero__meta {
+            justify-content: flex-start;
+        }
+    }
+
+    @media (max-width: 40rem) {
+        .agendamento-history,
+        .agendamento-resources {
+            padding: var(--space-4);
+        }
+
+        .agendamento-history__item {
+            flex-direction: column;
+        }
+
+        .agendamento-history__meta {
+            justify-items: start;
+        }
+    }
+}

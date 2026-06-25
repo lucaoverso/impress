@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Suite Escolar - Agendamento de Recursos</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&amp;family=Material+Symbols+Outlined:wght@400&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../src/styles/index.css">
+    <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+    <div class="app-shell app-shell--with-sidebar agendamento-template">
+        <aside class="side-navbar" aria-label="Navegação do módulo de agendamento">
+            <div class="side-navbar__brand">
+                <span class="side-navbar__brand-mark" aria-hidden="true">SE</span>
+                <div class="side-navbar__brand-copy">
+                    <strong class="side-navbar__title">Suite Escolar</strong>
+                    <span class="side-navbar__context">Módulo de agendamento</span>
+                </div>
+            </div>
+
+            <nav class="side-navbar__body" aria-label="Ações do módulo">
+                <section class="side-navbar__section">
+                    <div class="side-navbar__section-head">
+                        <span class="side-navbar__section-title">Agendamento</span>
+                        <span class="side-navbar__section-description">Recursos e reservas</span>
+                    </div>
+                    <div class="side-navbar__links">
+                        <a class="side-navbar__link is-active" href="#calendario" aria-current="page">
+                            <span class="ui-icon" aria-hidden="true">calendar_month</span>
+                            <span class="side-navbar__label">Novo agendamento</span>
+                        </a>
+                        <a class="side-navbar__link" href="#historico">
+                            <span class="ui-icon" aria-hidden="true">history</span>
+                            <span class="side-navbar__label">Histórico</span>
+                        </a>
+                        <a class="side-navbar__link" href="#recursos">
+                            <span class="ui-icon" aria-hidden="true">inventory_2</span>
+                            <span class="side-navbar__label">Recursos</span>
+                        </a>
+                    </div>
+                </section>
+
+                <a class="ui-button ui-button--primary side-navbar__primary-action" href="#calendario" data-side-nav-primary>
+                    <span class="ui-icon" aria-hidden="true">add_circle</span>
+                    <span>Agendar recurso</span>
+                </a>
+            </nav>
+
+            <div class="side-navbar__footer">
+                <button class="side-navbar__logout" type="button" data-app-logout>
+                    <span class="ui-icon" aria-hidden="true">logout</span>
+                    <span class="side-navbar__label">Sair</span>
+                </button>
+            </div>
+        </aside>
+
+        <main class="app-shell__content">
+            <header class="top-navbar">
+                <form class="top-navbar__search" role="search" data-top-navbar-search>
+                    <label class="top-navbar__search-field">
+                        <span class="ui-icon" aria-hidden="true">search</span>
+                        <span class="sr-only">Pesquisar recurso ou reserva</span>
+                        <input
+                            class="top-navbar__search-input"
+                            type="search"
+                            name="q"
+                            autocomplete="off"
+                            placeholder="Buscar recurso, professor ou reserva..."
+                            data-top-navbar-search-input
+                        >
+                    </label>
+                </form>
+
+                <div class="top-navbar__actions">
+                    <button class="top-navbar__icon-button" type="button" aria-label="Abrir notificacoes" data-top-navbar-notifications>
+                        <span class="ui-icon" aria-hidden="true">notifications</span>
+                        <span class="top-navbar__indicator" aria-hidden="true"></span>
+                    </button>
+                    <button class="top-navbar__icon-button" type="button" aria-label="Abrir calendario institucional" data-top-navbar-calendar>
+                        <span class="ui-icon" aria-hidden="true">calendar_today</span>
+                    </button>
+                    <span class="top-navbar__divider" aria-hidden="true"></span>
+                    <button class="top-navbar__profile" type="button" aria-label="Abrir perfil do usuario" data-top-navbar-profile>
+                        <span class="top-navbar__profile-copy">
+                            <strong class="top-navbar__profile-name">Profa. Ana Paula</strong>
+                            <span class="top-navbar__profile-role">Coordenacao pedagogica</span>
+                        </span>
+                        <span class="top-navbar__avatar" aria-hidden="true">AP</span>
+                    </button>
+                </div>
+            </header>
+
+            <section class="app-shell__page agendamento-page" aria-label="Agendamento de recursos">
+                <div class="agendamento-page__inner">
+                    <section id="calendario" class="agendamento-panel-view is-active" aria-label="Fluxo de novo agendamento">
+                        <div class="booking-flow" data-booking-flow>
+                            <div class="booking-stage" data-booking-stage>
+                                <div class="booking-stage__breadcrumbs" hidden data-booking-stage-breadcrumbs></div>
+                                <div class="booking-stage__copy" data-booking-stage-copy>
+                                    <h2 class="booking-stage__title" data-booking-stage-title>Agendar Equipamento</h2>
+                                    <p class="booking-stage__subtitle" data-booking-stage-subtitle>Selecione o equipamento que deseja reservar.</p>
+                                </div>
+                            </div>
+
+                            <ol class="stepper booking-flow__stepper" aria-label="Progresso do agendamento" data-booking-stepper hidden>
+                                <li class="stepper__item" data-stepper-item="1" aria-current="step">
+                                    <span class="stepper__marker">1</span>
+                                    <span class="stepper__label">Equipamento</span>
+                                </li>
+                                <li class="stepper__item is-upcoming" data-stepper-item="2">
+                                    <span class="stepper__marker">2</span>
+                                    <span class="stepper__label">Horário</span>
+                                </li>
+                                <li class="stepper__item is-upcoming" data-stepper-item="3">
+                                    <span class="stepper__marker">3</span>
+                                    <span class="stepper__label">Detalhes</span>
+                                </li>
+                                <li class="stepper__item is-upcoming" data-stepper-item="4">
+                                    <span class="stepper__marker">4</span>
+                                    <span class="stepper__label">Revisão</span>
+                                </li>
+                            </ol>
+
+                            <p class="booking-flow__feedback" aria-live="polite" hidden data-booking-feedback></p>
+
+                            <section class="booking-step-panel" data-booking-step-panel="1">
+                                <div class="booking-resource-grid" role="radiogroup" aria-label="Equipamentos disponiveis">
+                                    <label class="booking-resource-card">
+                                        <input class="booking-resource-card__control" type="radio" name="equipment" value="projector" checked data-equipment-control>
+                                        <span class="ui-badge ui-badge--success booking-resource-card__status">Disponível</span>
+                                        <span class="ui-icon booking-resource-card__icon" aria-hidden="true">videocam</span>
+                                        <span class="booking-resource-card__title">Projetor</span>
+                                        <span class="booking-resource-card__description">Projetores multimídia Epson e BenQ para sala de aula.</span>
+                                    </label>
+
+                                    <label class="booking-resource-card">
+                                        <input class="booking-resource-card__control" type="radio" name="equipment" value="notebook" data-equipment-control>
+                                        <span class="ui-badge ui-badge--success booking-resource-card__status">Disponível</span>
+                                        <span class="ui-icon booking-resource-card__icon" aria-hidden="true">laptop_mac</span>
+                                        <span class="booking-resource-card__title">Notebook</span>
+                                        <span class="booking-resource-card__description">Notebooks Dell com Windows 10 para uso dos professores.</span>
+                                    </label>
+
+                                    <label class="booking-resource-card">
+                                        <input class="booking-resource-card__control" type="radio" name="equipment" value="speaker" data-equipment-control>
+                                        <span class="ui-badge ui-badge--warning booking-resource-card__status">Limitado</span>
+                                        <span class="ui-icon booking-resource-card__icon" aria-hidden="true">speaker</span>
+                                        <span class="booking-resource-card__title">Caixa de Som</span>
+                                        <span class="booking-resource-card__description">Caixas de som amplificadas portáteis com Bluetooth.</span>
+                                    </label>
+
+                                    <label class="booking-resource-card">
+                                        <input class="booking-resource-card__control" type="radio" name="equipment" value="lab" data-equipment-control>
+                                        <span class="ui-badge ui-badge--success booking-resource-card__status">Disponível</span>
+                                        <span class="ui-icon booking-resource-card__icon" aria-hidden="true">devices</span>
+                                        <span class="booking-resource-card__title">Laboratório Móvel</span>
+                                        <span class="booking-resource-card__description">Carrinho com 30 tablets para uso em sala de aula.</span>
+                                    </label>
+                                </div>
+
+                                <section class="booking-surface">
+                                    <header class="booking-surface__header">
+                                        <div>
+                                            <h2 class="booking-surface__title" data-booking-day-title>Agendamentos do Dia - 07 de Outubro</h2>
+                                        </div>
+                                    </header>
+
+                                    <div class="booking-day-board" data-booking-day-board></div>
+                                </section>
+                            </section>
+
+                            <section class="booking-step-panel" data-booking-step-panel="2" hidden>
+                                <div class="booking-scheduler">
+                                    <section class="booking-surface booking-calendar">
+                                        <header class="booking-surface__header">
+                                            <div>
+                                                <h2 class="booking-surface__title">Selecione a data</h2>
+                                                <p class="booking-surface__subtitle">Use o calendário para encontrar um dia útil com disponibilidade e depois escolha um horário.</p>
+                                            </div>
+                                        </header>
+
+                                        <div class="booking-calendar__toolbar">
+                                            <h3 class="booking-calendar__month" data-calendar-month>Outubro 2026</h3>
+                                            <div class="booking-calendar__nav">
+                                                <button class="ui-button ui-button--ghost" type="button" aria-label="Mes anterior" data-calendar-nav="prev">
+                                                    <span class="ui-icon" aria-hidden="true">chevron_left</span>
+                                                </button>
+                                                <button class="ui-button ui-button--ghost" type="button" aria-label="Proximo mes" data-calendar-nav="next">
+                                                    <span class="ui-icon" aria-hidden="true">chevron_right</span>
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div class="booking-calendar__weekdays" aria-hidden="true">
+                                            <span>Dom</span>
+                                            <span>Seg</span>
+                                            <span>Ter</span>
+                                            <span>Qua</span>
+                                            <span>Qui</span>
+                                            <span>Sex</span>
+                                            <span>Sab</span>
+                                        </div>
+
+                                        <div class="booking-calendar__grid" data-calendar-grid></div>
+                                    </section>
+
+                                    <section class="booking-surface">
+                                        <header class="booking-surface__header">
+                                            <div>
+                                                <h2 class="booking-surface__title" data-booking-slot-title>Horários para 07 de Outubro</h2>
+                                            </div>
+                                        </header>
+
+                                        <p class="booking-slot-context"><span data-booking-slot-equipment>Projetor</span> - Sala dos Professores</p>
+
+                                        <div class="booking-slot-groups" data-booking-slot-groups></div>
+                                    </section>
+                                </div>
+                            </section>
+
+                            <section class="booking-step-panel" data-booking-step-panel="3" hidden>
+                                <section class="booking-surface">
+                                    <header class="booking-surface__header">
+                                        <div>
+                                            <h2 class="booking-surface__title">Detalhes do agendamento</h2>
+                                            <p class="booking-surface__subtitle">Preencha a descrição da aula e selecione apenas os recursos complementares necessários.</p>
+                                        </div>
+                                    </header>
+
+                                    <div class="booking-form-grid">
+                                        <label class="ui-field">
+                                            <span class="ui-label">Descrição da aula</span>
+                                            <textarea
+                                                class="ui-textarea"
+                                                id="bookingDescription"
+                                                name="description"
+                                                rows="4"
+                                                placeholder="Ex: Aula prática de biologia celular para o 1º ano B."
+                                                data-booking-description
+                                            ></textarea>
+                                            <span class="ui-field__hint">Esse campo aparece no resumo antes da confirmação.</span>
+                                        </label>
+
+                                        <label class="ui-field">
+                                            <span class="ui-label">Observações <span class="agendamento-inline-note">(opcional)</span></span>
+                                            <textarea
+                                                class="ui-textarea"
+                                                id="bookingNotes"
+                                                name="notes"
+                                                rows="3"
+                                                placeholder="Ex: Por favor, deixar a bateria totalmente carregada."
+                                                data-booking-notes
+                                            ></textarea>
+                                        </label>
+                                    </div>
+
+                                    <div class="booking-checklist">
+                                        <div>
+                                            <h3>Recursos adicionais</h3>
+                                            <p class="agendamento-section-copy">Itens opcionais do arquivo de referência, agora apresentados como uma checklist clara e reutilizável.</p>
+                                        </div>
+
+                                        <div class="booking-checklist__list">
+                                            <label class="booking-check">
+                                                <input type="checkbox" name="extras" value="hdmi" data-booking-extra data-extra-label="Adaptador HDMI">
+                                                <span class="ui-icon booking-check__icon" aria-hidden="true">settings_input_hdmi</span>
+                                                <span class="booking-check__copy">
+                                                    <strong>Adaptador HDMI</strong>
+                                                    <span>Ideal para projetores e televisores da sala multimídia.</span>
+                                                </span>
+                                            </label>
+
+                                            <label class="booking-check">
+                                                <input type="checkbox" name="extras" value="extension" data-booking-extra data-extra-label="Extensao eletrica">
+                                                <span class="ui-icon booking-check__icon" aria-hidden="true">electrical_services</span>
+                                                <span class="booking-check__copy">
+                                                    <strong>Extensão Elétrica</strong>
+                                                    <span>Extensão de apoio para disposição flexível dos equipamentos.</span>
+                                                </span>
+                                            </label>
+
+                                            <label class="booking-check">
+                                                <input type="checkbox" name="extras" value="speaker-small" data-booking-extra data-extra-label="Caixa de Som Pequena">
+                                                <span class="ui-icon booking-check__icon" aria-hidden="true">speaker</span>
+                                                <span class="booking-check__copy">
+                                                    <strong>Caixa de Som Pequena</strong>
+                                                    <span>Conexão P2/Bluetooth para atividades de menor porte.</span>
+                                                </span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </section>
+                            </section>
+
+                            <section class="booking-step-panel" data-booking-step-panel="4" hidden>
+                                <section class="booking-surface booking-review">
+                                    <div class="booking-review__intro">
+                                        <h2 class="booking-review__title">Revisão do Agendamento</h2>
+                                        <p class="booking-review__subtitle">Verifique as informações antes de confirmar sua reserva.</p>
+                                    </div>
+
+                                    <div class="booking-review__grid">
+                                        <section class="booking-review__section">
+                                            <h3>Recurso selecionado</h3>
+                                            <div class="booking-review__resource-card">
+                                                <div class="booking-review__resource-media">
+                                                    <img
+                                                        src="https://lh3.googleusercontent.com/aida-public/AB6AXuCyGpAUjWraWLSg1qml_ijT0pTT6XoQGv-7SLOzFVjWtn39oBXBIaVSsmWqCMNQf8-3Wsr_u38FR4tzROw2iLBs41jdpAqKzeuA3_9_QkOM83jesPzI3FEKTzFLZqiXuj6uDkcyMeYJZ8f2pI-k1uGssX9BGFis_5faN1Qm-baFFsBeNb_IaYB0PnqQkLzMFfW9y1eTEF-ySJqOsd6SDXYjsc6Ebq4cKB1QfXakH34C62Ena0IOIqdxdaFz9oS3QfgzH-KLiRsIaoml"
+                                                        alt="Projetor selecionado"
+                                                    >
+                                                </div>
+                                                <div class="booking-review__resource-copy">
+                                                    <strong data-review-equipment>Projetor Multimídia Epson</strong>
+                                                    <span data-review-equipment-status>Disponível</span>
+                                                </div>
+                                            </div>
+                                        </section>
+
+                                        <section class="booking-review__section">
+                                            <h3>Data e horario</h3>
+                                            <div class="booking-review__date-card">
+                                                <div class="booking-review__date-badge">
+                                                    <span data-review-month>OUT</span>
+                                                    <strong data-review-day>07</strong>
+                                                </div>
+                                                <div class="booking-review__date-copy">
+                                                    <strong data-review-date>07 de Outubro</strong>
+                                                    <span data-review-weekday>Segunda-feira</span>
+                                                </div>
+                                            </div>
+                                            <div class="booking-review__time-pill">
+                                                <span class="ui-icon" aria-hidden="true">schedule</span>
+                                                <span data-review-slot>2ª aula (07:50 - 08:40)</span>
+                                            </div>
+                                        </section>
+
+                                        <section class="booking-review__section">
+                                            <h3>Recursos adicionais</h3>
+                                            <div class="booking-review__extras" data-review-extras>
+                                                <span class="booking-review__note">Nenhum recurso adicional selecionado.</span>
+                                            </div>
+                                        </section>
+
+                                        <section class="booking-review__section booking-review__section--details">
+                                            <h3>Detalhes da aula</h3>
+                                            <dl class="booking-review__list">
+                                                <div class="booking-review__row">
+                                                    <dt>Descrição</dt>
+                                                    <dd data-review-description>Aguardando preenchimento.</dd>
+                                                </div>
+                                                <div class="booking-review__row">
+                                                    <dt>Observações</dt>
+                                                    <dd data-review-notes>Sem observacoes adicionais.</dd>
+                                                </div>
+                                            </dl>
+                                        </section>
+                                    </div>
+                                </section>
+                            </section>
+
+                            <footer class="booking-flow__actions">
+                                <button class="ui-button" type="button" data-booking-back hidden>Voltar</button>
+                                <span class="booking-flow__actions-spacer" aria-hidden="true"></span>
+                                <button class="ui-button ui-button--primary" type="button" data-booking-next>Próximo Passo</button>
+                            </footer>
+                        </div>
+                    </section>
+
+                    <section id="historico" class="agendamento-panel-view" aria-label="Histórico de reservas" hidden>
+                        <div class="agendamento-history surface-card">
+                            <header class="agendamento-panel-header">
+                                <div>
+                                    <h2>Histórico de reservas</h2>
+                                    <p>Visão rápida para a navegação lateral do módulo, usando a mesma linguagem visual do fluxo principal.</p>
+                                </div>
+                            </header>
+
+                            <div class="agendamento-history__list">
+                                <article class="agendamento-history__item">
+                                    <div>
+                                        <h3>Projetor • Sala de tecnologia</h3>
+                                        <p>Reservado por Profa. Ana Paula para aula de ciências.</p>
+                                    </div>
+                                    <div class="agendamento-history__meta">
+                                        <span>05/10/2026</span>
+                                        <span class="ui-badge ui-badge--success">Concluído</span>
+                                    </div>
+                                </article>
+
+                                <article class="agendamento-history__item">
+                                    <div>
+                                        <h3>Laboratório móvel • 1º ano B</h3>
+                                        <p>Uso em sequência didática com tablets e atividades colaborativas.</p>
+                                    </div>
+                                    <div class="agendamento-history__meta">
+                                        <span>29/09/2026</span>
+                                        <span class="ui-badge ui-badge--info">Confirmado</span>
+                                    </div>
+                                </article>
+
+                                <article class="agendamento-history__item">
+                                    <div>
+                                        <h3>Caixa de som • Pátio coberto</h3>
+                                        <p>Solicitação com apoio de microfone sem fio para evento interno.</p>
+                                    </div>
+                                    <div class="agendamento-history__meta">
+                                        <span>27/09/2026</span>
+                                        <span class="ui-badge ui-badge--warning">Limitado</span>
+                                    </div>
+                                </article>
+                            </div>
+                        </div>
+                    </section>
+
+                    <section id="recursos" class="agendamento-panel-view" aria-label="Catálogo de recursos" hidden>
+                        <div class="agendamento-resources surface-card">
+                            <header class="agendamento-panel-header">
+                                <div>
+                                    <h2>Catálogo de recursos</h2>
+                                    <p>Resumo visual do acervo que alimenta o fluxo de agendamento.</p>
+                                </div>
+                            </header>
+
+                            <div class="booking-resource-grid">
+                                <article class="booking-resource-card booking-resource-card--static">
+                                    <span class="ui-badge ui-badge--success booking-resource-card__status">Disponível</span>
+                                    <span class="ui-icon booking-resource-card__icon" aria-hidden="true">videocam</span>
+                                    <span class="booking-resource-card__title">Projetor</span>
+                                    <span class="booking-resource-card__description">Projetores multimídia para aulas expositivas e apresentações.</span>
+                                    <span class="booking-resource-card__meta">
+                                        <span><span class="ui-icon" aria-hidden="true">check_circle</span>Uso imediato</span>
+                                    </span>
+                                </article>
+
+                                <article class="booking-resource-card booking-resource-card--static">
+                                    <span class="ui-badge ui-badge--success booking-resource-card__status">Disponível</span>
+                                    <span class="ui-icon booking-resource-card__icon" aria-hidden="true">laptop_mac</span>
+                                    <span class="booking-resource-card__title">Notebook</span>
+                                    <span class="booking-resource-card__description">Equipamentos de apoio para aulas, reuniões e projeções.</span>
+                                    <span class="booking-resource-card__meta">
+                                        <span><span class="ui-icon" aria-hidden="true">wifi</span>Rede configurada</span>
+                                    </span>
+                                </article>
+
+                                <article class="booking-resource-card booking-resource-card--static">
+                                    <span class="ui-badge ui-badge--warning booking-resource-card__status">Limitado</span>
+                                    <span class="ui-icon booking-resource-card__icon" aria-hidden="true">speaker</span>
+                                    <span class="booking-resource-card__title">Caixa de som</span>
+                                    <span class="booking-resource-card__description">Kit portátil para sonorização rápida de aulas e eventos.</span>
+                                    <span class="booking-resource-card__meta">
+                                        <span><span class="ui-icon" aria-hidden="true">warning</span>Estoque reduzido</span>
+                                    </span>
+                                </article>
+
+                                <article class="booking-resource-card booking-resource-card--static">
+                                    <span class="ui-badge ui-badge--success booking-resource-card__status">Disponível</span>
+                                    <span class="ui-icon booking-resource-card__icon" aria-hidden="true">devices</span>
+                                    <span class="booking-resource-card__title">Laboratório móvel</span>
+                                    <span class="booking-resource-card__description">Carrinho com tablets para aulas práticas e roteiros de pesquisa.</span>
+                                    <span class="booking-resource-card__meta">
+                                        <span><span class="ui-icon" aria-hidden="true">inventory_2</span>Kit completo</span>
+                                    </span>
+                                </article>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="./script.js"></script>
+</body>
+</html>
