@@ -4,25 +4,65 @@ const OCCURRENCES_PAGE_SIZE = 10;
 const STATUS_LABELS = {
     registrado: "Registrado",
     em_acompanhamento: "Em acompanhamento",
-    aguardando_responsavel: "Aguardando responsavel",
+    aguardando_responsavel: "Aguardando responsável",
     resolvido: "Resolvido",
 };
 
 const PRE_REGISTRATION_STATUS_LABELS = {
     pending: "Pendente",
-    completed: "Concluido",
+    completed: "Concluído",
     cancelled: "Cancelado",
 };
 
 const RESPONSIBLE_CONTACT_LABELS = {
-    none: "Sem solicitacao de contato",
-    communicate: "Comunicar responsavel",
-    summon: "Convocar responsavel",
+    none: "Sem solicitação de contato",
+    communicate: "Comunicar responsável",
+    summon: "Convocar responsável",
 };
 
 const SIGNATURE_LABELS = {
     estudante: "Estudante",
-    responsavel: "Responsavel",
+    responsavel: "Responsável",
+};
+
+const GRAVITY_ORDER = {
+    leve: 1,
+    grave: 2,
+    gravissima: 3,
+};
+
+const GRAVITY_LABELS = {
+    leve: "Falta leve",
+    grave: "Falta grave",
+    gravissima: "Falta gravissima",
+};
+
+const PANEL_HEADERS = {
+    ocorrencias: {
+        title: "Ocorrencias",
+        copy: "Acompanhe registros, filtros e detalhes de cada ocorrencia em uma area unica.",
+        summary: "Historico, indicadores e consulta rapida ficam sincronizados com a lista carregada.",
+    },
+    "base-legal": {
+        title: "Base legal",
+        copy: "Cadastre, organize e atualize referencias do regimento usadas nos registros.",
+        summary: "Itens ativos ficam disponiveis para vincular as ocorrencias e documentos.",
+    },
+    estudantes: {
+        title: "Estudantes",
+        copy: "Consulte e mantenha os cadastros de estudantes usados pelo modulo de coordenacao.",
+        summary: "Busca por nome, turma e status ajudam a manter a base pronta para novos registros.",
+    },
+    relatorios: {
+        title: "Relatorios",
+        copy: "Veja indicadores consolidados a partir das ocorrencias e pre-registros carregados.",
+        summary: "Acompanhe recorrencia, tempo medio de conclusao e turmas com maior volume.",
+    },
+    "fluxo-professor": {
+        title: "Fila de pré-registros",
+        copy: "Acompanhe as pendencias enviadas pelos professores e conclua o que precisa virar registro.",
+        summary: "Use filtros para priorizar relatos recentes, finalizar registros ou descartar envios irrelevantes.",
+    },
 };
 
 const elements = {
@@ -33,12 +73,14 @@ const elements = {
     searchForm: document.querySelector("[data-top-navbar-search]"),
     searchInput: document.querySelector("[data-top-navbar-search-input]"),
     contextCopy: document.querySelector("[data-context-copy]"),
+    flowPanel: document.querySelector("[data-flow-panel]"),
+    flowPanelLabel: document.querySelector("[data-flow-panel-label]"),
+    pageTitle: document.querySelector("#tituloCoordenacao"),
     heroCopy: document.querySelector("[data-hero-copy]"),
     roleSummary: document.querySelector("[data-role-summary]"),
     profileName: document.querySelector("[data-profile-name]"),
     profileRole: document.querySelector("[data-profile-role]"),
     profileInitials: document.querySelector("[data-profile-initials]"),
-    occurrenceCreateAction: document.querySelector("[data-occurrence-create-action]"),
     primaryAction: document.querySelector("[data-primary-action]"),
     primaryActionIcon: document.querySelector("[data-primary-action-icon]"),
     primaryActionLabel: document.querySelector("[data-primary-action-label]"),
@@ -53,7 +95,14 @@ const elements = {
 
     occurrenceFeedback: document.querySelector("[data-occurrence-feedback]"),
     occurrenceFilters: document.querySelector("[data-coordenacao-filters]"),
-    clearOccurrenceFilters: document.querySelector("[data-clear-occurrence-filters]"),
+    periodTrigger: document.querySelector("[data-period-trigger]"),
+    periodLabel: document.querySelector("[data-period-label]"),
+    periodPopover: document.querySelector("[data-period-popover]"),
+    periodCalendar: document.querySelector("[data-period-calendar]"),
+    periodMonth: document.querySelector("[data-period-month]"),
+    periodNavButtons: Array.from(document.querySelectorAll("[data-period-nav]")),
+    periodStartInput: document.querySelector("[data-period-start]"),
+    periodEndInput: document.querySelector("[data-period-end]"),
     occurrenceList: document.querySelector("[data-occurrence-list]"),
     occurrenceModal: document.querySelector("[data-occurrence-modal]"),
     occurrenceModalClose: document.querySelector("[data-occurrence-modal-close]"),
@@ -63,6 +112,33 @@ const elements = {
     occurrenceDetail: document.querySelector("[data-occurrence-detail]"),
     occurrencePaginationSummary: document.querySelector("[data-occurrence-pagination-summary]"),
     occurrencePagination: document.querySelector("[data-occurrence-pagination]"),
+    occurrenceCreateModal: document.querySelector("[data-occurrence-create-modal]"),
+    occurrenceCreateClose: document.querySelector("[data-occurrence-create-close]"),
+    occurrenceCreateCancel: document.querySelector("[data-occurrence-create-cancel]"),
+    occurrenceCreateFeedback: document.querySelector("[data-occurrence-create-feedback]"),
+    occurrenceCreateForm: document.querySelector("[data-occurrence-create-form]"),
+    occurrenceCreateStudentId: document.querySelector("[data-occurrence-create-student-id]"),
+    occurrenceCreateStudentSearch: document.querySelector("[data-occurrence-create-student-search]"),
+    occurrenceCreateStudentResults: document.querySelector("[data-occurrence-create-student-results]"),
+    occurrenceCreateClass: document.querySelector("[data-occurrence-create-class]"),
+    occurrenceCreateProfessorId: document.querySelector("[data-occurrence-create-professor-id]"),
+    occurrenceCreateProfessorSearch: document.querySelector("[data-occurrence-create-professor-search]"),
+    occurrenceCreateProfessorResults: document.querySelector("[data-occurrence-create-professor-results]"),
+    occurrenceCreateDisciplineSearch: document.querySelector("[data-occurrence-create-discipline-search]"),
+    occurrenceCreateDisciplineResults: document.querySelector("[data-occurrence-create-discipline-results]"),
+    occurrenceCreateLesson: document.querySelector("[data-occurrence-create-lesson]"),
+    occurrenceCreateAction: document.querySelector("[data-occurrence-create-action]"),
+    occurrenceCreateActionHint: document.querySelector("[data-occurrence-create-action-hint]"),
+    occurrenceCreateSignature: document.querySelector("[data-occurrence-create-signature]"),
+    occurrenceCreateStatus: document.querySelector("[data-occurrence-create-status]"),
+    occurrenceCreateLegalSearch: document.querySelector("[data-occurrence-create-legal-search]"),
+    occurrenceCreateLegalResults: document.querySelector("[data-occurrence-create-legal-results]"),
+    occurrenceCreateLegalSelected: document.querySelector("[data-occurrence-create-legal-selected]"),
+    occurrenceCreateSteps: Array.from(document.querySelectorAll("[data-occurrence-create-step]")),
+    occurrenceCreateStepIndicators: Array.from(document.querySelectorAll("[data-occurrence-create-step-indicator]")),
+    occurrenceCreatePrev: document.querySelector("[data-occurrence-create-prev]"),
+    occurrenceCreateNext: document.querySelector("[data-occurrence-create-next]"),
+    occurrenceCreateSubmit: document.querySelector("[data-occurrence-create-submit]"),
 
     legalForm: document.querySelector("[data-base-legal-form]"),
     legalCancel: document.querySelector("[data-legal-cancel]"),
@@ -88,6 +164,7 @@ const elements = {
     teacherStudentSearch: document.querySelector("[data-teacher-student-search]"),
     teacherStudentResults: document.querySelector("[data-teacher-student-results]"),
     teacherSelectedStudents: document.querySelector("[data-teacher-selected-students]"),
+    teacherDiscipline: document.querySelector("[data-teacher-discipline]"),
     teacherReasons: document.querySelector("[data-teacher-reasons]"),
     teacherFeedback: document.querySelector("[data-teacher-feedback]"),
     teacherPreRegistrations: document.querySelector("[data-teacher-pre-registrations]"),
@@ -95,6 +172,11 @@ const elements = {
     managerFlow: document.querySelector("[data-manager-flow]"),
     managerFlowFeedback: document.querySelector("[data-manager-flow-feedback]"),
     preRegistrationQueue: document.querySelector("[data-pre-registration-queue]"),
+    preRegistrationFilters: document.querySelector("[data-pre-registration-filters]"),
+    preRegistrationFilterProfessor: document.querySelector("[data-pre-registration-filter-professor]"),
+    preRegistrationFilterClass: document.querySelector("[data-pre-registration-filter-class]"),
+    preRegistrationFilterPeriod: document.querySelector("[data-pre-registration-filter-period]"),
+    preRegistrationFooter: document.querySelector("[data-pre-registration-footer]"),
     preRegistrationCount: document.querySelector("[data-pre-registration-count]"),
     reasonForm: document.querySelector("[data-teacher-reason-form]"),
     reasonFeedback: document.querySelector("[data-reason-feedback]"),
@@ -125,6 +207,17 @@ const state = {
     preRegistrations: [],
     teacherSelectedStudents: [],
     teacherSearchTimer: null,
+    occurrencePeriodStart: "",
+    occurrencePeriodEnd: "",
+    occurrencePeriodMonth: new Date(),
+    preRegistrationFilters: {
+        professorId: "",
+        classId: "",
+        period: "7",
+    },
+    occurrenceCreateStep: 1,
+    occurrenceCreateLegalIds: [],
+    occurrenceCreateSearchTimer: null,
 };
 
 function query(selector, scope = document) {
@@ -168,6 +261,49 @@ function formatShortDate(value) {
     const date = new Date(`${String(value).trim()}T00:00:00`);
     if (Number.isNaN(date.getTime())) return String(value);
     return date.toLocaleDateString("pt-BR");
+}
+
+function dateKey(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+    return `${year}-${month}-${day}`;
+}
+
+function parseDateKey(value) {
+    if (!value) return null;
+    const [year, month, day] = String(value).split("-").map(Number);
+    if (!year || !month || !day) return null;
+    const date = new Date(year, month - 1, day);
+    if (Number.isNaN(date.getTime())) return null;
+    return date;
+}
+
+function formatMonthYear(date) {
+    return date.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+}
+
+function setOccurrencePeriodLabel() {
+    if (!elements.periodLabel) return;
+    if (!state.occurrencePeriodStart) {
+        elements.periodLabel.textContent = "Selecionar periodo";
+        return;
+    }
+    if (!state.occurrencePeriodEnd) {
+        elements.periodLabel.textContent = `A partir de ${formatShortDate(state.occurrencePeriodStart)}`;
+        return;
+    }
+    elements.periodLabel.textContent = `${formatShortDate(state.occurrencePeriodStart)} ate ${formatShortDate(state.occurrencePeriodEnd)}`;
+}
+
+function syncOccurrencePeriodInputs() {
+    if (elements.periodStartInput) {
+        elements.periodStartInput.value = state.occurrencePeriodStart;
+    }
+    if (elements.periodEndInput) {
+        elements.periodEndInput.value = state.occurrencePeriodEnd;
+    }
+    setOccurrencePeriodLabel();
 }
 
 function formatDateTime(value) {
@@ -295,6 +431,56 @@ function closeOccurrenceModal() {
     elements.body.classList.remove("coordenacao-modal-open");
 }
 
+function openOccurrenceCreateModal() {
+    if (!elements.occurrenceCreateModal) return;
+    setPanel("ocorrencias");
+    resetOccurrenceCreateForm();
+    if (typeof elements.occurrenceCreateModal.showModal === "function") {
+        if (!elements.occurrenceCreateModal.open) {
+            elements.occurrenceCreateModal.showModal();
+        }
+    } else {
+        elements.occurrenceCreateModal.setAttribute("open", "");
+    }
+    elements.body.classList.add("coordenacao-modal-open");
+    elements.occurrenceCreateForm?.elements.nome_estudante?.focus();
+}
+
+function closeOccurrenceCreateModal() {
+    setFeedback(elements.occurrenceCreateFeedback);
+    if (!elements.occurrenceCreateModal) return;
+    if (typeof elements.occurrenceCreateModal.close === "function" && elements.occurrenceCreateModal.open) {
+        elements.occurrenceCreateModal.close();
+    } else {
+        elements.occurrenceCreateModal.removeAttribute("open");
+    }
+    elements.body.classList.remove("coordenacao-modal-open");
+}
+
+function panelHeaderCopy(panelId) {
+    if (panelId === "fluxo-professor" && !state.isManager) {
+        return {
+            title: "Envio de pré-registro",
+            copy: "Envie pre-registros para a coordenacao com busca rapida de estudantes.",
+            summary: "O envio fica registrado para acompanhamento sem repetir casos ja encaminhados.",
+        };
+    }
+    return PANEL_HEADERS[panelId] || PANEL_HEADERS.ocorrencias;
+}
+
+function renderPageHeader(panelId = state.currentPanel) {
+    const header = panelHeaderCopy(panelId);
+    if (elements.pageTitle) {
+        elements.pageTitle.textContent = header.title;
+    }
+    if (elements.heroCopy) {
+        elements.heroCopy.textContent = header.copy;
+    }
+    if (elements.roleSummary) {
+        elements.roleSummary.textContent = header.summary;
+    }
+}
+
 function setPanel(targetId, { updateHash = true } = {}) {
     const available = new Set(
         elements.panelLinks
@@ -320,6 +506,8 @@ function setPanel(targetId, { updateHash = true } = {}) {
         panel.classList.toggle("is-active", active);
     });
 
+    renderPageHeader(nextPanel);
+
     if (updateHash) {
         window.history.replaceState(null, "", `#${nextPanel}`);
     }
@@ -330,34 +518,45 @@ function renderRoleShell() {
     const cargo = window.AppAuth?.normalizarCargoUsuario?.(state.user) || "USUARIO";
 
     elements.profileName.textContent = userName;
-    elements.profileRole.textContent = state.isManager ? "Gestao do modulo" : "Fluxo de pre-registro";
+    elements.profileRole.textContent = state.isManager ? "Gestao do modulo" : "Envio de pre-registro";
     elements.profileInitials.textContent = initialsFromName(userName);
     elements.contextCopy.textContent = state.isManager ? "Modulo de coordenacao" : "Fluxo docente";
 
     if (state.isManager) {
+        if (elements.flowPanelLabel) elements.flowPanelLabel.textContent = "Fila de pré-registros";
+        if (elements.flowPanel) elements.flowPanel.setAttribute("aria-label", "Fila de pre-registros");
         elements.heroCopy.textContent = "Gestao de ocorrencias, pendencias docentes e cadastros auxiliares em uma experiencia unica.";
         elements.roleSummary.textContent = `${cargo} com acesso de gestao. Ocorrencias, base legal, estudantes e fila docente ficam concentrados nesta interface.`;
         elements.searchInput.placeholder = "Buscar estudante, motivo ou registro...";
-        elements.primaryAction.href = "#fluxo-professor";
-        elements.primaryAction.dataset.panelTarget = "fluxo-professor";
-        elements.primaryActionIcon.textContent = "notifications_active";
-        elements.primaryActionLabel.textContent = "Abrir pendencias";
-        elements.fabAction.href = "#fluxo-professor";
-        elements.fabAction.dataset.panelTarget = "fluxo-professor";
-        elements.fabIcon.textContent = "notifications";
-        elements.fabLabel.textContent = "Abrir fila da coordenacao";
+        if (elements.primaryAction) {
+            elements.primaryAction.href = "#fluxo-professor";
+            elements.primaryAction.dataset.panelTarget = "fluxo-professor";
+        }
+        if (elements.primaryActionIcon) elements.primaryActionIcon.textContent = "notifications_active";
+        if (elements.primaryActionLabel) elements.primaryActionLabel.textContent = "Abrir pendencias";
+        elements.fabAction.href = "/coordenacao/ocorrencias/nova";
+        delete elements.fabAction.dataset.panelTarget;
+        elements.fabAction.setAttribute("aria-label", "Cadastrar nova ocorrencia");
+        elements.fabIcon.textContent = "add_circle";
+        elements.fabLabel.textContent = "Cadastrar nova ocorrencia";
+        elements.fabAction.hidden = false;
     } else {
+        if (elements.flowPanelLabel) elements.flowPanelLabel.textContent = "Envio de pré-registro";
+        if (elements.flowPanel) elements.flowPanel.setAttribute("aria-label", "Envio de pre-registro");
         elements.heroCopy.textContent = "Encaminhe casos para a coordenacao com o fluxo de pre-registro ja conectado ao backend.";
         elements.roleSummary.textContent = `${cargo} com acesso ao modulo. O envio de pre-registros ja funciona nesta interface.`;
         elements.searchInput.placeholder = "Buscar estudante para o pre-registro...";
-        elements.primaryAction.href = "#teacher-pre-registration-form";
-        delete elements.primaryAction.dataset.panelTarget;
-        elements.primaryActionIcon.textContent = "send";
-        elements.primaryActionLabel.textContent = "Novo pre-registro";
+        if (elements.primaryAction) {
+            elements.primaryAction.href = "#teacher-pre-registration-form";
+            delete elements.primaryAction.dataset.panelTarget;
+        }
+        if (elements.primaryActionIcon) elements.primaryActionIcon.textContent = "send";
+        if (elements.primaryActionLabel) elements.primaryActionLabel.textContent = "Novo pre-registro";
         elements.fabAction.href = "#teacher-pre-registration-form";
         delete elements.fabAction.dataset.panelTarget;
         elements.fabIcon.textContent = "send";
         elements.fabLabel.textContent = "Enviar pre-registro";
+        elements.fabAction.hidden = false;
     }
 
     elements.managerOnly.forEach((item) => {
@@ -427,7 +626,7 @@ async function openOccurrencePdf(occurrence) {
     window.setTimeout(() => window.URL.revokeObjectURL(objectUrl), 60_000);
 }
 
-function createActionButton(label, { primary = false, variant = "ghost", onClick } = {}) {
+function createActionButton(label, { primary = false, variant = "ghost", icon = "", onClick } = {}) {
     const resolvedVariant = primary ? "primary" : variant;
     const className = {
         primary: "ui-button ui-button--primary",
@@ -436,7 +635,13 @@ function createActionButton(label, { primary = false, variant = "ghost", onClick
     }[resolvedVariant] || "ui-button ui-button--ghost";
     const button = createElement("button", className);
     button.type = "button";
-    button.textContent = label;
+    if (icon) {
+        button.appendChild(createElement("span", "ui-icon", icon));
+        button.lastElementChild.setAttribute("aria-hidden", "true");
+        button.appendChild(createElement("span", "", label));
+    } else {
+        button.textContent = label;
+    }
     button.addEventListener("click", onClick);
     return button;
 }
@@ -569,18 +774,9 @@ function renderOccurrenceDetail() {
         },
     }));
 
-    const referenceFilter = occurrenceReferenceValue(occurrence);
-    if (referenceFilter) {
-        actions.appendChild(createActionButton("Filtrar referencia", {
-            variant: "subtle",
-            onClick: () => {
-                filterOccurrencesByReference(referenceFilter);
-            },
-        }));
-    }
-
     actions.appendChild(createActionButton("Abrir PDF", {
         primary: true,
+        icon: "picture_as_pdf",
         onClick: () => {
             openOccurrencePdf(occurrence).catch((error) => {
                 setFeedback(elements.occurrenceModalFeedback, error.message || "Nao foi possivel abrir o PDF.", "error");
@@ -772,26 +968,19 @@ function renderOccurrenceCards() {
         const actions = createElement("div", "coordenacao-record__actions");
         actions.appendChild(createActionButton("Ver detalhes", {
             primary: true,
+            icon: "visibility",
             onClick: () => {
                 openOccurrenceDetail(occurrence.id);
             },
         }));
         actions.appendChild(createActionButton("Abrir PDF", {
+            icon: "picture_as_pdf",
             onClick: () => {
                 openOccurrencePdf(occurrence).catch((error) => {
                     setFeedback(elements.occurrenceFeedback, error.message || "Nao foi possivel abrir o PDF.", "error");
                 });
             },
         }));
-        const referenceFilter = occurrenceReferenceValue(occurrence);
-        if (referenceFilter) {
-            actions.appendChild(createActionButton("Filtrar referencia", {
-                variant: "subtle",
-                onClick: () => {
-                    filterOccurrencesByReference(referenceFilter);
-                },
-            }));
-        }
 
         card.append(main, actions);
         elements.occurrenceList.appendChild(card);
@@ -800,6 +989,76 @@ function renderOccurrenceCards() {
     renderOccurrencePagination();
     if (isOccurrenceModalOpen()) {
         renderOccurrenceDetail();
+    }
+}
+
+function setPeriodPopover(open) {
+    if (!elements.periodPopover || !elements.periodTrigger) return;
+    elements.periodPopover.hidden = !open;
+    elements.periodTrigger.setAttribute("aria-expanded", String(open));
+    if (open) {
+        renderOccurrencePeriodCalendar();
+    }
+}
+
+function shiftOccurrencePeriodMonth(delta) {
+    const current = state.occurrencePeriodMonth || new Date();
+    state.occurrencePeriodMonth = new Date(current.getFullYear(), current.getMonth() + delta, 1);
+    renderOccurrencePeriodCalendar();
+}
+
+function selectOccurrencePeriodDate(value) {
+    if (!state.occurrencePeriodStart || (state.occurrencePeriodStart && state.occurrencePeriodEnd)) {
+        state.occurrencePeriodStart = value;
+        state.occurrencePeriodEnd = "";
+    } else if (value < state.occurrencePeriodStart) {
+        state.occurrencePeriodEnd = state.occurrencePeriodStart;
+        state.occurrencePeriodStart = value;
+        setPeriodPopover(false);
+    } else {
+        state.occurrencePeriodEnd = value;
+        setPeriodPopover(false);
+    }
+    syncOccurrencePeriodInputs();
+    renderOccurrencePeriodCalendar();
+}
+
+function renderOccurrencePeriodCalendar() {
+    if (!elements.periodCalendar || !elements.periodMonth) return;
+
+    const monthDate = state.occurrencePeriodMonth || new Date();
+    const year = monthDate.getFullYear();
+    const month = monthDate.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const gridStart = new Date(year, month, 1 - firstDay.getDay());
+    const selectedStart = parseDateKey(state.occurrencePeriodStart);
+    const selectedEnd = parseDateKey(state.occurrencePeriodEnd);
+
+    elements.periodMonth.textContent = formatMonthYear(monthDate);
+    elements.periodCalendar.innerHTML = "";
+
+    for (let index = 0; index < 42; index += 1) {
+        const date = new Date(gridStart);
+        date.setDate(gridStart.getDate() + index);
+        const value = dateKey(date);
+        const inCurrentMonth = date.getMonth() === month;
+        const isStart = value === state.occurrencePeriodStart;
+        const isEnd = value === state.occurrencePeriodEnd;
+        const inRange = selectedStart && selectedEnd && date > selectedStart && date < selectedEnd;
+        const button = createElement("button", "coordenacao-period-day", String(date.getDate()));
+        button.type = "button";
+        button.dataset.date = value;
+        button.classList.toggle("is-muted", !inCurrentMonth);
+        button.classList.toggle("is-selected", isStart || isEnd);
+        button.classList.toggle("is-in-range", Boolean(inRange));
+        button.setAttribute("aria-label", formatShortDate(value));
+        if (isStart || isEnd) {
+            button.setAttribute("aria-pressed", "true");
+        }
+        button.addEventListener("click", () => {
+            selectOccurrencePeriodDate(value);
+        });
+        elements.periodCalendar.appendChild(button);
     }
 }
 
@@ -818,7 +1077,7 @@ function populateSelect(select, items, { includeBlank = false, blankLabel = "Sel
     (items || []).forEach((item) => {
         const option = document.createElement("option");
         option.value = String(item.id);
-        option.textContent = item.nome;
+        option.textContent = item.nome || item.label || item.artigo || item.descricao || String(item.id);
         select.appendChild(option);
     });
 
@@ -836,10 +1095,6 @@ function populateManagerFilters() {
         includeBlank: true,
         blankLabel: "Todos os tipos",
     });
-    populateSelect(query("[data-filter-status]"), state.occurrenceContext?.status || [], {
-        includeBlank: true,
-        blankLabel: "Todos os status",
-    });
 
     const classes = (state.occurrenceContext?.turmas || []).map((item) => ({ id: item.id, nome: item.nome }));
     populateSelect(elements.studentClassSelect, classes, {
@@ -850,6 +1105,420 @@ function populateManagerFilters() {
         includeBlank: true,
         blankLabel: "Todas as turmas",
     });
+}
+
+function populateOccurrenceCreateFormOptions() {
+    if (!elements.occurrenceCreateForm) return;
+    populateSelect(elements.occurrenceCreateClass, state.occurrenceContext?.turmas || [], {
+        includeBlank: true,
+        blankLabel: "Selecione a turma",
+    });
+    populateSelect(elements.occurrenceCreateSignature, state.occurrenceContext?.quem_assina || []);
+    populateSelect(elements.occurrenceCreateStatus, state.occurrenceContext?.status || []);
+    updateOccurrenceCreateActionByLegal({ preferFirst: false });
+    updateOccurrenceCreateLessons();
+}
+
+function updateOccurrenceCreateLessons() {
+    if (!elements.occurrenceCreateLesson) return;
+    const classId = normalizeText(elements.occurrenceCreateClass?.value);
+    const selectedClass = (state.occurrenceContext?.turmas || []).find((item) => String(item.id) === classId);
+    const lessons = (selectedClass?.faixas_disponiveis || []).map((lesson) => ({
+        id: lesson,
+        nome: `${lesson}a aula`,
+    }));
+    populateSelect(elements.occurrenceCreateLesson, lessons, {
+        includeBlank: true,
+        blankLabel: lessons.length ? "Selecione a aula" : "Selecione a turma primeiro",
+    });
+    elements.occurrenceCreateLesson.disabled = lessons.length === 0;
+}
+
+function romanToInteger(value) {
+    const text = normalizeText(value).toUpperCase();
+    if (!text) return null;
+    const values = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
+    let total = 0;
+    let previous = 0;
+
+    for (let index = text.length - 1; index >= 0; index -= 1) {
+        const current = values[text[index]];
+        if (!current) return null;
+        if (current < previous) {
+            total -= current;
+        } else {
+            total += current;
+            previous = current;
+        }
+    }
+    return total;
+}
+
+function extractLegalReference(item) {
+    const articleLabel = normalizeText(item?.artigo);
+    let articleNumber = normalizeText(item?.artigo_numero).replace(/^art\.?\s*/i, "");
+    let incisoNumber = normalizeText(item?.inciso_numero).toUpperCase();
+
+    if (!articleNumber && articleLabel) {
+        const matchArticle = articleLabel.match(/Art\.?\s*([^\s,;:-]+(?:[-A-Za-z0-9.]+)?)/i);
+        if (matchArticle?.[1]) {
+            articleNumber = normalizeText(matchArticle[1]).replace(/^art\.?\s*/i, "");
+        }
+    }
+    if (!incisoNumber && articleLabel) {
+        const matchInciso = articleLabel.match(/(?:inciso\s+([IVXLCDM]+)|-\s*([IVXLCDM]+)\b)/i);
+        if (matchInciso?.[1] || matchInciso?.[2]) {
+            incisoNumber = normalizeText(matchInciso[1] || matchInciso[2]).toUpperCase();
+        }
+    }
+
+    return { articleNumber, incisoNumber };
+}
+
+function inferOccurrenceLegalGravityItem(item) {
+    const { articleNumber, incisoNumber } = extractLegalReference(item);
+    if (!articleNumber) return "";
+    if (articleNumber === "76") return "leve";
+
+    const incisoValue = romanToInteger(incisoNumber);
+    if (articleNumber === "81" || articleNumber === "82") {
+        if (incisoValue === 1) return "leve";
+        if (incisoValue === 2) return "grave";
+        if (incisoValue === 3) return "gravissima";
+        return "";
+    }
+
+    if (articleNumber !== "77" || !incisoValue) return "";
+    if (incisoValue >= 1 && incisoValue <= 7) return "leve";
+    if (incisoValue >= 8 && incisoValue <= 13) return "grave";
+    if (incisoValue >= 14 && incisoValue <= 26) return "gravissima";
+    return "";
+}
+
+function selectedOccurrenceCreateLegalItems() {
+    const selected = new Set(state.occurrenceCreateLegalIds.map(Number));
+    return (state.occurrenceContext?.regimento_itens || []).filter((item) => selected.has(Number(item.id)));
+}
+
+function inferOccurrenceCreateGravity() {
+    return selectedOccurrenceCreateLegalItems().reduce(
+        (selectedGravity, item) => {
+            const itemGravity = inferOccurrenceLegalGravityItem(item);
+            return (GRAVITY_ORDER[itemGravity] || 0) > (GRAVITY_ORDER[selectedGravity] || 0)
+                ? itemGravity
+                : selectedGravity;
+        },
+        ""
+    );
+}
+
+function occurrenceCreateStudentActions(currentAction = "") {
+    const actions = Array.isArray(state.occurrenceContext?.acoes_aplicadas)
+        ? state.occurrenceContext.acoes_aplicadas
+        : [];
+    const detailedStudentActions = actions.filter((item) => {
+        const recordTypes = Array.isArray(item?.tipos_registro) ? item.tipos_registro : [];
+        const acceptsStudent = recordTypes.length === 0 || recordTypes.includes("estudante");
+        return acceptsStudent && !boolValue(item?.legado);
+    });
+    const current = actions.find((item) => normalizeText(item?.id) === normalizeText(currentAction));
+    if (current && !detailedStudentActions.some((item) => normalizeText(item?.id) === normalizeText(currentAction))) {
+        return [...detailedStudentActions, current];
+    }
+    return detailedStudentActions;
+}
+
+function suggestedOccurrenceCreateAction(gravity, actions) {
+    if (!gravity) return null;
+    return (actions || []).find((item) => item?.gravidade === gravity) || null;
+}
+
+function updateOccurrenceCreateActionByLegal({ preferFirst = true } = {}) {
+    if (!elements.occurrenceCreateAction) return;
+    const currentValue = normalizeText(elements.occurrenceCreateAction.value);
+    const gravity = inferOccurrenceCreateGravity();
+    const actions = occurrenceCreateStudentActions(currentValue);
+    const suggestedAction = suggestedOccurrenceCreateAction(gravity, actions);
+    populateSelect(elements.occurrenceCreateAction, actions, {
+        includeBlank: true,
+        blankLabel: "Selecione a acao",
+    });
+
+    const currentStillAvailable = currentValue
+        && actions.some((item) => normalizeText(item?.id) === currentValue);
+    if (currentStillAvailable && (!preferFirst || !gravity)) {
+        elements.occurrenceCreateAction.value = currentValue;
+    } else if (preferFirst && suggestedAction) {
+        elements.occurrenceCreateAction.value = String(suggestedAction.id);
+    }
+
+    if (!elements.occurrenceCreateActionHint) return;
+    if (gravity) {
+        elements.occurrenceCreateActionHint.textContent =
+            `Gravidade automatica: ${GRAVITY_LABELS[gravity] || gravity}. A acao sugerida foi preenchida, mas voce pode altera-la.`;
+    } else if (state.occurrenceCreateLegalIds.length) {
+        elements.occurrenceCreateActionHint.textContent =
+            "A gravidade ainda nao foi identificada pela base legal selecionada. Escolha a acao manualmente.";
+    } else {
+        elements.occurrenceCreateActionHint.textContent =
+            "Selecione a base legal para sugerir automaticamente a acao disciplinar.";
+    }
+}
+
+function resetOccurrenceCreateForm() {
+    if (!elements.occurrenceCreateForm) return;
+    elements.occurrenceCreateForm.reset();
+    setFeedback(elements.occurrenceCreateFeedback);
+    populateOccurrenceCreateFormOptions();
+    setOccurrenceCreateStep(1);
+    const now = new Date();
+    elements.occurrenceCreateForm.elements.data_ocorrencia.value = now.toISOString().slice(0, 10);
+    elements.occurrenceCreateForm.elements.horario_ocorrencia.value = now.toTimeString().slice(0, 5);
+    if (elements.occurrenceCreateStatus && state.occurrenceContext?.status_padrao) {
+        elements.occurrenceCreateStatus.value = state.occurrenceContext.status_padrao;
+    }
+    if (elements.occurrenceCreateSignature) {
+        elements.occurrenceCreateSignature.value = "responsavel";
+    }
+    state.occurrenceCreateLegalIds = [];
+    renderOccurrenceCreateLegalSelected();
+    updateOccurrenceCreateActionByLegal({ preferFirst: false });
+    hideOccurrenceCreateSuggestions();
+}
+
+function setOccurrenceCreateStep(step) {
+    state.occurrenceCreateStep = Math.min(Math.max(Number(step) || 1, 1), 3);
+    elements.occurrenceCreateSteps.forEach((section) => {
+        section.hidden = Number(section.dataset.occurrenceCreateStep) !== state.occurrenceCreateStep;
+    });
+    elements.occurrenceCreateStepIndicators.forEach((indicator) => {
+        const indicatorStep = Number(indicator.dataset.occurrenceCreateStepIndicator);
+        indicator.classList.toggle("is-active", indicatorStep === state.occurrenceCreateStep);
+        indicator.classList.toggle("is-complete", indicatorStep < state.occurrenceCreateStep);
+    });
+    if (elements.occurrenceCreatePrev) elements.occurrenceCreatePrev.hidden = state.occurrenceCreateStep === 1;
+    if (elements.occurrenceCreateNext) elements.occurrenceCreateNext.hidden = state.occurrenceCreateStep === 3;
+    if (elements.occurrenceCreateSubmit) elements.occurrenceCreateSubmit.hidden = state.occurrenceCreateStep !== 3;
+    if (state.occurrenceCreateStep === 3) {
+        updateOccurrenceCreateActionByLegal();
+    }
+}
+
+function occurrenceCreateCurrentControls() {
+    const currentStep = elements.occurrenceCreateSteps.find(
+        (section) => Number(section.dataset.occurrenceCreateStep) === state.occurrenceCreateStep
+    );
+    return Array.from(currentStep?.querySelectorAll("input, select, textarea") || []);
+}
+
+function createSuggestionTitle(item) {
+    return normalizeText(item?.label || item?.nome || item?.name || item?.artigo || item?.referencia);
+}
+
+function createSuggestionDescription(item) {
+    return normalizeText(item?.turma_nome || item?.class_name || item?.email || item?.descricao);
+}
+
+function filterLocalSuggestions(items, term, fields = ["label", "nome", "name", "artigo", "descricao"]) {
+    const needle = normalizeText(term).toLowerCase();
+    return (items || [])
+        .filter((item) => {
+            if (!needle) return true;
+            return fields.some((field) => normalizeText(item?.[field]).toLowerCase().includes(needle));
+        })
+        .slice(0, 12);
+}
+
+function renderOccurrenceCreateSuggestions(container, items, onSelect, emptyText = "Nenhum resultado encontrado.") {
+    if (!container) return;
+    container.innerHTML = "";
+    if (!items.length) {
+        container.appendChild(createElement("div", "coordenacao-autocomplete-empty", emptyText));
+        container.hidden = false;
+        return;
+    }
+    items.forEach((item) => {
+        const button = createElement("button", "coordenacao-autocomplete-item");
+        button.type = "button";
+        button.appendChild(createElement("strong", "", createSuggestionTitle(item)));
+        const description = createSuggestionDescription(item);
+        if (description) button.appendChild(createElement("span", "", description));
+        button.addEventListener("pointerdown", (event) => {
+            event.preventDefault();
+            onSelect(item);
+            container.hidden = true;
+        });
+        container.appendChild(button);
+    });
+    container.hidden = false;
+}
+
+function hideOccurrenceCreateSuggestions() {
+    [
+        elements.occurrenceCreateStudentResults,
+        elements.occurrenceCreateProfessorResults,
+        elements.occurrenceCreateDisciplineResults,
+        elements.occurrenceCreateLegalResults,
+    ].forEach((container) => {
+        if (!container) return;
+        container.innerHTML = "";
+        container.hidden = true;
+    });
+}
+
+function selectOccurrenceCreateStudent(student) {
+    elements.occurrenceCreateStudentId.value = normalizeText(student.id);
+    elements.occurrenceCreateStudentSearch.value = normalizeText(student.nome || student.label);
+    if (student.turma_id) {
+        elements.occurrenceCreateClass.value = String(student.turma_id);
+        updateOccurrenceCreateLessons();
+    }
+}
+
+async function searchOccurrenceCreateStudents(term = "") {
+    const params = new URLSearchParams({ q: normalizeText(term), limite: "12" });
+    const items = await window.AppApi.fetchJson(`/ocorrencias/busca/estudantes?${params.toString()}`, { headers });
+    renderOccurrenceCreateSuggestions(elements.occurrenceCreateStudentResults, Array.isArray(items) ? items : [], selectOccurrenceCreateStudent);
+}
+
+function selectOccurrenceCreateProfessor(professor) {
+    elements.occurrenceCreateProfessorId.value = normalizeText(professor.id);
+    elements.occurrenceCreateProfessorSearch.value = normalizeText(professor.label || professor.nome);
+}
+
+async function searchOccurrenceCreateProfessors(term = "") {
+    const params = new URLSearchParams({ q: normalizeText(term), limite: "12" });
+    const items = await window.AppApi.fetchJson(`/ocorrencias/busca/professores?${params.toString()}`, { headers });
+    renderOccurrenceCreateSuggestions(elements.occurrenceCreateProfessorResults, Array.isArray(items) ? items : [], selectOccurrenceCreateProfessor);
+}
+
+function selectOccurrenceCreateDiscipline(discipline) {
+    elements.occurrenceCreateDisciplineSearch.value = createSuggestionTitle(discipline);
+}
+
+function searchOccurrenceCreateDisciplines(term = "") {
+    const items = filterLocalSuggestions(state.occurrenceContext?.disciplinas || [], term);
+    renderOccurrenceCreateSuggestions(elements.occurrenceCreateDisciplineResults, items, selectOccurrenceCreateDiscipline, "Nenhuma disciplina encontrada.");
+}
+
+function legalItemsAvailableForCreate() {
+    const selected = new Set(state.occurrenceCreateLegalIds);
+    return (state.occurrenceContext?.regimento_itens || []).filter((item) => boolValue(item.ativo) && !selected.has(Number(item.id)));
+}
+
+function selectOccurrenceCreateLegal(item) {
+    const id = Number(item?.id || 0);
+    if (id > 0 && !state.occurrenceCreateLegalIds.includes(id)) {
+        state.occurrenceCreateLegalIds.push(id);
+    }
+    elements.occurrenceCreateLegalSearch.value = "";
+    renderOccurrenceCreateLegalSelected();
+    updateOccurrenceCreateActionByLegal();
+}
+
+function searchOccurrenceCreateLegal(term = "") {
+    const items = filterLocalSuggestions(legalItemsAvailableForCreate(), term, ["artigo", "descricao", "label"]);
+    renderOccurrenceCreateSuggestions(elements.occurrenceCreateLegalResults, items, selectOccurrenceCreateLegal, "Nenhuma base legal encontrada.");
+}
+
+function renderOccurrenceCreateLegalSelected() {
+    if (!elements.occurrenceCreateLegalSelected) return;
+    elements.occurrenceCreateLegalSelected.innerHTML = "";
+    if (!state.occurrenceCreateLegalIds.length) {
+        elements.occurrenceCreateLegalSelected.appendChild(
+            createElement("p", "coordenacao-empty-state", "Nenhuma base legal vinculada.")
+        );
+        return;
+    }
+    const byId = new Map((state.occurrenceContext?.regimento_itens || []).map((item) => [Number(item.id), item]));
+    state.occurrenceCreateLegalIds.forEach((id) => {
+        const item = byId.get(id);
+        const chip = createElement("div", "coordenacao-create-selected-item");
+        chip.appendChild(createElement("span", "", createSuggestionTitle(item) || `Item ${id}`));
+        const remove = createElement("button", "coordenacao-icon-action", "close");
+        remove.type = "button";
+        remove.setAttribute("aria-label", "Remover base legal");
+        remove.addEventListener("click", () => {
+            state.occurrenceCreateLegalIds = state.occurrenceCreateLegalIds.filter((value) => value !== id);
+            renderOccurrenceCreateLegalSelected();
+            updateOccurrenceCreateActionByLegal();
+            searchOccurrenceCreateLegal(elements.occurrenceCreateLegalSearch?.value);
+        });
+        chip.appendChild(remove);
+        elements.occurrenceCreateLegalSelected.appendChild(chip);
+    });
+}
+
+function validateOccurrenceCreateStep() {
+    setFeedback(elements.occurrenceCreateFeedback);
+    const controls = occurrenceCreateCurrentControls();
+    const invalidControl = controls.find((control) => !control.checkValidity());
+    if (invalidControl) {
+        invalidControl.reportValidity();
+        return false;
+    }
+    if (state.occurrenceCreateStep === 2 && !state.occurrenceCreateLegalIds.length) {
+        setFeedback(elements.occurrenceCreateFeedback, "Selecione pelo menos uma base legal.", "error");
+        elements.occurrenceCreateLegalSearch?.focus();
+        return false;
+    }
+    return true;
+}
+
+function nextOccurrenceCreateStep() {
+    if (!validateOccurrenceCreateStep()) return;
+    setOccurrenceCreateStep(state.occurrenceCreateStep + 1);
+}
+
+function previousOccurrenceCreateStep() {
+    setFeedback(elements.occurrenceCreateFeedback);
+    setOccurrenceCreateStep(state.occurrenceCreateStep - 1);
+}
+
+function occurrenceCreatePayload() {
+    const form = elements.occurrenceCreateForm;
+    const legalIds = state.occurrenceCreateLegalIds;
+    if (!legalIds.length) {
+        throw new Error("Selecione pelo menos uma base legal.");
+    }
+    return {
+        tipo_registro: "estudante",
+        quem_assina: form.elements.quem_assina.value,
+        nome_estudante: normalizeText(form.elements.nome_estudante.value),
+        estudante_id: Number(form.elements.estudante_id.value) || null,
+        turma_id: Number(form.elements.turma_id.value),
+        professor_requerente: normalizeText(form.elements.professor_requerente.value),
+        professor_requerente_id: Number(form.elements.professor_requerente_id.value) || null,
+        disciplina: normalizeText(form.elements.disciplina.value),
+        data_ocorrencia: form.elements.data_ocorrencia.value,
+        aula: form.elements.aula.value,
+        horario_ocorrencia: form.elements.horario_ocorrencia.value,
+        descricao: normalizeText(form.elements.descricao.value),
+        regimento_item_ids: legalIds,
+        acao_aplicada: form.elements.acao_aplicada.value,
+        status: form.elements.status.value,
+    };
+}
+
+async function submitOccurrenceCreateForm(event) {
+    event.preventDefault();
+    const submitButton = elements.occurrenceCreateForm.querySelector('button[type="submit"]');
+    submitButton.disabled = true;
+    try {
+        const created = await window.AppApi.fetchJson("/ocorrencias", {
+            method: "POST",
+            headers: headersJson,
+            body: JSON.stringify(occurrenceCreatePayload()),
+        });
+        closeOccurrenceCreateModal();
+        setFeedback(elements.occurrenceFeedback, "Ocorrencia registrada com sucesso.", "success");
+        await loadOccurrences();
+        if (created?.id) {
+            await showOccurrenceDetails(created.id);
+        }
+    } finally {
+        submitButton.disabled = false;
+    }
 }
 
 async function loadOccurrences({ resetPage = true } = {}) {
@@ -1125,6 +1794,10 @@ function renderReports() {
 
 function renderPreRegistrationCount() {
     if (!elements.preRegistrationCount) return;
+    if (!state.isManager) {
+        elements.preRegistrationCount.hidden = true;
+        return;
+    }
     const pendingCount = state.preRegistrations.filter((item) => item.status === "pending").length;
     elements.preRegistrationCount.textContent = String(pendingCount);
     elements.preRegistrationCount.hidden = pendingCount <= 0;
@@ -1147,10 +1820,133 @@ function preRegistrationMetaLines(item, { includeProfessor = false } = {}) {
         reasons.length ? `Motivo(s): ${reasons.map((reason) => reason.name).join(", ")}` : normalizeText(item.reason_name) ? `Motivo: ${item.reason_name}` : "",
         item.discipline ? `Disciplina: ${item.discipline}` : "",
         item.lesson ? `Aula: ${item.lesson}` : "",
+        item.complementary_report ? `Relato: ${item.complementary_report}` : "",
         RESPONSIBLE_CONTACT_LABELS[item.responsible_contact] || "",
         includeProfessor ? `Professor: ${normalizeText(item.professor_name, "Nao informado")}` : "",
         `Registrado em: ${formatDateTime(item.occurred_at || item.created_at)}`,
     ].filter(Boolean);
+}
+
+function preRegistrationStudentsText(item) {
+    const students = Array.isArray(item.students) ? item.students : [];
+    if (students.length) {
+        return students.map((student) => student.name).join(", ");
+    }
+    return normalizeText(item.student_name, "Aluno nao informado");
+}
+
+function preRegistrationClassesText(item) {
+    const students = Array.isArray(item.students) ? item.students : [];
+    const classes = [...new Set(students.map((student) => normalizeText(student.class_name)).filter(Boolean))];
+    if (classes.length) return classes.join(", ");
+    return normalizeText(item.class_name, "Sem turma");
+}
+
+function preRegistrationReasonsText(item) {
+    const reasons = Array.isArray(item.reasons) ? item.reasons : [];
+    if (reasons.length) {
+        return reasons.map((reason) => reason.name).join(", ");
+    }
+    return normalizeText(item.reason_name, "Pre-registro");
+}
+
+function preRegistrationTypeVariant(item) {
+    const reason = preRegistrationReasonsText(item).toLowerCase();
+    return reason.includes("pedagog") || reason.includes("atividade") ? "pedagogico" : "disciplinar";
+}
+
+function formatQueueDate(value) {
+    if (!value) return "Nao informado";
+    const text = String(value).replace(" ", "T");
+    const date = new Date(`${text}Z`);
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleString("pt-BR", {
+        day: "2-digit",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+    }).replace(".", "");
+}
+
+function preRegistrationSummary(item) {
+    const reason = preRegistrationReasonsText(item);
+    const report = normalizeText(item.complementary_report);
+    const contact = RESPONSIBLE_CONTACT_LABELS[item.responsible_contact] || "";
+    return truncateText([report || reason, contact].filter(Boolean).join(" - "), 72);
+}
+
+function createIconAction(icon, label, onClick, { danger = false } = {}) {
+    const button = createElement("button", `coordenacao-icon-action${danger ? " is-danger" : ""}`);
+    button.type = "button";
+    button.setAttribute("aria-label", label);
+    button.title = label;
+    button.appendChild(createElement("span", "ui-icon", icon));
+    button.firstElementChild.setAttribute("aria-hidden", "true");
+    button.addEventListener("click", onClick);
+    return button;
+}
+
+function populatePreRegistrationFilters(items = []) {
+    if (!elements.preRegistrationFilterProfessor || !elements.preRegistrationFilterClass) return;
+    const professorOptions = new Map();
+    const classOptions = new Map();
+    items.forEach((item) => {
+        const professorId = normalizeText(item.professor_id);
+        if (professorId) {
+            professorOptions.set(professorId, normalizeText(item.professor_name, "Professor"));
+        }
+        (Array.isArray(item.students) ? item.students : []).forEach((student) => {
+            const classId = normalizeText(student.class_id);
+            if (classId) {
+                classOptions.set(classId, normalizeText(student.class_name, "Sem turma"));
+            }
+        });
+        const fallbackClassId = normalizeText(item.turma_id);
+        if (fallbackClassId) {
+            classOptions.set(fallbackClassId, normalizeText(item.class_name, "Sem turma"));
+        }
+    });
+
+    const professorItems = Array.from(professorOptions, ([id, nome]) => ({ id, nome }))
+        .sort((a, b) => a.nome.localeCompare(b.nome));
+    const classItems = Array.from(classOptions, ([id, nome]) => ({ id, nome }))
+        .sort((a, b) => a.nome.localeCompare(b.nome));
+    populateSelect(elements.preRegistrationFilterProfessor, professorItems, {
+        includeBlank: true,
+        blankLabel: "Todos os professores",
+    });
+    populateSelect(elements.preRegistrationFilterClass, classItems, {
+        includeBlank: true,
+        blankLabel: "Todas as turmas",
+    });
+    if (elements.preRegistrationFilterPeriod) {
+        elements.preRegistrationFilterPeriod.value = state.preRegistrationFilters.period;
+    }
+}
+
+function preRegistrationMatchesFilters(item) {
+    const filters = state.preRegistrationFilters;
+    if (filters.professorId && String(item.professor_id || "") !== filters.professorId) {
+        return false;
+    }
+    if (filters.classId) {
+        const students = Array.isArray(item.students) ? item.students : [];
+        const hasClass = students.some((student) => String(student.class_id || "") === filters.classId)
+            || String(item.turma_id || "") === filters.classId;
+        if (!hasClass) return false;
+    }
+    if (filters.period) {
+        const date = new Date(String(item.occurred_at || item.created_at || "").replace(" ", "T") + "Z");
+        if (Number.isNaN(date.getTime())) return false;
+        const threshold = new Date();
+        threshold.setDate(threshold.getDate() - Number(filters.period));
+        if (date < threshold) return false;
+    }
+    return true;
+}
+
+function pendingPreRegistrations() {
+    return state.preRegistrations.filter((item) => item.status === "pending");
 }
 
 function renderTeacherPreRegistrations() {
@@ -1180,47 +1976,133 @@ function renderTeacherPreRegistrations() {
 
 function renderManagerQueue() {
     elements.preRegistrationQueue.innerHTML = "";
-    const pending = state.preRegistrations.filter((item) => item.status === "pending");
+    const pending = pendingPreRegistrations();
+    const filtered = pending.filter(preRegistrationMatchesFilters);
 
-    if (!pending.length) {
-        elements.preRegistrationQueue.appendChild(
-            createElement("p", "coordenacao-empty-state", "Nenhuma pendencia enviada pelos professores.")
-        );
+    if (!filtered.length) {
+        const row = document.createElement("tr");
+        const cell = createElement("td", "coordenacao-empty-state", pending.length ? "Nenhuma pendencia encontrada com os filtros atuais." : "Nenhuma pendencia enviada pelos professores.");
+        cell.colSpan = 6;
+        row.appendChild(cell);
+        elements.preRegistrationQueue.appendChild(row);
+        if (elements.preRegistrationFooter) {
+            elements.preRegistrationFooter.textContent = pending.length
+                ? `Exibindo 0 de ${pending.length} registros pendentes`
+                : "Nenhum registro pendente.";
+        }
         return;
     }
 
-    pending.forEach((item) => {
-        const card = createElement("article", "coordenacao-queue-item");
-        const copy = createElement("div");
-        copy.appendChild(createElement("strong", "", preRegistrationTitle(item)));
-        preRegistrationMetaLines(item, { includeProfessor: true }).forEach((line) => {
-            copy.appendChild(createElement("p", "", line));
-        });
+    filtered.forEach((item) => {
+        const row = document.createElement("tr");
+        const studentCell = document.createElement("td");
+        studentCell.appendChild(createElement("strong", "", preRegistrationStudentsText(item)));
+        studentCell.appendChild(createElement("span", "coordenacao-table-muted", preRegistrationClassesText(item)));
 
-        const actions = createElement("div", "coordenacao-table__actions");
-        actions.appendChild(createBadge("Pendente", "ui-badge--warning"));
-        const queueReference = normalizeText(
-            Array.isArray(item.students) && item.students.length === 1
-                ? item.students[0]?.name
-                : item.student_name
-        );
-        actions.appendChild(createActionButton(queueReference ? "Ver historico" : "Abrir ocorrencias", {
-            variant: "subtle",
-            onClick: () => {
-                if (queueReference) {
-                    filterOccurrencesByReference(queueReference);
-                    return;
-                }
-                setPanel("ocorrencias");
-            },
+        const professorCell = document.createElement("td");
+        professorCell.appendChild(createElement("strong", "", normalizeText(item.professor_name, "Nao informado")));
+        if (item.discipline || item.lesson) {
+            professorCell.appendChild(createElement("span", "coordenacao-table-muted", [item.discipline, item.lesson ? `${item.lesson}a aula` : ""].filter(Boolean).join(" - ")));
+        }
+
+        const typeCell = document.createElement("td");
+        const variant = preRegistrationTypeVariant(item);
+        typeCell.appendChild(createElement(
+            "span",
+            `coordenacao-type-pill coordenacao-type-pill--${variant}`,
+            variant === "pedagogico" ? "Pedagogico" : "Disciplinar"
+        ));
+
+        const dateCell = createElement("td", "", formatQueueDate(item.occurred_at || item.created_at));
+        const summaryCell = createElement("td", "", preRegistrationSummary(item));
+        const actionsCell = createElement("td", "coordenacao-icon-actions");
+        actionsCell.appendChild(createIconAction("task_alt", "Marcar como concluida", () => {
+            completePreRegistrationFromQueue(item).catch((error) => {
+                setFeedback(elements.managerFlowFeedback, error.message || "Nao foi possivel concluir o pre-registro.", "error");
+            });
         }));
+        actionsCell.appendChild(createIconAction("playlist_add_check", "Finalizar registro", () => {
+            finishPreRegistration(item);
+        }));
+        actionsCell.appendChild(createIconAction("delete", "Excluir pendencia", () => {
+            discardPreRegistration(item).catch((error) => {
+                setFeedback(elements.managerFlowFeedback, error.message || "Nao foi possivel excluir a pendencia.", "error");
+            });
+        }, { danger: true }));
 
-        card.append(copy, actions);
-        elements.preRegistrationQueue.appendChild(card);
+        row.append(studentCell, professorCell, typeCell, dateCell, summaryCell, actionsCell);
+        elements.preRegistrationQueue.appendChild(row);
     });
+
+    if (elements.preRegistrationFooter) {
+        elements.preRegistrationFooter.textContent = `Exibindo ${filtered.length} de ${pending.length} registros pendentes`;
+    }
+}
+
+async function completePreRegistrationFromQueue(item) {
+    const occurrenceId = window.prompt("Informe o ID da ocorrencia vinculada a este pre-registro:");
+    if (!occurrenceId) return;
+    const normalizedOccurrenceId = Number(occurrenceId);
+    if (!Number.isInteger(normalizedOccurrenceId) || normalizedOccurrenceId <= 0) {
+        throw new Error("Informe um ID de ocorrencia valido.");
+    }
+    await window.AppApi.fetchJson(`/occurrences/pre-registrations/${item.id}/complete`, {
+        method: "POST",
+        headers: headersJson,
+        body: JSON.stringify({ occurrence_id: normalizedOccurrenceId }),
+    });
+    setFeedback(elements.managerFlowFeedback, "Pre-registro marcado como concluido.", "success");
+    await loadPreRegistrations();
+}
+
+function finishPreRegistration(item) {
+    const queueReference = normalizeText(
+        Array.isArray(item.students) && item.students.length === 1
+            ? item.students[0]?.name
+            : item.student_name
+    );
+    if (queueReference) {
+        filterOccurrencesByReference(queueReference);
+    } else {
+        setPanel("ocorrencias");
+    }
+    setFeedback(
+        elements.occurrenceFeedback,
+        "Finalize o registro a partir deste pre-registro. O botao flutuante abre o fluxo de nova ocorrencia.",
+        "success"
+    );
+}
+
+async function discardPreRegistration(item) {
+    const ok = window.confirm(`Excluir a pendencia de ${preRegistrationStudentsText(item)}?`);
+    if (!ok) return;
+    await window.AppApi.fetchJson(`/occurrences/pre-registrations/${item.id}`, {
+        method: "DELETE",
+        headers,
+    });
+    setFeedback(elements.managerFlowFeedback, "Pendencia descartada.", "success");
+    await loadPreRegistrations();
 }
 
 function renderReasonOptions() {
+    if (elements.teacherDiscipline) {
+        elements.teacherDiscipline.innerHTML = "";
+        const disciplines = state.preRegistrationContext?.disciplines || [];
+        if (!disciplines.length) {
+            elements.teacherDiscipline.required = false;
+            elements.teacherDiscipline.appendChild(new Option("Detectar pela grade", ""));
+        } else if (disciplines.length === 1) {
+            elements.teacherDiscipline.required = true;
+            elements.teacherDiscipline.appendChild(new Option(disciplines[0].name, disciplines[0].name, true, true));
+        } else {
+            elements.teacherDiscipline.required = true;
+            elements.teacherDiscipline.appendChild(new Option("Selecione a disciplina", ""));
+            disciplines.forEach((discipline) => {
+                elements.teacherDiscipline.appendChild(new Option(discipline.name, discipline.name));
+            });
+        }
+    }
+
     if (elements.teacherReasons) {
         elements.teacherReasons.innerHTML = "";
         const reasons = (state.preRegistrationContext?.reasons || []).filter((item) => boolValue(item.active));
@@ -1344,6 +2226,7 @@ async function loadPreRegistrations() {
     renderPreRegistrationCount();
     renderReports();
     if (state.isManager) {
+        populatePreRegistrationFilters(pendingPreRegistrations());
         renderManagerQueue();
     } else {
         renderTeacherPreRegistrations();
@@ -1357,12 +2240,17 @@ async function submitTeacherPreRegistration(event) {
     ).map((input) => Number(input.value));
     const contact = elements.teacherPreRegistrationForm.querySelector('input[name="responsible_contact"]:checked')?.value || "none";
     const studentIds = state.teacherSelectedStudents.map((student) => Number(student.id));
+    const discipline = normalizeText(elements.teacherPreRegistrationForm.elements.discipline?.value);
+    const complementaryReport = normalizeText(elements.teacherPreRegistrationForm.elements.complementary_report?.value);
 
     if (!studentIds.length) {
         throw new Error("Selecione pelo menos um estudante.");
     }
     if (!reasonIds.length) {
         throw new Error("Selecione pelo menos um motivo.");
+    }
+    if (elements.teacherDiscipline?.required && !discipline) {
+        throw new Error("Selecione a disciplina.");
     }
 
     await window.AppApi.fetchJson("/occurrences/pre-registrations", {
@@ -1372,6 +2260,8 @@ async function submitTeacherPreRegistration(event) {
             student_ids: studentIds,
             reason_ids: reasonIds,
             responsible_contact: contact,
+            discipline,
+            complementary_report: complementaryReport,
         }),
     });
 
@@ -1411,7 +2301,7 @@ function registerGeneralEvents() {
         window.AppAuth?.encerrarSessao?.();
     });
 
-    [elements.occurrenceCreateAction, elements.primaryAction, elements.fabAction].forEach((action) => {
+    [elements.primaryAction, elements.fabAction].forEach((action) => {
         action?.addEventListener("click", (event) => {
             const target = action.dataset.panelTarget;
             if (!target) return;
@@ -1449,6 +2339,12 @@ function registerGeneralEvents() {
     document.addEventListener("click", (event) => {
         if (!event.target.closest("[data-teacher-student-results]") && !event.target.closest("[data-teacher-student-search]")) {
             elements.teacherStudentResults.hidden = true;
+        }
+        if (!event.target.closest("[data-period-popover]") && !event.target.closest("[data-period-trigger]")) {
+            setPeriodPopover(false);
+        }
+        if (!event.target.closest("[data-occurrence-create-form]")) {
+            hideOccurrenceCreateSuggestions();
         }
     });
 
@@ -1490,10 +2386,73 @@ function registerManagerEvents() {
         });
     });
 
-    elements.clearOccurrenceFilters?.addEventListener("click", () => {
-        elements.occurrenceFilters.reset();
-        loadOccurrences().catch((error) => {
-            setFeedback(elements.occurrenceFeedback, error.message || "Nao foi possivel limpar os filtros.", "error");
+    elements.periodTrigger?.addEventListener("click", () => {
+        setPeriodPopover(elements.periodPopover?.hidden);
+    });
+
+    elements.periodNavButtons.forEach((button) => {
+        button.addEventListener("click", () => {
+            shiftOccurrencePeriodMonth(button.dataset.periodNav === "next" ? 1 : -1);
+        });
+    });
+
+    elements.occurrenceCreateClose?.addEventListener("click", closeOccurrenceCreateModal);
+    elements.occurrenceCreateCancel?.addEventListener("click", closeOccurrenceCreateModal);
+    elements.occurrenceCreatePrev?.addEventListener("click", previousOccurrenceCreateStep);
+    elements.occurrenceCreateNext?.addEventListener("click", nextOccurrenceCreateStep);
+    elements.occurrenceCreateClass?.addEventListener("change", updateOccurrenceCreateLessons);
+    elements.occurrenceCreateStudentSearch?.addEventListener("input", () => {
+        elements.occurrenceCreateStudentId.value = "";
+        window.clearTimeout(state.occurrenceCreateSearchTimer);
+        state.occurrenceCreateSearchTimer = window.setTimeout(() => {
+            searchOccurrenceCreateStudents(elements.occurrenceCreateStudentSearch.value).catch((error) => {
+                setFeedback(elements.occurrenceCreateFeedback, error.message || "Nao foi possivel buscar estudantes.", "error");
+            });
+        }, 180);
+    });
+    elements.occurrenceCreateStudentSearch?.addEventListener("focus", () => {
+        searchOccurrenceCreateStudents(elements.occurrenceCreateStudentSearch.value).catch((error) => {
+            setFeedback(elements.occurrenceCreateFeedback, error.message || "Nao foi possivel buscar estudantes.", "error");
+        });
+    });
+    elements.occurrenceCreateProfessorSearch?.addEventListener("input", () => {
+        elements.occurrenceCreateProfessorId.value = "";
+        window.clearTimeout(state.occurrenceCreateSearchTimer);
+        state.occurrenceCreateSearchTimer = window.setTimeout(() => {
+            searchOccurrenceCreateProfessors(elements.occurrenceCreateProfessorSearch.value).catch((error) => {
+                setFeedback(elements.occurrenceCreateFeedback, error.message || "Nao foi possivel buscar professores.", "error");
+            });
+        }, 180);
+    });
+    elements.occurrenceCreateProfessorSearch?.addEventListener("focus", () => {
+        searchOccurrenceCreateProfessors(elements.occurrenceCreateProfessorSearch.value).catch((error) => {
+            setFeedback(elements.occurrenceCreateFeedback, error.message || "Nao foi possivel buscar professores.", "error");
+        });
+    });
+    elements.occurrenceCreateDisciplineSearch?.addEventListener("input", () => {
+        searchOccurrenceCreateDisciplines(elements.occurrenceCreateDisciplineSearch.value);
+    });
+    elements.occurrenceCreateDisciplineSearch?.addEventListener("focus", () => {
+        searchOccurrenceCreateDisciplines(elements.occurrenceCreateDisciplineSearch.value);
+    });
+    elements.occurrenceCreateLegalSearch?.addEventListener("input", () => {
+        searchOccurrenceCreateLegal(elements.occurrenceCreateLegalSearch.value);
+    });
+    elements.occurrenceCreateLegalSearch?.addEventListener("focus", () => {
+        searchOccurrenceCreateLegal(elements.occurrenceCreateLegalSearch.value);
+    });
+    elements.occurrenceCreateForm?.addEventListener("submit", (event) => {
+        if (state.occurrenceCreateStep < 3) {
+            event.preventDefault();
+            nextOccurrenceCreateStep();
+            return;
+        }
+        if (!validateOccurrenceCreateStep()) {
+            event.preventDefault();
+            return;
+        }
+        submitOccurrenceCreateForm(event).catch((error) => {
+            setFeedback(elements.occurrenceCreateFeedback, error.message || "Nao foi possivel registrar a ocorrencia.", "error");
         });
     });
 
@@ -1522,6 +2481,16 @@ function registerManagerEvents() {
         loadStudents().catch((error) => {
             setFeedback(elements.studentFeedback, error.message || "Nao foi possivel carregar os estudantes.", "error");
         });
+    });
+
+    elements.preRegistrationFilters?.addEventListener("submit", (event) => {
+        event.preventDefault();
+        state.preRegistrationFilters = {
+            professorId: normalizeText(elements.preRegistrationFilterProfessor?.value),
+            classId: normalizeText(elements.preRegistrationFilterClass?.value),
+            period: normalizeText(elements.preRegistrationFilterPeriod?.value),
+        };
+        renderManagerQueue();
     });
 
     elements.reasonForm?.addEventListener("submit", (event) => {
@@ -1559,6 +2528,7 @@ function registerTeacherEvents() {
 async function bootstrapManager() {
     state.occurrenceContext = await window.AppApi.fetchJson("/ocorrencias/opcoes", { headers });
     populateManagerFilters();
+    populateOccurrenceCreateFormOptions();
     await Promise.all([
         loadOccurrences(),
         loadLegalItems(),

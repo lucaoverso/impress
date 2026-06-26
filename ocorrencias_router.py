@@ -3,6 +3,7 @@ import unicodedata
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
+from pydantic import BaseModel, Field, ValidationError
 
 from auth import get_usuario_logado
 from modules.occurrences import service as occurrence_pre_registration_service
@@ -26,6 +27,7 @@ from db.ocorrencias import (
     atualizar_ocorrencia,
     atualizar_estudante,
     atualizar_regimento_item,
+    atualizar_ocorrencia_rascunho,
     atualizar_status_regimento_item,
     atualizar_status_estudante,
     buscar_alinea_por_id,
@@ -35,6 +37,7 @@ from db.ocorrencias import (
     buscar_lei_por_id,
     buscar_estudantes_ocorrencia,
     buscar_ocorrencia_por_id,
+    buscar_ocorrencia_rascunho,
     buscar_professor_por_id_ocorrencia,
     buscar_professores_ocorrencia,
     buscar_regimento_item_por_id,
@@ -45,6 +48,7 @@ from db.ocorrencias import (
     criar_inciso,
     criar_lei,
     criar_ocorrencia,
+    criar_ocorrencia_rascunho,
     criar_regimento_item,
     listar_alineas,
     listar_artigos,
@@ -52,6 +56,7 @@ from db.ocorrencias import (
     listar_incisos,
     listar_leis,
     listar_ocorrencias,
+    marcar_ocorrencia_rascunho_finalizado,
     listar_regimento_itens,
     remover_alinea,
     remover_artigo,
@@ -59,6 +64,7 @@ from db.ocorrencias import (
     remover_inciso,
     remover_lei,
     remover_ocorrencia,
+    descartar_ocorrencia_rascunho,
     remover_regimento_item,
     salvar_ocorrencia_estudantes_vinculados,
     salvar_ocorrencia_professores_vinculados,
@@ -144,6 +150,10 @@ _FAIXA_GLOBAL_OFFSET_POR_TURNO = {
 }
 
 
+class OcorrenciaRascunhoSaveIn(BaseModel):
+    payload: dict = Field(default_factory=dict)
+
+
 def _model_to_dict(model, *, exclude_unset: bool = False) -> dict:
     if hasattr(model, "model_dump"):
         return model.model_dump(exclude_unset=exclude_unset)
@@ -158,6 +168,16 @@ def _exigir_gestor(usuario: dict):
     if not usuario_tem_acesso_coordenacao(usuario):
         raise HTTPException(403, "Acesso negado")
     return usuario
+
+
+def _usuario_id_logado(usuario: dict) -> int:
+    try:
+        usuario_id = int(usuario.get("id") or 0)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(401, "Usuario invalido.") from exc
+    if usuario_id <= 0:
+        raise HTTPException(401, "Usuario invalido.")
+    return usuario_id
 
 
 def _texto_obrigatorio(valor: str | None, campo: str, *, max_len: int = 255) -> str:
@@ -1019,6 +1039,79 @@ def criar_ocorrencia_api(payload: OcorrenciaCreateIn, usuario=Depends(get_usuari
             ocorrencia_id,
         )
     return _montar_resposta_ocorrencia(ocorrencia_id)
+
+
+@router.post("/ocorrencias/rascunhos")
+def criar_ocorrencia_rascunho_api(
+    payload: OcorrenciaRascunhoSaveIn | None = None,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    return criar_ocorrencia_rascunho(
+        _usuario_id_logado(usuario),
+        payload.payload if payload else {},
+    )
+
+
+@router.get("/ocorrencias/rascunhos/{rascunho_id}")
+def buscar_ocorrencia_rascunho_api(
+    rascunho_id: int,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    rascunho = buscar_ocorrencia_rascunho(rascunho_id, _usuario_id_logado(usuario))
+    if not rascunho:
+        raise HTTPException(404, "Rascunho nao encontrado.")
+    return rascunho
+
+
+@router.patch("/ocorrencias/rascunhos/{rascunho_id}")
+def atualizar_ocorrencia_rascunho_api(
+    rascunho_id: int,
+    payload: OcorrenciaRascunhoSaveIn,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    rascunho = atualizar_ocorrencia_rascunho(
+        rascunho_id,
+        _usuario_id_logado(usuario),
+        payload.payload,
+    )
+    if not rascunho or rascunho.get("status") != "draft":
+        raise HTTPException(404, "Rascunho nao encontrado.")
+    return rascunho
+
+
+@router.delete("/ocorrencias/rascunhos/{rascunho_id}")
+def descartar_ocorrencia_rascunho_api(
+    rascunho_id: int,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    rascunho = descartar_ocorrencia_rascunho(rascunho_id, _usuario_id_logado(usuario))
+    if not rascunho:
+        raise HTTPException(404, "Rascunho nao encontrado.")
+    return rascunho
+
+
+@router.post("/ocorrencias/rascunhos/{rascunho_id}/finalizar", response_model=OcorrenciaOut)
+def finalizar_ocorrencia_rascunho_api(
+    rascunho_id: int,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    usuario_id = _usuario_id_logado(usuario)
+    rascunho = buscar_ocorrencia_rascunho(rascunho_id, usuario_id)
+    if not rascunho or rascunho.get("status") != "draft":
+        raise HTTPException(404, "Rascunho nao encontrado.")
+    try:
+        payload = OcorrenciaCreateIn(**(rascunho.get("payload") or {}))
+    except ValidationError as exc:
+        raise HTTPException(400, "Complete os campos obrigatorios antes de salvar.") from exc
+
+    ocorrencia = criar_ocorrencia_api(payload, usuario)
+    marcar_ocorrencia_rascunho_finalizado(rascunho_id, usuario_id, int(ocorrencia["id"]))
+    return ocorrencia
 
 
 @router.get("/ocorrencias", response_model=list[OcorrenciaOut])

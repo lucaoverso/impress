@@ -141,6 +141,25 @@ def list_teacher_schedule(
     return rows
 
 
+def list_teacher_disciplines(professor_id: int) -> list[dict]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT DISTINCT d.id, d.nome AS name
+        FROM professores_turmas_disciplinas ptd
+        JOIN disciplinas d ON d.id = ptd.disciplina_id
+        WHERE ptd.professor_usuario_id = ?
+          AND COALESCE(d.ativo, 1) = 1
+        ORDER BY d.nome COLLATE NOCASE
+        """,
+        (int(professor_id),),
+    )
+    rows = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
 def create_reason(name: str) -> dict:
     conn = get_connection()
     cursor = conn.cursor()

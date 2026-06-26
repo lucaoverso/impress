@@ -735,6 +735,20 @@ def criar_tabelas():
     """)
 
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS ocorrencia_rascunhos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            usuario_id INTEGER NOT NULL,
+            payload_json TEXT NOT NULL DEFAULT '{}',
+            status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'submitted', 'discarded')),
+            ocorrencia_id INTEGER,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(usuario_id) REFERENCES usuarios(id),
+            FOREIGN KEY(ocorrencia_id) REFERENCES ocorrencias(id)
+        )
+    """)
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS leis (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL UNIQUE
@@ -10070,6 +10084,126 @@ def _validar_quem_assina_banco(valor: str | None, tipo_registro: str) -> str | N
     if quem_assina not in QUEM_ASSINA_OCORRENCIA_VALIDOS:
         raise ValueError("Quem assina invalido.")
     return quem_assina
+
+
+def _serializar_payload_rascunho(payload: dict | None) -> str:
+    if not isinstance(payload, dict):
+        payload = {}
+    return json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+
+def _linha_rascunho_para_dict(row) -> dict | None:
+    if not row:
+        return None
+    try:
+        payload = json.loads(row["payload_json"] or "{}")
+    except (TypeError, json.JSONDecodeError):
+        payload = {}
+    return {
+        "id": int(row["id"]),
+        "usuario_id": int(row["usuario_id"]),
+        "payload": payload if isinstance(payload, dict) else {},
+        "status": row["status"],
+        "ocorrencia_id": row["ocorrencia_id"],
+        "criado_em": row["criado_em"],
+        "atualizado_em": row["atualizado_em"],
+    }
+
+
+def criar_ocorrencia_rascunho(usuario_id: int, payload: dict | None = None) -> dict:
+    usuario_id_valor = int(usuario_id)
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            INSERT INTO ocorrencia_rascunhos (usuario_id, payload_json)
+            VALUES (?, ?)
+            """,
+            (usuario_id_valor, _serializar_payload_rascunho(payload)),
+        )
+        draft_id = int(cursor.lastrowid)
+        conn.commit()
+    finally:
+        conn.close()
+    return buscar_ocorrencia_rascunho(draft_id, usuario_id_valor)
+
+
+def buscar_ocorrencia_rascunho(rascunho_id: int, usuario_id: int | None = None) -> dict | None:
+    conn = get_connection()
+    cursor = conn.cursor()
+    params: list = [int(rascunho_id)]
+    filtro_usuario = ""
+    if usuario_id is not None:
+        filtro_usuario = " AND usuario_id = ?"
+        params.append(int(usuario_id))
+    cursor.execute(
+        f"""
+        SELECT id, usuario_id, payload_json, status, ocorrencia_id, criado_em, atualizado_em
+        FROM ocorrencia_rascunhos
+        WHERE id = ?{filtro_usuario}
+        """,
+        params,
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return _linha_rascunho_para_dict(row)
+
+
+def atualizar_ocorrencia_rascunho(rascunho_id: int, usuario_id: int, payload: dict | None) -> dict | None:
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            UPDATE ocorrencia_rascunhos
+            SET payload_json = ?, atualizado_em = datetime('now')
+            WHERE id = ? AND usuario_id = ? AND status = 'draft'
+            """,
+            (_serializar_payload_rascunho(payload), int(rascunho_id), int(usuario_id)),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return buscar_ocorrencia_rascunho(rascunho_id, usuario_id)
+
+
+def marcar_ocorrencia_rascunho_finalizado(
+    rascunho_id: int, usuario_id: int, ocorrencia_id: int
+) -> dict | None:
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            UPDATE ocorrencia_rascunhos
+            SET status = 'submitted', ocorrencia_id = ?, atualizado_em = datetime('now')
+            WHERE id = ? AND usuario_id = ? AND status = 'draft'
+            """,
+            (int(ocorrencia_id), int(rascunho_id), int(usuario_id)),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return buscar_ocorrencia_rascunho(rascunho_id, usuario_id)
+
+
+def descartar_ocorrencia_rascunho(rascunho_id: int, usuario_id: int) -> dict | None:
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            UPDATE ocorrencia_rascunhos
+            SET status = 'discarded', atualizado_em = datetime('now')
+            WHERE id = ? AND usuario_id = ? AND status = 'draft'
+            """,
+            (int(rascunho_id), int(usuario_id)),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return buscar_ocorrencia_rascunho(rascunho_id, usuario_id)
 
 
 def criar_ocorrencia(

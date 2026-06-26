@@ -71,6 +71,8 @@ def post_pre_registration(
         student_ids=payload.student_ids,
         reason_ids=payload.reason_ids,
         responsible_contact=payload.responsible_contact,
+        discipline=payload.discipline,
+        complementary_report=payload.complementary_report,
     )
 
 
@@ -85,3 +87,11 @@ def complete_pre_registration(
         pre_registration_id,
         payload.occurrence_id,
     )
+
+
+@router.delete("/pre-registrations/{pre_registration_id}")
+def delete_pre_registration(
+    pre_registration_id: int,
+    user=Depends(get_usuario_logado),
+):
+    return service.cancel_pre_registration(user, pre_registration_id)

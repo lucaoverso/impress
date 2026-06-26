@@ -31,6 +31,73 @@ class OcorrenciasRouterTest(unittest.TestCase):
         self.assertIsNotNone(professor)
         return professor
 
+    def _criar_admin(self, database) -> dict:
+        database.criar_usuario("Admin Teste", "admin@teste.local", "senha123", "admin", "ADMIN")
+        admin = database.buscar_usuario_por_email("admin@teste.local")
+        self.assertIsNotNone(admin)
+        return admin
+
+    def test_rascunho_salva_incompleto_e_finaliza_ocorrencia(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, ocorrencias_router = _reload_modulos(db_path)
+            database.criar_tabelas()
+            usuario = self._criar_admin(database)
+
+            turma_id = int(database.criar_turma("Turma Rascunho", "MATUTINO", 30))
+            item_id = database.criar_regimento_item(
+                lei_nome="Regimento Interno",
+                artigo_numero="76",
+                artigo_descricao="Dos deveres do estudante.",
+                inciso_numero="VII",
+                inciso_descricao="Integrar-se ao processo pedagogico.",
+            )
+
+            rascunho = ocorrencias_router.criar_ocorrencia_rascunho_api(
+                ocorrencias_router.OcorrenciaRascunhoSaveIn(
+                    payload={"nome_estudante": "Estudante Parcial"}
+                ),
+                usuario=usuario,
+            )
+
+            self.assertEqual(rascunho["status"], "draft")
+            self.assertEqual(rascunho["payload"]["nome_estudante"], "Estudante Parcial")
+
+            payload_final = {
+                "tipo_registro": "estudante",
+                "quem_assina": "responsavel",
+                "nome_estudante": "Estudante Rascunho",
+                "estudante_id": None,
+                "turma_id": turma_id,
+                "professor_requerente": "Professor Teste",
+                "professor_requerente_id": None,
+                "disciplina": "Portugues",
+                "data_ocorrencia": "2026-03-20",
+                "aula": "2",
+                "horario_ocorrencia": "07:30",
+                "descricao": "Relato final do rascunho.",
+                "regimento_item_ids": [item_id],
+                "acao_aplicada": "advertencia",
+                "status": "registrado",
+            }
+            atualizado = ocorrencias_router.atualizar_ocorrencia_rascunho_api(
+                int(rascunho["id"]),
+                ocorrencias_router.OcorrenciaRascunhoSaveIn(payload=payload_final),
+                usuario=usuario,
+            )
+
+            self.assertEqual(atualizado["payload"]["descricao"], "Relato final do rascunho.")
+
+            ocorrencia = ocorrencias_router.finalizar_ocorrencia_rascunho_api(
+                int(rascunho["id"]),
+                usuario=usuario,
+            )
+
+            self.assertEqual(ocorrencia["nome_estudante"], "Estudante Rascunho")
+            rascunho_final = database.buscar_ocorrencia_rascunho(int(rascunho["id"]), int(usuario["id"]))
+            self.assertEqual(rascunho_final["status"], "submitted")
+            self.assertEqual(int(rascunho_final["ocorrencia_id"]), int(ocorrencia["id"]))
+
     def test_criar_ocorrencia_persiste_base_legal(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")

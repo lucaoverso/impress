@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Suite Escolar - Nova ocorrencia</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&amp;family=Material+Symbols+Outlined:wght@400&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ request.url_for('frontend_v2', path='/src/styles/index.css') }}">
+    <link rel="stylesheet" href="{{ request.url_for('frontend_v2', path='/templates/coordenacao/style.css') }}?v={{ asset_version }}">
+</head>
+<body>
+    <div class="coordenacao-template coordenacao-draft-page">
+        <header class="coordenacao-draft-topbar">
+            <div class="coordenacao-draft-topbar__title">
+                <span class="coordenacao-draft-eyebrow">Novo registro</span>
+                <h1>Nova ocorrencia</h1>
+                <p>Registre manualmente uma ocorrencia iniciada pela coordenacao.</p>
+                <span data-draft-status>Preparando rascunho...</span>
+            </div>
+            <a class="coordenacao-draft-close" href="/coordenacao" aria-label="Fechar formulario">
+                <span class="ui-icon" aria-hidden="true">close</span>
+            </a>
+        </header>
+
+        <main class="coordenacao-draft-shell">
+            <form id="occurrenceDraftForm" class="coordenacao-draft-form" data-draft-form>
+                <ol class="coordenacao-draft-stepper" aria-label="Etapas da nova ocorrencia">
+                    <li class="is-active" data-draft-step-indicator="1">
+                        <span class="coordenacao-draft-stepper__index">1</span>
+                        <strong>Identificacao</strong>
+                    </li>
+                    <li data-draft-step-indicator="2">
+                        <span class="coordenacao-draft-stepper__index">2</span>
+                        <strong>Descricao e base</strong>
+                    </li>
+                    <li data-draft-step-indicator="3">
+                        <span class="coordenacao-draft-stepper__index">3</span>
+                        <strong>Revisao</strong>
+                    </li>
+                </ol>
+
+                <p class="coordenacao-feedback" data-draft-feedback hidden></p>
+
+                <section class="coordenacao-draft-step" data-draft-step="1">
+                    <div class="coordenacao-draft-card">
+                        <div class="coordenacao-draft-section__header">
+                            <span class="ui-icon" aria-hidden="true">school</span>
+                            <div>
+                                <h2>Informacoes academicas</h2>
+                                <p>Identifique quem esta envolvido no registro.</p>
+                            </div>
+                        </div>
+                        <div class="coordenacao-draft-grid coordenacao-draft-grid--four">
+                            <label class="ui-field">
+                                <span class="ui-label">Nome do estudante</span>
+                                <input type="hidden" name="estudante_id" data-draft-student-id>
+                                <input class="ui-input" type="search" name="nome_estudante" autocomplete="off" required data-draft-student-search>
+                                <div class="coordenacao-autocomplete-list" data-draft-student-results hidden></div>
+                            </label>
+                            <label class="ui-field">
+                                <span class="ui-label">Turma</span>
+                                <select class="ui-select" name="turma_id" required data-draft-class></select>
+                            </label>
+                            <label class="ui-field">
+                                <span class="ui-label">Professor requerente</span>
+                                <input type="hidden" name="professor_requerente_id" data-draft-professor-id>
+                                <input class="ui-input" type="search" name="professor_requerente" autocomplete="off" required data-draft-professor-search>
+                                <div class="coordenacao-autocomplete-list" data-draft-professor-results hidden></div>
+                            </label>
+                            <label class="ui-field">
+                                <span class="ui-label">Disciplina</span>
+                                <input class="ui-input" type="search" name="disciplina" autocomplete="off" required data-draft-discipline-search>
+                                <div class="coordenacao-autocomplete-list" data-draft-discipline-results hidden></div>
+                            </label>
+                        </div>
+
+                        <div class="coordenacao-draft-section__header coordenacao-draft-section__header--spaced">
+                            <span class="ui-icon" aria-hidden="true">schedule</span>
+                            <div>
+                                <h2>Temporalidade</h2>
+                                <p>Defina quando a ocorrencia aconteceu.</p>
+                            </div>
+                        </div>
+                        <div class="coordenacao-draft-grid coordenacao-draft-grid--three">
+                            <label class="ui-field">
+                                <span class="ui-label">Data</span>
+                                <input class="ui-input" type="date" name="data_ocorrencia" required>
+                            </label>
+                            <label class="ui-field">
+                                <span class="ui-label">Horario</span>
+                                <input class="ui-input" type="time" name="horario_ocorrencia" required>
+                            </label>
+                            <label class="ui-field">
+                                <span class="ui-label">Aula</span>
+                                <select class="ui-select" name="aula" required data-draft-lesson></select>
+                            </label>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="coordenacao-draft-step" data-draft-step="2" hidden>
+                    <div class="coordenacao-draft-step-heading">
+                        <h2>Descricao da ocorrencia e base legal</h2>
+                        <p>Descreva detalhadamente o ocorrido e vincule os artigos do regimento que fundamentam a acao disciplinar.</p>
+                    </div>
+                    <div class="coordenacao-draft-report-grid">
+                        <div class="coordenacao-draft-card">
+                            <div class="coordenacao-draft-card__title">
+                                <span class="ui-icon" aria-hidden="true">description</span>
+                                <h3>Relato detalhado</h3>
+                                <small>Min. 50 caracteres</small>
+                            </div>
+                            <label class="ui-field">
+                                <span class="sr-only">Relato detalhado</span>
+                                <textarea class="ui-textarea coordenacao-draft-textarea" name="descricao" rows="12" required minlength="50" maxlength="5000" data-draft-description placeholder="Descreva os fatos com precisao, incluindo horarios, pessoas envolvidas e acoes imediatas tomadas..."></textarea>
+                            </label>
+                            <p class="coordenacao-draft-note">
+                                <span class="ui-icon" aria-hidden="true">info</span>
+                                Este relato sera anexado ao prontuario permanente do aluno.
+                            </p>
+                        </div>
+
+                        <aside class="coordenacao-draft-card coordenacao-draft-legal">
+                            <div class="coordenacao-draft-card__title">
+                                <span class="ui-icon" aria-hidden="true">gavel</span>
+                                <h3>Base legal / Regimento</h3>
+                            </div>
+                            <label class="ui-field">
+                                <span class="sr-only">Buscar base legal</span>
+                                <input class="ui-input" type="search" name="regimento_busca" autocomplete="off" placeholder="Buscar por artigo ou palavra-chave..." data-draft-legal-search>
+                                <div class="coordenacao-autocomplete-list" data-draft-legal-results hidden></div>
+                            </label>
+                            <span class="coordenacao-draft-mini-label">Artigos selecionados</span>
+                            <div class="coordenacao-create-selected-list" data-draft-legal-selected aria-live="polite"></div>
+                        </aside>
+                    </div>
+                </section>
+
+                <section class="coordenacao-draft-step" data-draft-step="3" hidden>
+                    <div class="coordenacao-draft-review-layout">
+                        <div class="coordenacao-draft-card coordenacao-draft-final-fields">
+                            <div class="coordenacao-draft-step-heading">
+                                <h2>Revisao e ajustes finais</h2>
+                                <p>Confira os dados, ajuste a acao aplicada e salve o registro oficial.</p>
+                            </div>
+
+                            <label class="ui-field">
+                                <span class="ui-label">Acao aplicada</span>
+                                <select class="ui-select" name="acao_aplicada" required data-draft-action></select>
+                                <span class="ui-hint" data-draft-action-hint></span>
+                            </label>
+
+                            <fieldset class="coordenacao-draft-choice-group">
+                                <legend>Quem deve assinar este registro?</legend>
+                                <label>
+                                    <input type="radio" name="quem_assina" value="responsavel" required checked data-draft-signature-option>
+                                    <span>Responsavel</span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="quem_assina" value="estudante" required data-draft-signature-option>
+                                    <span>Estudante</span>
+                                </label>
+                            </fieldset>
+
+                            <fieldset class="coordenacao-draft-status-grid">
+                                <legend>Status inicial do registro</legend>
+                                <label>
+                                    <input type="radio" name="status" value="registrado" required checked data-draft-status-option>
+                                    <span>
+                                        <strong>Registrado</strong>
+                                        <small>Concluido e aguardando assinaturas.</small>
+                                    </span>
+                                </label>
+                                <label>
+                                    <input type="radio" name="status" value="em_acompanhamento" required data-draft-status-option>
+                                    <span>
+                                        <strong>Em analise</strong>
+                                        <small>Enviado para revisao da equipe escolar.</small>
+                                    </span>
+                                </label>
+                            </fieldset>
+                        </div>
+
+                        <aside class="coordenacao-draft-review-card" aria-label="Resumo da ocorrencia">
+                            <h3>Resumo da ocorrencia</h3>
+                            <div class="coordenacao-draft-review-list" data-draft-review-summary></div>
+                            <h4>Base legal aplicada</h4>
+                            <div class="coordenacao-draft-review-legal" data-draft-review-legal></div>
+                        </aside>
+                    </div>
+                </section>
+
+                <footer class="coordenacao-draft-footer">
+                    <button class="ui-button ui-button--ghost" type="button" data-draft-discard-footer>Cancelar registro</button>
+                    <div class="coordenacao-draft-footer__actions">
+                        <button class="ui-button ui-button--subtle" type="button" data-draft-prev hidden>
+                            <span class="ui-icon" aria-hidden="true">arrow_back</span>
+                            <span>Voltar</span>
+                        </button>
+                        <button class="ui-button ui-button--primary" type="button" data-draft-next>
+                            <span>Avancar</span>
+                            <span class="ui-icon" aria-hidden="true">arrow_forward</span>
+                        </button>
+                        <button class="ui-button ui-button--primary" type="submit" data-draft-submit hidden>
+                            <span class="ui-icon" aria-hidden="true">save</span>
+                            <span>Salvar registro</span>
+                        </button>
+                    </div>
+                </footer>
+            </form>
+        </main>
+    </div>
+
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version }}"></script>
+    <script type="module" src="{{ request.url_for('frontend_v2', path='/templates/coordenacao/nova-ocorrencia.js') }}?v={{ asset_version }}"></script>
+</body>
+</html>

@@ -17,16 +17,12 @@
                 <span class="side-navbar__brand-mark" aria-hidden="true">SE</span>
                 <div class="side-navbar__brand-copy">
                     <strong class="side-navbar__title">Suite Escolar</strong>
-                    <span class="side-navbar__context" data-context-copy>Modulo de coordenacao</span>
+                    <span class="side-navbar__context" data-context-copy>Módulo de coordenação</span>
                 </div>
             </div>
 
             <nav class="side-navbar__body" aria-label="Acoes da coordenacao">
                 <section class="side-navbar__section">
-                    <div class="side-navbar__section-head">
-                        <span class="side-navbar__section-title">Coordenacao</span>
-                        <span class="side-navbar__section-description">Rotinas do modulo</span>
-                    </div>
                     <div class="side-navbar__links">
                         <a class="side-navbar__link is-active" href="#ocorrencias" aria-current="page" data-panel-link="ocorrencias" data-manager-only>
                             <span class="ui-icon" aria-hidden="true">dashboard</span>
@@ -42,20 +38,15 @@
                         </a>
                         <a class="side-navbar__link" href="#relatorios" data-panel-link="relatorios" data-manager-only>
                             <span class="ui-icon" aria-hidden="true">bar_chart</span>
-                            <span class="side-navbar__label">Relatorios</span>
+                            <span class="side-navbar__label">Relatórios</span>
                         </a>
                         <a class="side-navbar__link" href="#fluxo-professor" data-panel-link="fluxo-professor">
                             <span class="ui-icon" aria-hidden="true">send</span>
-                            <span class="side-navbar__label">Fluxo do professor</span>
+                            <span class="side-navbar__label" data-flow-panel-label>Fila de pré-registros</span>
                             <span class="side-navbar__badge" data-pre-registration-count hidden>0</span>
                         </a>
                     </div>
                 </section>
-
-                <a class="ui-button ui-button--primary side-navbar__primary-action" href="#fluxo-professor" data-primary-action>
-                    <span class="ui-icon" aria-hidden="true" data-primary-action-icon>notifications_active</span>
-                    <span data-primary-action-label>Abrir pendencias</span>
-                </a>
             </nav>
 
             <div class="side-navbar__footer">
@@ -102,24 +93,14 @@
                 <div class="coordenacao-page__inner">
                     <header class="coordenacao-hero">
                         <div class="coordenacao-hero__copy">
-                            <h1 id="tituloCoordenacao">Central de Coordenacao</h1>
-                            <p data-hero-copy>Gestao de ocorrencias, pendencias docentes e cadastros auxiliares em uma experiencia unica.</p>
-                            <p class="coordenacao-hero__meta" data-role-summary>Carregando permissoes da sessao...</p>
+                            <h1 id="tituloCoordenacao">Central de Coordenação</h1>
+                            <p data-hero-copy>Gestão de ocorrências, pendências docentes e cadastros auxiliares em uma experiência unica.</p>
+                            <p class="coordenacao-hero__meta" data-role-summary>Carregando permissões da sessão...</p>
                         </div>
-                        <div class="coordenacao-hero__aside">
-                            <a
-                                class="ui-button ui-button--primary coordenacao-hero__action"
-                                href="#ocorrencias"
-                                data-occurrence-create-action
-                                data-panel-target="ocorrencias"
-                                data-manager-only
-                            >
-                                <span class="ui-icon" aria-hidden="true">add_circle</span>
-                                <span>Cadastrar nova ocorrencia</span>
-                            </a>
-                            <div class="coordenacao-metrics" aria-label="Resumo das ocorrencias">
+                        <div class="coordenacao-hero__aside" data-manager-only>
+                            <div class="coordenacao-metrics" aria-label="Resumo das ocorrências">
                                 <article class="coordenacao-metric">
-                                    <span class="coordenacao-metric__label">Ocorrencias</span>
+                                    <span class="coordenacao-metric__label">Ocorrências</span>
                                     <strong class="coordenacao-metric__value" data-metric-total>0</strong>
                                 </article>
                                 <article class="coordenacao-metric coordenacao-metric--danger">
@@ -127,28 +108,22 @@
                                     <strong class="coordenacao-metric__value" data-metric-pending>0</strong>
                                 </article>
                                 <article class="coordenacao-metric coordenacao-metric--success">
-                                    <span class="coordenacao-metric__label">Concluidas</span>
+                                    <span class="coordenacao-metric__label">Concluídas</span>
                                     <strong class="coordenacao-metric__value" data-metric-resolved>0</strong>
                                 </article>
                             </div>
                         </div>
                     </header>
 
-                    <section id="ocorrencias" class="coordenacao-section coordenacao-panel-view is-active" aria-labelledby="tituloOcorrencias" data-panel="ocorrencias" data-manager-only>
-                        <div class="coordenacao-section__header">
-                            <div>
-                                <h2 id="tituloOcorrencias">Ocorrencias</h2>
-                                <p>Use filtros, consulta rapida e detalhe expandido em modal para acompanhar cada registro sem sair desta tela.</p>
-                            </div>
-                        </div>
+                    <section id="ocorrencias" class="coordenacao-section coordenacao-panel-view is-active" aria-label="Ocorrencias" data-panel="ocorrencias" data-manager-only>
 
                         <p class="coordenacao-feedback" data-occurrence-feedback hidden></p>
 
                         <section class="coordenacao-filter-card" aria-label="Filtros de ocorrencias">
                             <form class="coordenacao-filter-grid coordenacao-filter-grid--full" data-coordenacao-filters>
                                 <label class="ui-field coordenacao-filter-grid__search">
-                                    <span class="ui-label">Referencia</span>
-                                    <input class="ui-input" type="search" name="nome_estudante" placeholder="Estudante, professor ou descricao">
+                                    <span class="ui-label">Buscar por nome</span>
+                                    <input class="ui-input" type="search" name="nome_estudante" placeholder="Nome do estudante">
                                 </label>
                                 <label class="ui-field">
                                     <span class="ui-label">Turma</span>
@@ -162,27 +137,40 @@
                                         <option value="">Todos os tipos</option>
                                     </select>
                                 </label>
-                                <label class="ui-field">
-                                    <span class="ui-label">Status</span>
-                                    <select class="ui-select" name="status" data-filter-status>
-                                        <option value="">Todos os status</option>
-                                    </select>
-                                </label>
-                                <label class="ui-field">
-                                    <span class="ui-label">Data inicial</span>
-                                    <input class="ui-input" type="date" name="data_inicial">
-                                </label>
-                                <label class="ui-field">
-                                    <span class="ui-label">Data final</span>
-                                    <input class="ui-input" type="date" name="data_final">
-                                </label>
+                                <div class="ui-field coordenacao-period-field">
+                                    <span class="ui-label">Periodo</span>
+                                    <input type="hidden" name="data_inicial" data-period-start>
+                                    <input type="hidden" name="data_final" data-period-end>
+                                    <button class="ui-input coordenacao-period-trigger" type="button" data-period-trigger aria-expanded="false">
+                                        <span class="ui-icon" aria-hidden="true">calendar_month</span>
+                                        <span data-period-label>Selecionar periodo</span>
+                                    </button>
+                                    <div class="coordenacao-period-popover" data-period-popover hidden>
+                                        <header class="coordenacao-period-popover__header">
+                                            <button class="top-navbar__icon-button" type="button" aria-label="Mes anterior" data-period-nav="prev">
+                                                <span class="ui-icon" aria-hidden="true">chevron_left</span>
+                                            </button>
+                                            <strong data-period-month>Periodo</strong>
+                                            <button class="top-navbar__icon-button" type="button" aria-label="Proximo mes" data-period-nav="next">
+                                                <span class="ui-icon" aria-hidden="true">chevron_right</span>
+                                            </button>
+                                        </header>
+                                        <div class="coordenacao-period-popover__weekdays" aria-hidden="true">
+                                            <span>Dom</span>
+                                            <span>Seg</span>
+                                            <span>Ter</span>
+                                            <span>Qua</span>
+                                            <span>Qui</span>
+                                            <span>Sex</span>
+                                            <span>Sab</span>
+                                        </div>
+                                        <div class="coordenacao-period-calendar" data-period-calendar></div>
+                                    </div>
+                                </div>
                                 <div class="coordenacao-filter-actions">
                                     <button class="ui-button ui-button--subtle coordenacao-filter-grid__button" type="submit">
                                         <span class="ui-icon" aria-hidden="true">filter_list</span>
                                         <span>Filtrar</span>
-                                    </button>
-                                    <button class="ui-button ui-button--ghost coordenacao-filter-grid__button" type="button" data-clear-occurrence-filters>
-                                        <span>Limpar</span>
                                     </button>
                                 </div>
                             </form>
@@ -190,10 +178,7 @@
 
                         <div class="coordenacao-overview-grid">
                             <article class="coordenacao-panel">
-                                <div class="coordenacao-panel__header">
-                                    <h3>Historico de registros</h3>
-                                    <p>Lista dinamica com 10 registros por pagina para facilitar a navegacao entre ocorrencias.</p>
-                                </div>
+    
                                 <div class="coordenacao-records" data-occurrence-list aria-live="polite"></div>
                                 <footer class="coordenacao-pagination" aria-label="Paginacao de ocorrencias">
                                     <p data-occurrence-pagination-summary>Nenhum registro carregado.</p>
@@ -203,13 +188,7 @@
                         </div>
                     </section>
 
-                    <section id="base-legal" class="coordenacao-section coordenacao-legal" aria-labelledby="tituloBaseLegal" data-panel="base-legal" data-manager-only hidden>
-                        <div class="coordenacao-section__header">
-                            <div>
-                                <h2 id="tituloBaseLegal">Base legal</h2>
-                                <p>Cadastre, organize e atualize referencias do regimento diretamente nesta interface.</p>
-                            </div>
-                        </div>
+                    <section id="base-legal" class="coordenacao-section coordenacao-legal" aria-label="Base legal" data-panel="base-legal" data-manager-only hidden>
 
                         <div class="coordenacao-legal-grid">
                             <article class="coordenacao-panel">
@@ -305,14 +284,7 @@
                         </article>
                     </section>
 
-                    <section id="estudantes" class="coordenacao-section coordenacao-students" aria-labelledby="tituloEstudantes" data-panel="estudantes" data-manager-only hidden>
-                        <div class="coordenacao-section__header">
-                            <div>
-                                <h2 id="tituloEstudantes">Cadastro de estudantes</h2>
-                                <p>Consulta e manutencao rapida usando os endpoints ja existentes do modulo.</p>
-                            </div>
-                        </div>
-
+                    <section id="estudantes" class="coordenacao-section coordenacao-students" aria-label="Estudantes" data-panel="estudantes" data-manager-only hidden>
                         <div class="coordenacao-students-grid">
                             <article class="coordenacao-panel">
                                 <div class="coordenacao-panel__header">
@@ -388,13 +360,8 @@
                         </div>
                     </section>
 
-                    <section id="relatorios" class="coordenacao-section coordenacao-reports" aria-labelledby="tituloRelatorios" data-panel="relatorios" data-manager-only hidden>
-                        <div class="coordenacao-section__header">
-                            <div>
-                                <h2 id="tituloRelatorios">Relatorios</h2>
-                                <p>Indicadores consolidados em tempo real com base nos registros e pre-registros ja disponiveis.</p>
-                            </div>
-                        </div>
+                    <section id="relatorios" class="coordenacao-section coordenacao-reports" aria-label="Relatorios" data-panel="relatorios" data-manager-only hidden>
+
 
                         <div class="coordenacao-report-grid">
                             <article class="coordenacao-panel coordenacao-report-card">
@@ -424,14 +391,7 @@
                         </div>
                     </section>
 
-                    <section id="fluxo-professor" class="coordenacao-section coordenacao-professor-flow" aria-labelledby="tituloFluxoProfessor" data-panel="fluxo-professor" hidden>
-                        <div class="coordenacao-section__header">
-                            <div>
-                                <h2 id="tituloFluxoProfessor">Fluxo do professor</h2>
-                                <p>Pre-registros e motivos rapidos compartilham a mesma area, com renderizacao diferente por permissao.</p>
-                            </div>
-                        </div>
-
+                    <section id="fluxo-professor" class="coordenacao-section coordenacao-professor-flow" aria-label="Fila de pre-registros" data-panel="fluxo-professor" data-flow-panel hidden>
                         <div class="coordenacao-flow-grid" data-teacher-flow hidden>
                             <article class="coordenacao-panel">
                                 <div class="coordenacao-panel__header">
@@ -446,10 +406,20 @@
                                     <div class="coordenacao-autocomplete-list" data-teacher-student-results hidden></div>
                                     <div class="coordenacao-selection-list" data-teacher-selected-students aria-live="polite"></div>
 
+                                    <label class="ui-field">
+                                        <span class="ui-label">Disciplina</span>
+                                        <select class="ui-select" name="discipline" data-teacher-discipline></select>
+                                    </label>
+
                                     <fieldset class="coordenacao-choice-group">
                                         <legend>Motivos do pre-registro</legend>
                                         <div class="coordenacao-checkbox-grid" data-teacher-reasons></div>
                                     </fieldset>
+
+                                    <label class="ui-field">
+                                        <span class="ui-label">Relato complementar</span>
+                                        <textarea class="ui-textarea" name="complementary_report" rows="4" maxlength="1000" placeholder="Opcional: descreva algum detalhe que ajude a coordenacao"></textarea>
+                                    </label>
 
                                     <fieldset class="coordenacao-choice-group">
                                         <legend>Contato com o responsavel</legend>
@@ -477,19 +447,65 @@
                             </article>
                         </div>
 
-                        <div class="coordenacao-flow-grid" data-manager-flow hidden>
-                            <article class="coordenacao-panel">
+                        <div class="coordenacao-manager-flow" data-manager-flow hidden>
+                            <article class="coordenacao-panel coordenacao-pre-registration-panel">
                                 <div class="coordenacao-panel__header">
-                                    <h3>Envios aguardando conclusao</h3>
-                                    <p>Acompanhe a fila docente e use este painel para identificar o que precisa de tratamento prioritario.</p>
+                                    <h3>Pendencias enviadas pelos professores</h3>
+                                    <p>Finalize os relatos relevantes, descarte o que nao procede e acompanhe o volume pendente.</p>
                                 </div>
-                                <div class="coordenacao-queue-list" data-pre-registration-queue></div>
+                                <form class="coordenacao-pre-registration-toolbar" data-pre-registration-filters>
+                                    <label class="ui-field">
+                                        <span class="ui-label">Professor</span>
+                                        <select class="ui-select" name="professor_id" data-pre-registration-filter-professor>
+                                            <option value="">Todos os professores</option>
+                                        </select>
+                                    </label>
+                                    <label class="ui-field">
+                                        <span class="ui-label">Turma</span>
+                                        <select class="ui-select" name="turma_id" data-pre-registration-filter-class>
+                                            <option value="">Todas as turmas</option>
+                                        </select>
+                                    </label>
+                                    <label class="ui-field">
+                                        <span class="ui-label">Periodo</span>
+                                        <select class="ui-select" name="periodo" data-pre-registration-filter-period>
+                                            <option value="7">Ultimos 7 dias</option>
+                                            <option value="15">Ultimos 15 dias</option>
+                                            <option value="30">Ultimos 30 dias</option>
+                                            <option value="">Todo o periodo</option>
+                                        </select>
+                                    </label>
+                                    <button class="ui-button ui-button--primary" type="submit">
+                                        <span class="ui-icon" aria-hidden="true">filter_list</span>
+                                        <span>Aplicar filtros</span>
+                                    </button>
+                                </form>
+                                <div class="coordenacao-pre-registration-table-wrap">
+                                    <table class="coordenacao-table coordenacao-pre-registration-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Aluno / Turma</th>
+                                                <th>Professor responsavel</th>
+                                                <th>Tipo</th>
+                                                <th>Data do registro</th>
+                                                <th>Resumo do relato</th>
+                                                <th>Acoes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody data-pre-registration-queue>
+                                            <tr>
+                                                <td colspan="6">Carregando pre-registros...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <footer class="coordenacao-pre-registration-footer" data-pre-registration-footer></footer>
                                 <p class="coordenacao-feedback" data-manager-flow-feedback hidden></p>
                             </article>
 
                             <article class="coordenacao-panel">
                                 <div class="coordenacao-panel__header">
-                                    <h3>Motivos de pre-registro</h3>
+                                    <h3>Motivos de pré-registro</h3>
                                     <p>Cadastre motivos curtos e ative ou inative itens sem sair da nova interface.</p>
                                 </div>
                                 <form class="coordenacao-reason-form" data-teacher-reason-form>
@@ -530,9 +546,125 @@
             </div>
         </dialog>
 
-        <a class="coordenacao-fab" href="#fluxo-professor" aria-label="Abrir fila da coordenacao" data-fab-action>
-            <span class="ui-icon" aria-hidden="true" data-fab-icon>notifications</span>
-            <span class="coordenacao-fab__label" data-fab-label>Abrir fila da coordenacao</span>
+        <dialog class="coordenacao-modal coordenacao-modal--form" data-occurrence-create-modal aria-labelledby="coordenacaoOccurrenceCreateTitle">
+            <div class="coordenacao-modal__surface">
+                <header class="coordenacao-modal__header">
+                    <div class="coordenacao-modal__header-copy">
+                        <span class="coordenacao-modal__eyebrow">Novo registro</span>
+                        <h2 id="coordenacaoOccurrenceCreateTitle">Nova ocorrencia</h2>
+                        <p>Registre manualmente uma ocorrencia iniciada pela coordenacao.</p>
+                    </div>
+                    <button class="top-navbar__icon-button coordenacao-modal__close" type="button" aria-label="Fechar novo registro" data-occurrence-create-close>
+                        <span class="ui-icon" aria-hidden="true">close</span>
+                    </button>
+                </header>
+                <p class="coordenacao-feedback" data-occurrence-create-feedback hidden></p>
+                <form class="coordenacao-create-form" data-occurrence-create-form>
+                    <input type="hidden" name="tipo_registro" value="estudante">
+
+                    <ol class="coordenacao-create-steps" aria-label="Etapas do registro">
+                        <li class="is-active" data-occurrence-create-step-indicator="1">
+                            <span>1</span>
+                            <strong>Contexto</strong>
+                        </li>
+                        <li data-occurrence-create-step-indicator="2">
+                            <span>2</span>
+                            <strong>Relato e base</strong>
+                        </li>
+                        <li data-occurrence-create-step-indicator="3">
+                            <span>3</span>
+                            <strong>Finalizacao</strong>
+                        </li>
+                    </ol>
+
+                    <section class="coordenacao-create-step" data-occurrence-create-step="1">
+                        <div class="coordenacao-create-grid">
+                            <label class="ui-field">
+                                <span class="ui-label">Nome do estudante</span>
+                                <input type="hidden" name="estudante_id" data-occurrence-create-student-id>
+                                <input class="ui-input" type="search" name="nome_estudante" required maxlength="255" placeholder="Buscar no banco" autocomplete="off" data-occurrence-create-student-search>
+                                <div class="coordenacao-autocomplete-list" data-occurrence-create-student-results hidden></div>
+                            </label>
+                            <label class="ui-field">
+                                <span class="ui-label">Turma</span>
+                                <select class="ui-select" name="turma_id" required data-occurrence-create-class></select>
+                            </label>
+                            <label class="ui-field">
+                                <span class="ui-label">Professor requerente</span>
+                                <input type="hidden" name="professor_requerente_id" data-occurrence-create-professor-id>
+                                <input class="ui-input" type="search" name="professor_requerente" required maxlength="255" placeholder="Buscar professor" autocomplete="off" data-occurrence-create-professor-search>
+                                <div class="coordenacao-autocomplete-list" data-occurrence-create-professor-results hidden></div>
+                            </label>
+                            <label class="ui-field">
+                                <span class="ui-label">Disciplina</span>
+                                <input class="ui-input" type="search" name="disciplina" required maxlength="255" placeholder="Buscar disciplina" autocomplete="off" data-occurrence-create-discipline-search>
+                                <div class="coordenacao-autocomplete-list" data-occurrence-create-discipline-results hidden></div>
+                            </label>
+                            <label class="ui-field">
+                                <span class="ui-label">Data</span>
+                                <input class="ui-input" type="date" name="data_ocorrencia" required>
+                            </label>
+                            <label class="ui-field">
+                                <span class="ui-label">Horario</span>
+                                <input class="ui-input" type="time" name="horario_ocorrencia" required>
+                            </label>
+                            <label class="ui-field">
+                                <span class="ui-label">Aula</span>
+                                <select class="ui-select" name="aula" required data-occurrence-create-lesson></select>
+                            </label>
+                        </div>
+                    </section>
+
+                    <section class="coordenacao-create-step" data-occurrence-create-step="2" hidden>
+                        <label class="ui-field">
+                            <span class="ui-label">Descricao</span>
+                            <textarea class="ui-textarea" name="descricao" rows="5" required maxlength="5000" placeholder="Descreva o ocorrido de forma objetiva"></textarea>
+                        </label>
+                        <label class="ui-field">
+                            <span class="ui-label">Base legal</span>
+                            <input class="ui-input" type="search" name="regimento_busca" placeholder="Buscar artigo ou descricao" autocomplete="off" data-occurrence-create-legal-search>
+                            <div class="coordenacao-autocomplete-list" data-occurrence-create-legal-results hidden></div>
+                        </label>
+                        <div class="coordenacao-create-selected-list" data-occurrence-create-legal-selected aria-live="polite"></div>
+                    </section>
+
+                    <section class="coordenacao-create-step" data-occurrence-create-step="3" hidden>
+                        <div class="coordenacao-create-grid">
+                            <label class="ui-field">
+                                <span class="ui-label">Acao aplicada</span>
+                                <select class="ui-select" name="acao_aplicada" required data-occurrence-create-action></select>
+                                <span class="ui-hint" data-occurrence-create-action-hint></span>
+                            </label>
+                            <label class="ui-field">
+                                <span class="ui-label">Quem assina</span>
+                                <select class="ui-select" name="quem_assina" required data-occurrence-create-signature></select>
+                            </label>
+                            <label class="ui-field">
+                                <span class="ui-label">Status</span>
+                                <select class="ui-select" name="status" required data-occurrence-create-status></select>
+                            </label>
+                        </div>
+                    </section>
+
+                    <footer class="coordenacao-create-form__actions">
+                        <button class="ui-button ui-button--ghost" type="button" data-occurrence-create-cancel>Cancelar</button>
+                        <button class="ui-button ui-button--subtle" type="button" data-occurrence-create-prev hidden>Voltar</button>
+                        <button class="ui-button ui-button--primary" type="button" data-occurrence-create-next>
+                            <span>Avancar</span>
+                            <span class="ui-icon" aria-hidden="true">arrow_forward</span>
+                        </button>
+                        <button class="ui-button ui-button--primary" type="submit" data-occurrence-create-submit hidden>
+                            <span class="ui-icon" aria-hidden="true">save</span>
+                            <span>Salvar registro</span>
+                        </button>
+                    </footer>
+                </form>
+            </div>
+        </dialog>
+
+        <a class="coordenacao-fab" href="#ocorrencias" aria-label="Cadastrar nova ocorrencia" data-fab-action data-panel-target="ocorrencias" hidden>
+            <span class="ui-icon" aria-hidden="true" data-fab-icon>add_circle</span>
+            <span class="coordenacao-fab__label" data-fab-label>Cadastrar nova ocorrencia</span>
         </a>
     </div>
 

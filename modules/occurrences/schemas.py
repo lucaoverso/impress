@@ -19,6 +19,8 @@ class PreRegistrationCreate(BaseModel):
     student_ids: list[int]
     reason_ids: list[int]
     responsible_contact: ResponsibleContact
+    discipline: str | None = None
+    complementary_report: str | None = None
 
 
 class PreRegistrationComplete(BaseModel):

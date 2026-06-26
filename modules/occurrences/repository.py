@@ -9,6 +9,7 @@ def create_pre_registration(
     responsible_contact: str,
     discipline: str,
     lesson: str,
+    complementary_report: str,
     occurred_at: str,
 ) -> dict:
     primary_student_id = int(student_ids[0])
@@ -24,12 +25,13 @@ def create_pre_registration(
             responsible_contact,
             discipline,
             lesson,
+            complementary_report,
             occurred_at,
             status,
             created_at,
             updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'), datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'), datetime('now'))
         """,
         (
             primary_student_id,
@@ -38,6 +40,7 @@ def create_pre_registration(
             responsible_contact,
             discipline,
             lesson,
+            complementary_report,
             occurred_at,
         ),
     )
@@ -113,6 +116,7 @@ def list_pre_registrations(
             pr.responsible_contact,
             pr.discipline,
             pr.lesson,
+            COALESCE(pr.complementary_report, '') AS complementary_report,
             COALESCE(NULLIF(pr.occurred_at, ''), pr.created_at) AS occurred_at,
             pr.status,
             pr.occurrence_id,
@@ -226,6 +230,26 @@ def complete_pre_registration(pre_registration_id: int, occurrence_id: int) -> d
     conn.commit()
     conn.close()
     return get_pre_registration(pre_registration_id)
+
+
+def cancel_pre_registration(pre_registration_id: int) -> dict | None:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE occurrence_pre_registrations
+        SET
+            status = 'cancelled',
+            updated_at = datetime('now')
+        WHERE id = ?
+          AND status = 'pending'
+        """,
+        (int(pre_registration_id),),
+    )
+    conn.commit()
+    changed = cursor.rowcount
+    conn.close()
+    return get_pre_registration(pre_registration_id) if changed else None
 
 
 def get_occurrence(occurrence_id: int) -> dict | None:

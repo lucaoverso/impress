@@ -14,6 +14,7 @@ atualizar_estudante = proxy("atualizar_estudante")
 atualizar_inciso = proxy("atualizar_inciso")
 atualizar_lei = proxy("atualizar_lei")
 atualizar_ocorrencia = proxy("atualizar_ocorrencia")
+atualizar_ocorrencia_rascunho = proxy("atualizar_ocorrencia_rascunho")
 atualizar_regimento_item = proxy("atualizar_regimento_item")
 atualizar_status_estudante = proxy("atualizar_status_estudante")
 atualizar_status_regimento_item = proxy("atualizar_status_regimento_item")
@@ -24,6 +25,7 @@ buscar_estudantes_ocorrencia = proxy("buscar_estudantes_ocorrencia")
 buscar_inciso_por_id = proxy("buscar_inciso_por_id")
 buscar_lei_por_id = proxy("buscar_lei_por_id")
 buscar_ocorrencia_por_id = proxy("buscar_ocorrencia_por_id")
+buscar_ocorrencia_rascunho = proxy("buscar_ocorrencia_rascunho")
 buscar_professor_por_id_ocorrencia = proxy("buscar_professor_por_id_ocorrencia")
 buscar_professores_ocorrencia = proxy("buscar_professores_ocorrencia")
 buscar_regimento_item_por_id = proxy("buscar_regimento_item_por_id")
@@ -34,6 +36,7 @@ criar_estudante = proxy("criar_estudante")
 criar_inciso = proxy("criar_inciso")
 criar_lei = proxy("criar_lei")
 criar_ocorrencia = proxy("criar_ocorrencia")
+criar_ocorrencia_rascunho = proxy("criar_ocorrencia_rascunho")
 criar_ou_atualizar_estudante_por_nome_turma = proxy("criar_ou_atualizar_estudante_por_nome_turma")
 criar_ou_atualizar_regimento_item = proxy("criar_ou_atualizar_regimento_item")
 criar_regimento_item = proxy("criar_regimento_item")
@@ -43,6 +46,7 @@ listar_estudantes = proxy("listar_estudantes")
 listar_incisos = proxy("listar_incisos")
 listar_leis = proxy("listar_leis")
 listar_ocorrencias = proxy("listar_ocorrencias")
+marcar_ocorrencia_rascunho_finalizado = proxy("marcar_ocorrencia_rascunho_finalizado")
 listar_regimento_itens = proxy("listar_regimento_itens")
 remover_alinea = proxy("remover_alinea")
 remover_artigo = proxy("remover_artigo")
@@ -50,6 +54,7 @@ remover_estudante = proxy("remover_estudante")
 remover_inciso = proxy("remover_inciso")
 remover_lei = proxy("remover_lei")
 remover_ocorrencia = proxy("remover_ocorrencia")
+descartar_ocorrencia_rascunho = proxy("descartar_ocorrencia_rascunho")
 remover_regimento_item = proxy("remover_regimento_item")
 salvar_ocorrencia_estudantes_vinculados = proxy("salvar_ocorrencia_estudantes_vinculados")
 salvar_ocorrencia_professores_vinculados = proxy("salvar_ocorrencia_professores_vinculados")
@@ -70,6 +75,7 @@ __all__ = [
     "atualizar_inciso",
     "atualizar_lei",
     "atualizar_ocorrencia",
+    "atualizar_ocorrencia_rascunho",
     "atualizar_regimento_item",
     "atualizar_status_estudante",
     "atualizar_status_regimento_item",
@@ -80,6 +86,7 @@ __all__ = [
     "buscar_inciso_por_id",
     "buscar_lei_por_id",
     "buscar_ocorrencia_por_id",
+    "buscar_ocorrencia_rascunho",
     "buscar_professor_por_id_ocorrencia",
     "buscar_professores_ocorrencia",
     "buscar_regimento_item_por_id",
@@ -90,6 +97,7 @@ __all__ = [
     "criar_inciso",
     "criar_lei",
     "criar_ocorrencia",
+    "criar_ocorrencia_rascunho",
     "criar_ou_atualizar_estudante_por_nome_turma",
     "criar_ou_atualizar_regimento_item",
     "criar_regimento_item",
@@ -99,6 +107,7 @@ __all__ = [
     "listar_incisos",
     "listar_leis",
     "listar_ocorrencias",
+    "marcar_ocorrencia_rascunho_finalizado",
     "listar_regimento_itens",
     "remover_alinea",
     "remover_artigo",
@@ -106,6 +115,7 @@ __all__ = [
     "remover_inciso",
     "remover_lei",
     "remover_ocorrencia",
+    "descartar_ocorrencia_rascunho",
     "remover_regimento_item",
     "salvar_ocorrencia_estudantes_vinculados",
     "salvar_ocorrencia_professores_vinculados",

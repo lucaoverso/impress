@@ -36,10 +36,12 @@ def require_manager(user: dict) -> None:
 def context(user: dict) -> dict:
     require_occurrences_access(user)
     manager = usuario_eh_gestor(user)
+    teacher = usuario_eh_professor(user)
     return {
         "is_manager": manager,
-        "is_teacher": usuario_eh_professor(user),
+        "is_teacher": teacher,
         "reasons": catalog_repository.list_reasons(include_inactive=manager),
+        "disciplines": catalog_repository.list_teacher_disciplines(_user_id(user)) if teacher else [],
     }
 
 
@@ -96,6 +98,8 @@ def create_pre_registration(
     student_ids: list[int],
     reason_ids: list[int],
     responsible_contact: str,
+    discipline: str | None = None,
+    complementary_report: str | None = None,
 ) -> dict:
     if not usuario_eh_professor(user):
         raise HTTPException(403, "Apenas professores podem criar pre-registros.")
@@ -114,6 +118,10 @@ def create_pre_registration(
     contact = str(responsible_contact or "").strip()
     if contact not in RESPONSIBLE_CONTACTS:
         raise HTTPException(400, "Opcao de contato com responsavel invalida.")
+    selected_discipline = _normalize_optional_text(discipline, 120)
+    if selected_discipline:
+        selected_discipline = _validate_teacher_discipline(_user_id(user), selected_discipline)
+    report = _normalize_optional_text(complementary_report, 1000)
     occurred_at = datetime.now()
     class_context = _resolve_class_context(
         _user_id(user),
@@ -125,8 +133,9 @@ def create_pre_registration(
         reason_ids=normalized_reason_ids,
         professor_id=_user_id(user),
         responsible_contact=contact,
-        discipline=class_context["discipline"],
+        discipline=selected_discipline or class_context["discipline"],
         lesson=class_context["lesson"],
+        complementary_report=report,
         occurred_at=occurred_at.strftime("%Y-%m-%d %H:%M:%S"),
     )
 
@@ -143,6 +152,25 @@ def _normalize_ids(values: list[int], label: str) -> list[int]:
     if not normalized:
         raise HTTPException(400, f"Selecione pelo menos um {label}.")
     return normalized
+
+
+def _normalize_optional_text(value: str | None, limit: int) -> str:
+    text = str(value or "").strip()
+    if len(text) > limit:
+        raise HTTPException(400, f"Texto deve ter no maximo {limit} caracteres.")
+    return text
+
+
+def _validate_teacher_discipline(professor_id: int, discipline: str) -> str:
+    disciplines = catalog_repository.list_teacher_disciplines(professor_id)
+    by_name = {
+        str(item.get("name") or "").strip().casefold(): str(item.get("name") or "").strip()
+        for item in disciplines
+    }
+    selected = by_name.get(discipline.casefold())
+    if not selected:
+        raise HTTPException(400, "Disciplina nao vinculada ao professor.")
+    return selected
 
 
 def _estimated_lesson(turn: str, moment: datetime) -> int:
@@ -282,3 +310,18 @@ def complete_pre_registration(
     if not completed:
         raise HTTPException(400, "Ocorrencia informada nao foi encontrada.")
     return completed
+
+
+def cancel_pre_registration(user: dict, pre_registration_id: int) -> dict:
+    require_manager(user)
+    current = repository.get_pre_registration(pre_registration_id)
+    if not current:
+        raise HTTPException(404, "Pre-registro nao encontrado.")
+    if current["status"] == "completed":
+        raise HTTPException(409, "Pre-registro ja concluido nao pode ser descartado.")
+    if current["status"] == "cancelled":
+        return current
+    cancelled = repository.cancel_pre_registration(pre_registration_id)
+    if not cancelled:
+        raise HTTPException(409, "Este pre-registro nao esta pendente.")
+    return cancelled

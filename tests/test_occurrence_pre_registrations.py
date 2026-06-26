@@ -171,6 +171,12 @@ class OccurrencePreRegistrationsTest(unittest.TestCase):
                 "Atividade nao realizada",
             )
             discipline_id = int(database.criar_disciplina("Matematica", 5))
+            database.criar_ou_atualizar_turma_disciplina(
+                turma_id=turma_id,
+                disciplina_id=discipline_id,
+                carga_horaria=5,
+                professor_usuario_id=int(professor["id"]),
+            )
             weekday = service.WEEKDAYS[datetime.now().weekday()]
             database.criar_horario_escolar(
                 ano_letivo=datetime.now().year,
@@ -186,7 +192,10 @@ class OccurrencePreRegistrationsTest(unittest.TestCase):
                 student_ids=[student_id, second_student_id],
                 reason_ids=[first_reason["id"], second_reason["id"]],
                 responsible_contact="none",
+                discipline="Matematica",
+                complementary_report="Relato livre do professor para a coordenacao.",
             )
+            context = service.context(professor)
 
             self.assertEqual(
                 created["student_ids"],
@@ -197,8 +206,39 @@ class OccurrencePreRegistrationsTest(unittest.TestCase):
                 [first_reason["id"], second_reason["id"]],
             )
             self.assertEqual(created["discipline"], "Matematica")
+            self.assertEqual(
+                created["complementary_report"],
+                "Relato livre do professor para a coordenacao.",
+            )
             self.assertEqual(created["lesson"], "2")
             self.assertTrue(created["occurred_at"])
+            self.assertEqual(context["disciplines"][0]["name"], "Matematica")
+
+    def test_manager_cancels_pending_pre_registration(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            database, service, _ = _reload_modules(
+                os.path.join(tmp_dir, "impressao.db")
+            )
+            _, student_id, professor = self._create_context(database)
+            reason = service.create_reason({"cargo": "ADMIN"}, "Relato irrelevante")
+            pre_registration = service.create_pre_registration(
+                professor,
+                student_ids=[student_id],
+                reason_ids=[reason["id"]],
+                responsible_contact="none",
+            )
+
+            cancelled = service.cancel_pre_registration(
+                {"cargo": "ADMIN"},
+                pre_registration["id"],
+            )
+            pending = service.list_pre_registrations(
+                {"cargo": "ADMIN"},
+                status="pending",
+            )
+
+            self.assertEqual(cancelled["status"], "cancelled")
+            self.assertEqual(pending, [])
 
 
 if __name__ == "__main__":
