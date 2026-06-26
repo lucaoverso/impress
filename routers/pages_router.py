@@ -128,8 +128,10 @@ def admin_page(request: Request):
 def coordenacao_page(request: Request):
     return render_template_response(
         request,
-        "coordenacao.html",
-        {"asset_version": ASSET_VERSION},
+        "coordenacao/index.html",
+        {
+            "asset_version": ASSET_VERSION,
+        },
         cache_control="no-store",
     )
 

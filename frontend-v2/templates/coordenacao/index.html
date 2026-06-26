@@ -7,8 +7,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&amp;family=Material+Symbols+Outlined:wght@400&amp;display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../../src/styles/index.css">
-    <link rel="stylesheet" href="./style.css">
+    <link rel="stylesheet" href="{{ request.url_for('frontend_v2', path='/src/styles/index.css') }}">
+    <link rel="stylesheet" href="{{ request.url_for('frontend_v2', path='/templates/coordenacao/style.css') }}?v={{ asset_version }}">
 </head>
 <body>
     <div class="app-shell app-shell--with-sidebar coordenacao-template">
@@ -17,7 +17,7 @@
                 <span class="side-navbar__brand-mark" aria-hidden="true">SE</span>
                 <div class="side-navbar__brand-copy">
                     <strong class="side-navbar__title">Suite Escolar</strong>
-                    <span class="side-navbar__context">Modulo de coordenacao</span>
+                    <span class="side-navbar__context" data-context-copy>Modulo de coordenacao</span>
                 </div>
             </div>
 
@@ -28,33 +28,33 @@
                         <span class="side-navbar__section-description">Rotinas do modulo</span>
                     </div>
                     <div class="side-navbar__links">
-                        <a class="side-navbar__link is-active" href="#ocorrencias" aria-current="page">
+                        <a class="side-navbar__link is-active" href="#ocorrencias" aria-current="page" data-panel-link="ocorrencias" data-manager-only>
                             <span class="ui-icon" aria-hidden="true">dashboard</span>
                             <span class="side-navbar__label">Ocorrencias</span>
                         </a>
-                        <a class="side-navbar__link" href="#base-legal">
+                        <a class="side-navbar__link" href="#base-legal" data-panel-link="base-legal" data-manager-only>
                             <span class="ui-icon" aria-hidden="true">article</span>
                             <span class="side-navbar__label">Base legal</span>
                         </a>
-                        <a class="side-navbar__link" href="#estudantes">
+                        <a class="side-navbar__link" href="#estudantes" data-panel-link="estudantes" data-manager-only>
                             <span class="ui-icon" aria-hidden="true">person</span>
                             <span class="side-navbar__label">Cadastro de estudantes</span>
                         </a>
-                        <a class="side-navbar__link" href="#relatorios">
+                        <a class="side-navbar__link" href="#relatorios" data-panel-link="relatorios" data-manager-only>
                             <span class="ui-icon" aria-hidden="true">bar_chart</span>
                             <span class="side-navbar__label">Relatorios</span>
                         </a>
-                        <a class="side-navbar__link" href="#fluxo-professor">
+                        <a class="side-navbar__link" href="#fluxo-professor" data-panel-link="fluxo-professor">
                             <span class="ui-icon" aria-hidden="true">send</span>
                             <span class="side-navbar__label">Fluxo do professor</span>
-                            <span class="side-navbar__badge">3</span>
+                            <span class="side-navbar__badge" data-pre-registration-count hidden>0</span>
                         </a>
                     </div>
                 </section>
 
-                <a class="ui-button ui-button--primary side-navbar__primary-action" href="#novo-registro">
-                    <span class="ui-icon" aria-hidden="true">add_circle</span>
-                    <span>Novo registro</span>
+                <a class="ui-button ui-button--primary side-navbar__primary-action" href="#fluxo-professor" data-primary-action>
+                    <span class="ui-icon" aria-hidden="true" data-primary-action-icon>notifications_active</span>
+                    <span data-primary-action-label>Abrir pendencias</span>
                 </a>
             </nav>
 
@@ -77,27 +77,23 @@
                             type="search"
                             name="q"
                             autocomplete="off"
-                            placeholder="Buscar estudante ou registro..."
+                            placeholder="Buscar estudante, motivo ou registro..."
                             data-top-navbar-search-input
                         >
                     </label>
                 </form>
 
                 <div class="top-navbar__actions">
-                    <button class="top-navbar__icon-button" type="button" aria-label="Abrir notificacoes" data-top-navbar-notifications>
-                        <span class="ui-icon" aria-hidden="true">notifications</span>
-                        <span class="top-navbar__indicator" aria-hidden="true"></span>
-                    </button>
-                    <button class="top-navbar__icon-button" type="button" aria-label="Abrir calendario" data-top-navbar-calendar>
-                        <span class="ui-icon" aria-hidden="true">calendar_today</span>
+                    <button class="top-navbar__icon-button" type="button" aria-label="Atualizar dados do modulo" data-top-navbar-refresh>
+                        <span class="ui-icon" aria-hidden="true">refresh</span>
                     </button>
                     <span class="top-navbar__divider" aria-hidden="true"></span>
                     <button class="top-navbar__profile" type="button" aria-label="Abrir perfil do usuario" data-top-navbar-profile>
                         <span class="top-navbar__profile-copy">
-                            <strong class="top-navbar__profile-name">Coord. Ana Paula</strong>
-                            <span class="top-navbar__profile-role">School Admin</span>
+                            <strong class="top-navbar__profile-name" data-profile-name>Carregando...</strong>
+                            <span class="top-navbar__profile-role" data-profile-role>Validando sessao</span>
                         </span>
-                        <span class="top-navbar__avatar" aria-hidden="true">AP</span>
+                        <span class="top-navbar__avatar" aria-hidden="true" data-profile-initials>SE</span>
                     </button>
                 </div>
             </header>
@@ -107,312 +103,178 @@
                     <header class="coordenacao-hero">
                         <div class="coordenacao-hero__copy">
                             <h1 id="tituloCoordenacao">Central de Coordenacao</h1>
-                            <p>Gestao e registro de ocorrencias escolares</p>
+                            <p data-hero-copy>Gestao de ocorrencias, pendencias docentes e cadastros auxiliares em uma experiencia unica.</p>
+                            <p class="coordenacao-hero__meta" data-role-summary>Carregando permissoes da sessao...</p>
                         </div>
-                        <div class="coordenacao-metrics" aria-label="Resumo das ocorrencias">
-                            <article class="coordenacao-metric">
-                                <span class="coordenacao-metric__label">Ocorrencias</span>
-                                <strong class="coordenacao-metric__value">1.248</strong>
-                            </article>
-                            <article class="coordenacao-metric coordenacao-metric--danger">
-                                <span class="coordenacao-metric__label">Pendentes</span>
-                                <strong class="coordenacao-metric__value">42</strong>
-                            </article>
-                            <article class="coordenacao-metric coordenacao-metric--success">
-                                <span class="coordenacao-metric__label">Concluidas</span>
-                                <strong class="coordenacao-metric__value">1.206</strong>
-                            </article>
+                        <div class="coordenacao-hero__aside">
+                            <a
+                                class="ui-button ui-button--primary coordenacao-hero__action"
+                                href="#ocorrencias"
+                                data-occurrence-create-action
+                                data-panel-target="ocorrencias"
+                                data-manager-only
+                            >
+                                <span class="ui-icon" aria-hidden="true">add_circle</span>
+                                <span>Cadastrar nova ocorrencia</span>
+                            </a>
+                            <div class="coordenacao-metrics" aria-label="Resumo das ocorrencias">
+                                <article class="coordenacao-metric">
+                                    <span class="coordenacao-metric__label">Ocorrencias</span>
+                                    <strong class="coordenacao-metric__value" data-metric-total>0</strong>
+                                </article>
+                                <article class="coordenacao-metric coordenacao-metric--danger">
+                                    <span class="coordenacao-metric__label">Pendentes</span>
+                                    <strong class="coordenacao-metric__value" data-metric-pending>0</strong>
+                                </article>
+                                <article class="coordenacao-metric coordenacao-metric--success">
+                                    <span class="coordenacao-metric__label">Concluidas</span>
+                                    <strong class="coordenacao-metric__value" data-metric-resolved>0</strong>
+                                </article>
+                            </div>
                         </div>
                     </header>
 
-                    <section id="ocorrencias" class="coordenacao-panel-view is-active" aria-label="Ocorrencias">
+                    <section id="ocorrencias" class="coordenacao-section coordenacao-panel-view is-active" aria-labelledby="tituloOcorrencias" data-panel="ocorrencias" data-manager-only>
+                        <div class="coordenacao-section__header">
+                            <div>
+                                <h2 id="tituloOcorrencias">Ocorrencias</h2>
+                                <p>Use filtros, consulta rapida e detalhe expandido em modal para acompanhar cada registro sem sair desta tela.</p>
+                            </div>
+                        </div>
+
+                        <p class="coordenacao-feedback" data-occurrence-feedback hidden></p>
+
                         <section class="coordenacao-filter-card" aria-label="Filtros de ocorrencias">
-                            <form class="coordenacao-filter-grid" data-coordenacao-filters>
+                            <form class="coordenacao-filter-grid coordenacao-filter-grid--full" data-coordenacao-filters>
                                 <label class="ui-field coordenacao-filter-grid__search">
-                                    <span class="ui-label">Filtrar por estudante</span>
-                                    <input class="ui-input" type="search" name="estudante" placeholder="Nome do aluno...">
+                                    <span class="ui-label">Referencia</span>
+                                    <input class="ui-input" type="search" name="nome_estudante" placeholder="Estudante, professor ou descricao">
                                 </label>
                                 <label class="ui-field">
                                     <span class="ui-label">Turma</span>
-                                    <select class="ui-select" name="turma">
-                                        <option>Todas as turmas</option>
-                                        <option>9o Ano A</option>
-                                        <option>1o EM B</option>
-                                        <option>6o Ano C</option>
+                                    <select class="ui-select" name="turma_id" data-filter-turma>
+                                        <option value="">Todas as turmas</option>
                                     </select>
                                 </label>
                                 <label class="ui-field">
                                     <span class="ui-label">Tipo</span>
-                                    <select class="ui-select" name="tipo">
-                                        <option>Todos os tipos</option>
-                                        <option>Pedagogico</option>
-                                        <option>Disciplinar</option>
+                                    <select class="ui-select" name="tipo_registro" data-filter-tipo>
+                                        <option value="">Todos os tipos</option>
                                     </select>
                                 </label>
                                 <label class="ui-field">
-                                    <span class="ui-label">Periodo</span>
-                                    <input class="ui-input" type="date" name="periodo">
+                                    <span class="ui-label">Status</span>
+                                    <select class="ui-select" name="status" data-filter-status>
+                                        <option value="">Todos os status</option>
+                                    </select>
                                 </label>
-                                <button class="ui-button ui-button--subtle coordenacao-filter-grid__button" type="submit">
-                                    <span class="ui-icon" aria-hidden="true">filter_list</span>
-                                    <span>Filtrar</span>
-                                </button>
+                                <label class="ui-field">
+                                    <span class="ui-label">Data inicial</span>
+                                    <input class="ui-input" type="date" name="data_inicial">
+                                </label>
+                                <label class="ui-field">
+                                    <span class="ui-label">Data final</span>
+                                    <input class="ui-input" type="date" name="data_final">
+                                </label>
+                                <div class="coordenacao-filter-actions">
+                                    <button class="ui-button ui-button--subtle coordenacao-filter-grid__button" type="submit">
+                                        <span class="ui-icon" aria-hidden="true">filter_list</span>
+                                        <span>Filtrar</span>
+                                    </button>
+                                    <button class="ui-button ui-button--ghost coordenacao-filter-grid__button" type="button" data-clear-occurrence-filters>
+                                        <span>Limpar</span>
+                                    </button>
+                                </div>
                             </form>
                         </section>
 
-                        <div class="coordenacao-records" aria-label="Lista de ocorrencias">
-                        <article class="coordenacao-record" data-status="pendente">
-                            <div class="coordenacao-record__main">
-                                <span class="coordenacao-record__avatar" aria-hidden="true">
-                                    <span class="ui-icon">person</span>
-                                </span>
-                                <div class="coordenacao-record__content">
-                                    <div class="coordenacao-record__title-row">
-                                        <h2>Gabrieli Fernandes Da Silva</h2>
-                                        <span class="ui-badge ui-badge--danger">Pendente</span>
-                                    </div>
-                                    <dl class="coordenacao-record__meta">
-                                        <div>
-                                            <dt>Turma</dt>
-                                            <dd><span class="ui-icon" aria-hidden="true">school</span>1o EM B</dd>
-                                        </div>
-                                        <div>
-                                            <dt>Data</dt>
-                                            <dd><span class="ui-icon" aria-hidden="true">calendar_today</span>24/05/2024</dd>
-                                        </div>
-                                        <div>
-                                            <dt>Tipo</dt>
-                                            <dd class="is-primary"><span class="ui-icon" aria-hidden="true">warning</span>Disciplinar</dd>
-                                        </div>
-                                    </dl>
-                                    <p>Estudante apresentou comportamento disruptivo em sala de aula, recusando-se a realizar as atividades propostas e ignorando as orientacoes do docente.</p>
+                        <div class="coordenacao-overview-grid">
+                            <article class="coordenacao-panel">
+                                <div class="coordenacao-panel__header">
+                                    <h3>Historico de registros</h3>
+                                    <p>Lista dinamica com 10 registros por pagina para facilitar a navegacao entre ocorrencias.</p>
                                 </div>
-                            </div>
-                            <div class="coordenacao-record__actions">
-                                <button class="ui-button ui-button--primary" type="button" data-record-action="details">
-                                    <span class="ui-icon" aria-hidden="true">visibility</span>
-                                    <span>Ver detalhes</span>
-                                </button>
-                                <button class="ui-button" type="button" data-record-action="edit">
-                                    <span class="ui-icon" aria-hidden="true">edit</span>
-                                    <span>Editar</span>
-                                </button>
-                            </div>
-                        </article>
-
-                        <article class="coordenacao-record is-resolved" data-status="concluido">
-                            <div class="coordenacao-record__main">
-                                <span class="coordenacao-record__avatar is-muted" aria-hidden="true">
-                                    <span class="ui-icon">person</span>
-                                </span>
-                                <div class="coordenacao-record__content">
-                                    <div class="coordenacao-record__title-row">
-                                        <h2>Luis Fernando Araujo Costa</h2>
-                                        <span class="ui-badge ui-badge--info">Concluido</span>
-                                    </div>
-                                    <dl class="coordenacao-record__meta">
-                                        <div>
-                                            <dt>Turma</dt>
-                                            <dd><span class="ui-icon" aria-hidden="true">school</span>9o Ano A</dd>
-                                        </div>
-                                        <div>
-                                            <dt>Data</dt>
-                                            <dd><span class="ui-icon" aria-hidden="true">calendar_today</span>22/05/2024</dd>
-                                        </div>
-                                        <div>
-                                            <dt>Tipo</dt>
-                                            <dd class="is-tertiary"><span class="ui-icon" aria-hidden="true">book</span>Pedagogico</dd>
-                                        </div>
-                                    </dl>
-                                    <p>Dificuldade tecnica em acessar plataforma de ensino. Realizada reuniao com o responsavel para orientacao sobre o uso correto das ferramentas digitais.</p>
-                                </div>
-                            </div>
-                            <div class="coordenacao-record__actions">
-                                <button class="ui-button" type="button" data-record-action="document">
-                                    <span class="ui-icon" aria-hidden="true">description</span>
-                                    <span>Ver ata</span>
-                                </button>
-                            </div>
-                        </article>
-
-                        <article class="coordenacao-record" data-status="pendente">
-                            <div class="coordenacao-record__main">
-                                <span class="coordenacao-record__avatar" aria-hidden="true">
-                                    <span class="ui-icon">person</span>
-                                </span>
-                                <div class="coordenacao-record__content">
-                                    <div class="coordenacao-record__title-row">
-                                        <h2>Diego Gomes Leal</h2>
-                                        <span class="ui-badge ui-badge--danger">Pendente</span>
-                                    </div>
-                                    <dl class="coordenacao-record__meta">
-                                        <div>
-                                            <dt>Turma</dt>
-                                            <dd><span class="ui-icon" aria-hidden="true">school</span>1o EM B</dd>
-                                        </div>
-                                        <div>
-                                            <dt>Data</dt>
-                                            <dd><span class="ui-icon" aria-hidden="true">calendar_today</span>21/05/2024</dd>
-                                        </div>
-                                        <div>
-                                            <dt>Tipo</dt>
-                                            <dd class="is-primary"><span class="ui-icon" aria-hidden="true">warning</span>Disciplinar</dd>
-                                        </div>
-                                    </dl>
-                                    <p>Atraso recorrente para o inicio das aulas no periodo matutino. Requer intervencao da coordenacao com a familia.</p>
-                                </div>
-                            </div>
-                            <div class="coordenacao-record__actions">
-                                <button class="ui-button ui-button--primary" type="button" data-record-action="details">
-                                    <span class="ui-icon" aria-hidden="true">visibility</span>
-                                    <span>Ver detalhes</span>
-                                </button>
-                                <button class="ui-button" type="button" data-record-action="edit">
-                                    <span class="ui-icon" aria-hidden="true">edit</span>
-                                    <span>Editar</span>
-                                </button>
-                            </div>
-                        </article>
-
-                        <article class="coordenacao-record" data-status="pendente">
-                            <div class="coordenacao-record__main">
-                                <span class="coordenacao-record__avatar" aria-hidden="true">
-                                    <span class="ui-icon">person</span>
-                                </span>
-                                <div class="coordenacao-record__content">
-                                    <div class="coordenacao-record__title-row">
-                                        <h2>Ana Lara Batista Da Silva</h2>
-                                        <span class="ui-badge ui-badge--danger">Pendente</span>
-                                    </div>
-                                    <dl class="coordenacao-record__meta">
-                                        <div>
-                                            <dt>Turma</dt>
-                                            <dd><span class="ui-icon" aria-hidden="true">school</span>6o Ano C</dd>
-                                        </div>
-                                        <div>
-                                            <dt>Data</dt>
-                                            <dd><span class="ui-icon" aria-hidden="true">calendar_today</span>20/05/2024</dd>
-                                        </div>
-                                        <div>
-                                            <dt>Tipo</dt>
-                                            <dd class="is-tertiary"><span class="ui-icon" aria-hidden="true">book</span>Pedagogico</dd>
-                                        </div>
-                                    </dl>
-                                    <p>Rendimento academico abaixo da media em Matematica. Necessario acompanhamento pedagogico individualizado.</p>
-                                </div>
-                            </div>
-                            <div class="coordenacao-record__actions">
-                                <button class="ui-button ui-button--primary" type="button" data-record-action="details">
-                                    <span class="ui-icon" aria-hidden="true">visibility</span>
-                                    <span>Ver detalhes</span>
-                                </button>
-                                <button class="ui-button" type="button" data-record-action="edit">
-                                    <span class="ui-icon" aria-hidden="true">edit</span>
-                                    <span>Editar</span>
-                                </button>
-                            </div>
-                        </article>
-
-                        <article class="coordenacao-record is-resolved" data-status="concluido">
-                            <div class="coordenacao-record__main">
-                                <span class="coordenacao-record__avatar is-muted" aria-hidden="true">
-                                    <span class="ui-icon">person</span>
-                                </span>
-                                <div class="coordenacao-record__content">
-                                    <div class="coordenacao-record__title-row">
-                                        <h2>Rafael Garcia Soares</h2>
-                                        <span class="ui-badge ui-badge--info">Concluido</span>
-                                    </div>
-                                    <dl class="coordenacao-record__meta">
-                                        <div>
-                                            <dt>Turma</dt>
-                                            <dd><span class="ui-icon" aria-hidden="true">school</span>7o Ano B</dd>
-                                        </div>
-                                        <div>
-                                            <dt>Data</dt>
-                                            <dd><span class="ui-icon" aria-hidden="true">calendar_today</span>19/05/2024</dd>
-                                        </div>
-                                        <div>
-                                            <dt>Tipo</dt>
-                                            <dd class="is-primary"><span class="ui-icon" aria-hidden="true">warning</span>Disciplinar</dd>
-                                        </div>
-                                    </dl>
-                                    <p>Uso indevido de aparelhos eletronicos durante a avaliacao de Geografia. Suspensao de 3 dias aplicada conforme regimento escolar.</p>
-                                </div>
-                            </div>
-                            <div class="coordenacao-record__actions">
-                                <button class="ui-button" type="button" data-record-action="document">
-                                    <span class="ui-icon" aria-hidden="true">description</span>
-                                    <span>Ver ata</span>
-                                </button>
-                            </div>
-                        </article>
-                            <footer class="coordenacao-pagination" aria-label="Paginacao de ocorrencias">
-                                <p>Mostrando 5 de 1.248 ocorrencias</p>
-                                <nav class="coordenacao-pagination__nav" aria-label="Paginas">
-                                    <button class="coordenacao-page-button" type="button" aria-label="Pagina anterior">
-                                        <span class="ui-icon" aria-hidden="true">chevron_left</span>
-                                    </button>
-                                    <button class="coordenacao-page-button is-active" type="button" aria-current="page">1</button>
-                                    <button class="coordenacao-page-button" type="button">2</button>
-                                    <button class="coordenacao-page-button" type="button">3</button>
-                                    <span class="coordenacao-page-button" aria-hidden="true">...</span>
-                                    <button class="coordenacao-page-button" type="button" aria-label="Proxima pagina">
-                                        <span class="ui-icon" aria-hidden="true">chevron_right</span>
-                                    </button>
-                                </nav>
-                            </footer>
+                                <div class="coordenacao-records" data-occurrence-list aria-live="polite"></div>
+                                <footer class="coordenacao-pagination" aria-label="Paginacao de ocorrencias">
+                                    <p data-occurrence-pagination-summary>Nenhum registro carregado.</p>
+                                    <nav class="coordenacao-pagination__nav" aria-label="Paginas" data-occurrence-pagination></nav>
+                                </footer>
+                            </article>
                         </div>
                     </section>
 
-                    <section id="base-legal" class="coordenacao-section coordenacao-legal" aria-labelledby="tituloBaseLegal" hidden>
+                    <section id="base-legal" class="coordenacao-section coordenacao-legal" aria-labelledby="tituloBaseLegal" data-panel="base-legal" data-manager-only hidden>
                         <div class="coordenacao-section__header">
                             <div>
                                 <h2 id="tituloBaseLegal">Base legal</h2>
-                                <p>Cadastre leis, artigos e referencias usadas para fundamentar os registros da coordenacao.</p>
+                                <p>Cadastre, organize e atualize referencias do regimento diretamente nesta interface.</p>
                             </div>
-                            <button class="ui-button" type="button" data-backend-action="import-legal-base">
-                                <span class="ui-icon" aria-hidden="true">upload_file</span>
-                                <span>Importar arquivo</span>
-                            </button>
                         </div>
 
                         <div class="coordenacao-legal-grid">
                             <article class="coordenacao-panel">
                                 <div class="coordenacao-panel__header">
                                     <h3>Cadastrar referencia</h3>
-                                    <p>Comece pelo documento principal e detalhe artigo, inciso ou alinea quando necessario.</p>
+                                    <p>Os campos principais ja seguem o contrato de `regimento-itens`. Inciso e alinea sao opcionais.</p>
                                 </div>
                                 <form class="coordenacao-form-grid" data-base-legal-form>
+                                    <input type="hidden" name="item_id" value="">
                                     <label class="ui-field">
                                         <span class="ui-label">Lei ou documento</span>
-                                        <input class="ui-input" type="text" name="lei" placeholder="Ex: Regimento Escolar">
+                                        <input class="ui-input" type="text" name="lei_nome" placeholder="Ex: Regimento Escolar">
                                     </label>
                                     <label class="ui-field">
-                                        <span class="ui-label">Referencia</span>
-                                        <input class="ui-input" type="text" name="referencia" placeholder="Ex: Art. 23, inciso II">
+                                        <span class="ui-label">Referencia principal</span>
+                                        <input class="ui-input" type="text" name="artigo_numero" placeholder="Ex: Art. 23">
                                     </label>
                                     <label class="ui-field coordenacao-form-grid__wide">
                                         <span class="ui-label">Descricao</span>
-                                        <textarea class="ui-textarea" name="descricao" placeholder="Texto ou resumo da base legal"></textarea>
+                                        <textarea class="ui-textarea" name="artigo_descricao" rows="4" placeholder="Texto resumido do artigo ou referencia principal"></textarea>
                                     </label>
-                                    <button class="ui-button ui-button--primary" type="submit">
-                                        <span class="ui-icon" aria-hidden="true">save</span>
-                                        <span>Salvar referencia</span>
-                                    </button>
+                                    <details class="coordenacao-inline-details coordenacao-form-grid__wide">
+                                        <summary>Detalhar inciso ou alinea</summary>
+                                        <div class="coordenacao-form-grid coordenacao-form-grid--nested">
+                                            <label class="ui-field">
+                                                <span class="ui-label">Inciso</span>
+                                                <input class="ui-input" type="text" name="inciso_numero" placeholder="Ex: II">
+                                            </label>
+                                            <label class="ui-field">
+                                                <span class="ui-label">Alinea</span>
+                                                <input class="ui-input" type="text" name="alinea_identificador" placeholder="Ex: a">
+                                            </label>
+                                            <label class="ui-field coordenacao-form-grid__wide">
+                                                <span class="ui-label">Descricao do inciso</span>
+                                                <textarea class="ui-textarea" name="inciso_descricao" rows="3" placeholder="Texto do inciso, se houver"></textarea>
+                                            </label>
+                                            <label class="ui-field coordenacao-form-grid__wide">
+                                                <span class="ui-label">Descricao da alinea</span>
+                                                <textarea class="ui-textarea" name="alinea_descricao" rows="3" placeholder="Texto da alinea, se houver"></textarea>
+                                            </label>
+                                        </div>
+                                    </details>
+                                    <div class="coordenacao-form-actions coordenacao-form-grid__wide">
+                                        <button class="ui-button ui-button--primary" type="submit" data-legal-submit-label>
+                                            <span class="ui-icon" aria-hidden="true">save</span>
+                                            <span>Salvar referencia</span>
+                                        </button>
+                                        <button class="ui-button ui-button--ghost" type="button" data-legal-cancel hidden>
+                                            <span>Cancelar edicao</span>
+                                        </button>
+                                    </div>
+                                    <p class="coordenacao-feedback coordenacao-form-grid__wide" data-legal-feedback hidden></p>
                                 </form>
                             </article>
 
                             <article class="coordenacao-panel coordenacao-panel--soft">
                                 <div class="coordenacao-panel__header">
                                     <h3>Fluxo sugerido</h3>
-                                    <p>Organize as referencias na mesma ordem em que aparecem durante o fechamento da ocorrencia.</p>
+                                    <p>Comece pela referencia principal e abra os campos opcionais apenas quando a base legal precisar de mais granularidade.</p>
                                 </div>
                                 <ol class="coordenacao-flow-list">
-                                    <li><span>1</span><strong>Lei</strong><small>ECA, LDB ou regimento interno.</small></li>
-                                    <li><span>2</span><strong>Artigo</strong><small>Texto principal usado no documento.</small></li>
-                                    <li><span>3</span><strong>Inciso</strong><small>Detalhamento aplicavel ao caso.</small></li>
-                                    <li><span>4</span><strong>Alinea</strong><small>Complemento quando existir.</small></li>
+                                    <li><span>1</span><strong>Lei</strong><small>Documento ou fonte principal.</small></li>
+                                    <li><span>2</span><strong>Artigo</strong><small>Referencia minima obrigatoria para o item.</small></li>
+                                    <li><span>3</span><strong>Inciso</strong><small>Use quando o caso exigir mais precisao.</small></li>
+                                    <li><span>4</span><strong>Alinea</strong><small>Detalhamento final, se existir.</small></li>
                                 </ol>
                             </article>
                         </div>
@@ -420,7 +282,7 @@
                         <article class="coordenacao-panel">
                             <div class="coordenacao-panel__header">
                                 <h3>Referencias cadastradas</h3>
-                                <p>Itens disponiveis para vincular aos registros e documentos gerados.</p>
+                                <p>Itens disponiveis para vincular aos registros no modulo atual.</p>
                             </div>
                             <div class="coordenacao-table-wrap">
                                 <table class="coordenacao-table">
@@ -429,104 +291,13 @@
                                             <th>Tipo</th>
                                             <th>Lei</th>
                                             <th>Referencia</th>
-                                            <th>Uso</th>
-                                            <th>Acoes</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr>
-                                            <td>Artigo</td>
-                                            <td>Regimento Escolar</td>
-                                            <td>Art. 18</td>
-                                            <td><span class="ui-badge ui-badge--info">Disciplina</span></td>
-                                            <td><button class="ui-button ui-button--ghost" type="button" data-backend-action="edit-legal-reference">Editar</button></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Inciso</td>
-                                            <td>ECA</td>
-                                            <td>Art. 53, inciso I</td>
-                                            <td><span class="ui-badge ui-badge--success">Direitos</span></td>
-                                            <td><button class="ui-button ui-button--ghost" type="button" data-backend-action="edit-legal-reference">Editar</button></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Artigo</td>
-                                            <td>LDB</td>
-                                            <td>Art. 12</td>
-                                            <td><span class="ui-badge">Pedagogico</span></td>
-                                            <td><button class="ui-button ui-button--ghost" type="button" data-backend-action="edit-legal-reference">Editar</button></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </article>
-                    </section>
-
-                    <section id="estudantes" class="coordenacao-section coordenacao-students" aria-labelledby="tituloEstudantes" hidden>
-                        <div class="coordenacao-section__header">
-                            <div>
-                                <h2 id="tituloEstudantes">Cadastro de estudantes</h2>
-                                <p>Localize, revise e mantenha os dados basicos usados nos registros de ocorrencia.</p>
-                            </div>
-                            <button class="ui-button ui-button--primary" type="button" data-backend-action="new-student">
-                                <span class="ui-icon" aria-hidden="true">person_add</span>
-                                <span>Novo estudante</span>
-                            </button>
-                        </div>
-
-                        <article class="coordenacao-panel">
-                            <form class="coordenacao-student-toolbar" data-student-search-form>
-                                <label class="ui-field">
-                                    <span class="ui-label">Buscar estudante</span>
-                                    <input class="ui-input" type="search" name="estudante" placeholder="Nome, turma ou responsavel">
-                                </label>
-                                <label class="ui-field">
-                                    <span class="ui-label">Turma</span>
-                                    <select class="ui-select" name="turma">
-                                        <option>Todas as turmas</option>
-                                        <option>6o Ano C</option>
-                                        <option>7o Ano B</option>
-                                        <option>9o Ano A</option>
-                                        <option>1o EM B</option>
-                                    </select>
-                                </label>
-                                <button class="ui-button ui-button--subtle" type="submit">
-                                    <span class="ui-icon" aria-hidden="true">search</span>
-                                    <span>Pesquisar</span>
-                                </button>
-                            </form>
-
-                            <div class="coordenacao-table-wrap">
-                                <table class="coordenacao-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Estudante</th>
-                                            <th>Turma</th>
-                                            <th>Responsavel</th>
                                             <th>Status</th>
                                             <th>Acoes</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
+                                    <tbody data-legal-table-body>
                                         <tr>
-                                            <td>Gabrieli Fernandes Da Silva</td>
-                                            <td>1o EM B</td>
-                                            <td>Maria Fernandes</td>
-                                            <td><span class="ui-badge ui-badge--warning">Acompanhamento</span></td>
-                                            <td><button class="ui-button ui-button--ghost" type="button" data-backend-action="open-student">Abrir</button></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Ana Lara Batista Da Silva</td>
-                                            <td>6o Ano C</td>
-                                            <td>Carlos Batista</td>
-                                            <td><span class="ui-badge">Ativo</span></td>
-                                            <td><button class="ui-button ui-button--ghost" type="button" data-backend-action="open-student">Abrir</button></td>
-                                        </tr>
-                                        <tr>
-                                            <td>Rafael Garcia Soares</td>
-                                            <td>7o Ano B</td>
-                                            <td>Patricia Garcia</td>
-                                            <td><span class="ui-badge ui-badge--info">Historico</span></td>
-                                            <td><button class="ui-button ui-button--ghost" type="button" data-backend-action="open-student">Abrir</button></td>
+                                            <td colspan="5">Carregando referencias...</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -534,93 +305,192 @@
                         </article>
                     </section>
 
-                    <section id="relatorios" class="coordenacao-section coordenacao-reports" aria-labelledby="tituloRelatorios" hidden>
+                    <section id="estudantes" class="coordenacao-section coordenacao-students" aria-labelledby="tituloEstudantes" data-panel="estudantes" data-manager-only hidden>
+                        <div class="coordenacao-section__header">
+                            <div>
+                                <h2 id="tituloEstudantes">Cadastro de estudantes</h2>
+                                <p>Consulta e manutencao rapida usando os endpoints ja existentes do modulo.</p>
+                            </div>
+                        </div>
+
+                        <div class="coordenacao-students-grid">
+                            <article class="coordenacao-panel">
+                                <div class="coordenacao-panel__header">
+                                    <h3>Cadastro rapido</h3>
+                                    <p>Edite nome, turma e status sem sair da nova interface.</p>
+                                </div>
+                                <form class="coordenacao-form-grid" data-student-form>
+                                    <input type="hidden" name="id" value="">
+                                    <label class="ui-field coordenacao-form-grid__wide">
+                                        <span class="ui-label">Nome do estudante</span>
+                                        <input class="ui-input" type="text" name="nome" placeholder="Nome completo do estudante">
+                                    </label>
+                                    <label class="ui-field">
+                                        <span class="ui-label">Turma</span>
+                                        <select class="ui-select" name="turma_id" data-student-class-select></select>
+                                    </label>
+                                    <label class="ui-field coordenacao-toggle-field">
+                                        <span class="ui-label">Status</span>
+                                        <span class="coordenacao-toggle">
+                                            <input type="checkbox" name="ativo" checked>
+                                            <span>Ativo</span>
+                                        </span>
+                                    </label>
+                                    <div class="coordenacao-form-actions coordenacao-form-grid__wide">
+                                        <button class="ui-button ui-button--primary" type="submit" data-student-submit-label>
+                                            <span class="ui-icon" aria-hidden="true">save</span>
+                                            <span>Salvar estudante</span>
+                                        </button>
+                                        <button class="ui-button ui-button--ghost" type="button" data-student-cancel hidden>
+                                            <span>Cancelar edicao</span>
+                                        </button>
+                                    </div>
+                                    <p class="coordenacao-feedback coordenacao-form-grid__wide" data-student-feedback hidden></p>
+                                </form>
+                            </article>
+
+                            <article class="coordenacao-panel">
+                                <form class="coordenacao-student-toolbar" data-student-search-form>
+                                    <label class="ui-field">
+                                        <span class="ui-label">Buscar estudante</span>
+                                        <input class="ui-input" type="search" name="nome" placeholder="Nome do estudante">
+                                    </label>
+                                    <label class="ui-field">
+                                        <span class="ui-label">Turma</span>
+                                        <select class="ui-select" name="turma_id" data-student-filter-class>
+                                            <option value="">Todas as turmas</option>
+                                        </select>
+                                    </label>
+                                    <button class="ui-button ui-button--subtle" type="submit">
+                                        <span class="ui-icon" aria-hidden="true">search</span>
+                                        <span>Pesquisar</span>
+                                    </button>
+                                </form>
+
+                                <div class="coordenacao-table-wrap">
+                                    <table class="coordenacao-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Estudante</th>
+                                                <th>Turma</th>
+                                                <th>Status</th>
+                                                <th>Acoes</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody data-student-table-body>
+                                            <tr>
+                                                <td colspan="4">Carregando estudantes...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </article>
+                        </div>
+                    </section>
+
+                    <section id="relatorios" class="coordenacao-section coordenacao-reports" aria-labelledby="tituloRelatorios" data-panel="relatorios" data-manager-only hidden>
                         <div class="coordenacao-section__header">
                             <div>
                                 <h2 id="tituloRelatorios">Relatorios</h2>
-                                <p>Indicadores de acompanhamento para revisar recorrencia, status e distribuicao dos registros.</p>
+                                <p>Indicadores consolidados em tempo real com base nos registros e pre-registros ja disponiveis.</p>
                             </div>
-                            <button class="ui-button" type="button" data-backend-action="export-reports">
-                                <span class="ui-icon" aria-hidden="true">download</span>
-                                <span>Exportar</span>
-                            </button>
                         </div>
 
                         <div class="coordenacao-report-grid">
                             <article class="coordenacao-panel coordenacao-report-card">
                                 <span class="ui-icon" aria-hidden="true">trending_up</span>
                                 <div>
-                                    <h3>Recorrencia disciplinar</h3>
-                                    <strong>18%</strong>
-                                    <p>Casos repetidos no periodo atual.</p>
+                                    <h3>Recorrencia no periodo</h3>
+                                    <strong data-report-repeat-rate>0%</strong>
+                                    <p>Percentual de estudantes com mais de um registro no conjunto filtrado.</p>
                                 </div>
                             </article>
                             <article class="coordenacao-panel coordenacao-report-card">
                                 <span class="ui-icon" aria-hidden="true">schedule</span>
                                 <div>
-                                    <h3>Tempo medio de fechamento</h3>
-                                    <strong>2,4 dias</strong>
-                                    <p>Entre pre-registro e conclusao.</p>
+                                    <h3>Tempo medio de conclusao</h3>
+                                    <strong data-report-completion-time>-</strong>
+                                    <p>Media entre criacao e conclusao dos pre-registros ja finalizados.</p>
                                 </div>
                             </article>
                             <article class="coordenacao-panel coordenacao-report-card">
                                 <span class="ui-icon" aria-hidden="true">groups</span>
                                 <div>
-                                    <h3>Turmas com maior volume</h3>
-                                    <strong>1o EM B</strong>
-                                    <p>Principal concentracao da semana.</p>
+                                    <h3>Turma com maior volume</h3>
+                                    <strong data-report-top-class>-</strong>
+                                    <p>Turma mais recorrente entre os registros carregados.</p>
                                 </div>
                             </article>
                         </div>
                     </section>
 
-                    <section id="fluxo-professor" class="coordenacao-section coordenacao-professor-flow" aria-labelledby="tituloFluxoProfessor" hidden>
+                    <section id="fluxo-professor" class="coordenacao-section coordenacao-professor-flow" aria-labelledby="tituloFluxoProfessor" data-panel="fluxo-professor" hidden>
                         <div class="coordenacao-section__header">
                             <div>
                                 <h2 id="tituloFluxoProfessor">Fluxo do professor</h2>
-                                <p>Acompanhe pre-registros enviados por professores e mantenha motivos de envio rapido.</p>
+                                <p>Pre-registros e motivos rapidos compartilham a mesma area, com renderizacao diferente por permissao.</p>
                             </div>
-                            <button class="ui-button" type="button" data-backend-action="refresh-teacher-flow">
-                                <span class="ui-icon" aria-hidden="true">refresh</span>
-                                <span>Atualizar fila</span>
-                            </button>
                         </div>
 
-                        <div class="coordenacao-flow-grid">
+                        <div class="coordenacao-flow-grid" data-teacher-flow hidden>
+                            <article class="coordenacao-panel">
+                                <div class="coordenacao-panel__header">
+                                    <h3>Enviar pre-registro</h3>
+                                    <p>Use o mesmo backend do fluxo atual, agora com busca rapida de estudantes na nova UI.</p>
+                                </div>
+                                <form class="coordenacao-reason-form" data-teacher-pre-registration-form id="teacher-pre-registration-form">
+                                    <label class="ui-field">
+                                        <span class="ui-label">Buscar estudante</span>
+                                        <input class="ui-input" type="search" name="student_search" placeholder="Nome do estudante ou turma" data-teacher-student-search autocomplete="off">
+                                    </label>
+                                    <div class="coordenacao-autocomplete-list" data-teacher-student-results hidden></div>
+                                    <div class="coordenacao-selection-list" data-teacher-selected-students aria-live="polite"></div>
+
+                                    <fieldset class="coordenacao-choice-group">
+                                        <legend>Motivos do pre-registro</legend>
+                                        <div class="coordenacao-checkbox-grid" data-teacher-reasons></div>
+                                    </fieldset>
+
+                                    <fieldset class="coordenacao-choice-group">
+                                        <legend>Contato com o responsavel</legend>
+                                        <div class="coordenacao-radio-grid">
+                                            <label><input type="radio" name="responsible_contact" value="none" checked><span>Sem solicitacao</span></label>
+                                            <label><input type="radio" name="responsible_contact" value="communicate"><span>Comunicar</span></label>
+                                            <label><input type="radio" name="responsible_contact" value="summon"><span>Convocar</span></label>
+                                        </div>
+                                    </fieldset>
+
+                                    <button class="ui-button ui-button--primary" type="submit">
+                                        <span class="ui-icon" aria-hidden="true">send</span>
+                                        <span>Enviar para a coordenacao</span>
+                                    </button>
+                                    <p class="coordenacao-feedback" data-teacher-feedback hidden></p>
+                                </form>
+                            </article>
+
+                            <article class="coordenacao-panel">
+                                <div class="coordenacao-panel__header">
+                                    <h3>Meus pre-registros</h3>
+                                    <p>Acompanhe o que ja foi enviado e evite duplicidade.</p>
+                                </div>
+                                <div class="coordenacao-queue-list" data-teacher-pre-registrations></div>
+                            </article>
+                        </div>
+
+                        <div class="coordenacao-flow-grid" data-manager-flow hidden>
                             <article class="coordenacao-panel">
                                 <div class="coordenacao-panel__header">
                                     <h3>Envios aguardando conclusao</h3>
-                                    <p>Casos que chegaram da sala e ainda precisam de descricao, encaminhamento e base legal.</p>
+                                    <p>Acompanhe a fila docente e use este painel para identificar o que precisa de tratamento prioritario.</p>
                                 </div>
-                                <div class="coordenacao-queue-list">
-                                    <article class="coordenacao-queue-item">
-                                        <div>
-                                            <strong>Uso de celular durante a aula</strong>
-                                            <p>Prof. Mariana - 1o EM B - Gabrieli Fernandes</p>
-                                        </div>
-                                        <span class="ui-badge ui-badge--warning">Novo</span>
-                                    </article>
-                                    <article class="coordenacao-queue-item">
-                                        <div>
-                                            <strong>Atraso recorrente</strong>
-                                            <p>Prof. Renato - 1o EM B - Diego Gomes</p>
-                                        </div>
-                                        <span class="ui-badge ui-badge--info">Em revisao</span>
-                                    </article>
-                                    <article class="coordenacao-queue-item">
-                                        <div>
-                                            <strong>Dificuldade em atividade avaliativa</strong>
-                                            <p>Prof. Aline - 6o Ano C - Ana Lara Batista</p>
-                                        </div>
-                                        <span class="ui-badge">Rascunho</span>
-                                    </article>
-                                </div>
+                                <div class="coordenacao-queue-list" data-pre-registration-queue></div>
+                                <p class="coordenacao-feedback" data-manager-flow-feedback hidden></p>
                             </article>
 
                             <article class="coordenacao-panel">
                                 <div class="coordenacao-panel__header">
                                     <h3>Motivos de pre-registro</h3>
-                                    <p>Opcoes curtas para o professor selecionar rapidamente pelo celular.</p>
+                                    <p>Cadastre motivos curtos e ative ou inative itens sem sair da nova interface.</p>
                                 </div>
                                 <form class="coordenacao-reason-form" data-teacher-reason-form>
                                     <label class="ui-field">
@@ -632,12 +502,8 @@
                                         <span>Cadastrar motivo</span>
                                     </button>
                                 </form>
-                                <div class="coordenacao-chip-list" aria-label="Motivos cadastrados">
-                                    <span class="ui-badge">Uso de celular</span>
-                                    <span class="ui-badge">Atraso recorrente</span>
-                                    <span class="ui-badge">Nao realizou atividade</span>
-                                    <span class="ui-badge">Conflito entre estudantes</span>
-                                </div>
+                                <p class="coordenacao-feedback" data-reason-feedback hidden></p>
+                                <div class="coordenacao-chip-list coordenacao-chip-list--actions" aria-label="Motivos cadastrados" data-reason-list></div>
                             </article>
                         </div>
                     </section>
@@ -645,12 +511,33 @@
             </section>
         </main>
 
-        <a class="coordenacao-fab" href="#novo-registro" aria-label="Registrar nova ocorrencia">
-            <span class="ui-icon" aria-hidden="true">add</span>
-            <span class="coordenacao-fab__label">Registrar nova ocorrencia</span>
+        <dialog class="coordenacao-modal" data-occurrence-modal aria-labelledby="coordenacaoOccurrenceModalTitle">
+            <div class="coordenacao-modal__surface">
+                <header class="coordenacao-modal__header">
+                    <div class="coordenacao-modal__header-copy">
+                        <p class="coordenacao-modal__eyebrow">Leitura detalhada</p>
+                        <h2 id="coordenacaoOccurrenceModalTitle" data-occurrence-modal-title>Detalhes da ocorrencia</h2>
+                        <p data-occurrence-modal-subtitle>Contexto completo, descricao e base legal do registro selecionado.</p>
+                    </div>
+                    <button class="top-navbar__icon-button coordenacao-modal__close" type="button" aria-label="Fechar detalhes da ocorrencia" data-occurrence-modal-close>
+                        <span class="ui-icon" aria-hidden="true">close</span>
+                    </button>
+                </header>
+                <p class="coordenacao-feedback" data-occurrence-modal-feedback hidden></p>
+                <div class="coordenacao-modal__body" data-occurrence-detail>
+                    <p class="coordenacao-empty-state">Selecione um registro para ver os detalhes.</p>
+                </div>
+            </div>
+        </dialog>
+
+        <a class="coordenacao-fab" href="#fluxo-professor" aria-label="Abrir fila da coordenacao" data-fab-action>
+            <span class="ui-icon" aria-hidden="true" data-fab-icon>notifications</span>
+            <span class="coordenacao-fab__label" data-fab-label>Abrir fila da coordenacao</span>
         </a>
     </div>
 
-    <script type="module" src="./script.js"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version }}"></script>
+    <script type="module" src="{{ request.url_for('frontend_v2', path='/templates/coordenacao/script.js') }}?v={{ asset_version }}"></script>
 </body>
 </html>

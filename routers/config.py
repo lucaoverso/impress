@@ -9,6 +9,8 @@ from fastapi.templating import Jinja2Templates
 BASE_DIR = Path(__file__).resolve().parent.parent
 STATIC_DIR = BASE_DIR / "static"
 TEMPLATES_DIR = BASE_DIR / "templates"
+FRONTEND_V2_DIR = BASE_DIR / "frontend-v2"
+FRONTEND_V2_TEMPLATES_DIR = FRONTEND_V2_DIR / "templates"
 SPOOL_DIR = os.getenv("SPOOL_DIR", str(BASE_DIR / "spool"))
 APC_DIR = os.getenv("APC_DIR", str(BASE_DIR / "spool" / "apc"))
 DEFAULT_PRINTER_NAME = os.getenv("CUPS_PRINTER", "").strip()
@@ -53,7 +55,12 @@ def _resolver_radius_internal_secret() -> str:
 
 
 RADIUS_INTERNAL_SECRET = _resolver_radius_internal_secret()
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates = Jinja2Templates(
+    directory=[
+        str(TEMPLATES_DIR),
+        str(FRONTEND_V2_TEMPLATES_DIR),
+    ]
+)
 templates.env.policies["json.dumps_kwargs"] = {"ensure_ascii": False}
 
 

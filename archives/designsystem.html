@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Design System Board - Suíte Escolar</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@300;400;600;700;800&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-secondary": "#ffffff",
+                      "surface-dim": "#d8dbd9",
+                      "surface": "#f7faf8",
+                      "surface-container-highest": "#e0e3e1",
+                      "tertiary-fixed": "#ffdbce",
+                      "on-primary": "#ffffff",
+                      "inverse-on-surface": "#eff1f0",
+                      "surface-container-lowest": "#ffffff",
+                      "on-primary-fixed": "#00201d",
+                      "on-error": "#ffffff",
+                      "background": "#f7faf8",
+                      "on-secondary-fixed": "#0b1d2c",
+                      "inverse-primary": "#8cd4ca",
+                      "on-surface": "#191c1c",
+                      "on-surface-variant": "#3f4947",
+                      "on-tertiary-fixed": "#370e00",
+                      "on-secondary-container": "#556678",
+                      "tertiary": "#622a11",
+                      "surface-container": "#eceeed",
+                      "secondary-fixed": "#d2e4fa",
+                      "on-tertiary-fixed-variant": "#72361b",
+                      "surface-tint": "#1a6962",
+                      "tertiary-fixed-dim": "#ffb598",
+                      "inverse-surface": "#2d3130",
+                      "error": "#ba1a1a",
+                      "on-background": "#191c1c",
+                      "outline-variant": "#bec9c6",
+                      "secondary-container": "#d2e4fa",
+                      "secondary": "#4f6072",
+                      "on-tertiary-container": "#ffb395",
+                      "surface-variant": "#e0e3e1",
+                      "surface-container-high": "#e6e9e7",
+                      "error-container": "#ffdad6",
+                      "primary-fixed": "#a7f0e6",
+                      "primary-container": "#005c55",
+                      "surface-bright": "#f7faf8",
+                      "secondary-fixed-dim": "#b7c8dd",
+                      "primary-fixed-dim": "#8cd4ca",
+                      "on-error-container": "#93000a",
+                      "outline": "#6f7977",
+                      "on-tertiary": "#ffffff",
+                      "surface-container-low": "#f2f4f2",
+                      "on-primary-fixed-variant": "#00504a",
+                      "on-primary-container": "#8ad2c8",
+                      "tertiary-container": "#7f4025",
+                      "primary": "#00433d",
+                      "on-secondary-fixed-variant": "#37485a",
+                      "success": "#16a34a",
+                      "warning": "#eab308"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.125rem",
+                      "lg": "0.25rem",
+                      "xl": "0.5rem",
+                      "full": "0.75rem"
+              },
+              "fontFamily": {
+                      "headline": ["Nunito Sans"],
+                      "display": ["Nunito Sans"],
+                      "body": ["Nunito Sans"],
+                      "label": ["Nunito Sans"]
+              }
+            },
+          },
+        }
+    </script>
+<style>
+        body {
+            font-family: 'Nunito Sans', sans-serif;
+            background-color: #f7faf8;
+            color: #191c1c;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .bento-grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 24px;
+        }
+        .design-card {
+            background-color: #ffffff;
+            border: 1px solid #d8e1ec;
+            border-radius: 0.75rem;
+            padding: 24px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+        .swatch {
+            height: 80px;
+            width: 100%;
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-end;
+            padding: 8px;
+            font-size: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+<!-- Top Navigation (Shared Component Mock) -->
+<header class="bg-surface border-b border-outline-variant fixed top-0 w-full z-50">
+<div class="flex justify-between items-center w-full px-6 py-4 max-w-[1400px] mx-auto">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-primary text-3xl" style="font-variation-settings: 'FILL' 1;">school</span>
+<h1 class="text-title-sm font-bold text-primary">Suíte Escolar <span class="ml-2 font-normal text-on-surface-variant opacity-60">Design System</span></h1>
+</div>
+<div class="flex items-center gap-4">
+<div class="hidden md:flex gap-6">
+<span class="text-primary font-bold border-b-2 border-primary pb-1 cursor-pointer">Guia de Estilo</span>
+<span class="text-on-surface-variant hover:text-primary transition-colors cursor-pointer">Componentes</span>
+<span class="text-on-surface-variant hover:text-primary transition-colors cursor-pointer">Recursos</span>
+</div>
+<div class="h-8 w-8 rounded-full bg-primary-soft flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-sm">person</span>
+</div>
+</div>
+</div>
+</header>
+<main class="pt-24 pb-12 px-6 max-w-[1400px] mx-auto">
+<div class="mb-10">
+<h2 class="text-3xl font-extrabold text-primary tracking-tight">System Foundations</h2>
+<p class="text-on-surface-variant mt-2 max-w-2xl">The architectural blueprint for the Suíte Escolar academic management ecosystem. Built for clarity, focus, and administrative efficiency.</p>
+</div>
+<div class="bento-grid">
+<!-- Section 1: Brand & Foundations -->
+<section class="col-span-12 lg:col-span-8 design-card">
+<h3 class="text-label-sm uppercase tracking-wider text-outline mb-6">01. Brand &amp; Foundations</h3>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+<div>
+<p class="text-body-md font-bold mb-4">Core Identity</p>
+<div class="flex items-center gap-4 p-6 bg-surface-container-low rounded-xl border border-outline-variant">
+<div class="w-16 h-16 bg-primary rounded-xl flex items-center justify-center shadow-lg">
+<span class="material-symbols-outlined text-white text-4xl" style="font-variation-settings: 'FILL' 1;">school</span>
+</div>
+<div>
+<p class="text-2xl font-extrabold text-primary leading-none">Suíte Escolar</p>
+<p class="text-label-sm text-on-surface-variant mt-1">Selo de Qualidade Acadêmica</p>
+</div>
+</div>
+<p class="mt-4 text-sm text-on-surface-variant leading-relaxed">
+                            The brand represents stability, academic growth, and organized leadership. The deep teal primary color anchors the interface in trust.
+                        </p>
+</div>
+<div>
+<p class="text-body-md font-bold mb-4">Color Palette</p>
+<div class="grid grid-cols-3 gap-3">
+<div class="space-y-1">
+<div class="swatch bg-primary text-on-primary">#00433D</div>
+<span class="text-[10px] uppercase font-bold text-outline">Primary</span>
+</div>
+<div class="space-y-1">
+<div class="swatch bg-secondary text-on-secondary">#4F6072</div>
+<span class="text-[10px] uppercase font-bold text-outline">Secondary</span>
+</div>
+<div class="space-y-1">
+<div class="swatch bg-surface-container-highest text-on-surface">#E0E3E1</div>
+<span class="text-[10px] uppercase font-bold text-outline">Surface</span>
+</div>
+<div class="space-y-1">
+<div class="swatch bg-success text-white">#16A34A</div>
+<span class="text-[10px] uppercase font-bold text-outline">Success</span>
+</div>
+<div class="space-y-1">
+<div class="swatch bg-warning text-white">#EAB308</div>
+<span class="text-[10px] uppercase font-bold text-outline">Warning</span>
+</div>
+<div class="space-y-1">
+<div class="swatch bg-error text-white">#BA1A1A</div>
+<span class="text-[10px] uppercase font-bold text-outline">Error</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Section 6: Iconography -->
+<section class="col-span-12 lg:col-span-4 design-card">
+<h3 class="text-label-sm uppercase tracking-wider text-outline mb-6">02. Iconography</h3>
+<div class="grid grid-cols-4 gap-6 content-center">
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 flex items-center justify-center bg-surface-container rounded-lg">
+<span class="material-symbols-outlined text-primary">dashboard</span>
+</div>
+<span class="text-[10px] text-outline font-bold">dashboard</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 flex items-center justify-center bg-surface-container rounded-lg">
+<span class="material-symbols-outlined text-primary">school</span>
+</div>
+<span class="text-[10px] text-outline font-bold">school</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 flex items-center justify-center bg-surface-container rounded-lg">
+<span class="material-symbols-outlined text-primary">group</span>
+</div>
+<span class="text-[10px] text-outline font-bold">group</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 flex items-center justify-center bg-surface-container rounded-lg">
+<span class="material-symbols-outlined text-primary">print</span>
+</div>
+<span class="text-[10px] text-outline font-bold">print</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 flex items-center justify-center bg-surface-container rounded-lg">
+<span class="material-symbols-outlined text-primary">payments</span>
+</div>
+<span class="text-[10px] text-outline font-bold">payments</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 flex items-center justify-center bg-surface-container rounded-lg">
+<span class="material-symbols-outlined text-primary">settings</span>
+</div>
+<span class="text-[10px] text-outline font-bold">settings</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 flex items-center justify-center bg-surface-container rounded-lg">
+<span class="material-symbols-outlined text-primary">notifications</span>
+</div>
+<span class="text-[10px] text-outline font-bold">notifications</span>
+</div>
+<div class="flex flex-col items-center gap-2">
+<div class="w-12 h-12 flex items-center justify-center bg-surface-container rounded-lg">
+<span class="material-symbols-outlined text-primary">person_add</span>
+</div>
+<span class="text-[10px] text-outline font-bold">person_add</span>
+</div>
+</div>
+</section>
+<!-- Section 2: Typography -->
+<section class="col-span-12 lg:col-span-5 design-card">
+<h3 class="text-label-sm uppercase tracking-wider text-outline mb-6">03. Typography</h3>
+<div class="space-y-6">
+<div class="border-b border-outline-variant pb-4">
+<span class="text-[10px] font-bold text-outline uppercase block mb-1">Headline-md / 24px Bold</span>
+<p class="text-headline-md text-primary">Suíte Escolar: Gestão Acadêmica Inteligente</p>
+</div>
+<div class="border-b border-outline-variant pb-4">
+<span class="text-[10px] font-bold text-outline uppercase block mb-1">Title-sm / 18px Bold</span>
+<p class="text-title-sm text-on-surface">Lista de Matrículas do Semestre</p>
+</div>
+<div class="border-b border-outline-variant pb-4">
+<span class="text-[10px] font-bold text-outline uppercase block mb-1">Body-md / 16px Regular</span>
+<p class="text-body-md text-on-surface-variant">Este sistema foi projetado para facilitar a rotina escolar, permitindo o acompanhamento detalhado de notas, faltas e ocorrências.</p>
+</div>
+<div>
+<span class="text-[10px] font-bold text-outline uppercase block mb-1">Label-sm / 14px Bold</span>
+<p class="text-label-sm text-primary uppercase">Clique aqui para ver mais detalhes</p>
+</div>
+</div>
+</section>
+<!-- Section 3: Buttons & Actions -->
+<section class="col-span-12 lg:col-span-7 design-card">
+<h3 class="text-label-sm uppercase tracking-wider text-outline mb-6">04. Buttons &amp; Actions</h3>
+<div class="overflow-x-auto">
+<table class="w-full text-left">
+<thead>
+<tr class="text-[10px] text-outline uppercase font-bold">
+<th class="pb-4">State</th>
+<th class="pb-4">Primary</th>
+<th class="pb-4">Secondary</th>
+<th class="pb-4">Outline</th>
+</tr>
+</thead>
+<tbody class="space-y-4">
+<tr>
+<td class="text-xs font-bold py-3">Default</td>
+<td><button class="bg-primary text-white px-5 py-2 rounded-lg text-sm font-bold shadow-sm transition-all">Action</button></td>
+<td><button class="bg-secondary text-white px-5 py-2 rounded-lg text-sm font-bold shadow-sm transition-all">Action</button></td>
+<td><button class="border-2 border-primary text-primary px-5 py-2 rounded-lg text-sm font-bold transition-all">Action</button></td>
+</tr>
+<tr>
+<td class="text-xs font-bold py-3">Hover</td>
+<td><button class="bg-primary-container text-on-primary-container px-5 py-2 rounded-lg text-sm font-bold shadow-md transition-all">Action</button></td>
+<td><button class="bg-on-secondary-container text-white px-5 py-2 rounded-lg text-sm font-bold shadow-md transition-all">Action</button></td>
+<td><button class="border-2 border-primary bg-primary-soft text-primary px-5 py-2 rounded-lg text-sm font-bold transition-all">Action</button></td>
+</tr>
+<tr>
+<td class="text-xs font-bold py-3">Active</td>
+<td><button class="bg-primary text-white px-5 py-2 rounded-lg text-sm font-bold scale-95 transition-all">Action</button></td>
+<td><button class="bg-secondary text-white px-5 py-2 rounded-lg text-sm font-bold scale-95 transition-all">Action</button></td>
+<td><button class="border-2 border-primary text-primary px-5 py-2 rounded-lg text-sm font-bold scale-95 transition-all">Action</button></td>
+</tr>
+<tr>
+<td class="text-xs font-bold py-3">Disabled</td>
+<td><button class="bg-surface-dim text-outline px-5 py-2 rounded-lg text-sm font-bold cursor-not-allowed">Action</button></td>
+<td><button class="bg-surface-dim text-outline px-5 py-2 rounded-lg text-sm font-bold cursor-not-allowed">Action</button></td>
+<td><button class="border-2 border-surface-dim text-outline px-5 py-2 rounded-lg text-sm font-bold cursor-not-allowed">Action</button></td>
+</tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- Section 4: Form Elements -->
+<section class="col-span-12 lg:col-span-6 design-card">
+<h3 class="text-label-sm uppercase tracking-wider text-outline mb-6">05. Form Elements</h3>
+<div class="space-y-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="space-y-1">
+<label class="text-label-sm text-on-surface">Nome do Aluno</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-outline text-lg">person</span>
+<input class="w-full pl-10 pr-4 py-2 bg-surface-container-low border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary transition-all outline-none" placeholder="Ex: João Silva" type="text"/>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-label-sm text-on-surface">Data de Nascimento</label>
+<input class="w-full px-4 py-2 bg-surface-container-low border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary focus:border-primary outline-none" type="date"/>
+</div>
+</div>
+<div class="space-y-1">
+<label class="text-label-sm text-error">E-mail de Responsável (Inválido)</label>
+<input class="w-full px-4 py-2 bg-error-container/20 border border-error rounded-lg text-error outline-none" type="email" value="email-invalido@"/>
+<span class="text-[10px] text-error font-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-xs">error</span> Insira um endereço de e-mail válido.
+                        </span>
+</div>
+<div class="flex items-center gap-6">
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="w-5 h-5 rounded border-outline-variant text-primary focus:ring-primary" type="checkbox"/>
+<span class="text-sm text-on-surface group-hover:text-primary transition-colors">Ativo</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="w-5 h-5 border-outline-variant text-primary focus:ring-primary" name="status" type="radio"/>
+<span class="text-sm text-on-surface group-hover:text-primary transition-colors">Manhã</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer group">
+<input class="w-5 h-5 border-outline-variant text-primary focus:ring-primary" name="status" type="radio"/>
+<span class="text-sm text-on-surface group-hover:text-primary transition-colors">Tarde</span>
+</label>
+</div>
+<div class="space-y-1">
+<label class="text-label-sm text-on-surface">Turma Selecionada</label>
+<select class="w-full px-4 py-2 bg-surface-container-low border border-outline-variant rounded-lg focus:ring-2 focus:ring-primary outline-none">
+<option>1º Ano - Ensino Médio A</option>
+<option>2º Ano - Ensino Médio B</option>
+<option>3º Ano - Ensino Médio C</option>
+</select>
+</div>
+</div>
+</section>
+<!-- Section 5: UI Patterns -->
+<section class="col-span-12 lg:col-span-6 design-card">
+<h3 class="text-label-sm uppercase tracking-wider text-outline mb-6">06. UI Patterns &amp; Badges</h3>
+<div class="space-y-8">
+<div>
+<p class="text-body-md font-bold mb-4">Status Badges</p>
+<div class="flex flex-wrap gap-3">
+<span class="px-3 py-1 bg-warning/10 text-warning border border-warning/20 rounded-full text-[10px] font-extrabold uppercase tracking-widest">Pendente</span>
+<span class="px-3 py-1 bg-success/10 text-success border border-success/20 rounded-full text-[10px] font-extrabold uppercase tracking-widest">Concluído</span>
+<span class="px-3 py-1 bg-error/10 text-error border border-error/20 rounded-full text-[10px] font-extrabold uppercase tracking-widest">Disciplinar</span>
+<span class="px-3 py-1 bg-primary/10 text-primary border border-primary/20 rounded-full text-[10px] font-extrabold uppercase tracking-widest">Em Análise</span>
+</div>
+</div>
+<div>
+<p class="text-body-md font-bold mb-4">SelectionCard Pattern (Activity Print Flow)</p>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+<div class="p-4 border-2 border-primary bg-primary-soft rounded-xl cursor-pointer hover:shadow-md transition-all relative overflow-hidden">
+<div class="absolute top-2 right-2 h-6 w-6 bg-primary rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined text-white text-xs">check</span>
+</div>
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-primary">description</span>
+<p class="font-bold text-primary">Atividade Reforço</p>
+</div>
+<p class="text-xs text-on-primary-fixed-variant">Matemática - Álgebra I</p>
+<p class="text-[10px] text-outline mt-3">PDF • 12mb • 15 Páginas</p>
+</div>
+<div class="p-4 border border-outline-variant bg-surface-container-low rounded-xl cursor-pointer hover:border-primary/40 hover:bg-white transition-all">
+<div class="flex items-center gap-3 mb-2">
+<span class="material-symbols-outlined text-on-surface-variant">history_edu</span>
+<p class="font-bold text-on-surface">Prova Bimestral</p>
+</div>
+<p class="text-xs text-on-surface-variant">Português - Redação</p>
+<p class="text-[10px] text-outline mt-3">DOCX • 5mb • 4 Páginas</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Visual Asset Showcase -->
+<div class="mt-12 design-card relative overflow-hidden bg-primary h-64 flex flex-col justify-center items-center text-center">
+
+<div class="relative z-10 p-8">
+<h3 class="text-display-lg text-white font-extrabold">Suíte Escolar</h3>
+<p class="text-primary-fixed text-lg max-w-xl mx-auto mt-4">Transformando a gestão acadêmica com design focado no usuário e performance superior.</p>
+<div class="flex gap-4 justify-center mt-8">
+<button class="bg-white text-primary px-8 py-3 rounded-xl font-bold hover:scale-105 transition-transform">Download System Assets</button>
+<button class="border border-white/30 bg-white/10 backdrop-blur-md text-white px-8 py-3 rounded-xl font-bold hover:bg-white/20 transition-all">Documentation</button>
+</div>
+</div>
+</div>
+</main>
+<footer class="bg-surface-container py-8 border-t border-outline-variant mt-12">
+<div class="max-w-[1400px] mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary">verified_user</span>
+<span class="text-label-sm font-bold text-primary">DESIGN SYSTEM V2.4</span>
+</div>
+<p class="text-sm text-outline">© 2024 Suíte Escolar. Propriedade Intelectual Reservada.</p>
+<div class="flex gap-4">
+<span class="material-symbols-outlined text-outline hover:text-primary cursor-pointer transition-colors">share</span>
+<span class="material-symbols-outlined text-outline hover:text-primary cursor-pointer transition-colors">download</span>
+</div>
+</div>
+</footer>
+<script>
+        // Micro-interactions and simple state handling
+        document.querySelectorAll('.design-card').forEach(card => {
+            card.addEventListener('mouseenter', () => {
+                card.classList.add('shadow-md');
+                card.style.transform = 'translateY(-2px)';
+                card.style.transition = 'all 0.3s ease';
+            });
+            card.addEventListener('mouseleave', () => {
+                card.classList.remove('shadow-md');
+                card.style.transform = 'translateY(0)';
+            });
+        });
+
+        // Simulating selection on SelectionCards
+        const selectionCards = document.querySelectorAll('.SelectionCard');
+        // This is a mockup so we won't add complex logic, just visual confirmation of interactions
+    </script>
+</body></html>

@@ -63,6 +63,7 @@ audit_router_module = _reload_or_import(audit_router_module)
 
 ENABLE_EMBEDDED_WORKER = config_module.ENABLE_EMBEDDED_WORKER
 STATIC_DIR = config_module.STATIC_DIR
+FRONTEND_V2_DIR = config_module.FRONTEND_V2_DIR
 
 system_router = system_router_module.router
 pages_router = pages_router_module.router
@@ -204,3 +205,4 @@ app.include_router(preconselho_router)
 app.include_router(audit_router)
 
 app.mount("/static", CachedStaticFiles(directory=str(STATIC_DIR)), name="static")
+app.mount("/frontend-v2", CachedStaticFiles(directory=str(FRONTEND_V2_DIR)), name="frontend_v2")
