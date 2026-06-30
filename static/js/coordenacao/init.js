@@ -251,6 +251,7 @@ async function init() {
         registrarEventosEstudantes();
         registrarEventosRegimento();
         registrarEventosPreRegistrosGestao();
+        registrarEventosAcompanhamentoDocente();
         renderMotivosGestao();
 
         await carregarOpcoesOcorrencias();
@@ -266,7 +267,8 @@ async function init() {
             carregarEstudantes(),
             carregarCatalogosBaseLegal(),
             carregarRegimentoItens(),
-            carregarPreRegistros({ manager: true })
+            carregarPreRegistros({ manager: true }),
+            carregarAcompanhamentoDocente()
         ]);
     } catch (err) {
         setMensagemOcorrencias(err.message || "Erro ao carregar modulo de coordenacao.", true);

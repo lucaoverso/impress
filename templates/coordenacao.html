@@ -86,6 +86,10 @@
                         aria-selected="false" type="button">
                         Estudantes
                     </button>
+                    <button class="admin-tab-btn" data-coord-tab-trigger="acompanhamento-docente"
+                        aria-controls="coord-tab-acompanhamento-docente" aria-selected="false" type="button">
+                        Acompanhamento Docente
+                    </button>
                     <button class="admin-tab-btn" data-coord-tab-trigger="relatorios" aria-controls="coord-tab-relatorios"
                         aria-selected="false" type="button">
                         Relatórios
@@ -830,6 +834,121 @@
                 </section>
             </section>
 
+            <section id="coord-tab-acompanhamento-docente" class="coordenacao-tab-panel"
+                data-coord-tab-panel="acompanhamento-docente" hidden>
+                <section class="coordenacao-stack acompanhamento-docente-page">
+                    <article class="coordenacao-card acompanhamento-docente-header">
+                        <div class="coordenacao-section-header">
+                            <div>
+                                <h2>Acompanhamento docente</h2>
+                                <p>Registre acontecimentos do bimestre e consulte o histÃ³rico individual de cada professor.</p>
+                            </div>
+                            <button id="btnNovoRegistroDocente" class="btn-destaque" type="button">
+                                Novo registro
+                            </button>
+                        </div>
+                        <form id="formBuscaAcompanhamentoDocente" class="acompanhamento-docente-search">
+                            <label class="coordenacao-field" for="buscaAcompanhamentoDocente">
+                                <span>Buscar professor</span>
+                                <input id="buscaAcompanhamentoDocente" type="search"
+                                    placeholder="Nome ou disciplina">
+                            </label>
+                            <label class="coordenacao-field" for="periodoInicialAcompanhamentoDocente">
+                                <span>Data inicial</span>
+                                <input id="periodoInicialAcompanhamentoDocente" type="date">
+                            </label>
+                            <label class="coordenacao-field" for="periodoFinalAcompanhamentoDocente">
+                                <span>Data final</span>
+                                <input id="periodoFinalAcompanhamentoDocente" type="date">
+                            </label>
+                            <div class="coordenacao-filter-actions">
+                                <button class="btn-destaque" type="submit">Buscar</button>
+                                <button id="btnLimparBuscaAcompanhamentoDocente" type="button">Limpar</button>
+                            </div>
+                        </form>
+                        <div id="resumoPeriodoAcompanhamentoDocente" class="acompanhamento-docente-period-summary"
+                            aria-live="polite"></div>
+                        <p id="msgAcompanhamentoDocente" class="coordenacao-status-copy" role="status"></p>
+                    </article>
+
+                    <section class="acompanhamento-docente-layout">
+                        <article class="coordenacao-card acompanhamento-docente-list-card">
+                            <div class="coordenacao-section-header">
+                                <div>
+                                    <h2>Professores</h2>
+                                    <p>Indicadores simples para localizar rapidamente quem precisa de acompanhamento.</p>
+                                </div>
+                            </div>
+                            <div id="listaAcompanhamentoDocente" class="acompanhamento-docente-list"></div>
+                        </article>
+
+                        <aside class="coordenacao-card acompanhamento-docente-profile-card">
+                            <div id="perfilAcompanhamentoDocente" class="acompanhamento-docente-profile">
+                                <div class="coordenacao-empty-state">
+                                    Selecione um professor para ver o perfil.
+                                </div>
+                            </div>
+                        </aside>
+                    </section>
+
+                    <section id="modalRegistroDocente" class="coordenacao-occurrence-modal" hidden>
+                        <div class="coordenacao-occurrence-modal-backdrop" data-fechar-modal-docente></div>
+                        <article class="coordenacao-occurrence-modal-panel acompanhamento-docente-modal" role="dialog"
+                            aria-modal="true" aria-labelledby="tituloRegistroDocente" tabindex="-1">
+                            <div class="coordenacao-section-header acompanhamento-docente-modal-header">
+                                <div>
+                                    <h2 id="tituloRegistroDocente">Novo registro docente</h2>
+                                    <p>Registre uma informaÃ§Ã£o objetiva para compor a linha do tempo do bimestre.</p>
+                                </div>
+                                <button id="btnFecharRegistroDocente" class="coordenacao-modal-close" type="button">
+                                    Fechar
+                                </button>
+                            </div>
+                            <form id="formRegistroDocente" class="coordenacao-form acompanhamento-docente-form">
+                                <label class="coordenacao-field coordenacao-field-wide" for="registroDocenteProfessorBusca">
+                                    <span>Professor</span>
+                                    <div class="coordenacao-autocomplete-shell">
+                                        <input id="registroDocenteProfessorBusca" type="text" autocomplete="off"
+                                            placeholder="Buscar por nome ou disciplina" required>
+                                        <div id="listaRegistroDocenteProfessores" class="coordenacao-autocomplete-list"
+                                            hidden></div>
+                                    </div>
+                                </label>
+                                <input id="registroDocenteProfessorId" type="hidden">
+
+                                <label class="coordenacao-field" for="registroDocenteTipo">
+                                    <span>Tipo</span>
+                                    <select id="registroDocenteTipo" required>
+                                        <option value="positive">Positivo</option>
+                                        <option value="attention">Ponto de atenÃ§Ã£o</option>
+                                        <option value="guidance">OrientaÃ§Ã£o</option>
+                                        <option value="informative">Informativo</option>
+                                    </select>
+                                </label>
+                                <label class="coordenacao-field" for="registroDocenteData">
+                                    <span>Data</span>
+                                    <input id="registroDocenteData" type="date" required>
+                                </label>
+                                <label class="coordenacao-field coordenacao-field-wide" for="registroDocenteCategoria">
+                                    <span>Categoria</span>
+                                    <input id="registroDocenteCategoria" type="text" maxlength="120"
+                                        placeholder="Ex: entrega, planejamento, orientaÃ§Ã£o pedagÃ³gica" required>
+                                </label>
+                                <label class="coordenacao-field coordenacao-field-wide" for="registroDocenteDescricao">
+                                    <span>DescriÃ§Ã£o</span>
+                                    <textarea id="registroDocenteDescricao" rows="5"
+                                        placeholder="Descreva o acontecimento de forma objetiva" required></textarea>
+                                </label>
+                                <div class="coordenacao-form-navigation acompanhamento-docente-actions">
+                                    <button id="btnCancelarRegistroDocente" type="button">Cancelar</button>
+                                    <button class="btn-destaque" type="submit">Salvar registro</button>
+                                </div>
+                            </form>
+                        </article>
+                    </section>
+                </section>
+            </section>
+
             <section id="coord-tab-regimento" class="coordenacao-tab-panel" data-coord-tab-panel="regimento" hidden>
                 <section class="coordenacao-grid">
                     <article class="coordenacao-card">
@@ -1093,6 +1212,7 @@
     <script src="{{ request.url_for('static', path='js/coordenacao/base-legal.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/coordenacao/cadastros.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/coordenacao/pre-registros.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/coordenacao/acompanhamento-docente.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/coordenacao/init.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/coordenacao.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>

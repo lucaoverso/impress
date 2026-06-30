@@ -15,6 +15,7 @@ from pcpi_router import router as pcpi_router
 import modules.preconselho.router as preconselho_router_module
 import modules.occurrences.router as occurrences_router_module
 import modules.audit.router as audit_router_module
+import modules.teacher_followup.router as teacher_followup_router_module
 import routers.admin_router as admin_router_module
 import modules.scheduling.router as scheduling_router_module
 import routers.common as common_module
@@ -60,6 +61,7 @@ professores_router_module = _reload_or_import(professores_router_module)
 admin_router_module = _reload_or_import(admin_router_module)
 preconselho_router_module = _reload_or_import(preconselho_router_module)
 audit_router_module = _reload_or_import(audit_router_module)
+teacher_followup_router_module = _reload_or_import(teacher_followup_router_module)
 
 ENABLE_EMBEDDED_WORKER = config_module.ENABLE_EMBEDDED_WORKER
 STATIC_DIR = config_module.STATIC_DIR
@@ -77,6 +79,7 @@ admin_router = admin_router_module.router
 preconselho_router = preconselho_router_module.router
 occurrences_router = occurrences_router_module.router
 audit_router = audit_router_module.router
+teacher_followup_router = teacher_followup_router_module.router
 
 root = system_router_module.root
 health = system_router_module.health
@@ -202,5 +205,6 @@ app.include_router(occurrences_router)
 app.include_router(pcpi_router)
 app.include_router(preconselho_router)
 app.include_router(audit_router)
+app.include_router(teacher_followup_router)
 
 app.mount("/static", CachedStaticFiles(directory=str(STATIC_DIR)), name="static")

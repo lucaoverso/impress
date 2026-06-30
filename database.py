@@ -642,6 +642,27 @@ def criar_tabelas():
     """)
 
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS teacher_followup_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            teacher_id INTEGER NOT NULL,
+            record_type TEXT NOT NULL CHECK (record_type IN ('positive', 'attention', 'guidance', 'informative')),
+            category TEXT NOT NULL,
+            description TEXT NOT NULL,
+            record_date TEXT NOT NULL,
+            created_by_user_id INTEGER,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(teacher_id) REFERENCES usuarios(id),
+            FOREIGN KEY(created_by_user_id) REFERENCES usuarios(id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_teacher_followup_records_teacher
+        ON teacher_followup_records(teacher_id, record_date DESC, id DESC)
+    """)
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS pre_conselho_periodos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL,

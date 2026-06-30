@@ -682,7 +682,8 @@ function ocultarTodasSugestoes() {
         "listaRegimentoBusca",
         "listaLeisBaseLegal",
         "listaArtigosBaseLegal",
-        "listaIncisosBaseLegal"
+        "listaIncisosBaseLegal",
+        "listaRegistroDocenteProfessores"
     ].forEach(ocultarSugestoes);
 }
 
