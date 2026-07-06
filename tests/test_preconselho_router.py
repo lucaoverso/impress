@@ -173,6 +173,7 @@ class PreConselhoRouterTest(unittest.TestCase):
                     data_inicio="2032-01-20",
                     data_fim="2032-04-30",
                     status="ABERTO",
+                    tem_rav=True,
                 )
             )
             database.criar_ou_atualizar_turma_disciplina(
@@ -209,6 +210,7 @@ class PreConselhoRouterTest(unittest.TestCase):
                 nivel_atencao="medio",
                 pos_preconselho_recuperado=False,
                 pos_preconselho_observacao="segue precisando de retomada individual",
+                estudante_em_rav=True,
             )
 
             salvo = preconselho_router.salvar_registro_preconselho_api(
@@ -225,6 +227,8 @@ class PreConselhoRouterTest(unittest.TestCase):
             )
             self.assertIn("em razão de", salvo["texto_gerado"])
             self.assertFalse(salvo["pos_preconselho_recuperado"])
+            self.assertTrue(salvo["estudante_em_rav"])
+            self.assertIn("Recuperar para Avançar (RAV)", salvo["texto_gerado"])
             self.assertIn("manteve baixo rendimento", salvo["texto_gerado"].lower())
 
             salvo_historia = preconselho_router.salvar_registro_preconselho_api(
@@ -255,6 +259,7 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertEqual(listagem["total_registros"], 1)
             self.assertEqual(listagem["itens"][0]["estudante_nome"], "Ana")
             self.assertFalse(listagem["itens"][0]["pos_preconselho_recuperado"])
+            self.assertTrue(listagem["itens"][0]["estudante_em_rav"])
 
             consolidado = preconselho_router.gerar_consolidado_preconselho_api(
                 periodo_id=periodo_id,
@@ -270,6 +275,7 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertIn("ANA", consolidado["texto"])
             self.assertIn("Historia", consolidado["texto"])
             self.assertIn("Matematica", consolidado["texto"])
+            self.assertIn("Recuperar para Avançar (RAV)", consolidado["texto"])
             self.assertNotIn("A turma do 7A, composta pelo seguinte corpo docente:", consolidado["texto"])
             self.assertIn("PROFESSOR REGISTRO (Historia e Matematica)", consolidado["texto"])
             self.assertNotIn("Professora Estrutural (Geografia Aplicada)", consolidado["texto"])
@@ -336,7 +342,7 @@ class PreConselhoRouterTest(unittest.TestCase):
             )
 
             motivo_id = int(database.listar_motivos_pre_conselho()[0]["id"])
-            preconselho_router.salvar_registro_preconselho_api(
+            salvo_sem_rav = preconselho_router.salvar_registro_preconselho_api(
                 payload=models.PreConselhoRegistroSaveIn(
                     periodo_id=periodo_id,
                     turma_id=turma_id,
@@ -346,9 +352,12 @@ class PreConselhoRouterTest(unittest.TestCase):
                     motivo_ids=[motivo_id],
                     observacao_professor="precisa revisar os conceitos da unidade",
                     nivel_atencao="medio",
+                    estudante_em_rav=True,
                 ),
                 usuario=self._usuario_professor(professor_colega_id, "Professora Colega"),
             )
+            self.assertFalse(salvo_sem_rav["estudante_em_rav"])
+            self.assertNotIn("Recuperar para Avançar (RAV)", salvo_sem_rav["texto_gerado"])
 
             usuario_hibrido = self._usuario_professor(
                 professor_hibrido_id,
@@ -685,12 +694,14 @@ class PreConselhoRouterTest(unittest.TestCase):
                     data_inicio="2034-05-01",
                     data_fim="2034-06-30",
                     status="ABERTO",
+                    tem_rav=True,
                 ),
                 usuario=usuario_admin,
             )
 
             self.assertEqual(periodo["ano_letivo"], 2034)
             self.assertEqual(periodo["etapa"], 2)
+            self.assertTrue(periodo["tem_rav"])
 
             periodo_atualizado = preconselho_router.atualizar_periodo_preconselho_api(
                 periodo_id=int(periodo["id"]),
@@ -700,11 +711,13 @@ class PreConselhoRouterTest(unittest.TestCase):
                     etapa=2,
                     data_inicio="2034-05-02",
                     data_fim="2034-06-29",
+                    tem_rav=False,
                 ),
                 usuario=usuario_admin,
             )
 
             self.assertEqual(periodo_atualizado["nome"], "2o Bimestre 2034 - Ajustado")
+            self.assertFalse(periodo_atualizado["tem_rav"])
 
             motivo = preconselho_router.criar_motivo_preconselho_api(
                 payload=models.PreConselhoMotivoCreateIn(

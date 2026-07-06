@@ -12,6 +12,7 @@ class PreConselhoPeriodo:
     data_inicio: str = ""
     data_fim: str = ""
     status: str = ""
+    tem_rav: bool = False
 
 
 @dataclass(slots=True)
@@ -35,4 +36,5 @@ class PreConselhoRegistro:
     nivel_atencao: str = ""
     observacao_professor: str = ""
     texto_gerado: str = ""
+    estudante_em_rav: bool = False
     motivo_ids: list[int] = field(default_factory=list)

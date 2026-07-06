@@ -75,6 +75,7 @@ def save_preconselho_record(payload, usuario: dict) -> dict:
         "Observação do pós pré-conselho",
         max_len=1000,
     )
+    estudante_em_rav = bool(payload.estudante_em_rav) if bool(periodo.get("tem_rav")) else False
     try:
         nivel_atencao = validar_nivel_atencao_pre_conselho(payload.nivel_atencao)
         (
@@ -95,6 +96,7 @@ def save_preconselho_record(payload, usuario: dict) -> dict:
             pos_preconselho_recuperado=pos_preconselho_recuperado,
             pos_preconselho_motivos=pos_preconselho_motivos,
             pos_preconselho_observacao=observacao_pos_preconselho,
+            estudante_em_rav=estudante_em_rav,
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -115,6 +117,7 @@ def save_preconselho_record(payload, usuario: dict) -> dict:
         pos_preconselho_recuperado=pos_preconselho_recuperado,
         pos_preconselho_motivo_ids=pos_preconselho_motivo_ids,
         pos_preconselho_observacao=observacao_pos_preconselho,
+        estudante_em_rav=estudante_em_rav,
     )
 
     registro = repository.get_record(registro_id)

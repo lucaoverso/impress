@@ -207,6 +207,15 @@
                                             rendimento.</small>
                                     </div>
 
+                                    <div id="preconselhoRavRegistroField"
+                                        class="preconselho-toggle-field pcpi-field pcpi-field-wide" hidden>
+                                        <label class="preconselho-toggle-row" for="preconselhoEstudanteEmRav">
+                                            <input id="preconselhoEstudanteEmRav" type="checkbox">
+                                            <span>Estudante está em Recuperar para Avançar (RAV)</span>
+                                        </label>
+                                        <small class="pcpi-hint">Este campo aparece somente em períodos marcados com RAV.</small>
+                                    </div>
+
                                     <label class="pcpi-field pcpi-field-wide" for="preconselhoObservacaoPosPreConselho">
                                         <span>Observação do pós pré conselho</span>
                                         <textarea id="preconselhoObservacaoPosPreConselho" rows="3" maxlength="1000"
@@ -493,6 +502,14 @@
                                 <span>Data final</span>
                                 <input id="preconselhoPeriodoDataFim" type="date" required>
                             </label>
+
+                            <div class="preconselho-toggle-field pcpi-field pcpi-field-wide">
+                                <label class="preconselho-toggle-row" for="preconselhoPeriodoTemRav">
+                                    <input id="preconselhoPeriodoTemRav" type="checkbox">
+                                    <span>Período com Recuperar para Avançar (RAV)</span>
+                                </label>
+                                <small class="pcpi-hint">Quando marcado, o registro do estudante exibirá a opção de RAV.</small>
+                            </div>
 
                             <label class="pcpi-field pcpi-field-wide" for="preconselhoPeriodoStatusForm">
                                 <span>Status inicial ou desejado</span>

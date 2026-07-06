@@ -46,6 +46,7 @@ Status: mapa inicial extraido do codigo.
 | `20260615_repair_global_schedule_config.py` | Reparar/seedar grade global. | `configuracao_aulas`. | Confirmada pelo codigo |
 | `20260622_add_apc_submission_history.py` | Criar historico de envios APC. | `apc_envio_historico`, `apc_envios.primeiro_envio_em`. | Confirmada pelo codigo |
 | `20260622_create_apc_preview_jobs.py` | Criar fila de preview APC. | `apc_preview_jobs`. | Confirmada pelo codigo |
+| `20260706_add_rav_preconselho.py` | Adicionar marcadores de Recuperar para Avancar no pre-conselho. | `pre_conselho_periodos.tem_rav`, `pre_conselho_registros.estudante_em_rav`. | Confirmada pelo codigo |
 
 ## Seeds Iniciais
 

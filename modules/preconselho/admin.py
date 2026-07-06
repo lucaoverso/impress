@@ -49,6 +49,7 @@ def create_preconselho_period(payload, usuario: dict) -> dict:
             data_inicio=validate_iso_date(payload.data_inicio, "Data inicial"),
             data_fim=validate_iso_date(payload.data_fim, "Data final"),
             status=status,
+            tem_rav=bool(payload.tem_rav),
         )
     except Exception as exc:
         raise HTTPException(500, "Falha ao criar o período.") from exc
@@ -77,6 +78,7 @@ def update_preconselho_period(periodo_id: int, payload, usuario: dict) -> dict:
         etapa=etapa,
         data_inicio=validate_iso_date(payload.data_inicio, "Data inicial"),
         data_fim=validate_iso_date(payload.data_fim, "Data final"),
+        tem_rav=bool(payload.tem_rav),
     )
     if not atualizado:
         raise HTTPException(404, "Período não encontrado.")

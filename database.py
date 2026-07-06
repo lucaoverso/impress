@@ -825,6 +825,7 @@ def criar_tabelas():
             data_inicio TEXT NOT NULL,
             data_fim TEXT NOT NULL,
             status TEXT NOT NULL DEFAULT 'FECHADO',
+            tem_rav INTEGER NOT NULL DEFAULT 0,
             criado_em TEXT NOT NULL DEFAULT (datetime('now')),
             atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
             UNIQUE(ano_letivo, etapa)
@@ -862,6 +863,7 @@ def criar_tabelas():
             pos_preconselho_recuperado INTEGER,
             pos_preconselho_motivos TEXT NOT NULL DEFAULT '[]',
             pos_preconselho_observacao TEXT NOT NULL DEFAULT '',
+            estudante_em_rav INTEGER NOT NULL DEFAULT 0,
             texto_gerado TEXT NOT NULL DEFAULT '',
             criado_em TEXT NOT NULL DEFAULT (datetime('now')),
             atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
@@ -11101,6 +11103,7 @@ def listar_periodos_pre_conselho():
             data_inicio,
             data_fim,
             status,
+            tem_rav,
             criado_em,
             atualizado_em
         FROM pre_conselho_periodos
@@ -11126,6 +11129,7 @@ def buscar_periodo_pre_conselho_por_id(periodo_id: int):
             data_inicio,
             data_fim,
             status,
+            tem_rav,
             criado_em,
             atualizado_em
         FROM pre_conselho_periodos
@@ -11153,6 +11157,7 @@ def buscar_periodo_pre_conselho_por_ano_etapa(ano_letivo: int, etapa: int):
             data_inicio,
             data_fim,
             status,
+            tem_rav,
             criado_em,
             atualizado_em
         FROM pre_conselho_periodos
@@ -11176,6 +11181,7 @@ def criar_periodo_pre_conselho(
     data_inicio: str,
     data_fim: str,
     status: str,
+    tem_rav: bool = False,
 ):
     nome_final = _normalizar_nome_catalogo(nome) or nome_periodo_pre_conselho(ano_letivo, etapa)
     conn = get_connection()
@@ -11190,10 +11196,11 @@ def criar_periodo_pre_conselho(
             data_inicio,
             data_fim,
             status,
+            tem_rav,
             criado_em,
             atualizado_em
         )
-        VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     """,
         (
             nome_final,
@@ -11202,6 +11209,7 @@ def criar_periodo_pre_conselho(
             data_inicio,
             data_fim,
             status,
+            int(bool(tem_rav)),
         ),
     )
 
@@ -11219,6 +11227,7 @@ def atualizar_periodo_pre_conselho_dados(
     etapa: int,
     data_inicio: str,
     data_fim: str,
+    tem_rav: bool = False,
 ):
     nome_final = _normalizar_nome_catalogo(nome) or nome_periodo_pre_conselho(ano_letivo, etapa)
     conn = get_connection()
@@ -11232,6 +11241,7 @@ def atualizar_periodo_pre_conselho_dados(
             etapa = ?,
             data_inicio = ?,
             data_fim = ?,
+            tem_rav = ?,
             atualizado_em = datetime('now')
         WHERE id = ?
     """,
@@ -11241,6 +11251,7 @@ def atualizar_periodo_pre_conselho_dados(
             int(etapa),
             data_inicio,
             data_fim,
+            int(bool(tem_rav)),
             int(periodo_id),
         ),
     )
@@ -11679,6 +11690,8 @@ def _normalizar_linha_registro_pre_conselho(
         "motivo_ids": [int(motivo["id"]) for motivo in motivos],
         "motivos": motivos,
         "periodo_status": item.get("periodo_status", "") or "",
+        "periodo_tem_rav": bool(int(item.get("periodo_tem_rav") or 0)),
+        "estudante_em_rav": bool(int(item.get("estudante_em_rav") or 0)),
         **pos_preconselho,
     }
 
@@ -11700,6 +11713,7 @@ def criar_ou_atualizar_registro_pre_conselho(
     pos_preconselho_recuperado: bool | None = None,
     pos_preconselho_motivo_ids: list[str] | None = None,
     pos_preconselho_observacao: str = "",
+    estudante_em_rav: bool = False,
 ):
     conn = get_connection()
     cursor = conn.cursor()
@@ -11721,6 +11735,7 @@ def criar_ou_atualizar_registro_pre_conselho(
     )
     pos_preconselho_motivos_json = _serializar_lista_texto(pos_preconselho_motivo_ids)
     pos_preconselho_observacao_limpa = _normalizar_nome_catalogo(pos_preconselho_observacao)
+    estudante_em_rav_valor = int(bool(estudante_em_rav))
     texto_gerado_limpo = str(texto_gerado or "").strip()
 
     motivo_ids_validos = []
@@ -11767,6 +11782,7 @@ def criar_ou_atualizar_registro_pre_conselho(
                 pos_preconselho_recuperado = ?,
                 pos_preconselho_motivos = ?,
                 pos_preconselho_observacao = ?,
+                estudante_em_rav = ?,
                 texto_gerado = ?,
                 atualizado_em = datetime('now')
             WHERE id = ?
@@ -11787,6 +11803,7 @@ def criar_ou_atualizar_registro_pre_conselho(
                 None if pos_preconselho_recuperado_limpo is None else int(pos_preconselho_recuperado_limpo),
                 pos_preconselho_motivos_json,
                 pos_preconselho_observacao_limpa,
+                estudante_em_rav_valor,
                 texto_gerado_limpo,
                 int(registro_id),
             ),
@@ -11810,11 +11827,12 @@ def criar_ou_atualizar_registro_pre_conselho(
                 pos_preconselho_recuperado,
                 pos_preconselho_motivos,
                 pos_preconselho_observacao,
+                estudante_em_rav,
                 texto_gerado,
                 criado_em,
                 atualizado_em
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
         """,
             (
                 periodo_id_valor,
@@ -11832,6 +11850,7 @@ def criar_ou_atualizar_registro_pre_conselho(
                 None if pos_preconselho_recuperado_limpo is None else int(pos_preconselho_recuperado_limpo),
                 pos_preconselho_motivos_json,
                 pos_preconselho_observacao_limpa,
+                estudante_em_rav_valor,
                 texto_gerado_limpo,
             ),
         )
@@ -11862,6 +11881,7 @@ def listar_registros_pre_conselho(
             COALESCE(p.ano_letivo, r.ano_letivo, 0) AS ano_letivo,
             COALESCE(p.etapa, r.bimestre, 0) AS etapa,
             COALESCE(p.status, '') AS periodo_status,
+            COALESCE(p.tem_rav, 0) AS periodo_tem_rav,
             r.professor_usuario_id AS professor_id,
             COALESCE(u.nome, '') AS professor_nome,
             r.turma_id,
@@ -11875,6 +11895,7 @@ def listar_registros_pre_conselho(
             r.pos_preconselho_recuperado,
             COALESCE(r.pos_preconselho_motivos, '[]') AS pos_preconselho_motivos,
             COALESCE(r.pos_preconselho_observacao, '') AS pos_preconselho_observacao,
+            COALESCE(r.estudante_em_rav, 0) AS estudante_em_rav,
             COALESCE(r.texto_gerado, '') AS texto_gerado,
             r.criado_em,
             r.atualizado_em
@@ -11936,6 +11957,7 @@ def buscar_registro_pre_conselho_por_id(registro_id: int):
             COALESCE(p.ano_letivo, r.ano_letivo, 0) AS ano_letivo,
             COALESCE(p.etapa, r.bimestre, 0) AS etapa,
             COALESCE(p.status, '') AS periodo_status,
+            COALESCE(p.tem_rav, 0) AS periodo_tem_rav,
             r.professor_usuario_id AS professor_id,
             COALESCE(u.nome, '') AS professor_nome,
             r.turma_id,
@@ -11949,6 +11971,7 @@ def buscar_registro_pre_conselho_por_id(registro_id: int):
             r.pos_preconselho_recuperado,
             COALESCE(r.pos_preconselho_motivos, '[]') AS pos_preconselho_motivos,
             COALESCE(r.pos_preconselho_observacao, '') AS pos_preconselho_observacao,
+            COALESCE(r.estudante_em_rav, 0) AS estudante_em_rav,
             COALESCE(r.texto_gerado, '') AS texto_gerado,
             r.criado_em,
             r.atualizado_em
@@ -11998,6 +12021,7 @@ def listar_estudantes_pre_conselho_painel(
             r.pos_preconselho_recuperado,
             COALESCE(r.pos_preconselho_motivos, '[]') AS pos_preconselho_motivos,
             COALESCE(r.pos_preconselho_observacao, '') AS pos_preconselho_observacao,
+            COALESCE(r.estudante_em_rav, 0) AS estudante_em_rav,
             COALESCE(r.texto_gerado, '') AS texto_gerado
         FROM estudantes e
         LEFT JOIN turmas t ON t.id = e.turma_id
@@ -12055,6 +12079,7 @@ def listar_estudantes_pre_conselho_painel(
                 "texto_gerado": item.get("texto_gerado", "") or "",
                 "motivo_ids": [int(motivo["id"]) for motivo in motivos],
                 "motivos": motivos,
+                "estudante_em_rav": bool(int(item.get("estudante_em_rav") or 0)),
                 **pos_preconselho,
             }
         )

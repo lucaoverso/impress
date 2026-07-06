@@ -11,6 +11,7 @@ class PreConselhoPeriodoOut(BaseModel):
     data_inicio: str = ""
     data_fim: str = ""
     status: str = ""
+    tem_rav: bool = False
     editavel: bool = False
 
 
@@ -21,6 +22,7 @@ class PreConselhoPeriodoCreateIn(BaseModel):
     data_inicio: str
     data_fim: str
     status: str = ""
+    tem_rav: bool = False
 
 
 class PreConselhoPeriodoUpdateIn(BaseModel):
@@ -29,6 +31,7 @@ class PreConselhoPeriodoUpdateIn(BaseModel):
     etapa: int
     data_inicio: str
     data_fim: str
+    tem_rav: bool = False
 
 
 class PreConselhoPeriodoStatusIn(BaseModel):
@@ -127,6 +130,7 @@ class PreConselhoEstudantePainelOut(BaseModel):
     pos_preconselho_motivo_ids: list[str] = Field(default_factory=list)
     pos_preconselho_motivos: list[str] = Field(default_factory=list)
     pos_preconselho_observacao: str = ""
+    estudante_em_rav: bool = False
 
 
 class PreConselhoRegistroSaveIn(BaseModel):
@@ -141,6 +145,7 @@ class PreConselhoRegistroSaveIn(BaseModel):
     pos_preconselho_recuperado: bool | None = None
     pos_preconselho_motivo_ids: list[str] = Field(default_factory=list)
     pos_preconselho_observacao: str = ""
+    estudante_em_rav: bool = False
     professor_id: int | None = None
 
 
@@ -153,6 +158,7 @@ class PreConselhoTextoPreviewIn(BaseModel):
     pos_preconselho_recuperado: bool | None = None
     pos_preconselho_motivo_ids: list[str] = Field(default_factory=list)
     pos_preconselho_observacao: str = ""
+    estudante_em_rav: bool = False
 
 
 class PreConselhoRegistroOut(BaseModel):
@@ -180,6 +186,7 @@ class PreConselhoRegistroOut(BaseModel):
     pos_preconselho_motivo_ids: list[str] = Field(default_factory=list)
     pos_preconselho_motivos: list[str] = Field(default_factory=list)
     pos_preconselho_observacao: str = ""
+    estudante_em_rav: bool = False
     editavel: bool = False
 
 
@@ -203,6 +210,7 @@ class PreConselhoConsolidadoEstudanteOut(BaseModel):
     motivos: list[str] = Field(default_factory=list)
     observacoes: list[str] = Field(default_factory=list)
     professores: list[str] = Field(default_factory=list)
+    estudante_em_rav: bool = False
     texto: str = ""
 
 

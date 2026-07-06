@@ -531,6 +531,12 @@ def _texto_pos_pre_conselho(
     return " ".join(parte for parte in partes if parte)
 
 
+def _texto_rav(estudante_em_rav: bool) -> str:
+    if not estudante_em_rav:
+        return ""
+    return "O estudante encontra-se em Recuperar para Avançar (RAV)."
+
+
 def gerar_texto_pre_conselho_individual(
     motivos: list[dict],
     observacao_professor: str = "",
@@ -540,6 +546,7 @@ def gerar_texto_pre_conselho_individual(
     pos_preconselho_recuperado: bool | None = None,
     pos_preconselho_motivos: list[str] | None = None,
     pos_preconselho_observacao: str = "",
+    estudante_em_rav: bool = False,
 ) -> dict:
     if not motivos:
         raise ValueError("Selecione ao menos um motivo para gerar o texto.")
@@ -566,10 +573,12 @@ def gerar_texto_pre_conselho_individual(
         pos_preconselho_motivos,
         pos_preconselho_observacao,
     )
+    rav = _texto_rav(estudante_em_rav)
     texto = " ".join(
         parte
         for parte in (
             abertura,
+            rav,
             complemento_nivel,
             observacao,
             pos_preconselho,
@@ -671,6 +680,7 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
             "motivos": [],
             "observacoes": [],
             "professores": [],
+            "estudante_em_rav": False,
             "texto": "",
         }
 
@@ -690,6 +700,7 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
     )
     professores = _lista_unica_texto(_texto_caixa_alta(item.get("professor_nome")) for item in registros)
     nivel_atencao = _nivel_mais_critico(registros)
+    estudante_em_rav = any(bool(registro.get("estudante_em_rav")) for registro in registros)
 
     estudante_nome = _texto_caixa_alta(base.get("estudante_nome")) or "ESTUDANTE NÃO IDENTIFICADO"
     abertura = (
@@ -710,6 +721,7 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
             )
 
     recomendacao = _texto_recomendacao_nivel(nivel_atencao)
+    rav_txt = _texto_rav(estudante_em_rav)
     observacao_txt = ""
     if observacoes:
         observacao_txt = _garantir_ponto_final(
@@ -746,6 +758,7 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
         parte
         for parte in (
             abertura,
+            rav_txt,
             recomendacao,
             detalhes_disciplina,
             observacao_txt,
@@ -763,6 +776,7 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
         "motivos": motivos,
         "observacoes": observacoes,
         "professores": professores,
+        "estudante_em_rav": estudante_em_rav,
         "texto": texto,
     }
 

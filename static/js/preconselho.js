@@ -161,6 +161,10 @@ function periodoDocenteAtual() {
     return obterPeriodos().find((item) => Number(item.id) === Number(estadoDocente.periodoId)) || null;
 }
 
+function periodoTemRav(periodo = periodoDocenteAtual()) {
+    return Boolean(periodo?.tem_rav);
+}
+
 function comboDocenteAtual() {
     return estadoDocente.combos.find((item) =>
         Number(item.turma_id) === Number(estadoDocente.turmaId) &&
@@ -208,7 +212,8 @@ function resolverEstudanteParaFormulario(estudanteId) {
         pos_preconselho_motivos: Array.isArray(registro.pos_preconselho_motivos)
             ? registro.pos_preconselho_motivos
             : [],
-        pos_preconselho_observacao: String(registro.pos_preconselho_observacao || "")
+        pos_preconselho_observacao: String(registro.pos_preconselho_observacao || ""),
+        estudante_em_rav: Boolean(registro.estudante_em_rav)
     };
 }
 
@@ -293,6 +298,18 @@ function atualizarStatusSinalizacaoDocente({ possuiEstudante = false, possuiRegi
     el("preconselhoStatusSelecionadoTitulo").textContent = "Sinalização automática no salvamento";
     el("preconselhoStatusSelecionadoTexto").textContent =
         "Este estudante será sinalizado automaticamente assim que o registro for salvo nesta turma, disciplina e período.";
+}
+
+function atualizarVisibilidadeRavDocente() {
+    const campo = el("preconselhoRavRegistroField");
+    const checkbox = el("preconselhoEstudanteEmRav");
+    const visivel = periodoTemRav();
+    if (campo) {
+        campo.hidden = !visivel;
+    }
+    if (!visivel && checkbox) {
+        checkbox.checked = false;
+    }
 }
 
 function modalRegistroDocenteAberto() {
@@ -387,10 +404,12 @@ function limparFormularioDocente() {
     el("preconselhoObservacaoProfessor").value = "";
     definirStatusPosPreConselhoDocente("");
     el("preconselhoObservacaoPosPreConselho").value = "";
+    el("preconselhoEstudanteEmRav").checked = false;
     aplicarSelecaoMotivosDocente([]);
     el("preconselhoTextoPreview").value = "";
     el("preconselhoPreviewAjuda").textContent = "Selecione um estudante e marque os motivos para gerar a pré-visualização.";
     atualizarStatusSinalizacaoDocente();
+    atualizarVisibilidadeRavDocente();
     atualizarEstadoFormularioDocente();
     renderizarEstudantesDocente();
 }
@@ -405,6 +424,7 @@ function definirBotoesDocenteHabilitados() {
     el("preconselhoNivelAtencao").disabled = !camposHabilitados;
     el("preconselhoObservacaoProfessor").disabled = !camposHabilitados;
     el("preconselhoObservacaoPosPreConselho").disabled = !camposHabilitados;
+    el("preconselhoEstudanteEmRav").disabled = !camposHabilitados || !periodoTemRav(periodo);
     document.querySelectorAll(".preconselho-motivo-checkbox").forEach((checkbox) => {
         checkbox.disabled = !camposHabilitados;
     });
@@ -771,6 +791,7 @@ function renderizarRegistrosDocente() {
                         <strong>${escaparHtml(item.estudante_nome || "")}</strong>
                         <div class="pcpi-tag-group">
                             ${item.nivel_atencao ? `<span class="pcpi-chip">${escaparHtml(rotuloNivelAtencao(item.nivel_atencao))}</span>` : ""}
+                            ${item.estudante_em_rav ? '<span class="pcpi-chip pcpi-chip-automatico">RAV</span>' : ""}
                             <span class="pcpi-chip pcpi-chip-manual">Salvo</span>
                         </div>
                     </div>
@@ -814,11 +835,13 @@ function preencherFormularioComEstudante(estudante) {
                 : ""
     );
     el("preconselhoObservacaoPosPreConselho").value = String(estudante.pos_preconselho_observacao || "");
+    el("preconselhoEstudanteEmRav").checked = periodoTemRav() && Boolean(estudante.estudante_em_rav);
     aplicarSelecaoMotivosDocente(estudante.motivo_ids || []);
     atualizarStatusSinalizacaoDocente({
         possuiEstudante: true,
         possuiRegistro: Boolean(estudante.sinalizado),
     });
+    atualizarVisibilidadeRavDocente();
 
     renderizarEstudantesDocente();
     atualizarEstadoFormularioDocente();
@@ -854,6 +877,7 @@ async function atualizarPreviewDocente() {
                 pos_preconselho_recuperado: obterStatusPosPreConselhoDocente(),
                 pos_preconselho_motivo_ids: [],
                 pos_preconselho_observacao: String(el("preconselhoObservacaoPosPreConselho").value || "").trim(),
+                estudante_em_rav: periodoTemRav() && Boolean(el("preconselhoEstudanteEmRav").checked),
                 estudante_nome: String(estudante?.nome || "").trim(),
                 disciplina_nome: String(combo?.disciplina_nome || "").trim()
             })
@@ -1339,7 +1363,7 @@ function renderizarTabelaPeriodos() {
         <tr>
             <td data-label="Período">
                 <strong>${escaparHtml(rotuloPeriodo(item))}</strong>
-                <div class="preconselho-table-meta">${Number(item.ano_letivo || 0)} • etapa ${Number(item.etapa || 0)}</div>
+                <div class="preconselho-table-meta">${Number(item.ano_letivo || 0)} • etapa ${Number(item.etapa || 0)}${item.tem_rav ? " • RAV" : ""}</div>
             </td>
             <td data-label="Status">
                 <span class="status-chip ${statusPeriodoClasse(item.status)}">${escaparHtml(rotuloStatusPeriodo(item.status))}</span>
@@ -1405,6 +1429,7 @@ function limparFormularioPeriodo() {
     el("preconselhoPeriodoDataInicio").value = "";
     el("preconselhoPeriodoDataFim").value = "";
     el("preconselhoPeriodoStatusForm").value = "ABERTO";
+    el("preconselhoPeriodoTemRav").checked = false;
 }
 
 function limparFormularioMotivo() {
@@ -1429,6 +1454,7 @@ function carregarPeriodoNoFormulario(periodoId) {
     el("preconselhoPeriodoDataInicio").value = String(periodo.data_inicio || "");
     el("preconselhoPeriodoDataFim").value = String(periodo.data_fim || "");
     el("preconselhoPeriodoStatusForm").value = String(periodo.status || "FECHADO");
+    el("preconselhoPeriodoTemRav").checked = Boolean(periodo.tem_rav);
 }
 
 function carregarMotivoNoFormulario(motivoId) {
@@ -1487,7 +1513,8 @@ async function salvarPeriodo(event) {
         ano_letivo: Number(el("preconselhoPeriodoAnoLetivo").value || 0),
         etapa: Number(el("preconselhoPeriodoEtapa").value || 0),
         data_inicio: String(el("preconselhoPeriodoDataInicio").value || ""),
-        data_fim: String(el("preconselhoPeriodoDataFim").value || "")
+        data_fim: String(el("preconselhoPeriodoDataFim").value || ""),
+        tem_rav: Boolean(el("preconselhoPeriodoTemRav").checked)
     };
     const statusDesejado = String(el("preconselhoPeriodoStatusForm").value || "ABERTO");
 
@@ -1646,6 +1673,7 @@ async function salvarRegistroDocente(event) {
     const nivelAtencao = String(el("preconselhoNivelAtencao").value || "").trim() || null;
     const posPreConselhoRecuperado = obterStatusPosPreConselhoDocente();
     const posPreConselhoObservacao = String(el("preconselhoObservacaoPosPreConselho").value || "").trim();
+    const estudanteEmRav = periodoTemRav(periodo) && Boolean(el("preconselhoEstudanteEmRav").checked);
 
     if (!periodo || !combo) {
         definirMensagem("msgPreconselhoRegistro", "Selecione um período e uma turma/disciplina antes de salvar.", true);
@@ -1680,7 +1708,8 @@ async function salvarRegistroDocente(event) {
                 nivel_atencao: nivelAtencao,
                 pos_preconselho_recuperado: posPreConselhoRecuperado,
                 pos_preconselho_motivo_ids: [],
-                pos_preconselho_observacao: posPreConselhoObservacao
+                pos_preconselho_observacao: posPreConselhoObservacao,
+                estudante_em_rav: estudanteEmRav
             })
         });
 
@@ -1957,6 +1986,7 @@ function registrarEventos() {
         });
     });
     el("preconselhoObservacaoPosPreConselho").addEventListener("input", agendarPreviewDocente);
+    el("preconselhoEstudanteEmRav").addEventListener("change", agendarPreviewDocente);
     el("preconselhoPosPreConselhoStatus").addEventListener("change", () => {
         atualizarEstadoFormularioDocente();
         agendarPreviewDocente();

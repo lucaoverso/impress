@@ -42,6 +42,7 @@ def preview_preconselho_text(payload, usuario: dict) -> dict:
             pos_preconselho_recuperado=pos_preconselho_recuperado,
             pos_preconselho_motivos=pos_preconselho_motivos,
             pos_preconselho_observacao=observacao_pos_preconselho,
+            estudante_em_rav=bool(payload.estudante_em_rav),
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc

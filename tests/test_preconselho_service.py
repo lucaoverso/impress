@@ -34,6 +34,7 @@ class PreConselhoServiceTest(unittest.TestCase):
             disciplina_nome="Matematica",
             pos_preconselho_recuperado=True,
             pos_preconselho_observacao="conseguiu responder melhor as atividades de retomada",
+            estudante_em_rav=True,
         )
 
         self.assertIn(
@@ -45,6 +46,7 @@ class PreConselhoServiceTest(unittest.TestCase):
         self.assertIn("não entrega de trabalhos propostos", resultado["texto"])
         self.assertIn("baixa participação nas aulas", resultado["texto"])
         self.assertIn("Como relato complementar do professor", resultado["texto"])
+        self.assertIn("Recuperar para Avançar (RAV)", resultado["texto"])
         self.assertIn("prioridade no acompanhamento individualizado", resultado["texto"])
         self.assertIn("foi recuperado por meio da recuperação paralela", resultado["texto"])
         self.assertIn("No pós-pré-conselho, observou-se ainda que", resultado["texto"])
@@ -82,6 +84,7 @@ class PreConselhoServiceTest(unittest.TestCase):
                 "observacao_professor": "precisa retomar a rotina de estudos",
                 "pos_preconselho_recuperado": False,
                 "pos_preconselho_observacao": "segue precisando de retomada frequente",
+                "estudante_em_rav": True,
             },
             {
                 "estudante_nome": "Ana",
@@ -147,6 +150,7 @@ class PreConselhoServiceTest(unittest.TestCase):
         self.assertIn("Não entregou o trabalho", resultado["motivos_frequentes"][0])
         self.assertEqual(len(resultado["itens_agrupados"]), 3)
         self.assertEqual(resultado["itens_agrupados"][0]["estudante_nome"], "ANA")
+        self.assertTrue(resultado["itens_agrupados"][0]["estudante_em_rav"])
         self.assertEqual(resultado["itens_agrupados"][0]["professores"], ["PROF. ANA"])
         self.assertIn(
             "Relatos complementares registrados", resultado["itens_agrupados"][0]["texto"]
@@ -156,6 +160,7 @@ class PreConselhoServiceTest(unittest.TestCase):
             resultado["itens_agrupados"][0]["texto"],
         )
         self.assertIn("em razão de", resultado["itens_agrupados"][0]["texto"])
+        self.assertIn("Recuperar para Avançar (RAV)", resultado["itens_agrupados"][0]["texto"])
         self.assertIn("No pós-pré-conselho, registrou-se que", resultado["itens_agrupados"][0]["texto"])
         self.assertNotIn("Os professores que atuam na turma", resultado["itens_agrupados"][0]["texto"])
 
