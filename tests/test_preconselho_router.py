@@ -267,32 +267,27 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertEqual(consolidado["total_registros"], 2)
             self.assertEqual(consolidado["total_estudantes"], 1)
             self.assertIn("No período 1º Bimestre 2032", consolidado["texto"])
-            self.assertIn("Ana", consolidado["texto"])
+            self.assertIn("ANA", consolidado["texto"])
             self.assertIn("Historia", consolidado["texto"])
             self.assertIn("Matematica", consolidado["texto"])
-            self.assertIn("A turma do 7A, composta pelo seguinte corpo docente:", consolidado["texto"])
-            self.assertIn("Professora Estrutural (Geografia Aplicada)", consolidado["texto"])
+            self.assertNotIn("A turma do 7A, composta pelo seguinte corpo docente:", consolidado["texto"])
+            self.assertIn("PROFESSOR REGISTRO (Historia e Matematica)", consolidado["texto"])
+            self.assertNotIn("Professora Estrutural (Geografia Aplicada)", consolidado["texto"])
             self.assertEqual(len(consolidado["itens_agrupados"]), 1)
             self.assertEqual(
                 sorted(consolidado["itens_agrupados"][0]["disciplinas"]), ["Historia", "Matematica"]
             )
             self.assertEqual(
                 sorted(consolidado["itens_agrupados"][0]["professores"]),
-                sorted(
-                    [
-                        "Professor Registro",
-                        "Professora Sem Registro",
-                        "Professora Estrutural",
-                    ]
-                ),
+                ["PROFESSOR REGISTRO"],
             )
             self.assertIn(
                 "No pós-pré-conselho, registrou-se que",
                 consolidado["itens_agrupados"][0]["texto"],
             )
-            self.assertIn("Professor Registro", consolidado["itens_agrupados"][0]["texto"])
-            self.assertIn("Professora Sem Registro", consolidado["itens_agrupados"][0]["texto"])
-            self.assertIn("Professora Estrutural", consolidado["itens_agrupados"][0]["texto"])
+            self.assertIn("Prof REGISTRO", consolidado["itens_agrupados"][0]["texto"])
+            self.assertNotIn("Professora Sem Registro", consolidado["itens_agrupados"][0]["texto"])
+            self.assertNotIn("Professora Estrutural", consolidado["itens_agrupados"][0]["texto"])
 
     def test_professor_com_acesso_coordenacao_tem_visao_docente_e_consolidacao(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -381,7 +376,8 @@ class PreConselhoRouterTest(unittest.TestCase):
 
             self.assertEqual(consolidado["professor_id"], professor_colega_id)
             self.assertEqual(consolidado["total_registros"], 1)
-            self.assertIn("Carlos", consolidado["texto"])
+            self.assertIn("CARLOS", consolidado["texto"])
+            self.assertIn("PROFESSORA COLEGA (Biologia Experimental)", consolidado["texto"])
 
     def test_relatorio_institucional_destaca_turmas_estudantes_e_professores_relacionados(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

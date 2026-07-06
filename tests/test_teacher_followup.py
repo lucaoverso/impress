@@ -14,6 +14,7 @@ def _reload_modules(db_path: str):
         "db._proxy",
         "routers.common",
         "modules.teacher_followup.repository",
+        "modules.teacher_followup.catalog_repository",
         "modules.teacher_followup.service",
         "modules.teacher_followup.router",
     ):
@@ -157,15 +158,22 @@ class TeacherFollowupTest(unittest.TestCase):
             finally:
                 conn.close()
 
+            catalog = router.get_catalog(user=self._coord_user(coord_id))
+            positive_criterion = next(
+                item
+                for item in catalog["criteria"]
+                if item["record_type"] == "positive" and item["target_role"] == "teacher"
+            )
             payload = schemas.FollowupRecordCreate(
                 teacher_id=professor_id,
+                criterion_id=positive_criterion["id"],
                 record_type="positive",
-                category="Planejamento",
                 description="Entregou os materiais com antecedencia.",
                 record_date="2035-05-11",
             )
             created = router.create_record(payload=payload, user=self._coord_user(coord_id))
             self.assertEqual(created["record"]["type"], "positive")
+            self.assertEqual(created["record"]["criterion_id"], positive_criterion["id"])
 
             listing = router.list_teachers(
                 q="mate",
@@ -208,6 +216,117 @@ class TeacherFollowupTest(unittest.TestCase):
             self.assertEqual(filtered["teachers"][0]["deadline_indicators"]["expected"], 1)
             self.assertEqual(filtered["teachers"][0]["deadline_indicators"]["on_time"], 1)
             self.assertEqual(filtered["period_summary"]["on_time_percent"], 100.0)
+
+    def test_admin_catalog_creates_updates_models_and_blocks_inactive_criterion(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, schemas, router = _reload_modules(db_path)
+            database.criar_tabelas()
+            coord_id = int(
+                database.criar_coordenador(
+                    nome="Coord Catalogo",
+                    email="coord.catalogo@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1980-01-01",
+                )
+            )
+            professor_id = int(
+                database.criar_professor(
+                    nome="Carla Docente",
+                    email="carla.docente@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                    data_nascimento="1989-06-21",
+                    aulas_semanais=8,
+                    turmas_quantidade=1,
+                    disciplinas=["Historia"],
+                )
+            )
+
+            catalog = router.get_catalog(user=self._coord_user(coord_id))
+            self.assertGreaterEqual(len(catalog["dimensions"]), 3)
+            self.assertGreaterEqual(len(catalog["criteria"]), 3)
+            self.assertEqual(
+                {item["id"] for item in catalog["modes"]},
+                {"automatic", "manual", "hybrid"},
+            )
+            self.assertEqual(
+                {item["id"] for item in catalog["target_roles"]},
+                {"teacher", "coordinator", "administrative", "support"},
+            )
+
+            dimension = router.create_dimension(
+                payload=schemas.FollowupDimensionCreate(
+                    name="Participacao institucional",
+                    description="Acoes da rotina escolar.",
+                ),
+                user=self._coord_user(coord_id),
+            )["dimension"]
+            criterion = router.create_criterion(
+                payload=schemas.FollowupCriterionCreate(
+                    dimension_id=dimension["id"],
+                    name="Organizacao de evento",
+                    description="Participacao ativa em evento institucional.",
+                    record_type="positive",
+                    mode="manual",
+                    target_role="teacher",
+                    active=True,
+                ),
+                user=self._coord_user(coord_id),
+            )["criterion"]
+            self.assertEqual(criterion["dimension_id"], dimension["id"])
+            self.assertTrue(criterion["active"])
+
+            model = router.create_model(
+                payload=schemas.FollowupModelCreate(
+                    name="Professor bimestral",
+                    target_role="teacher",
+                    description="Modelo de acompanhamento docente.",
+                    criterion_ids=[criterion["id"]],
+                ),
+                user=self._coord_user(coord_id),
+            )["model"]
+            self.assertEqual(model["target_role"], "teacher")
+
+            created = router.create_record(
+                payload=schemas.FollowupRecordCreate(
+                    teacher_id=professor_id,
+                    criterion_id=criterion["id"],
+                    record_type="positive",
+                    description="Participou ativamente da organizacao da feira cultural.",
+                    record_date="2035-06-30",
+                ),
+                user=self._coord_user(coord_id),
+            )
+            self.assertEqual(created["record"]["category"], "Organizacao de evento")
+
+            updated = router.update_criterion(
+                criterion_id=criterion["id"],
+                payload=schemas.FollowupCriterionUpdate(
+                    dimension_id=dimension["id"],
+                    name="Organizacao de evento escolar",
+                    description="Texto revisado.",
+                    record_type="positive",
+                    mode="hybrid",
+                    target_role="teacher",
+                    active=False,
+                ),
+                user=self._coord_user(coord_id),
+            )["criterion"]
+            self.assertEqual(updated["mode"], "hybrid")
+            self.assertFalse(updated["active"])
+
+            with self.assertRaises(HTTPException) as ctx:
+                router.create_record(
+                    payload=schemas.FollowupRecordCreate(
+                        teacher_id=professor_id,
+                        criterion_id=criterion["id"],
+                        record_type="positive",
+                        description="Tentativa com criterio inativo.",
+                        record_date="2035-07-01",
+                    ),
+                    user=self._coord_user(coord_id),
+                )
+            self.assertEqual(ctx.exception.status_code, 400)
 
     def test_teacher_without_coordination_access_is_denied(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

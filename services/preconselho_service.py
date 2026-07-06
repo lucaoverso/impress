@@ -252,6 +252,10 @@ def _formatar_lista_pt_br(itens) -> str:
     return ", ".join(valores[:-1]) + f" e {valores[-1]}"
 
 
+def _texto_caixa_alta(valor) -> str:
+    return _texto_limpo(valor).upper()
+
+
 def _garantir_ponto_final(frase: str) -> str:
     texto = _texto_limpo(frase)
     if not texto:
@@ -296,7 +300,7 @@ def _texto_relato_complementar_consolidado(
             primeiro_nome = parte
             break
         if primeiro_nome:
-            return f"em {disciplina}, Prof {primeiro_nome} relatou que {observacao}"
+            return f"em {disciplina}, Prof {_texto_caixa_alta(primeiro_nome)} relatou que {observacao}"
     return f"em {disciplina}, foi relatado que {observacao}"
 
 
@@ -497,17 +501,6 @@ def _texto_recomendacao_nivel(nivel_atencao: str) -> str:
     return ""
 
 
-def _texto_professores_turma(professores: list[str]) -> str:
-    nomes = _lista_unica_texto(professores)
-    if not nomes:
-        return ""
-    if len(nomes) == 1:
-        return _garantir_ponto_final(f"O professor que atua na turma é {nomes[0]}")
-    return _garantir_ponto_final(
-        f"Os professores que atuam na turma são {_formatar_lista_pt_br(nomes)}"
-    )
-
-
 def _texto_pos_pre_conselho(
     recuperado: bool | None,
     motivos_pos_pre_conselho: list[str] | None = None,
@@ -695,18 +688,10 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
         )
         for registro in registros
     )
-    professores = _lista_unica_texto(
-        nome
-        for item in registros
-        for nome in (
-            item.get("professores_turma")
-            if isinstance(item.get("professores_turma"), list)
-            else [item.get("professor_nome")]
-        )
-    )
+    professores = _lista_unica_texto(_texto_caixa_alta(item.get("professor_nome")) for item in registros)
     nivel_atencao = _nivel_mais_critico(registros)
 
-    estudante_nome = _texto_limpo(base.get("estudante_nome")) or "Estudante não identificado"
+    estudante_nome = _texto_caixa_alta(base.get("estudante_nome")) or "ESTUDANTE NÃO IDENTIFICADO"
     abertura = (
         f"O estudante {estudante_nome} obteve baixo rendimento {_descricao_disciplinas(disciplinas)}, "
         f"em razão de {_formatar_lista_pt_br(motivos)}."
@@ -725,7 +710,6 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
             )
 
     recomendacao = _texto_recomendacao_nivel(nivel_atencao)
-    professores_txt = _texto_professores_turma(professores)
     observacao_txt = ""
     if observacoes:
         observacao_txt = _garantir_ponto_final(
@@ -762,7 +746,6 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
         parte
         for parte in (
             abertura,
-            professores_txt,
             recomendacao,
             detalhes_disciplina,
             observacao_txt,
@@ -811,56 +794,19 @@ def _texto_abertura_consolidado(
         partes.append("considerando todas as disciplinas")
 
     if professor_limpo:
-        partes.append(f"com registros vinculados ao professor {professor_limpo}")
+        partes.append(f"com registros vinculados ao professor {_texto_caixa_alta(professor_limpo)}")
 
-    abertura = (
+    return (
         ", ".join(partes)
         + f", foram consolidados {total_registros} registro(s) de {total_estudantes} estudante(s) sinalizado(s)."
     )
 
-    if turma_limpa and turma_limpa != "Todas as turmas":
-        corpo_docente = _texto_corpo_docente_turma(registros)
-        if corpo_docente:
-            abertura += f" A turma do {turma_limpa}, composta pelo seguinte corpo docente: {corpo_docente}."
-
-    return abertura
-
-
-def _nomes_estudantes_resumidos(registros: list[dict], *, limite: int = 8) -> str:
-    nomes = _lista_unica_texto(registro.get("estudante_nome") for registro in registros or [])
-    if not nomes:
-        return ""
-    if len(nomes) <= limite:
-        return _formatar_lista_pt_br(nomes)
-    prefixo = nomes[:limite] + ["demais estudantes sinalizados"]
-    return _formatar_lista_pt_br(prefixo)
-
-
-def _texto_corpo_docente_turma(registros: list[dict]) -> str:
-    corpo_docente = []
-    for registro in registros or []:
-        if isinstance(registro.get("corpo_docente_turma"), list) and registro.get("corpo_docente_turma"):
-            corpo_docente = registro.get("corpo_docente_turma")
-            break
-
-    if corpo_docente:
-        itens = []
-        for item in corpo_docente:
-            professor = _texto_limpo(item.get("professor_nome"))
-            disciplinas = _lista_unica_texto(item.get("disciplinas") or [])
-            if not professor:
-                continue
-            if disciplinas:
-                itens.append(f"{professor} ({_formatar_lista_pt_br(disciplinas)})")
-            else:
-                itens.append(professor)
-        return _formatar_lista_pt_br(itens)
-
+def _texto_professores_sinalizadores(registros: list[dict]) -> str:
     docentes = {}
     ordem_docentes = []
 
     for registro in registros or []:
-        professor = _texto_limpo(registro.get("professor_nome"))
+        professor = _texto_caixa_alta(registro.get("professor_nome"))
         disciplina = _texto_limpo(registro.get("disciplina_nome")) or "Disciplina não informada"
         if not professor:
             continue
@@ -870,10 +816,15 @@ def _texto_corpo_docente_turma(registros: list[dict]) -> str:
         if disciplina not in docentes[professor]:
             docentes[professor].append(disciplina)
 
-    itens = []
-    for professor in ordem_docentes:
-        itens.append(f"{professor} ({_formatar_lista_pt_br(docentes[professor])})")
-    return _formatar_lista_pt_br(itens)
+    itens = [
+        f"{professor} ({_formatar_lista_pt_br(docentes[professor])})"
+        for professor in ordem_docentes
+    ]
+    if not itens:
+        return ""
+    if len(itens) == 1:
+        return f"O professor que sinalizou estudante(s) foi {_formatar_lista_pt_br(itens)}."
+    return f"Os professores que sinalizaram estudante(s) foram {_formatar_lista_pt_br(itens)}."
 
 
 def _resolver_periodo_atual() -> tuple[int, int]:
@@ -928,15 +879,6 @@ def gerar_texto_consolidado_pre_conselho(
     total_registros = len(itens)
     total_estudantes = len(_lista_unica_texto(item.get("estudante_nome") for item in itens))
     motivos_frequentes = _motivos_frequentes(itens)
-    professores_turma = _lista_unica_texto(
-        nome
-        for item in itens
-        for nome in (
-            item.get("professores_turma")
-            if isinstance(item.get("professores_turma"), list)
-            else [item.get("professor_nome")]
-        )
-    )
     itens_agrupados = [
         _texto_estudante_consolidado(grupo) for grupo in _agrupar_registros_por_estudante(itens)
     ]
@@ -968,15 +910,7 @@ def gerar_texto_consolidado_pre_conselho(
     if motivos_frequentes:
         fatores = f"Os motivos mais recorrentes foram {_formatar_lista_pt_br(motivos_frequentes)}."
 
-    professores_txt = ""
-    if professores_turma:
-        if len(professores_turma) == 1:
-            professores_txt = f"O professor que atua na turma é {professores_turma[0]}."
-        else:
-            professores_txt = (
-                "Os professores que atuam na turma são "
-                f"{_formatar_lista_pt_br(professores_turma)}."
-            )
+    professores_txt = _texto_professores_sinalizadores(itens)
 
     estudantes_txt = "\n\n".join(
         item["texto"] for item in itens_agrupados if _texto_limpo(item.get("texto"))

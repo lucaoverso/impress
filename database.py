@@ -645,6 +645,7 @@ def criar_tabelas():
         CREATE TABLE IF NOT EXISTS teacher_followup_records (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             teacher_id INTEGER NOT NULL,
+            criterion_id INTEGER,
             record_type TEXT NOT NULL CHECK (record_type IN ('positive', 'attention', 'guidance', 'informative')),
             category TEXT NOT NULL,
             description TEXT NOT NULL,
@@ -653,13 +654,166 @@ def criar_tabelas():
             created_at TEXT NOT NULL DEFAULT (datetime('now')),
             updated_at TEXT NOT NULL DEFAULT (datetime('now')),
             FOREIGN KEY(teacher_id) REFERENCES usuarios(id),
+            FOREIGN KEY(criterion_id) REFERENCES teacher_followup_criteria(id),
             FOREIGN KEY(created_by_user_id) REFERENCES usuarios(id)
         )
     """)
 
+    cursor.execute("PRAGMA table_info(teacher_followup_records)")
+    colunas_followup_records = {row["name"] for row in cursor.fetchall()}
+    if "criterion_id" not in colunas_followup_records:
+        cursor.execute("ALTER TABLE teacher_followup_records ADD COLUMN criterion_id INTEGER")
+
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_teacher_followup_records_teacher
         ON teacher_followup_records(teacher_id, record_date DESC, id DESC)
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_teacher_followup_records_criterion
+        ON teacher_followup_records(criterion_id)
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS teacher_followup_dimensions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            active INTEGER NOT NULL DEFAULT 1,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS teacher_followup_criteria (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            dimension_id INTEGER NOT NULL,
+            code TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            record_type TEXT NOT NULL CHECK (record_type IN ('positive', 'attention', 'guidance', 'informative')),
+            mode TEXT NOT NULL DEFAULT 'manual' CHECK (mode IN ('automatic', 'manual', 'hybrid')),
+            target_role TEXT NOT NULL DEFAULT 'teacher' CHECK (target_role IN ('teacher', 'coordinator', 'administrative', 'support')),
+            active INTEGER NOT NULL DEFAULT 1,
+            sort_order INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(dimension_id) REFERENCES teacher_followup_dimensions(id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS teacher_followup_models (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            target_role TEXT NOT NULL DEFAULT 'teacher' CHECK (target_role IN ('teacher', 'coordinator', 'administrative', 'support')),
+            description TEXT NOT NULL DEFAULT '',
+            active INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS teacher_followup_model_criteria (
+            model_id INTEGER NOT NULL,
+            criterion_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            PRIMARY KEY(model_id, criterion_id),
+            FOREIGN KEY(model_id) REFERENCES teacher_followup_models(id) ON DELETE CASCADE,
+            FOREIGN KEY(criterion_id) REFERENCES teacher_followup_criteria(id) ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
+        INSERT OR IGNORE INTO teacher_followup_dimensions (code, name, description, sort_order)
+        VALUES
+            ('teamwork', 'Trabalho em equipe', 'Participação, colaboração e postura coletiva.', 10),
+            ('planning', 'Planejamento e entregas', 'Organizacao, prazos e qualidade das entregas.', 20),
+            ('guidance', 'Orientação pedagógica', 'Acompanhamentos e combinados realizados pela gestão.', 30)
+    """)
+
+    cursor.execute("""
+        INSERT OR IGNORE INTO teacher_followup_criteria (
+            dimension_id, code, name, description, record_type, mode, target_role, sort_order
+        )
+        SELECT id, 'teamwork_positive', 'Trabalho em equipe',
+               'Participação colaborativa em ações coletivas da escola.',
+               'positive', 'manual', 'teacher', 10
+        FROM teacher_followup_dimensions WHERE code = 'teamwork'
+    """)
+    cursor.execute("""
+        INSERT OR IGNORE INTO teacher_followup_criteria (
+            dimension_id, code, name, description, record_type, mode, target_role, sort_order
+        )
+        SELECT id, 'deadline_attention', 'Prazos e entregas',
+               'Ponto de atenção relacionado a prazos, entregas ou organização.',
+               'attention', 'hybrid', 'teacher', 20
+        FROM teacher_followup_dimensions WHERE code = 'planning'
+    """)
+    cursor.execute("""
+        INSERT OR IGNORE INTO teacher_followup_criteria (
+            dimension_id, code, name, description, record_type, mode, target_role, sort_order
+        )
+        SELECT id, 'pedagogical_guidance', 'Orientação pedagógica',
+               'Orientação realizada pela coordenação para alinhamento de prática.',
+               'guidance', 'manual', 'teacher', 30
+        FROM teacher_followup_dimensions WHERE code = 'guidance'
+    """)
+
+    cursor.execute("""
+        INSERT OR IGNORE INTO teacher_followup_models (code, name, target_role, description)
+        VALUES
+            ('teacher_default', 'Professor', 'teacher', 'Modelo inicial para acompanhamento docente.'),
+            ('coordinator_default', 'Coordenador', 'coordinator', 'Modelo inicial para acompanhamento de coordenação.'),
+            ('administrative_default', 'Administrativo', 'administrative', 'Modelo inicial para equipe administrativa.'),
+            ('support_default', 'Apoio', 'support', 'Modelo inicial para equipe de apoio.')
+    """)
+
+    cursor.execute("""
+        UPDATE teacher_followup_dimensions
+        SET name = CASE
+                WHEN code = 'guidance' AND name = 'Orientacao pedagogica' THEN 'Orientação pedagógica'
+                ELSE name
+            END,
+            description = CASE
+                WHEN code = 'teamwork' AND description = 'Participacao, colaboracao e postura coletiva.' THEN 'Participação, colaboração e postura coletiva.'
+                WHEN code = 'planning' AND description = 'Organizacao, prazos e qualidade das entregas.' THEN 'Organização, prazos e qualidade das entregas.'
+                WHEN code = 'guidance' AND description = 'Acompanhamentos e combinados realizados pela gestao.' THEN 'Acompanhamentos e combinados realizados pela gestão.'
+                ELSE description
+            END,
+            updated_at = datetime('now')
+        WHERE code IN ('teamwork', 'planning', 'guidance')
+    """)
+
+    cursor.execute("""
+        UPDATE teacher_followup_criteria
+        SET name = CASE
+                WHEN code = 'pedagogical_guidance' AND name = 'Orientacao pedagogica' THEN 'Orientação pedagógica'
+                ELSE name
+            END,
+            description = CASE
+                WHEN code = 'teamwork_positive' AND description = 'Participacao colaborativa em acoes coletivas da escola.' THEN 'Participação colaborativa em ações coletivas da escola.'
+                WHEN code = 'deadline_attention' AND description = 'Ponto de atencao relacionado a prazos, entregas ou organizacao.' THEN 'Ponto de atenção relacionado a prazos, entregas ou organização.'
+                WHEN code = 'pedagogical_guidance' AND description = 'Orientacao realizada pela coordenacao para alinhamento de pratica.' THEN 'Orientação realizada pela coordenação para alinhamento de prática.'
+                ELSE description
+            END,
+            updated_at = datetime('now')
+        WHERE code IN ('teamwork_positive', 'deadline_attention', 'pedagogical_guidance')
+    """)
+
+    cursor.execute("""
+        UPDATE teacher_followup_models
+        SET description = CASE
+                WHEN code = 'coordinator_default' AND description = 'Modelo inicial para acompanhamento de coordenacao.' THEN 'Modelo inicial para acompanhamento de coordenação.'
+                ELSE description
+            END,
+            updated_at = datetime('now')
+        WHERE code = 'coordinator_default'
     """)
 
     cursor.execute("""

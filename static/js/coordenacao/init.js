@@ -268,6 +268,7 @@ async function init() {
             carregarCatalogosBaseLegal(),
             carregarRegimentoItens(),
             carregarPreRegistros({ manager: true }),
+            carregarCatalogoAcompanhamentoDocente(),
             carregarAcompanhamentoDocente()
         ]);
     } catch (err) {

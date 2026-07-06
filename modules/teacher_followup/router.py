@@ -3,10 +3,21 @@ from fastapi import APIRouter, Depends, Query
 from auth import get_usuario_logado
 
 from . import service
-from .schemas import FollowupRecordCreate
+from .schemas import (
+    FollowupCriterionCreate,
+    FollowupCriterionUpdate,
+    FollowupDimensionCreate,
+    FollowupModelCreate,
+    FollowupRecordCreate,
+)
 
 
 router = APIRouter(prefix="/teacher-followup", tags=["teacher-followup"])
+
+
+@router.get("/catalog")
+def get_catalog(user=Depends(get_usuario_logado)):
+    return service.catalog(user)
 
 
 @router.get("/teachers")
@@ -50,3 +61,36 @@ def create_record(
     user=Depends(get_usuario_logado),
 ):
     return service.create_record(user, payload)
+
+
+@router.post("/dimensions")
+def create_dimension(
+    payload: FollowupDimensionCreate,
+    user=Depends(get_usuario_logado),
+):
+    return service.create_dimension(user, payload)
+
+
+@router.post("/criteria")
+def create_criterion(
+    payload: FollowupCriterionCreate,
+    user=Depends(get_usuario_logado),
+):
+    return service.create_criterion(user, payload)
+
+
+@router.patch("/criteria/{criterion_id}")
+def update_criterion(
+    criterion_id: int,
+    payload: FollowupCriterionUpdate,
+    user=Depends(get_usuario_logado),
+):
+    return service.update_criterion(user, criterion_id, payload)
+
+
+@router.post("/models")
+def create_model(
+    payload: FollowupModelCreate,
+    user=Depends(get_usuario_logado),
+):
+    return service.create_model(user, payload)

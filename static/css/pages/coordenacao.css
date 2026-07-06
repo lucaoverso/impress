@@ -1872,6 +1872,79 @@ body.coordenacao-modal-open {
     align-items: end;
 }
 
+.acompanhamento-docente-admin {
+    display: grid;
+    gap: 16px;
+}
+
+.acompanhamento-docente-admin-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+    align-items: start;
+}
+
+.acompanhamento-docente-admin-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-md);
+    background: var(--surface-1);
+}
+
+.acompanhamento-docente-admin-form h3,
+.acompanhamento-docente-admin-lists h3 {
+    margin: 0;
+    color: var(--text-main);
+    font-size: 16px;
+}
+
+.acompanhamento-docente-admin-form h3,
+.acompanhamento-docente-admin-form button,
+.acompanhamento-docente-admin-form .coordenacao-form-navigation,
+.acompanhamento-docente-admin-form .coordenacao-field-wide,
+.acompanhamento-docente-admin-form .coordenacao-check-option {
+    grid-column: 1 / -1;
+}
+
+.acompanhamento-docente-admin-lists {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.acompanhamento-docente-admin-lists > div,
+.acompanhamento-docente-admin-list {
+    display: grid;
+    gap: 10px;
+    min-width: 0;
+}
+
+.acompanhamento-docente-admin-item {
+    display: grid;
+    gap: 5px;
+    padding: 12px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-md);
+    background: var(--surface-1);
+}
+
+.acompanhamento-docente-admin-item span,
+.acompanhamento-docente-admin-item p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 13px;
+}
+
+.acompanhamento-docente-admin-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 4px;
+}
+
 .acompanhamento-docente-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(360px, 0.85fr);
@@ -2222,6 +2295,8 @@ body.coordenacao-modal-open {
 @media (max-width: 1200px) {
     .coordenacao-main-layout,
     .coordenacao-grid,
+    .acompanhamento-docente-admin-grid,
+    .acompanhamento-docente-admin-lists,
     .acompanhamento-docente-layout {
         grid-template-columns: 1fr;
     }
@@ -2479,6 +2554,7 @@ body.coordenacao-modal-open {
 
     .coordenacao-filter-actions,
     .coordenacao-inline,
+    .acompanhamento-docente-admin-form,
     .acompanhamento-docente-search,
     .acompanhamento-docente-form {
         grid-template-columns: 1fr;

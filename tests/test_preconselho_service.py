@@ -136,31 +136,28 @@ class PreConselhoServiceTest(unittest.TestCase):
         self.assertEqual(resultado["total_estudantes"], 3)
         self.assertIn("No período 1º Bimestre 2032", resultado["texto"])
         self.assertIn("7A", resultado["texto"])
+        self.assertNotIn("A turma do 7A, composta pelo seguinte corpo docente:", resultado["texto"])
+        self.assertIn("JOÃO BATISTA GOMES", resultado["texto"])
+        self.assertNotIn("Pamela Sabrina Araujo Silva (Historia)", resultado["texto"])
+        self.assertIn("PROF. ANA (Matematica e Historia)", resultado["texto"])
         self.assertIn(
-            "A turma do 7A, composta pelo seguinte corpo docente:",
+            "ALEX BORGES (Lingua Portuguesa e R.A Lingua Portuguesa)",
             resultado["texto"],
         )
-        self.assertIn("João Batista Gomes (Matematica)", resultado["texto"])
-        self.assertIn("Pamela Sabrina Araujo Silva (Historia)", resultado["texto"])
-        self.assertIn(
-            "Alex Borges (Lingua Portuguesa e R.A Lingua Portuguesa)",
-            resultado["texto"],
-        )
-        self.assertIn("João Batista Gomes", resultado["texto"])
         self.assertIn("Não entregou o trabalho", resultado["motivos_frequentes"][0])
         self.assertEqual(len(resultado["itens_agrupados"]), 3)
-        self.assertEqual(resultado["itens_agrupados"][0]["estudante_nome"], "Ana")
-        self.assertEqual(resultado["itens_agrupados"][0]["professores"], ["Prof. Ana", "Prof. Bruno"])
+        self.assertEqual(resultado["itens_agrupados"][0]["estudante_nome"], "ANA")
+        self.assertEqual(resultado["itens_agrupados"][0]["professores"], ["PROF. ANA"])
         self.assertIn(
             "Relatos complementares registrados", resultado["itens_agrupados"][0]["texto"]
         )
         self.assertIn(
-            "em Matematica, Prof Ana relatou que precisa retomar a rotina de estudos",
+            "em Matematica, Prof ANA relatou que precisa retomar a rotina de estudos",
             resultado["itens_agrupados"][0]["texto"],
         )
         self.assertIn("em razão de", resultado["itens_agrupados"][0]["texto"])
         self.assertIn("No pós-pré-conselho, registrou-se que", resultado["itens_agrupados"][0]["texto"])
-        self.assertIn("Os professores que atuam na turma são Prof. Ana e Prof. Bruno", resultado["itens_agrupados"][0]["texto"])
+        self.assertNotIn("Os professores que atuam na turma", resultado["itens_agrupados"][0]["texto"])
 
     def test_gera_texto_consolidado_vazio_com_acentuacao(self):
         resultado = gerar_texto_consolidado_pre_conselho(

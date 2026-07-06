@@ -18,8 +18,8 @@ function rotuloPercentualPrazo(valor) {
 function rotuloTipoRegistroDocente(tipo) {
     const rotulos = {
         positive: "Positivo",
-        attention: "Ponto de atencao",
-        guidance: "Orientacao",
+        attention: "Ponto de atenção",
+        guidance: "Orientação",
         informative: "Informativo"
     };
     return rotulos[tipo] || tipo || "Registro";
@@ -71,6 +71,9 @@ function abrirModalRegistroDocente(professor = null) {
     el("registroDocenteData").value = new Date().toISOString().slice(0, 10);
     el("registroDocenteProfessorId").value = professor?.id ? String(professor.id) : "";
     el("registroDocenteProfessorBusca").value = professor?.name || "";
+    if (typeof atualizarSelectCriterioRegistroDocente === "function") {
+        atualizarSelectCriterioRegistroDocente();
+    }
     ocultarSugestoes("listaRegistroDocenteProfessores");
     modal.hidden = false;
     document.body.classList.add("coordenacao-modal-open");
@@ -279,7 +282,7 @@ function renderPerfilAcompanhamentoDocente(perfil) {
     const avalTitle = document.createElement("h3");
     avalTitle.innerText = "Avaliacoes anteriores";
     const avalText = document.createElement("p");
-    avalText.innerText = "Secao preparada para historico de avaliacoes futuras.";
+    avalText.innerText = "Seção preparada para histórico de avaliações futuras.";
     avaliacoes.appendChild(avalTitle);
     avaliacoes.appendChild(avalText);
     container.appendChild(avaliacoes);
@@ -351,7 +354,7 @@ async function salvarRegistroDocente(event) {
     const payload = {
         teacher_id: professorId,
         record_type: el("registroDocenteTipo").value,
-        category: el("registroDocenteCategoria").value,
+        criterion_id: Number(el("registroDocenteCriterio").value || 0),
         description: el("registroDocenteDescricao").value,
         record_date: el("registroDocenteData").value
     };
@@ -367,6 +370,9 @@ async function salvarRegistroDocente(event) {
 }
 
 function registrarEventosAcompanhamentoDocente() {
+    if (typeof registrarEventosAdminAcompanhamentoDocente === "function") {
+        registrarEventosAdminAcompanhamentoDocente();
+    }
     el("formBuscaAcompanhamentoDocente")?.addEventListener("submit", (event) => {
         event.preventDefault();
         carregarAcompanhamentoDocente().catch((err) => setMensagemAcompanhamentoDocente(err.message, true));

@@ -138,8 +138,13 @@ def list_records(teacher_id: int, record_type: str | None = None) -> list[dict]:
             f"""
             SELECT
                 r.*,
+                COALESCE(c.name, '') AS criterion_name,
+                COALESCE(c.mode, '') AS criterion_mode,
+                COALESCE(d.name, '') AS dimension_name,
                 COALESCE(author.nome, '') AS created_by_name
             FROM teacher_followup_records r
+            LEFT JOIN teacher_followup_criteria c ON c.id = r.criterion_id
+            LEFT JOIN teacher_followup_dimensions d ON d.id = c.dimension_id
             LEFT JOIN usuarios author ON author.id = r.created_by_user_id
             WHERE r.teacher_id = ?
               {type_sql}
@@ -155,6 +160,7 @@ def list_records(teacher_id: int, record_type: str | None = None) -> list[dict]:
 def create_record(
     *,
     teacher_id: int,
+    criterion_id: int | None,
     record_type: str,
     category: str,
     description: str,
@@ -168,6 +174,7 @@ def create_record(
             """
             INSERT INTO teacher_followup_records (
                 teacher_id,
+                criterion_id,
                 record_type,
                 category,
                 description,
@@ -176,10 +183,11 @@ def create_record(
                 created_at,
                 updated_at
             )
-            VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+            VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
             """,
             (
                 int(teacher_id),
+                int(criterion_id) if criterion_id else None,
                 record_type,
                 category,
                 description,
@@ -193,8 +201,13 @@ def create_record(
             """
             SELECT
                 r.*,
+                COALESCE(c.name, '') AS criterion_name,
+                COALESCE(c.mode, '') AS criterion_mode,
+                COALESCE(d.name, '') AS dimension_name,
                 COALESCE(author.nome, '') AS created_by_name
             FROM teacher_followup_records r
+            LEFT JOIN teacher_followup_criteria c ON c.id = r.criterion_id
+            LEFT JOIN teacher_followup_dimensions d ON d.id = c.dimension_id
             LEFT JOIN usuarios author ON author.id = r.created_by_user_id
             WHERE r.id = ?
             """,

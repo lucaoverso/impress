@@ -841,7 +841,7 @@
                         <div class="coordenacao-section-header">
                             <div>
                                 <h2>Acompanhamento docente</h2>
-                                <p>Registre acontecimentos do bimestre e consulte o histÃ³rico individual de cada professor.</p>
+                                <p>Registre acontecimentos do bimestre e consulte o histórico individual de cada professor.</p>
                             </div>
                             <button id="btnNovoRegistroDocente" class="btn-destaque" type="button">
                                 Novo registro
@@ -871,6 +871,101 @@
                         <p id="msgAcompanhamentoDocente" class="coordenacao-status-copy" role="status"></p>
                     </article>
 
+                    <article class="coordenacao-card acompanhamento-docente-admin">
+                        <div class="coordenacao-section-header">
+                            <div>
+                                <h2>Administração do acompanhamento</h2>
+                                <p>Configure dimensões, critérios e modelos usados nos registros da coordenação.</p>
+                            </div>
+                        </div>
+                        <section class="acompanhamento-docente-admin-grid">
+                            <form id="formDimensaoDocente" class="coordenacao-form acompanhamento-docente-admin-form">
+                                <h3>Dimensão</h3>
+                                <label class="coordenacao-field" for="dimensaoDocenteNome">
+                                    <span>Nome</span>
+                                    <input id="dimensaoDocenteNome" type="text" maxlength="120" required>
+                                </label>
+                                <label class="coordenacao-field" for="dimensaoDocenteDescricao">
+                                    <span>Descrição</span>
+                                    <textarea id="dimensaoDocenteDescricao" rows="3" maxlength="500"></textarea>
+                                </label>
+                                <button class="btn-destaque" type="submit">Salvar dimensão</button>
+                            </form>
+
+                            <form id="formCriterioDocente" class="coordenacao-form acompanhamento-docente-admin-form">
+                                <h3>Critério</h3>
+                                <input id="criterioDocenteId" type="hidden">
+                                <label class="coordenacao-field" for="criterioDocenteDimensao">
+                                    <span>Dimensão</span>
+                                    <select id="criterioDocenteDimensao" required></select>
+                                </label>
+                                <label class="coordenacao-field" for="criterioDocenteNome">
+                                    <span>Motivo</span>
+                                    <input id="criterioDocenteNome" type="text" maxlength="120" required>
+                                </label>
+                                <label class="coordenacao-field" for="criterioDocenteTipo">
+                                    <span>Tipo</span>
+                                    <select id="criterioDocenteTipo" required></select>
+                                </label>
+                                <label class="coordenacao-field" for="criterioDocenteModo">
+                                    <span>Origem</span>
+                                    <select id="criterioDocenteModo" required></select>
+                                </label>
+                                <label class="coordenacao-field" for="criterioDocentePublico">
+                                    <span>Modelo</span>
+                                    <select id="criterioDocentePublico" required></select>
+                                </label>
+                                <label class="coordenacao-field coordenacao-field-wide" for="criterioDocenteDescricao">
+                                    <span>Descrição</span>
+                                    <textarea id="criterioDocenteDescricao" rows="3" maxlength="1000"></textarea>
+                                </label>
+                                <label class="coordenacao-check-option">
+                                    <input id="criterioDocenteAtivo" type="checkbox" checked>
+                                    <span>Critério ativo</span>
+                                </label>
+                                <div class="coordenacao-form-navigation">
+                                    <button id="btnCancelarEdicaoCriterioDocente" type="button">Cancelar</button>
+                                    <button class="btn-destaque" type="submit">Salvar critério</button>
+                                </div>
+                            </form>
+
+                            <form id="formModeloDocente" class="coordenacao-form acompanhamento-docente-admin-form">
+                                <h3>Modelo</h3>
+                                <label class="coordenacao-field" for="modeloDocenteNome">
+                                    <span>Nome</span>
+                                    <input id="modeloDocenteNome" type="text" maxlength="120" required>
+                                </label>
+                                <label class="coordenacao-field" for="modeloDocentePublico">
+                                    <span>Público</span>
+                                    <select id="modeloDocentePublico" required></select>
+                                </label>
+                                <label class="coordenacao-field" for="modeloDocenteCriterios">
+                                    <span>Critérios</span>
+                                    <select id="modeloDocenteCriterios" multiple size="5"></select>
+                                </label>
+                                <label class="coordenacao-field" for="modeloDocenteDescricao">
+                                    <span>Descrição</span>
+                                    <textarea id="modeloDocenteDescricao" rows="3" maxlength="500"></textarea>
+                                </label>
+                                <button class="btn-destaque" type="submit">Salvar modelo</button>
+                            </form>
+                        </section>
+                        <section class="acompanhamento-docente-admin-lists">
+                            <div>
+                                <h3>Dimensões</h3>
+                                <div id="listaDimensoesDocente" class="acompanhamento-docente-admin-list"></div>
+                            </div>
+                            <div>
+                                <h3>Critérios</h3>
+                                <div id="listaCriteriosDocente" class="acompanhamento-docente-admin-list"></div>
+                            </div>
+                            <div>
+                                <h3>Modelos</h3>
+                                <div id="listaModelosDocente" class="acompanhamento-docente-admin-list"></div>
+                            </div>
+                        </section>
+                    </article>
+
                     <section class="acompanhamento-docente-layout">
                         <article class="coordenacao-card acompanhamento-docente-list-card">
                             <div class="coordenacao-section-header">
@@ -898,7 +993,7 @@
                             <div class="coordenacao-section-header acompanhamento-docente-modal-header">
                                 <div>
                                     <h2 id="tituloRegistroDocente">Novo registro docente</h2>
-                                    <p>Registre uma informaÃ§Ã£o objetiva para compor a linha do tempo do bimestre.</p>
+                                    <p>Registre uma informação objetiva para compor a linha do tempo do bimestre.</p>
                                 </div>
                                 <button id="btnFecharRegistroDocente" class="coordenacao-modal-close" type="button">
                                     Fechar
@@ -920,8 +1015,8 @@
                                     <span>Tipo</span>
                                     <select id="registroDocenteTipo" required>
                                         <option value="positive">Positivo</option>
-                                        <option value="attention">Ponto de atenÃ§Ã£o</option>
-                                        <option value="guidance">OrientaÃ§Ã£o</option>
+                                        <option value="attention">Ponto de atenção</option>
+                                        <option value="guidance">Orientação</option>
                                         <option value="informative">Informativo</option>
                                     </select>
                                 </label>
@@ -929,13 +1024,12 @@
                                     <span>Data</span>
                                     <input id="registroDocenteData" type="date" required>
                                 </label>
-                                <label class="coordenacao-field coordenacao-field-wide" for="registroDocenteCategoria">
+                                <label class="coordenacao-field coordenacao-field-wide" for="registroDocenteCriterio">
                                     <span>Categoria</span>
-                                    <input id="registroDocenteCategoria" type="text" maxlength="120"
-                                        placeholder="Ex: entrega, planejamento, orientaÃ§Ã£o pedagÃ³gica" required>
+                                    <select id="registroDocenteCriterio" required></select>
                                 </label>
                                 <label class="coordenacao-field coordenacao-field-wide" for="registroDocenteDescricao">
-                                    <span>DescriÃ§Ã£o</span>
+                                    <span>Descrição</span>
                                     <textarea id="registroDocenteDescricao" rows="5"
                                         placeholder="Descreva o acontecimento de forma objetiva" required></textarea>
                                 </label>
@@ -1212,6 +1306,7 @@
     <script src="{{ request.url_for('static', path='js/coordenacao/base-legal.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/coordenacao/cadastros.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/coordenacao/pre-registros.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/coordenacao/acompanhamento-docente-admin.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/coordenacao/acompanhamento-docente.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/coordenacao/init.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/coordenacao.js') }}?v={{ asset_version | default('1') }}"></script>
