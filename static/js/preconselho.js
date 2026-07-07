@@ -340,56 +340,6 @@ function renderizarSugestoesHabilidadesRav(forcar = false) {
     sugestoes.hidden = false;
 }
 
-function definirStatusPosPreConselhoDocente(valor = "") {
-    const status = valor === "sim" || valor === "nao" ? valor : "";
-    el("preconselhoPosPreConselhoStatus").value = status;
-
-    document.querySelectorAll(".preconselho-choice-btn").forEach((botao) => {
-        const ativo = botao.dataset.valor === status;
-        botao.classList.toggle("is-active", ativo);
-        botao.setAttribute("aria-pressed", ativo ? "true" : "false");
-    });
-
-    if (status === "sim") {
-        el("preconselhoPosPreConselhoAjuda").textContent =
-            "O texto informará que o estudante foi recuperado pela recuperação paralela.";
-        return;
-    }
-    if (status === "nao") {
-        el("preconselhoPosPreConselhoAjuda").textContent =
-            "O texto informará que o estudante manteve baixo rendimento após a recuperação paralela.";
-        return;
-    }
-    el("preconselhoPosPreConselhoAjuda").textContent =
-        "Use “Sim” quando houve recuperação e “Não” quando o estudante manteve baixo rendimento.";
-}
-
-function obterStatusPosPreConselhoDocente() {
-    const valor = String(el("preconselhoPosPreConselhoStatus").value || "").trim().toLowerCase();
-    if (valor === "sim") {
-        return true;
-    }
-    if (valor === "nao") {
-        return false;
-    }
-    return null;
-}
-
-function resumoPosPreConselho(item = {}) {
-    const status = typeof item.pos_preconselho_recuperado === "boolean"
-        ? item.pos_preconselho_recuperado
-        : null;
-    if (status === null) {
-        return "";
-    }
-
-    const base = status
-        ? "Recuperado pela recuperação paralela"
-        : "Manteve baixo rendimento após a recuperação paralela";
-    const observacao = String(item.pos_preconselho_observacao || "").trim();
-    return observacao ? `${base}: ${observacao}` : base;
-}
-
 function atualizarStatusSinalizacaoDocente({ possuiEstudante = false, possuiRegistro = false } = {}) {
     if (!possuiEstudante) {
         el("preconselhoStatusSelecionadoTitulo").textContent = "Nenhum estudante em edição";
@@ -523,8 +473,6 @@ function limparFormularioDocente() {
     el("preconselhoSinalizarEstudante").checked = false;
     el("preconselhoNivelAtencao").value = "";
     el("preconselhoObservacaoProfessor").value = "";
-    definirStatusPosPreConselhoDocente("");
-    el("preconselhoObservacaoPosPreConselho").value = "";
     el("preconselhoEstudanteEmRav").checked = false;
     el("preconselhoRavBuscaHabilidade").value = "";
     el("preconselhoRavAcoes").value = "";
@@ -548,7 +496,6 @@ function definirBotoesDocenteHabilitados() {
 
     el("preconselhoNivelAtencao").disabled = !camposHabilitados;
     el("preconselhoObservacaoProfessor").disabled = !camposHabilitados;
-    el("preconselhoObservacaoPosPreConselho").disabled = !camposHabilitados;
     el("preconselhoEstudanteEmRav").disabled = !camposHabilitados || !periodoTemRav(periodo);
     el("preconselhoRavAcoes").disabled = !camposHabilitados || !periodoTemRav(periodo) || !Boolean(el("preconselhoEstudanteEmRav").checked);
     el("preconselhoRavBuscaHabilidade").disabled = !camposHabilitados || !periodoTemRav(periodo) || !Boolean(el("preconselhoEstudanteEmRav").checked);
@@ -558,10 +505,6 @@ function definirBotoesDocenteHabilitados() {
     document.querySelectorAll("[data-action='remover-habilidade-rav']").forEach((botao) => {
         botao.disabled = !camposHabilitados || !periodoTemRav(periodo) || !Boolean(el("preconselhoEstudanteEmRav").checked);
     });
-    document.querySelectorAll(".preconselho-choice-btn").forEach((botao) => {
-        botao.disabled = !camposHabilitados;
-    });
-
     el("btnSalvarRegistroDocente").disabled = !possuiEstudante || !podeEditar;
     el("btnExcluirRegistroDocente").disabled = !registro || !podeEditar;
 
@@ -964,7 +907,6 @@ function renderizarEstudantesDocente() {
     lista.innerHTML = estadoDocente.estudantes.map((item) => {
         const selecionado = Number(item.estudante_id) === Number(estadoDocente.estudanteId);
         const nivel = rotuloNivelAtencao(item.nivel_atencao);
-        const resumoPos = resumoPosPreConselho(item);
         return `
             <li class="pcpi-item ${item.sinalizado ? "pcpi-item-manual" : "pcpi-item-automatico"}">
                 <button type="button" class="preconselho-list-button ${selecionado ? "is-active" : ""}" data-estudante-id="${Number(item.estudante_id)}">
@@ -982,7 +924,6 @@ function renderizarEstudantesDocente() {
                                 ? `\n${item.motivos.map((m) => `- ${escaparHtml(m.descricao || "")}`).join("\n")}`
                                 : ""
                             )
-                            + (resumoPos ? `\n${resumoPos}` : "")
                             : "Clique para abrir um relato.")}
                     </span>
                 </button>
@@ -1047,7 +988,6 @@ function renderizarRegistrosDocente() {
                     </div>
                     <p class="pcpi-item-line">${escaparHtml(item.disciplina_nome || "")}</p>
                     <p class="pcpi-item-note">${escaparHtml(formatarMotivosRegistro(item.motivos || []))}</p>
-                    ${resumoPosPreConselho(item) ? `<p class="pcpi-item-note">${escaparHtml(resumoPosPreConselho(item))}</p>` : ""}
                     ${item.texto_gerado ? `<p class="pcpi-item-note is-secondary">${escaparHtml(item.texto_gerado)}</p>` : ""}
                     <div class="preconselho-item-actions">
                         <button type="button" class="preconselho-btn-link" data-action="editar-registro" data-estudante-id="${Number(item.estudante_id)}">Editar</button>
@@ -1077,14 +1017,6 @@ function preencherFormularioComEstudante(estudante) {
     el("preconselhoSinalizarEstudante").checked = true;
     el("preconselhoNivelAtencao").value = String(estudante.nivel_atencao || "");
     el("preconselhoObservacaoProfessor").value = String(estudante.observacao_professor || "");
-    definirStatusPosPreConselhoDocente(
-        estudante.pos_preconselho_recuperado === true
-            ? "sim"
-            : estudante.pos_preconselho_recuperado === false
-                ? "nao"
-                : ""
-    );
-    el("preconselhoObservacaoPosPreConselho").value = String(estudante.pos_preconselho_observacao || "");
     el("preconselhoEstudanteEmRav").checked = periodoTemRav() && Boolean(estudante.estudante_em_rav);
     el("preconselhoRavBuscaHabilidade").value = "";
     el("preconselhoRavAcoes").value = String(estudante.rav_acoes || "");
@@ -1128,9 +1060,9 @@ async function atualizarPreviewDocente() {
                 motivo_ids: motivoIds,
                 observacao_professor: String(el("preconselhoObservacaoProfessor").value || "").trim(),
                 nivel_atencao: String(el("preconselhoNivelAtencao").value || "").trim() || null,
-                pos_preconselho_recuperado: obterStatusPosPreConselhoDocente(),
+                pos_preconselho_recuperado: null,
                 pos_preconselho_motivo_ids: [],
-                pos_preconselho_observacao: String(el("preconselhoObservacaoPosPreConselho").value || "").trim(),
+                pos_preconselho_observacao: "",
                 estudante_em_rav: periodoTemRav() && Boolean(el("preconselhoEstudanteEmRav").checked),
                 rav_habilidade_ids: obterHabilidadesRavSelecionadasDocente(),
                 rav_acoes: String(el("preconselhoRavAcoes").value || "").trim(),
@@ -2218,8 +2150,6 @@ async function salvarRegistroDocente(event) {
     const motivoIds = obterMotivosSelecionadosDocente();
     const observacao = String(el("preconselhoObservacaoProfessor").value || "").trim();
     const nivelAtencao = String(el("preconselhoNivelAtencao").value || "").trim() || null;
-    const posPreConselhoRecuperado = obterStatusPosPreConselhoDocente();
-    const posPreConselhoObservacao = String(el("preconselhoObservacaoPosPreConselho").value || "").trim();
     const estudanteEmRav = periodoTemRav(periodo) && Boolean(el("preconselhoEstudanteEmRav").checked);
     const ravHabilidadeIds = estudanteEmRav ? obterHabilidadesRavSelecionadasDocente() : [];
     const ravAcoes = estudanteEmRav ? String(el("preconselhoRavAcoes").value || "").trim() : "";
@@ -2255,9 +2185,9 @@ async function salvarRegistroDocente(event) {
                 motivo_ids: motivoIds,
                 observacao_professor: observacao,
                 nivel_atencao: nivelAtencao,
-                pos_preconselho_recuperado: posPreConselhoRecuperado,
+                pos_preconselho_recuperado: null,
                 pos_preconselho_motivo_ids: [],
-                pos_preconselho_observacao: posPreConselhoObservacao,
+                pos_preconselho_observacao: "",
                 estudante_em_rav: estudanteEmRav,
                 rav_habilidade_ids: ravHabilidadeIds,
                 rav_acoes: ravAcoes
@@ -2343,7 +2273,6 @@ async function carregarContexto() {
     renderizarSelectNivelAtencao();
     renderizarSelectCategoriasMotivo();
     renderizarMotivosDocente();
-    definirStatusPosPreConselhoDocente("");
     renderizarTabelaPeriodos();
     renderizarTabelaMotivos();
     renderizarTabelaHabilidadesRav();
@@ -2564,26 +2493,12 @@ function registrarEventos() {
         atualizarEstadoFormularioDocente();
         agendarPreviewDocente();
     });
-    document.querySelectorAll(".preconselho-choice-btn").forEach((botao) => {
-        botao.addEventListener("click", () => {
-            const valorAtual = String(el("preconselhoPosPreConselhoStatus").value || "");
-            const proximoValor = valorAtual === botao.dataset.valor ? "" : String(botao.dataset.valor || "");
-            definirStatusPosPreConselhoDocente(proximoValor);
-            atualizarEstadoFormularioDocente();
-            agendarPreviewDocente();
-        });
-    });
-    el("preconselhoObservacaoPosPreConselho").addEventListener("input", agendarPreviewDocente);
     el("preconselhoEstudanteEmRav").addEventListener("change", () => {
         atualizarVisibilidadeRavDocente();
         atualizarEstadoFormularioDocente();
         agendarPreviewDocente();
     });
     el("preconselhoRavAcoes").addEventListener("input", agendarPreviewDocente);
-    el("preconselhoPosPreConselhoStatus").addEventListener("change", () => {
-        atualizarEstadoFormularioDocente();
-        agendarPreviewDocente();
-    });
 
     el("formConsolidacaoPreconselho").addEventListener("submit", async (event) => {
         event.preventDefault();
