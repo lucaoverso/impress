@@ -39,6 +39,10 @@
                 aria-controls="preconselho-tab-relatorio" aria-selected="false" type="button" hidden>
                 Relatório
             </button>
+            <button id="tabBtnRav" class="admin-tab-btn" data-preconselho-tab-trigger="rav"
+                aria-controls="preconselho-tab-rav" aria-selected="false" type="button" hidden>
+                RAV
+            </button>
             <button id="tabBtnConfiguracoes" class="admin-tab-btn" data-preconselho-tab-trigger="configuracoes"
                 aria-controls="preconselho-tab-configuracoes" aria-selected="false" type="button" hidden>
                 Configurações
@@ -214,6 +218,30 @@
                                             <span>Estudante está em Recuperar para Avançar (RAV)</span>
                                         </label>
                                         <small class="pcpi-hint">Este campo aparece somente em períodos marcados com RAV.</small>
+                                    </div>
+
+                                    <div id="preconselhoRavDetalhesField"
+                                        class="preconselho-rav-details pcpi-field pcpi-field-wide" hidden>
+                                        <div class="pcpi-subsection-header">
+                                            <h3>Plano de recuperacao RAV</h3>
+                                        </div>
+                                        <label class="pcpi-field" for="preconselhoRavBuscaHabilidade">
+                                            <span>Buscar habilidade a recuperar</span>
+                                            <div class="preconselho-rav-search">
+                                                <input id="preconselhoRavBuscaHabilidade" type="text"
+                                                    autocomplete="off"
+                                                    placeholder="Digite codigo ou parte da habilidade desta turma">
+                                                <div id="preconselhoRavSugestoesHabilidades"
+                                                    class="preconselho-rav-suggestions" hidden></div>
+                                            </div>
+                                        </label>
+                                        <div id="preconselhoRavHabilidadesDocente"
+                                            class="preconselho-rav-selected"></div>
+                                        <label class="pcpi-field" for="preconselhoRavAcoes">
+                                            <span>Acoes a serem desenvolvidas</span>
+                                            <textarea id="preconselhoRavAcoes" rows="3" maxlength="1000"
+                                                placeholder="Descreva a metodologia, intervencoes ou estrategias que serao trabalhadas."></textarea>
+                                        </label>
                                     </div>
 
                                     <label class="pcpi-field pcpi-field-wide" for="preconselhoObservacaoPosPreConselho">
@@ -457,6 +485,66 @@
                 </section>
             </section>
 
+            <section id="preconselho-tab-rav" class="admin-tab-panel" data-preconselho-tab-panel="rav" hidden>
+                <section class="preconselho-workspace-grid">
+                    <article class="calendar-card pcpi-card pcpi-card-full">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">Coordenacao</p>
+                                <h2>Visualizacao de RAV por turma</h2>
+                                <p>Acompanhe estudantes marcados em RAV, disciplinas envolvidas, habilidades selecionadas e acoes planejadas.</p>
+                            </div>
+                        </div>
+
+                        <form id="formRavPreconselho" class="pcpi-filter-grid">
+                            <label class="pcpi-field" for="preconselhoPeriodoRav">
+                                <span>Periodo</span>
+                                <select id="preconselhoPeriodoRav" required></select>
+                            </label>
+
+                            <label class="pcpi-field" for="preconselhoTurmaRav">
+                                <span>Turma</span>
+                                <select id="preconselhoTurmaRav"></select>
+                            </label>
+
+                            <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
+                                <button id="btnAtualizarRavPreconselho" class="btn-destaque" type="submit">Atualizar RAV</button>
+                            </div>
+                        </form>
+
+                        <div class="preconselho-summary-grid">
+                            <article class="preconselho-summary-card">
+                                <span>Estudantes em RAV</span>
+                                <strong id="preconselhoResumoRavEstudantes">0</strong>
+                                <small>Total de estudantes unicos no filtro.</small>
+                            </article>
+                            <article class="preconselho-summary-card">
+                                <span>Registros RAV</span>
+                                <strong id="preconselhoResumoRavRegistros">0</strong>
+                                <small>Disciplinas marcadas com RAV.</small>
+                            </article>
+                            <article class="preconselho-summary-card">
+                                <span>Turma</span>
+                                <strong id="preconselhoResumoRavTurma">Todas</strong>
+                                <small>Filtro atual da visualizacao.</small>
+                            </article>
+                        </div>
+
+                        <p id="msgPreconselhoRav" class="pcpi-status-copy"></p>
+                    </article>
+
+                    <article class="calendar-card pcpi-card pcpi-card-full">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">RAV</p>
+                                <h2>Estudantes e habilidades</h2>
+                            </div>
+                        </div>
+                        <ul id="listaRavPreconselho" class="pcpi-list" aria-live="polite"></ul>
+                    </article>
+                </section>
+            </section>
+
             <section id="preconselho-tab-configuracoes" class="admin-tab-panel"
                 data-preconselho-tab-panel="configuracoes" hidden>
                 <section class="preconselho-config-grid">
@@ -541,6 +629,106 @@
                                 <tbody id="tbodyPeriodosPreconselho"></tbody>
                             </table>
                         </div>
+                    </article>
+
+                    <article class="calendar-card pcpi-card">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">Administracao</p>
+                                <h2>Habilidades de RAV</h2>
+                                <p>Cadastre ou importe as habilidades que poderao ser selecionadas por periodo, disciplina e turma.</p>
+                            </div>
+                        </div>
+
+                            <form id="formHabilidadeRavPreconselho" class="pcpi-form-grid">
+                                <input id="preconselhoRavHabilidadeEdicaoId" type="hidden">
+
+                                <label class="pcpi-field" for="preconselhoRavHabilidadePeriodo">
+                                    <span>Periodo</span>
+                                    <select id="preconselhoRavHabilidadePeriodo" required></select>
+                                </label>
+
+                                <label class="pcpi-field" for="preconselhoRavHabilidadeDisciplina">
+                                    <span>Disciplina</span>
+                                    <select id="preconselhoRavHabilidadeDisciplina" required></select>
+                                </label>
+
+                                <label class="pcpi-field" for="preconselhoRavHabilidadeCodigo">
+                                    <span>Codigo</span>
+                                    <input id="preconselhoRavHabilidadeCodigo" type="text" maxlength="80"
+                                        placeholder="Ex.: MS.EF05LP03.s.03">
+                                </label>
+
+                                <label class="pcpi-field" for="preconselhoRavHabilidadeTurmas">
+                                    <span>Turmas</span>
+                                    <select id="preconselhoRavHabilidadeTurmas" multiple required></select>
+                                </label>
+
+                                <label class="pcpi-field pcpi-field-wide" for="preconselhoRavHabilidadeDescricao">
+                                    <span>Habilidade</span>
+                                <textarea id="preconselhoRavHabilidadeDescricao" rows="3" maxlength="500"
+                                    placeholder="Ex.: Resolver problemas envolvendo fracoes em situacoes contextualizadas." required></textarea>
+                                </label>
+
+                                <label class="pcpi-field" for="preconselhoRavHabilidadeOrdem">
+                                    <span>Ordem</span>
+                                    <input id="preconselhoRavHabilidadeOrdem" type="number" min="0" step="10" value="0">
+                                </label>
+
+                                <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
+                                <button id="btnSalvarHabilidadeRavPreconselho" class="btn-destaque" type="submit">Salvar
+                                    habilidade</button>
+                                <button id="btnLimparHabilidadeRavPreconselho" type="button">Limpar formulario</button>
+                            </div>
+                        </form>
+
+                        <p id="msgPreconselhoRavHabilidade" class="pcpi-status-copy"></p>
+
+                        <div class="preconselho-table-wrap">
+                            <table class="preconselho-table">
+                                <thead>
+                                    <tr>
+                                        <th>Periodo</th>
+                                        <th>Disciplina</th>
+                                        <th>Codigo</th>
+                                        <th>Habilidade</th>
+                                        <th>Turmas</th>
+                                        <th>Status</th>
+                                        <th>Acoes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tbodyHabilidadesRavPreconselho"></tbody>
+                            </table>
+                        </div>
+                    </article>
+
+                    <article class="calendar-card pcpi-card">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">Importacao</p>
+                                <h2>Habilidades via JSON</h2>
+                                <p>Cole o JSON gerado para um periodo com codigo, texto, disciplina e turmas.</p>
+                            </div>
+                        </div>
+
+                        <form id="formImportarHabilidadesRavPreconselho" class="pcpi-form-grid">
+                            <label class="pcpi-field" for="preconselhoRavImportPeriodo">
+                                <span>Periodo padrao</span>
+                                <select id="preconselhoRavImportPeriodo"></select>
+                            </label>
+
+                            <label class="pcpi-field pcpi-field-wide" for="preconselhoRavImportJson">
+                                <span>JSON</span>
+                                <textarea id="preconselhoRavImportJson" rows="10" spellcheck="false"
+                                    placeholder='{"periodo": "1º Bimestre", "habilidades": [{"codigo": "MS.EF05LP03.s.03", "texto": "Acentuar corretamente palavras oxitonas, paroxitonas e proparoxitonas.", "disciplina": "Lingua Portuguesa", "turma": "6º A, 6º B"}]}'></textarea>
+                            </label>
+
+                            <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
+                                <button id="btnImportarHabilidadesRavPreconselho" class="btn-destaque" type="submit">Importar JSON</button>
+                            </div>
+                        </form>
+
+                        <p id="msgPreconselhoRavImport" class="pcpi-status-copy"></p>
                     </article>
 
                     <article class="calendar-card pcpi-card">

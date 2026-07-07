@@ -54,6 +54,10 @@ const estadoRelatorio = {
     turmasExpandidas: new Set()
 };
 
+const estadoRav = {
+    dados: null
+};
+
 function limparMensagem(id) {
     definirMensagem(id, "", false);
 }
@@ -157,6 +161,19 @@ function obterMotivosContexto() {
     return Array.isArray(contextoAtual?.motivos) ? contextoAtual.motivos : [];
 }
 
+function obterHabilidadesRavContexto() {
+    return Array.isArray(contextoAtual?.rav_habilidades) ? contextoAtual.rav_habilidades : [];
+}
+
+function obterHabilidadesRavPorDisciplina(disciplinaId, incluirInativas = false, periodoId = null, turmaId = null) {
+    return obterHabilidadesRavContexto().filter((item) =>
+        Number(item.disciplina_id || 0) === Number(disciplinaId || 0) &&
+        (!periodoId || Number(item.periodo_id || 0) === Number(periodoId || 0)) &&
+        (!turmaId || (Array.isArray(item.turma_ids) && item.turma_ids.map(Number).includes(Number(turmaId || 0)))) &&
+        (incluirInativas || Number(item.ativo ?? 1) === 1)
+    );
+}
+
 function periodoDocenteAtual() {
     return obterPeriodos().find((item) => Number(item.id) === Number(estadoDocente.periodoId)) || null;
 }
@@ -213,7 +230,14 @@ function resolverEstudanteParaFormulario(estudanteId) {
             ? registro.pos_preconselho_motivos
             : [],
         pos_preconselho_observacao: String(registro.pos_preconselho_observacao || ""),
-        estudante_em_rav: Boolean(registro.estudante_em_rav)
+        estudante_em_rav: Boolean(registro.estudante_em_rav),
+        rav_habilidade_ids: Array.isArray(registro.rav_habilidade_ids)
+            ? registro.rav_habilidade_ids
+            : [],
+        rav_habilidades: Array.isArray(registro.rav_habilidades)
+            ? registro.rav_habilidades
+            : [],
+        rav_acoes: String(registro.rav_acoes || "")
     };
 }
 
@@ -228,6 +252,92 @@ function aplicarSelecaoMotivosDocente(motivoIds = []) {
     document.querySelectorAll(".preconselho-motivo-checkbox").forEach((checkbox) => {
         checkbox.checked = ids.has(Number(checkbox.value || 0));
     });
+}
+
+function obterHabilidadesRavSelecionadasDocente() {
+    return Array.from(document.querySelectorAll("[data-rav-habilidade-selecionada-id]"))
+        .map((item) => Number(item.dataset.ravHabilidadeSelecionadaId || 0))
+        .filter((valor) => Number.isInteger(valor) && valor > 0);
+}
+
+function aplicarSelecaoHabilidadesRavDocente(habilidadeIds = []) {
+    renderizarHabilidadesRavDocente(habilidadeIds);
+}
+
+function filtrarHabilidadesRavDocente(termo = "", limite = 12) {
+    const combo = comboDocenteAtual();
+    const termoLimpo = String(termo || "").trim().toLowerCase();
+    const selecionados = new Set(obterHabilidadesRavSelecionadasDocente());
+    const habilidades = obterHabilidadesRavPorDisciplina(
+        combo?.disciplina_id,
+        false,
+        estadoDocente.periodoId,
+        combo?.turma_id
+    )
+        .filter((item) => !selecionados.has(Number(item.id || 0)));
+
+    const filtradas = termoLimpo
+        ? habilidades.filter((item) =>
+            String(`${item.codigo || ""} ${item.descricao || ""}`).toLowerCase().includes(termoLimpo)
+        )
+        : habilidades;
+    return filtradas.slice(0, limite);
+}
+
+function ocultarSugestoesHabilidadesRav() {
+    const sugestoes = el("preconselhoRavSugestoesHabilidades");
+    if (!sugestoes) {
+        return;
+    }
+    sugestoes.innerHTML = "";
+    sugestoes.hidden = true;
+}
+
+function renderizarSugestoesHabilidadesRav(forcar = false) {
+    const sugestoes = el("preconselhoRavSugestoesHabilidades");
+    const input = el("preconselhoRavBuscaHabilidade");
+    if (!sugestoes || !input) {
+        return;
+    }
+
+    const termo = String(input.value || "").trim();
+    if (!forcar && termo.length < 1) {
+        ocultarSugestoesHabilidadesRav();
+        return;
+    }
+
+    const itens = filtrarHabilidadesRavDocente(termo);
+    sugestoes.innerHTML = "";
+    if (itens.length === 0) {
+        const vazio = document.createElement("div");
+        vazio.className = "preconselho-rav-suggestion-empty";
+        vazio.textContent = "Nenhuma habilidade encontrada para este periodo, turma e disciplina.";
+        sugestoes.appendChild(vazio);
+        sugestoes.hidden = false;
+        return;
+    }
+
+    itens.forEach((habilidade) => {
+        const botao = document.createElement("button");
+        botao.type = "button";
+        botao.className = "preconselho-rav-suggestion";
+        botao.dataset.ravHabilidadeId = String(Number(habilidade.id || 0));
+        botao.textContent = [habilidade.codigo, habilidade.descricao].filter(Boolean).join(" - ");
+        botao.addEventListener("click", () => {
+            const ids = obterHabilidadesRavSelecionadasDocente();
+            const habilidadeId = Number(habilidade.id || 0);
+            if (habilidadeId > 0 && !ids.includes(habilidadeId)) {
+                aplicarSelecaoHabilidadesRavDocente([...ids, habilidadeId]);
+            }
+            input.value = "";
+            ocultarSugestoesHabilidadesRav();
+            atualizarEstadoFormularioDocente();
+            agendarPreviewDocente();
+            input.focus();
+        });
+        sugestoes.appendChild(botao);
+    });
+    sugestoes.hidden = false;
 }
 
 function definirStatusPosPreConselhoDocente(valor = "") {
@@ -302,13 +412,24 @@ function atualizarStatusSinalizacaoDocente({ possuiEstudante = false, possuiRegi
 
 function atualizarVisibilidadeRavDocente() {
     const campo = el("preconselhoRavRegistroField");
+    const detalhes = el("preconselhoRavDetalhesField");
     const checkbox = el("preconselhoEstudanteEmRav");
     const visivel = periodoTemRav();
     if (campo) {
         campo.hidden = !visivel;
     }
+    if (detalhes) {
+        detalhes.hidden = !visivel || !Boolean(checkbox?.checked);
+        if (detalhes.hidden) {
+            ocultarSugestoesHabilidadesRav();
+        }
+    }
     if (!visivel && checkbox) {
         checkbox.checked = false;
+        aplicarSelecaoHabilidadesRavDocente([]);
+        if (el("preconselhoRavAcoes")) {
+            el("preconselhoRavAcoes").value = "";
+        }
     }
 }
 
@@ -405,7 +526,11 @@ function limparFormularioDocente() {
     definirStatusPosPreConselhoDocente("");
     el("preconselhoObservacaoPosPreConselho").value = "";
     el("preconselhoEstudanteEmRav").checked = false;
+    el("preconselhoRavBuscaHabilidade").value = "";
+    el("preconselhoRavAcoes").value = "";
     aplicarSelecaoMotivosDocente([]);
+    aplicarSelecaoHabilidadesRavDocente([]);
+    renderizarHabilidadesRavDocente();
     el("preconselhoTextoPreview").value = "";
     el("preconselhoPreviewAjuda").textContent = "Selecione um estudante e marque os motivos para gerar a pré-visualização.";
     atualizarStatusSinalizacaoDocente();
@@ -425,8 +550,13 @@ function definirBotoesDocenteHabilitados() {
     el("preconselhoObservacaoProfessor").disabled = !camposHabilitados;
     el("preconselhoObservacaoPosPreConselho").disabled = !camposHabilitados;
     el("preconselhoEstudanteEmRav").disabled = !camposHabilitados || !periodoTemRav(periodo);
+    el("preconselhoRavAcoes").disabled = !camposHabilitados || !periodoTemRav(periodo) || !Boolean(el("preconselhoEstudanteEmRav").checked);
+    el("preconselhoRavBuscaHabilidade").disabled = !camposHabilitados || !periodoTemRav(periodo) || !Boolean(el("preconselhoEstudanteEmRav").checked);
     document.querySelectorAll(".preconselho-motivo-checkbox").forEach((checkbox) => {
         checkbox.disabled = !camposHabilitados;
+    });
+    document.querySelectorAll("[data-action='remover-habilidade-rav']").forEach((botao) => {
+        botao.disabled = !camposHabilitados || !periodoTemRav(periodo) || !Boolean(el("preconselhoEstudanteEmRav").checked);
     });
     document.querySelectorAll(".preconselho-choice-btn").forEach((botao) => {
         botao.disabled = !camposHabilitados;
@@ -474,17 +604,20 @@ function renderizarAbasDisponiveis() {
     const mostrarDocente = Boolean(contextoAtual?.professor_id);
     const mostrarConsolidacao = Boolean(contextoAtual?.pode_consolidar);
     const mostrarRelatorio = Boolean(contextoAtual?.pode_relatorio);
+    const mostrarRav = Boolean(contextoAtual?.pode_relatorio);
     const mostrarConfiguracoes = Boolean(contextoAtual?.pode_configurar);
 
     el("tabBtnDocente").hidden = !mostrarDocente;
     el("tabBtnConsolidacao").hidden = !mostrarConsolidacao;
     el("tabBtnRelatorio").hidden = !mostrarRelatorio;
+    el("tabBtnRav").hidden = !mostrarRav;
     el("tabBtnConfiguracoes").hidden = !mostrarConfiguracoes;
 
     const ordem = [
         { aba: "docente", visivel: mostrarDocente },
         { aba: "consolidacao", visivel: mostrarConsolidacao },
         { aba: "relatorio", visivel: mostrarRelatorio },
+        { aba: "rav", visivel: mostrarRav },
         { aba: "configuracoes", visivel: mostrarConfiguracoes }
     ].filter((item) => item.visivel);
 
@@ -547,6 +680,18 @@ function renderizarSelectPeriodos() {
         }
     );
 
+    preencherSelect(
+        el("preconselhoPeriodoRav"),
+        periodos,
+        (item) => item.id,
+        (item) => rotuloPeriodo(item),
+        "Selecione um periodo",
+        {
+            permitirVazio: false,
+            valorSelecionado: el("preconselhoPeriodoRav")?.value || periodos[0]?.id || ""
+        }
+    );
+
     if (!estadoDocente.periodoId && periodos.length > 0) {
         const periodoAberto = periodos.find((item) => item.status === "ABERTO");
         estadoDocente.periodoId = Number(periodoAberto?.id || periodos[0].id);
@@ -587,6 +732,65 @@ function renderizarSelectsConsolidacao() {
             valorSelecionado: el("preconselhoDisciplinaConsolidacao")?.value || ""
         }
     );
+
+    preencherSelect(
+        el("preconselhoTurmaRav"),
+        Array.isArray(contextoAtual?.turmas) ? contextoAtual.turmas : [],
+        (item) => item.id,
+        (item) => item.nome,
+        "Todas as turmas",
+        {
+            valorSelecionado: el("preconselhoTurmaRav")?.value || ""
+        }
+    );
+}
+
+function renderizarSelectDisciplinaHabilidadeRav() {
+    preencherSelect(
+        el("preconselhoRavHabilidadePeriodo"),
+        obterPeriodos(),
+        (item) => item.id,
+        (item) => rotuloPeriodo(item),
+        "Selecione o periodo",
+        {
+            permitirVazio: false,
+            valorSelecionado: el("preconselhoRavHabilidadePeriodo")?.value || obterPeriodos()[0]?.id || ""
+        }
+    );
+    preencherSelect(
+        el("preconselhoRavImportPeriodo"),
+        obterPeriodos(),
+        (item) => item.id,
+        (item) => rotuloPeriodo(item),
+        "Periodo informado no JSON",
+        {
+            valorSelecionado: el("preconselhoRavImportPeriodo")?.value || ""
+        }
+    );
+    preencherSelect(
+        el("preconselhoRavHabilidadeDisciplina"),
+        Array.isArray(contextoAtual?.disciplinas) ? contextoAtual.disciplinas : [],
+        (item) => item.id,
+        (item) => item.nome,
+        "Selecione a disciplina",
+        {
+            permitirVazio: false,
+            valorSelecionado: el("preconselhoRavHabilidadeDisciplina")?.value || ""
+        }
+    );
+    const selectTurmas = el("preconselhoRavHabilidadeTurmas");
+    const selecionadas = new Set(Array.from(selectTurmas?.selectedOptions || []).map((option) => option.value));
+    if (selectTurmas) {
+        selectTurmas.innerHTML = "";
+        (Array.isArray(contextoAtual?.turmas) ? contextoAtual.turmas : []).forEach((turma) => {
+            const option = document.createElement("option");
+            option.value = String(turma.id);
+            option.textContent = String(turma.nome || "");
+            option.selected = selecionadas.has(option.value);
+            selectTurmas.appendChild(option);
+        });
+        selectTurmas.disabled = selectTurmas.options.length === 0;
+    }
 }
 
 function renderizarSelectNivelAtencao() {
@@ -649,6 +853,52 @@ function renderizarMotivosDocente() {
             </div>
         </section>
     `).join("");
+}
+
+function renderizarHabilidadesRavDocente(habilidadeIdsSelecionadas = null) {
+    const container = el("preconselhoRavHabilidadesDocente");
+    if (!container) {
+        return;
+    }
+
+    const combo = comboDocenteAtual();
+    const selecionados = new Set(
+        Array.isArray(habilidadeIdsSelecionadas)
+            ? habilidadeIdsSelecionadas.map((item) => Number(item))
+            : obterHabilidadesRavSelecionadasDocente()
+    );
+    const habilidades = obterHabilidadesRavPorDisciplina(
+        combo?.disciplina_id,
+        false,
+        estadoDocente.periodoId,
+        combo?.turma_id
+    );
+
+    if (!combo) {
+        container.innerHTML = '<p class="preconselho-rav-empty">Selecione uma turma e disciplina para buscar habilidades.</p>';
+        ocultarSugestoesHabilidadesRav();
+        return;
+    }
+    if (habilidades.length === 0) {
+        container.innerHTML = '<p class="preconselho-rav-empty">Nenhuma habilidade ativa cadastrada para este periodo, turma e disciplina.</p>';
+        ocultarSugestoesHabilidadesRav();
+        return;
+    }
+
+    const itensSelecionados = habilidades.filter((habilidade) => selecionados.has(Number(habilidade.id || 0)));
+    if (itensSelecionados.length === 0) {
+        container.innerHTML = '<p class="preconselho-rav-empty">Nenhuma habilidade selecionada ainda.</p>';
+        renderizarSugestoesHabilidadesRav(false);
+        return;
+    }
+
+    container.innerHTML = itensSelecionados.map((habilidade) => `
+        <article class="preconselho-rav-skill-card" data-rav-habilidade-selecionada-id="${Number(habilidade.id)}">
+            <span>${escaparHtml([habilidade.codigo, habilidade.descricao].filter(Boolean).join(" - "))}</span>
+            <button type="button" data-action="remover-habilidade-rav" data-habilidade-id="${Number(habilidade.id)}">Remover</button>
+        </article>
+    `).join("");
+    renderizarSugestoesHabilidadesRav(false);
 }
 
 function renderizarResumoDocente() {
@@ -836,7 +1086,11 @@ function preencherFormularioComEstudante(estudante) {
     );
     el("preconselhoObservacaoPosPreConselho").value = String(estudante.pos_preconselho_observacao || "");
     el("preconselhoEstudanteEmRav").checked = periodoTemRav() && Boolean(estudante.estudante_em_rav);
+    el("preconselhoRavBuscaHabilidade").value = "";
+    el("preconselhoRavAcoes").value = String(estudante.rav_acoes || "");
     aplicarSelecaoMotivosDocente(estudante.motivo_ids || []);
+    renderizarHabilidadesRavDocente();
+    aplicarSelecaoHabilidadesRavDocente(estudante.rav_habilidade_ids || []);
     atualizarStatusSinalizacaoDocente({
         possuiEstudante: true,
         possuiRegistro: Boolean(estudante.sinalizado),
@@ -878,7 +1132,12 @@ async function atualizarPreviewDocente() {
                 pos_preconselho_motivo_ids: [],
                 pos_preconselho_observacao: String(el("preconselhoObservacaoPosPreConselho").value || "").trim(),
                 estudante_em_rav: periodoTemRav() && Boolean(el("preconselhoEstudanteEmRav").checked),
+                rav_habilidade_ids: obterHabilidadesRavSelecionadasDocente(),
+                rav_acoes: String(el("preconselhoRavAcoes").value || "").trim(),
                 estudante_nome: String(estudante?.nome || "").trim(),
+                periodo_id: Number(estadoDocente.periodoId || 0) || null,
+                turma_id: Number(combo?.turma_id || 0) || null,
+                disciplina_id: Number(combo?.disciplina_id || 0) || null,
                 disciplina_nome: String(combo?.disciplina_nome || "").trim()
             })
         });
@@ -1347,6 +1606,91 @@ async function carregarRelatorio() {
     }
 }
 
+function construirParametrosRav() {
+    const params = new URLSearchParams({
+        periodo_id: String(el("preconselhoPeriodoRav").value || "")
+    });
+    const turmaId = String(el("preconselhoTurmaRav").value || "").trim();
+    if (turmaId) params.set("turma_id", turmaId);
+    return params;
+}
+
+function renderizarRav() {
+    const dados = estadoRav.dados;
+    const lista = el("listaRavPreconselho");
+    const turmaSelecionada = Array.from(el("preconselhoTurmaRav")?.options || [])
+        .find((option) => option.value === String(el("preconselhoTurmaRav")?.value || ""));
+
+    if (!dados) {
+        el("preconselhoResumoRavEstudantes").textContent = "0";
+        el("preconselhoResumoRavRegistros").textContent = "0";
+        el("preconselhoResumoRavTurma").textContent = turmaSelecionada?.textContent || "Todas";
+        lista.innerHTML = criarEstadoVazio("Selecione um periodo para visualizar os estudantes em RAV.");
+        return;
+    }
+
+    const itens = Array.isArray(dados.itens) ? dados.itens : [];
+    el("preconselhoResumoRavEstudantes").textContent = String(Number(dados.total_estudantes || 0));
+    el("preconselhoResumoRavRegistros").textContent = String(Number(dados.total_registros || 0));
+    el("preconselhoResumoRavTurma").textContent = turmaSelecionada?.textContent || "Todas";
+
+    if (itens.length === 0) {
+        lista.innerHTML = criarEstadoVazio("Nenhum estudante em RAV para os filtros selecionados.");
+        return;
+    }
+
+    lista.innerHTML = itens.map((item) => {
+        const habilidades = Array.isArray(item.rav_habilidades)
+            ? item.rav_habilidades
+                .map((habilidade) => [habilidade.codigo, habilidade.descricao].filter(Boolean).join(" - "))
+                .filter(Boolean)
+            : [];
+        return `
+            <li class="pcpi-item pcpi-item-manual">
+                <div class="pcpi-checkbox-row">
+                    <div class="pcpi-item-body">
+                        <div class="pcpi-item-top">
+                            <strong>${escaparHtml(item.estudante_nome || "")}</strong>
+                            <div class="pcpi-tag-group">
+                                <span class="pcpi-chip pcpi-chip-automatico">RAV</span>
+                                ${item.nivel_atencao ? `<span class="pcpi-chip">${escaparHtml(rotuloNivelAtencao(item.nivel_atencao))}</span>` : ""}
+                            </div>
+                        </div>
+                        <p class="pcpi-item-line">${escaparHtml(item.turma_nome || "")} | ${escaparHtml(item.disciplina_nome || "")}</p>
+                        <p class="pcpi-item-note">${escaparHtml(habilidades.length ? `Habilidades: ${habilidades.join("; ")}` : "Nenhuma habilidade selecionada.")}</p>
+                        ${item.rav_acoes ? `<p class="pcpi-item-note is-secondary">${escaparHtml(`Acoes: ${item.rav_acoes}`)}</p>` : ""}
+                        <p class="pcpi-item-note is-secondary">${escaparHtml(`Professor: ${item.professor_nome || "Nao informado"}`)}</p>
+                    </div>
+                </div>
+            </li>
+        `;
+    }).join("");
+}
+
+async function carregarRav() {
+    limparMensagem("msgPreconselhoRav");
+    const periodoId = Number(el("preconselhoPeriodoRav").value || 0);
+    if (!periodoId) {
+        estadoRav.dados = null;
+        renderizarRav();
+        return;
+    }
+
+    try {
+        const resposta = await fetchComAuth(`/preconselho/rav/turma?${construirParametrosRav().toString()}`, { headers });
+        if (!resposta.ok) {
+            throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel carregar a visualizacao de RAV."));
+        }
+        estadoRav.dados = await resposta.json();
+        renderizarRav();
+        definirMensagem("msgPreconselhoRav", "Visualizacao de RAV atualizada.");
+    } catch (erro) {
+        estadoRav.dados = null;
+        renderizarRav();
+        definirMensagem("msgPreconselhoRav", erro.message || "Nao foi possivel carregar a visualizacao de RAV.", true);
+    }
+}
+
 function renderizarTabelaPeriodos() {
     const tbody = el("tbodyPeriodosPreconselho");
     if (!tbody) {
@@ -1421,6 +1765,53 @@ function renderizarTabelaMotivos() {
     `).join("");
 }
 
+function renderizarTabelaHabilidadesRav() {
+    const tbody = el("tbodyHabilidadesRavPreconselho");
+    if (!tbody) {
+        return;
+    }
+
+    const habilidades = obterHabilidadesRavContexto();
+    if (habilidades.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="booking-empty">Nenhuma habilidade de RAV cadastrada.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = habilidades.map((item) => `
+        <tr>
+            <td data-label="Periodo">
+                <strong>${escaparHtml(item.periodo_nome || "")}</strong>
+            </td>
+            <td data-label="Disciplina">
+                <strong>${escaparHtml(item.disciplina_nome || "")}</strong>
+                <div class="preconselho-table-meta">Ordem ${Number(item.ordem || 0)}</div>
+            </td>
+            <td data-label="Codigo">
+                ${escaparHtml(item.codigo || "")}
+            </td>
+            <td data-label="Habilidade">
+                ${escaparHtml(item.descricao || "")}
+            </td>
+            <td data-label="Turmas">
+                ${escaparHtml((Array.isArray(item.turmas) ? item.turmas : []).map((turma) => turma.nome).filter(Boolean).join(", "))}
+            </td>
+            <td data-label="Status">
+                <span class="status-chip ${Number(item.ativo ?? 1) === 1 ? "status-aberto" : "status-fechado"}">
+                    ${Number(item.ativo ?? 1) === 1 ? "Ativa" : "Inativa"}
+                </span>
+            </td>
+            <td data-label="Acoes">
+                <div class="preconselho-table-actions">
+                    <button type="button" data-action="editar-habilidade-rav" data-habilidade-id="${Number(item.id)}">Editar</button>
+                    <button type="button" data-action="status-habilidade-rav" data-habilidade-id="${Number(item.id)}" data-ativo="${Number(item.ativo ?? 1)}">
+                        ${Number(item.ativo ?? 1) === 1 ? "Inativar" : "Ativar"}
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join("");
+}
+
 function limparFormularioPeriodo() {
     el("preconselhoPeriodoEdicaoId").value = "";
     el("preconselhoPeriodoNome").value = "";
@@ -1439,6 +1830,18 @@ function limparFormularioMotivo() {
     el("preconselhoMotivoCodigo").disabled = false;
     el("preconselhoMotivoDescricao").value = "";
     el("preconselhoMotivoOrdem").value = "0";
+}
+
+function limparFormularioHabilidadeRav() {
+    el("preconselhoRavHabilidadeEdicaoId").value = "";
+    el("preconselhoRavHabilidadePeriodo").selectedIndex = 0;
+    el("preconselhoRavHabilidadeDisciplina").selectedIndex = 0;
+    el("preconselhoRavHabilidadeCodigo").value = "";
+    Array.from(el("preconselhoRavHabilidadeTurmas").options || []).forEach((option) => {
+        option.selected = false;
+    });
+    el("preconselhoRavHabilidadeDescricao").value = "";
+    el("preconselhoRavHabilidadeOrdem").value = "0";
 }
 
 function carregarPeriodoNoFormulario(periodoId) {
@@ -1471,6 +1874,24 @@ function carregarMotivoNoFormulario(motivoId) {
     el("preconselhoMotivoOrdem").value = String(Number(motivo.ordem || 0));
 }
 
+function carregarHabilidadeRavNoFormulario(habilidadeId) {
+    const habilidade = obterHabilidadesRavContexto().find((item) => Number(item.id) === Number(habilidadeId));
+    if (!habilidade) {
+        return;
+    }
+
+    el("preconselhoRavHabilidadeEdicaoId").value = String(habilidade.id);
+    el("preconselhoRavHabilidadePeriodo").value = String(habilidade.periodo_id || "");
+    el("preconselhoRavHabilidadeDisciplina").value = String(habilidade.disciplina_id || "");
+    el("preconselhoRavHabilidadeCodigo").value = String(habilidade.codigo || "");
+    const turmaIds = new Set((Array.isArray(habilidade.turma_ids) ? habilidade.turma_ids : []).map((item) => String(item)));
+    Array.from(el("preconselhoRavHabilidadeTurmas").options || []).forEach((option) => {
+        option.selected = turmaIds.has(option.value);
+    });
+    el("preconselhoRavHabilidadeDescricao").value = String(habilidade.descricao || "");
+    el("preconselhoRavHabilidadeOrdem").value = String(Number(habilidade.ordem || 0));
+}
+
 async function recarregarPeriodos() {
     const resposta = await fetchComAuth("/preconselho/periodos", { headers });
     if (!resposta.ok) {
@@ -1483,6 +1904,7 @@ async function recarregarPeriodos() {
         periodos
     };
     renderizarSelectPeriodos();
+    renderizarSelectDisciplinaHabilidadeRav();
     renderizarTabelaPeriodos();
 }
 
@@ -1501,6 +1923,23 @@ async function recarregarMotivos() {
     };
     renderizarMotivosDocente();
     renderizarTabelaMotivos();
+}
+
+async function recarregarHabilidadesRav() {
+    const incluirInativos = Boolean(contextoAtual?.pode_configurar);
+    const sufixo = incluirInativos ? "?incluir_inativos=true" : "";
+    const resposta = await fetchComAuth(`/preconselho/habilidades-rav${sufixo}`, { headers });
+    if (!resposta.ok) {
+        throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel atualizar as habilidades de RAV."));
+    }
+
+    const rav_habilidades = await resposta.json();
+    contextoAtual = {
+        ...contextoAtual,
+        rav_habilidades
+    };
+    renderizarHabilidadesRavDocente();
+    renderizarTabelaHabilidadesRav();
 }
 
 async function salvarPeriodo(event) {
@@ -1555,11 +1994,13 @@ async function salvarPeriodo(event) {
 
         await recarregarPeriodos();
         renderizarSelectsConsolidacao();
+        renderizarSelectDisciplinaHabilidadeRav();
         if (contextoAtual?.pode_consolidar) {
             await carregarConsolidacao();
         }
         if (contextoAtual?.pode_relatorio) {
             await carregarRelatorio();
+            await carregarRav();
         }
         limparFormularioPeriodo();
         definirMensagem("msgPreconselhoPeriodo", periodoId > 0 ? "Período atualizado com sucesso." : "Período criado com sucesso.");
@@ -1585,11 +2026,13 @@ async function alternarStatusPeriodo(periodoId, statusAtual) {
 
         await recarregarPeriodos();
         renderizarSelectsConsolidacao();
+        renderizarSelectDisciplinaHabilidadeRav();
         if (contextoAtual?.pode_consolidar) {
             await carregarConsolidacao();
         }
         if (contextoAtual?.pode_relatorio) {
             await carregarRelatorio();
+            await carregarRav();
         }
         definirMensagem("msgPreconselhoPeriodo", "Status do período atualizado.");
     } catch (erro) {
@@ -1661,6 +2104,110 @@ async function alternarStatusMotivo(motivoId, ativoAtual) {
     }
 }
 
+async function salvarHabilidadeRav(event) {
+    event.preventDefault();
+    limparMensagem("msgPreconselhoRavHabilidade");
+
+    const habilidadeId = Number(el("preconselhoRavHabilidadeEdicaoId").value || 0);
+    const payload = {
+        periodo_id: Number(el("preconselhoRavHabilidadePeriodo").value || 0),
+        disciplina_id: Number(el("preconselhoRavHabilidadeDisciplina").value || 0),
+        codigo: String(el("preconselhoRavHabilidadeCodigo").value || "").trim(),
+        descricao: String(el("preconselhoRavHabilidadeDescricao").value || "").trim(),
+        turma_ids: Array.from(el("preconselhoRavHabilidadeTurmas").selectedOptions || [])
+            .map((option) => Number(option.value || 0))
+            .filter((valor) => Number.isInteger(valor) && valor > 0),
+        ordem: Number(el("preconselhoRavHabilidadeOrdem").value || 0)
+    };
+
+    try {
+        const resposta = await fetchComAuth(
+            habilidadeId > 0 ? `/preconselho/habilidades-rav/${habilidadeId}` : "/preconselho/habilidades-rav",
+            {
+                method: habilidadeId > 0 ? "PUT" : "POST",
+                headers: headersJson,
+                body: JSON.stringify(payload)
+            }
+        );
+
+        if (!resposta.ok) {
+            throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel salvar a habilidade de RAV."));
+        }
+
+        await recarregarHabilidadesRav();
+        limparFormularioHabilidadeRav();
+        definirMensagem("msgPreconselhoRavHabilidade", habilidadeId > 0 ? "Habilidade atualizada com sucesso." : "Habilidade criada com sucesso.");
+    } catch (erro) {
+        definirMensagem("msgPreconselhoRavHabilidade", erro.message || "Erro ao salvar a habilidade de RAV.", true);
+    }
+}
+
+async function importarHabilidadesRavJson(event) {
+    event.preventDefault();
+    limparMensagem("msgPreconselhoRavImport");
+
+    let payload;
+    try {
+        const texto = String(el("preconselhoRavImportJson").value || "").trim();
+        const dados = JSON.parse(texto);
+        const periodoPadrao = Number(el("preconselhoRavImportPeriodo").value || 0);
+        payload = Array.isArray(dados)
+            ? { periodo_id: periodoPadrao || null, habilidades: dados }
+            : {
+                periodo_id: periodoPadrao || dados.periodo_id || null,
+                periodo: String(dados.periodo || ""),
+                habilidades: dados.habilidades || []
+            };
+    } catch (erro) {
+        definirMensagem("msgPreconselhoRavImport", "JSON invalido. Confira a estrutura antes de importar.", true);
+        return;
+    }
+
+    try {
+        const resposta = await fetchComAuth("/preconselho/habilidades-rav/importar-json", {
+            method: "POST",
+            headers: headersJson,
+            body: JSON.stringify(payload)
+        });
+        if (!resposta.ok) {
+            throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel importar as habilidades."));
+        }
+        const resultado = await resposta.json();
+        await recarregarHabilidadesRav();
+        definirMensagem(
+            "msgPreconselhoRavImport",
+            `Importacao concluida: ${Number(resultado.criadas || 0)} criadas, ${Number(resultado.atualizadas || 0)} atualizadas, ${Number(resultado.ignoradas || 0)} ignoradas.`
+        );
+        if (Array.isArray(resultado.erros) && resultado.erros.length > 0) {
+            definirMensagem("msgPreconselhoRavImport", resultado.erros.slice(0, 4).join(" | "), true);
+        }
+    } catch (erro) {
+        definirMensagem("msgPreconselhoRavImport", erro.message || "Erro ao importar habilidades.", true);
+    }
+}
+
+async function alternarStatusHabilidadeRav(habilidadeId, ativoAtual) {
+    limparMensagem("msgPreconselhoRavHabilidade");
+    try {
+        const resposta = await fetchComAuth(`/preconselho/habilidades-rav/${Number(habilidadeId)}/status`, {
+            method: "PUT",
+            headers: headersJson,
+            body: JSON.stringify({
+                ativo: Number(ativoAtual) !== 1
+            })
+        });
+
+        if (!resposta.ok) {
+            throw new Error(await obterMensagemErroResposta(resposta, "Nao foi possivel atualizar o status da habilidade."));
+        }
+
+        await recarregarHabilidadesRav();
+        definirMensagem("msgPreconselhoRavHabilidade", "Status da habilidade atualizado.");
+    } catch (erro) {
+        definirMensagem("msgPreconselhoRavHabilidade", erro.message || "Erro ao atualizar o status da habilidade.", true);
+    }
+}
+
 async function salvarRegistroDocente(event) {
     event.preventDefault();
     limparMensagem("msgPreconselhoRegistro");
@@ -1674,6 +2221,8 @@ async function salvarRegistroDocente(event) {
     const posPreConselhoRecuperado = obterStatusPosPreConselhoDocente();
     const posPreConselhoObservacao = String(el("preconselhoObservacaoPosPreConselho").value || "").trim();
     const estudanteEmRav = periodoTemRav(periodo) && Boolean(el("preconselhoEstudanteEmRav").checked);
+    const ravHabilidadeIds = estudanteEmRav ? obterHabilidadesRavSelecionadasDocente() : [];
+    const ravAcoes = estudanteEmRav ? String(el("preconselhoRavAcoes").value || "").trim() : "";
 
     if (!periodo || !combo) {
         definirMensagem("msgPreconselhoRegistro", "Selecione um período e uma turma/disciplina antes de salvar.", true);
@@ -1709,7 +2258,9 @@ async function salvarRegistroDocente(event) {
                 pos_preconselho_recuperado: posPreConselhoRecuperado,
                 pos_preconselho_motivo_ids: [],
                 pos_preconselho_observacao: posPreConselhoObservacao,
-                estudante_em_rav: estudanteEmRav
+                estudante_em_rav: estudanteEmRav,
+                rav_habilidade_ids: ravHabilidadeIds,
+                rav_acoes: ravAcoes
             })
         });
 
@@ -1788,12 +2339,14 @@ async function carregarContexto() {
     renderizarAbasDisponiveis();
     renderizarSelectPeriodos();
     renderizarSelectsConsolidacao();
+    renderizarSelectDisciplinaHabilidadeRav();
     renderizarSelectNivelAtencao();
     renderizarSelectCategoriasMotivo();
     renderizarMotivosDocente();
     definirStatusPosPreConselhoDocente("");
     renderizarTabelaPeriodos();
     renderizarTabelaMotivos();
+    renderizarTabelaHabilidadesRav();
 
     if (!el("preconselhoPeriodoConsolidacao").value && obterPeriodos().length > 0) {
         const periodoAberto = obterPeriodos().find((item) => item.status === "ABERTO");
@@ -1803,8 +2356,13 @@ async function carregarContexto() {
         const periodoAberto = obterPeriodos().find((item) => item.status === "ABERTO");
         el("preconselhoPeriodoRelatorio").value = String(periodoAberto?.id || obterPeriodos()[0].id);
     }
+    if (!el("preconselhoPeriodoRav").value && obterPeriodos().length > 0) {
+        const periodoAberto = obterPeriodos().find((item) => item.status === "ABERTO");
+        el("preconselhoPeriodoRav").value = String(periodoAberto?.id || obterPeriodos()[0].id);
+    }
 
     renderizarRelatorio();
+    renderizarRav();
 }
 
 async function carregarPainelInicial() {
@@ -1817,6 +2375,7 @@ async function carregarPainelInicial() {
     }
     if (contextoAtual?.pode_relatorio) {
         tarefas.push(carregarRelatorio());
+        tarefas.push(carregarRav());
     }
     await Promise.all(tarefas);
 }
@@ -1966,6 +2525,11 @@ function registrarEventos() {
             fecharModalRegistroDocente();
         }
     });
+    document.addEventListener("click", (event) => {
+        if (!event.target.closest("#preconselhoRavDetalhesField")) {
+            ocultarSugestoesHabilidadesRav();
+        }
+    });
 
     el("preconselhoNivelAtencao").addEventListener("change", agendarPreviewDocente);
     el("preconselhoObservacaoProfessor").addEventListener("input", agendarPreviewDocente);
@@ -1973,6 +2537,30 @@ function registrarEventos() {
         if (!event.target.closest(".preconselho-motivo-checkbox")) {
             return;
         }
+        atualizarEstadoFormularioDocente();
+        agendarPreviewDocente();
+    });
+    el("preconselhoRavBuscaHabilidade").addEventListener("input", () => {
+        renderizarSugestoesHabilidadesRav(false);
+    });
+    el("preconselhoRavBuscaHabilidade").addEventListener("focus", () => {
+        renderizarSugestoesHabilidadesRav(true);
+    });
+    el("preconselhoRavBuscaHabilidade").addEventListener("keydown", (event) => {
+        if (event.key !== "Escape") {
+            return;
+        }
+        ocultarSugestoesHabilidadesRav();
+    });
+    el("preconselhoRavHabilidadesDocente").addEventListener("click", (event) => {
+        const botao = event.target.closest("button[data-action='remover-habilidade-rav']");
+        if (!botao) {
+            return;
+        }
+        const removerId = Number(botao.dataset.habilidadeId || 0);
+        const ids = obterHabilidadesRavSelecionadasDocente()
+            .filter((habilidadeId) => Number(habilidadeId) !== removerId);
+        aplicarSelecaoHabilidadesRavDocente(ids);
         atualizarEstadoFormularioDocente();
         agendarPreviewDocente();
     });
@@ -1986,7 +2574,12 @@ function registrarEventos() {
         });
     });
     el("preconselhoObservacaoPosPreConselho").addEventListener("input", agendarPreviewDocente);
-    el("preconselhoEstudanteEmRav").addEventListener("change", agendarPreviewDocente);
+    el("preconselhoEstudanteEmRav").addEventListener("change", () => {
+        atualizarVisibilidadeRavDocente();
+        atualizarEstadoFormularioDocente();
+        agendarPreviewDocente();
+    });
+    el("preconselhoRavAcoes").addEventListener("input", agendarPreviewDocente);
     el("preconselhoPosPreConselhoStatus").addEventListener("change", () => {
         atualizarEstadoFormularioDocente();
         agendarPreviewDocente();
@@ -2021,6 +2614,17 @@ function registrarEventos() {
         await carregarRelatorio();
     });
 
+    el("formRavPreconselho").addEventListener("submit", async (event) => {
+        event.preventDefault();
+        await carregarRav();
+    });
+    el("preconselhoPeriodoRav").addEventListener("change", async () => {
+        await carregarRav();
+    });
+    el("preconselhoTurmaRav").addEventListener("change", async () => {
+        await carregarRav();
+    });
+
     el("formPeriodoPreconselho").addEventListener("submit", salvarPeriodo);
     el("btnLimparPeriodoPreconselho").addEventListener("click", () => {
         limparMensagem("msgPreconselhoPeriodo");
@@ -2046,6 +2650,13 @@ function registrarEventos() {
         limparFormularioMotivo();
     });
 
+    el("formHabilidadeRavPreconselho").addEventListener("submit", salvarHabilidadeRav);
+    el("btnLimparHabilidadeRavPreconselho").addEventListener("click", () => {
+        limparMensagem("msgPreconselhoRavHabilidade");
+        limparFormularioHabilidadeRav();
+    });
+    el("formImportarHabilidadesRavPreconselho").addEventListener("submit", importarHabilidadesRavJson);
+
     el("tbodyMotivosPreconselho").addEventListener("click", async (event) => {
         const botaoEditar = event.target.closest("button[data-action='editar-motivo']");
         if (botaoEditar) {
@@ -2058,12 +2669,26 @@ function registrarEventos() {
             await alternarStatusMotivo(botaoStatus.dataset.motivoId, botaoStatus.dataset.ativo);
         }
     });
+
+    el("tbodyHabilidadesRavPreconselho").addEventListener("click", async (event) => {
+        const botaoEditar = event.target.closest("button[data-action='editar-habilidade-rav']");
+        if (botaoEditar) {
+            carregarHabilidadeRavNoFormulario(botaoEditar.dataset.habilidadeId);
+            return;
+        }
+
+        const botaoStatus = event.target.closest("button[data-action='status-habilidade-rav']");
+        if (botaoStatus) {
+            await alternarStatusHabilidadeRav(botaoStatus.dataset.habilidadeId, botaoStatus.dataset.ativo);
+        }
+    });
 }
 
 async function iniciarModulo() {
     registrarEventos();
     limparFormularioPeriodo();
     limparFormularioMotivo();
+    limparFormularioHabilidadeRav();
     try {
         await carregarUsuario();
         await carregarContexto();

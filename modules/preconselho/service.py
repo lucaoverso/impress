@@ -324,6 +324,32 @@ def list_active_valid_reasons(
     return motivos
 
 
+def list_active_valid_rav_skills(
+    habilidade_ids: list[int],
+    disciplina_id: int,
+    periodo_id: int | None = None,
+    turma_id: int | None = None,
+    *,
+    get_rav_skills_by_ids=repository.get_rav_skills_by_ids,
+) -> list[dict]:
+    habilidades = get_rav_skills_by_ids(habilidade_ids)
+    ids_recebidos = {int(valor) for valor in habilidade_ids or [] if int(valor) > 0}
+    ids_encontrados = {
+        int(item["id"])
+        for item in habilidades
+        if int(item.get("ativo") or 0) == 1
+        and int(item.get("disciplina_id") or 0) == int(disciplina_id)
+        and (periodo_id is None or int(item.get("periodo_id") or 0) == int(periodo_id))
+        and (
+            turma_id is None
+            or int(turma_id) in {int(valor) for valor in item.get("turma_ids") or []}
+        )
+    }
+    if ids_recebidos != ids_encontrados:
+        raise HTTPException(400, "Existe habilidade de RAV invÃ¡lida, inativa ou fora da disciplina.")
+    return habilidades
+
+
 def is_record_editable_for_user(usuario: dict, registro: dict) -> bool:
     if is_admin_user(usuario):
         return True
@@ -434,6 +460,51 @@ def list_preconselho_reasons(*, incluir_inativos: bool, usuario: dict) -> list[d
     return _list_preconselho_reasons(incluir_inativos=incluir_inativos, usuario=usuario)
 
 
+def list_preconselho_rav_skills(
+    *,
+    periodo_id: int | None,
+    disciplina_id: int | None,
+    turma_id: int | None,
+    incluir_inativos: bool,
+    usuario: dict,
+) -> list[dict]:
+    from .admin import list_preconselho_rav_skills as _list_preconselho_rav_skills
+
+    return _list_preconselho_rav_skills(
+        periodo_id=periodo_id,
+        disciplina_id=disciplina_id,
+        turma_id=turma_id,
+        incluir_inativos=incluir_inativos,
+        usuario=usuario,
+    )
+
+
+def create_preconselho_rav_skill(payload, usuario: dict) -> dict:
+    from .admin import create_preconselho_rav_skill as _create_preconselho_rav_skill
+
+    return _create_preconselho_rav_skill(payload, usuario)
+
+
+def update_preconselho_rav_skill(habilidade_id: int, payload, usuario: dict) -> dict:
+    from .admin import update_preconselho_rav_skill as _update_preconselho_rav_skill
+
+    return _update_preconselho_rav_skill(habilidade_id, payload, usuario)
+
+
+def update_preconselho_rav_skill_status(habilidade_id: int, payload, usuario: dict) -> dict:
+    from .admin import (
+        update_preconselho_rav_skill_status as _update_preconselho_rav_skill_status,
+    )
+
+    return _update_preconselho_rav_skill_status(habilidade_id, payload, usuario)
+
+
+def import_preconselho_rav_skills(payload, usuario: dict) -> dict:
+    from .admin import import_preconselho_rav_skills as _import_preconselho_rav_skills
+
+    return _import_preconselho_rav_skills(payload, usuario)
+
+
 def create_preconselho_reason(payload, usuario: dict) -> dict:
     from .admin import create_preconselho_reason as _create_preconselho_reason
 
@@ -503,6 +574,21 @@ def build_preconselho_report(
         build_report_item=build_report_item,
         format_natural_list=format_natural_list,
         attention_level_label=attention_level_label,
+    )
+
+
+def build_preconselho_rav_view(
+    *,
+    periodo_id: int,
+    turma_id: int | None,
+    usuario: dict,
+) -> dict:
+    from .reports import build_preconselho_rav_view as _build_preconselho_rav_view
+
+    return _build_preconselho_rav_view(
+        periodo_id=periodo_id,
+        turma_id=turma_id,
+        usuario=usuario,
     )
 
 

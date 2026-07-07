@@ -614,6 +614,112 @@
     background: #fbfdff;
 }
 
+.preconselho-rav-details {
+    display: grid;
+    gap: 12px;
+    padding: 12px 14px;
+    border: 1px solid #cfe1f0;
+    border-radius: 14px;
+    background: #f7fbff;
+}
+
+.preconselho-rav-details[hidden] {
+    display: none;
+}
+
+.preconselho-rav-search {
+    position: relative;
+}
+
+.preconselho-rav-suggestions {
+    position: absolute;
+    inset-inline: 0;
+    top: calc(100% + 4px);
+    z-index: 1250;
+    display: grid;
+    max-height: 220px;
+    overflow: auto;
+    border: 1px solid #cfe1f0;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 18px 34px rgba(15, 23, 42, 0.14);
+}
+
+.preconselho-rav-suggestions[hidden] {
+    display: none;
+}
+
+.preconselho-rav-suggestion,
+.preconselho-rav-suggestion-empty {
+    padding: 10px 12px;
+    border: 0;
+    border-bottom: 1px solid #e6edf5;
+    background: #ffffff;
+    color: #334155;
+    text-align: left;
+    font-size: 13px;
+}
+
+.preconselho-rav-suggestion:last-child,
+.preconselho-rav-suggestion-empty:last-child {
+    border-bottom: 0;
+}
+
+.preconselho-rav-suggestion:hover,
+.preconselho-rav-suggestion:focus-visible {
+    background: #effaf7;
+    color: #16314c;
+}
+
+.preconselho-rav-selected {
+    display: grid;
+    gap: 8px;
+}
+
+.preconselho-rav-skill-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid #dbe4ef;
+    border-radius: 12px;
+    background: #ffffff;
+}
+
+.preconselho-rav-skill-card span {
+    color: #334155;
+    font-size: 13px;
+}
+
+.preconselho-rav-skill-card button {
+    min-height: 32px;
+    padding: 0 10px;
+    border-radius: 10px;
+}
+
+.preconselho-rav-empty {
+    margin: 0;
+    padding: 10px 12px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    background: #ffffff;
+    color: #64748b;
+    font-size: 13px;
+}
+
+#preconselhoRavHabilidadeTurmas {
+    min-height: 116px;
+    padding: 8px;
+}
+
+#preconselhoRavImportJson {
+    min-height: 220px;
+    font-family: Consolas, "Courier New", monospace;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
 .preconselho-toggle-row {
     display: flex;
     align-items: center;

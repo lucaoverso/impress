@@ -417,6 +417,32 @@ def build_preconselho_report(
     }
 
 
+def build_preconselho_rav_view(
+    *,
+    periodo_id: int,
+    turma_id: int | None,
+    usuario: dict,
+) -> dict:
+    if not has_manager_access(usuario):
+        raise HTTPException(403, "Acesso negado.")
+    periodo = validate_period(periodo_id)
+    turma = validate_classroom(turma_id) if turma_id is not None else None
+    itens = repository.list_rav_by_classroom(
+        periodo_id=int(periodo["id"]),
+        turma_id=int(turma["id"]) if turma else None,
+    )
+    itens = enrich_editable_records(usuario, itens)
+    estudantes = {int(item.get("estudante_id") or 0) for item in itens}
+    estudantes.discard(0)
+    return {
+        "periodo_id": int(periodo["id"]),
+        "turma_id": int(turma["id"]) if turma else None,
+        "total_estudantes": len(estudantes),
+        "total_registros": len(itens),
+        "itens": itens,
+    }
+
+
 def repository_enrich_teachers_in_records(records: list[dict]) -> list[dict]:
     from .report_helpers import enrich_teachers_in_records
 

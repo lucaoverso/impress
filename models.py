@@ -240,6 +240,72 @@ class PreConselhoMotivoStatusIn(BaseModel):
     ativo: bool
 
 
+class PreConselhoRavHabilidadeOut(BaseModel):
+    id: int
+    periodo_id: int | None = None
+    periodo_nome: str = ""
+    disciplina_id: int
+    disciplina_nome: str = ""
+    codigo: str = ""
+    descricao: str
+    turma_ids: list[int] = Field(default_factory=list)
+    turmas: list[dict] = Field(default_factory=list)
+    ativo: int | bool = True
+    ordem: int = 0
+    criado_em: str = ""
+    atualizado_em: str = ""
+
+
+class PreConselhoRavHabilidadeCreateIn(BaseModel):
+    periodo_id: int
+    disciplina_id: int
+    codigo: str = ""
+    descricao: str
+    turma_ids: list[int] = Field(default_factory=list)
+    ordem: int = 0
+
+
+class PreConselhoRavHabilidadeUpdateIn(BaseModel):
+    periodo_id: int
+    disciplina_id: int
+    codigo: str = ""
+    descricao: str
+    turma_ids: list[int] = Field(default_factory=list)
+    ordem: int = 0
+
+
+class PreConselhoRavHabilidadeStatusIn(BaseModel):
+    ativo: bool
+
+
+class PreConselhoRavHabilidadeJsonItemIn(BaseModel):
+    codigo: str = ""
+    texto: str = ""
+    descricao: str = ""
+    disciplina_id: int | None = None
+    disciplina: str = ""
+    periodo_id: int | None = None
+    periodo: str = ""
+    turma_ids: list[int] = Field(default_factory=list)
+    turma: str = ""
+    turmas: list[str] = Field(default_factory=list)
+    ordem: int = 0
+
+
+class PreConselhoRavHabilidadeImportIn(BaseModel):
+    periodo_id: int | None = None
+    periodo: str = ""
+    habilidades: list[PreConselhoRavHabilidadeJsonItemIn] = Field(default_factory=list)
+
+
+class PreConselhoRavHabilidadeImportOut(BaseModel):
+    total_recebido: int = 0
+    criadas: int = 0
+    atualizadas: int = 0
+    ignoradas: int = 0
+    erros: list[str] = Field(default_factory=list)
+
+
 class PreConselhoTurmaOut(BaseModel):
     id: int
     nome: str
@@ -282,6 +348,7 @@ class PreConselhoContextoOut(BaseModel):
     turmas: list[PreConselhoTurmaOut] = Field(default_factory=list)
     disciplinas: list[PreConselhoDisciplinaOut] = Field(default_factory=list)
     motivos: list[PreConselhoMotivoOut] = Field(default_factory=list)
+    rav_habilidades: list[PreConselhoRavHabilidadeOut] = Field(default_factory=list)
     professores: list[PreConselhoProfessorOut] = Field(default_factory=list)
     niveis_atencao: list[dict] = Field(default_factory=list)
     motivos_pos_preconselho: dict[str, list[dict[str, str]]] = Field(default_factory=dict)
@@ -305,6 +372,9 @@ class PreConselhoEstudantePainelOut(BaseModel):
     pos_preconselho_motivos: list[str] = Field(default_factory=list)
     pos_preconselho_observacao: str = ""
     estudante_em_rav: bool = False
+    rav_habilidade_ids: list[int] = Field(default_factory=list)
+    rav_habilidades: list[PreConselhoRavHabilidadeOut] = Field(default_factory=list)
+    rav_acoes: str = ""
 
 
 class PreConselhoRegistroSaveIn(BaseModel):
@@ -320,6 +390,8 @@ class PreConselhoRegistroSaveIn(BaseModel):
     pos_preconselho_motivo_ids: list[str] = Field(default_factory=list)
     pos_preconselho_observacao: str = ""
     estudante_em_rav: bool = False
+    rav_habilidade_ids: list[int] = Field(default_factory=list)
+    rav_acoes: str = ""
     professor_id: int | None = None
 
 
@@ -328,11 +400,16 @@ class PreConselhoTextoPreviewIn(BaseModel):
     observacao_professor: str = ""
     nivel_atencao: str | None = None
     estudante_nome: str = ""
+    periodo_id: int | None = None
+    turma_id: int | None = None
+    disciplina_id: int | None = None
     disciplina_nome: str = ""
     pos_preconselho_recuperado: bool | None = None
     pos_preconselho_motivo_ids: list[str] = Field(default_factory=list)
     pos_preconselho_observacao: str = ""
     estudante_em_rav: bool = False
+    rav_habilidade_ids: list[int] = Field(default_factory=list)
+    rav_acoes: str = ""
 
 
 class PreConselhoRegistroOut(BaseModel):
@@ -361,6 +438,9 @@ class PreConselhoRegistroOut(BaseModel):
     pos_preconselho_motivos: list[str] = Field(default_factory=list)
     pos_preconselho_observacao: str = ""
     estudante_em_rav: bool = False
+    rav_habilidade_ids: list[int] = Field(default_factory=list)
+    rav_habilidades: list[PreConselhoRavHabilidadeOut] = Field(default_factory=list)
+    rav_acoes: str = ""
     editavel: bool = False
 
 
@@ -443,6 +523,14 @@ class PreConselhoRelatorioOut(BaseModel):
     pontos_criticos: list[str] = Field(default_factory=list)
     estudantes_destaque: list[PreConselhoRelatorioItemOut] = Field(default_factory=list)
     turmas: list[PreConselhoRelatorioTurmaOut] = Field(default_factory=list)
+
+
+class PreConselhoRavTurmaOut(BaseModel):
+    periodo_id: int | None = None
+    turma_id: int | None = None
+    total_estudantes: int = 0
+    total_registros: int = 0
+    itens: list[PreConselhoRegistroOut] = Field(default_factory=list)
 
 
 class ProfessorCreateIn(BaseModel):

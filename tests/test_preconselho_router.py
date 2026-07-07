@@ -198,6 +198,17 @@ class PreConselhoRouterTest(unittest.TestCase):
 
             motivos = database.listar_motivos_pre_conselho()
             motivo_ids = [int(motivos[0]["id"]), int(motivos[1]["id"]), int(motivos[4]["id"])]
+            habilidade = preconselho_router.criar_habilidade_rav_preconselho_api(
+                payload=models.PreConselhoRavHabilidadeCreateIn(
+                    periodo_id=periodo_id,
+                    disciplina_id=disciplina_id,
+                    codigo="MS.EF05MA01.s.01",
+                    descricao="Resolver problemas com numeros racionais",
+                    turma_ids=[turma_id],
+                    ordem=10,
+                ),
+                usuario=self._usuario_admin(),
+            )
 
             payload = models.PreConselhoRegistroSaveIn(
                 periodo_id=periodo_id,
@@ -211,6 +222,8 @@ class PreConselhoRouterTest(unittest.TestCase):
                 pos_preconselho_recuperado=False,
                 pos_preconselho_observacao="segue precisando de retomada individual",
                 estudante_em_rav=True,
+                rav_habilidade_ids=[int(habilidade["id"])],
+                rav_acoes="retomada guiada com lista de exercicios e atendimento em grupo",
             )
 
             salvo = preconselho_router.salvar_registro_preconselho_api(
@@ -228,6 +241,13 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertIn("em razão de", salvo["texto_gerado"])
             self.assertFalse(salvo["pos_preconselho_recuperado"])
             self.assertTrue(salvo["estudante_em_rav"])
+            self.assertEqual(salvo["rav_habilidade_ids"], [int(habilidade["id"])])
+            self.assertEqual(
+                salvo["rav_acoes"],
+                "retomada guiada com lista de exercicios e atendimento em grupo",
+            )
+            self.assertIn("Resolver problemas com numeros racionais", salvo["texto_gerado"])
+            self.assertIn("retomada guiada", salvo["texto_gerado"])
             self.assertIn("Recuperar para Avançar (RAV)", salvo["texto_gerado"])
             self.assertIn("manteve baixo rendimento", salvo["texto_gerado"].lower())
 
@@ -260,6 +280,21 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertEqual(listagem["itens"][0]["estudante_nome"], "Ana")
             self.assertFalse(listagem["itens"][0]["pos_preconselho_recuperado"])
             self.assertTrue(listagem["itens"][0]["estudante_em_rav"])
+            self.assertEqual(listagem["itens"][0]["rav_habilidade_ids"], [int(habilidade["id"])])
+
+            rav_turma = preconselho_router.visualizar_rav_turma_preconselho_api(
+                periodo_id=periodo_id,
+                turma_id=turma_id,
+                usuario=self._usuario_coord(coordenador_id, "Coordenadora"),
+            )
+
+            self.assertEqual(rav_turma["total_estudantes"], 1)
+            self.assertEqual(rav_turma["total_registros"], 1)
+            self.assertEqual(rav_turma["itens"][0]["estudante_nome"], "Ana")
+            self.assertEqual(
+                rav_turma["itens"][0]["rav_habilidades"][0]["descricao"],
+                "Resolver problemas com numeros racionais",
+            )
 
             consolidado = preconselho_router.gerar_consolidado_preconselho_api(
                 periodo_id=periodo_id,

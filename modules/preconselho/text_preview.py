@@ -2,7 +2,12 @@
 
 from fastapi import HTTPException
 
-from .service import list_active_valid_reasons, optional_text, require_preconselho_access
+from .service import (
+    list_active_valid_rav_skills,
+    list_active_valid_reasons,
+    optional_text,
+    require_preconselho_access,
+)
 from services.preconselho_service import (
     gerar_texto_pre_conselho_individual,
     validar_motivos_pos_pre_conselho,
@@ -18,6 +23,15 @@ def preview_preconselho_text(payload, usuario: dict) -> dict:
         "Observacao do pos pre-conselho",
         max_len=1000,
     )
+    rav_acoes = optional_text(payload.rav_acoes, "Acoes de RAV", max_len=1000) if payload.estudante_em_rav else ""
+    rav_habilidades = []
+    if payload.estudante_em_rav and payload.disciplina_id:
+        rav_habilidades = list_active_valid_rav_skills(
+            payload.rav_habilidade_ids,
+            int(payload.disciplina_id),
+            int(payload.periodo_id) if payload.periodo_id else None,
+            int(payload.turma_id) if payload.turma_id else None,
+        )
     try:
         (
             pos_preconselho_recuperado,
@@ -29,7 +43,7 @@ def preview_preconselho_text(payload, usuario: dict) -> dict:
             observacao_pos_preconselho,
         )
         nivel_atencao = validar_nivel_atencao_pre_conselho(payload.nivel_atencao)
-        return gerar_texto_pre_conselho_individual(
+        texto = gerar_texto_pre_conselho_individual(
             motivos=motivos,
             observacao_professor=optional_text(
                 payload.observacao_professor,
@@ -44,5 +58,13 @@ def preview_preconselho_text(payload, usuario: dict) -> dict:
             pos_preconselho_observacao=observacao_pos_preconselho,
             estudante_em_rav=bool(payload.estudante_em_rav),
         )
+        if payload.estudante_em_rav and rav_habilidades:
+            texto["texto"] = (
+                f"{texto['texto']} Habilidades a recuperar: "
+                f"{'; '.join(str(item['descricao']) for item in rav_habilidades)}."
+            )
+        if payload.estudante_em_rav and rav_acoes:
+            texto["texto"] = f"{texto['texto']} Acoes previstas: {rav_acoes}."
+        return texto
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc

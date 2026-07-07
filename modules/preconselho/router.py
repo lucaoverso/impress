@@ -15,6 +15,13 @@ from models import (
     PreConselhoPeriodoOut,
     PreConselhoPeriodoStatusIn,
     PreConselhoPeriodoUpdateIn,
+    PreConselhoRavHabilidadeCreateIn,
+    PreConselhoRavHabilidadeImportIn,
+    PreConselhoRavHabilidadeImportOut,
+    PreConselhoRavHabilidadeOut,
+    PreConselhoRavHabilidadeStatusIn,
+    PreConselhoRavHabilidadeUpdateIn,
+    PreConselhoRavTurmaOut,
     PreConselhoRegistroSaveIn,
     PreConselhoRegistrosOut,
     PreConselhoRelatorioOut,
@@ -26,20 +33,26 @@ from models import (
 from .service import (
     build_preconselho_context,
     build_preconselho_consolidated,
+    build_preconselho_rav_view,
     build_preconselho_report,
     create_preconselho_period,
+    create_preconselho_rav_skill,
     create_preconselho_reason,
     delete_preconselho_record,
+    import_preconselho_rav_skills,
     list_my_classroom_disciplines,
     list_panel_students,
     list_preconselho_attention_levels,
     list_preconselho_periods,
+    list_preconselho_rav_skills,
     list_preconselho_reasons,
     list_preconselho_records,
     preview_preconselho_text,
     save_preconselho_record,
     update_preconselho_period,
     update_preconselho_period_status,
+    update_preconselho_rav_skill,
+    update_preconselho_rav_skill_status,
     update_preconselho_reason,
     update_preconselho_reason_status,
 )
@@ -150,6 +163,19 @@ def gerar_relatorio_preconselho_api(
     return build_preconselho_report(periodo_id=periodo_id, usuario=usuario)
 
 
+@router.get("/preconselho/rav/turma", response_model=PreConselhoRavTurmaOut)
+def visualizar_rav_turma_preconselho_api(
+    periodo_id: int = Query(...),
+    turma_id: int | None = Query(default=None),
+    usuario=Depends(get_usuario_logado),
+):
+    return build_preconselho_rav_view(
+        periodo_id=periodo_id,
+        turma_id=turma_id,
+        usuario=usuario,
+    )
+
+
 @router.get("/preconselho/periodos", response_model=list[PreConselhoPeriodoOut])
 def listar_periodos_preconselho_api(usuario=Depends(get_usuario_logado)):
     return list_preconselho_periods(usuario)
@@ -219,6 +245,63 @@ def atualizar_status_motivo_preconselho_api(
     usuario=Depends(get_usuario_logado),
 ):
     return update_preconselho_reason_status(motivo_id, payload, usuario)
+
+
+@router.get("/preconselho/habilidades-rav", response_model=list[PreConselhoRavHabilidadeOut])
+def listar_habilidades_rav_preconselho_api(
+    periodo_id: int | None = Query(default=None),
+    disciplina_id: int | None = Query(default=None),
+    turma_id: int | None = Query(default=None),
+    incluir_inativos: bool = Query(default=False),
+    usuario=Depends(get_usuario_logado),
+):
+    return list_preconselho_rav_skills(
+        periodo_id=periodo_id,
+        disciplina_id=disciplina_id,
+        turma_id=turma_id,
+        incluir_inativos=incluir_inativos,
+        usuario=usuario,
+    )
+
+
+@router.post("/preconselho/habilidades-rav", response_model=PreConselhoRavHabilidadeOut)
+def criar_habilidade_rav_preconselho_api(
+    payload: PreConselhoRavHabilidadeCreateIn,
+    usuario=Depends(get_usuario_logado),
+):
+    return create_preconselho_rav_skill(payload, usuario)
+
+
+@router.post(
+    "/preconselho/habilidades-rav/importar-json",
+    response_model=PreConselhoRavHabilidadeImportOut,
+)
+def importar_habilidades_rav_preconselho_api(
+    payload: PreConselhoRavHabilidadeImportIn,
+    usuario=Depends(get_usuario_logado),
+):
+    return import_preconselho_rav_skills(payload, usuario)
+
+
+@router.put("/preconselho/habilidades-rav/{habilidade_id}", response_model=PreConselhoRavHabilidadeOut)
+def atualizar_habilidade_rav_preconselho_api(
+    habilidade_id: int,
+    payload: PreConselhoRavHabilidadeUpdateIn,
+    usuario=Depends(get_usuario_logado),
+):
+    return update_preconselho_rav_skill(habilidade_id, payload, usuario)
+
+
+@router.put(
+    "/preconselho/habilidades-rav/{habilidade_id}/status",
+    response_model=PreConselhoRavHabilidadeOut,
+)
+def atualizar_status_habilidade_rav_preconselho_api(
+    habilidade_id: int,
+    payload: PreConselhoRavHabilidadeStatusIn,
+    usuario=Depends(get_usuario_logado),
+):
+    return update_preconselho_rav_skill_status(habilidade_id, payload, usuario)
 
 
 @router.get("/preconselho/niveis-atencao")

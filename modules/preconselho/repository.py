@@ -13,22 +13,30 @@ from db.docencia import (
 )
 from db.ocorrencias import buscar_estudante_por_id, listar_estudantes
 from db.preconselho import (
+    atualizar_habilidade_rav_pre_conselho_dados,
     atualizar_motivo_pre_conselho_dados,
     atualizar_periodo_pre_conselho_dados,
+    atualizar_status_habilidade_rav_pre_conselho,
     atualizar_status_motivo_pre_conselho,
     atualizar_status_periodo_pre_conselho,
+    buscar_habilidade_rav_pre_conselho_por_id,
+    buscar_habilidade_rav_pre_conselho_por_chave,
+    buscar_habilidades_rav_pre_conselho_por_ids,
     buscar_motivo_pre_conselho_por_id,
     buscar_motivos_pre_conselho_por_ids,
     buscar_periodo_pre_conselho_por_id,
     buscar_registro_pre_conselho_por_id,
     contar_registros_pre_conselho_por_professor_periodo,
+    criar_habilidade_rav_pre_conselho,
     criar_motivo_pre_conselho,
     criar_ou_atualizar_registro_pre_conselho,
     criar_periodo_pre_conselho,
     excluir_registro_pre_conselho,
     listar_estudantes_pre_conselho_painel,
+    listar_habilidades_rav_pre_conselho,
     listar_motivos_pre_conselho,
     listar_periodos_pre_conselho,
+    listar_rav_pre_conselho_por_turma,
     listar_registros_pre_conselho,
 )
 from db.usuarios import (
@@ -104,12 +112,20 @@ def update_reason_data(*args, **kwargs):
     return atualizar_motivo_pre_conselho_dados(*args, **kwargs)
 
 
+def update_rav_skill_data(*args, **kwargs):
+    return atualizar_habilidade_rav_pre_conselho_dados(*args, **kwargs)
+
+
 def update_period_data(*args, **kwargs):
     return atualizar_periodo_pre_conselho_dados(*args, **kwargs)
 
 
 def update_reason_status(motivo_id: int, ativo: bool):
     return atualizar_status_motivo_pre_conselho(motivo_id, ativo)
+
+
+def update_rav_skill_status(habilidade_id: int, ativo: bool):
+    return atualizar_status_habilidade_rav_pre_conselho(habilidade_id, ativo)
 
 
 def update_period_status(periodo_id: int, status: str):
@@ -120,8 +136,20 @@ def get_reason(motivo_id: int):
     return buscar_motivo_pre_conselho_por_id(motivo_id)
 
 
+def get_rav_skill(habilidade_id: int):
+    return buscar_habilidade_rav_pre_conselho_por_id(habilidade_id)
+
+
+def get_rav_skill_by_key(*args, **kwargs):
+    return buscar_habilidade_rav_pre_conselho_por_chave(*args, **kwargs)
+
+
 def get_reasons_by_ids(motivo_ids: list[int] | tuple[int, ...]):
     return buscar_motivos_pre_conselho_por_ids(motivo_ids)
+
+
+def get_rav_skills_by_ids(habilidade_ids: list[int] | tuple[int, ...]):
+    return buscar_habilidades_rav_pre_conselho_por_ids(habilidade_ids)
 
 
 def get_period(periodo_id: int):
@@ -138,6 +166,10 @@ def count_records_by_teacher_and_period(*, professor_id: int, periodo_id: int):
 
 def create_reason(*args, **kwargs):
     return criar_motivo_pre_conselho(*args, **kwargs)
+
+
+def create_rav_skill(*args, **kwargs):
+    return criar_habilidade_rav_pre_conselho(*args, **kwargs)
 
 
 def save_record(*args, **kwargs):
@@ -160,12 +192,31 @@ def list_reasons(*, incluir_inativos: bool = False):
     return listar_motivos_pre_conselho(incluir_inativos=incluir_inativos)
 
 
+def list_rav_skills(
+    *,
+    periodo_id: int | None = None,
+    disciplina_id: int | None = None,
+    turma_id: int | None = None,
+    incluir_inativos: bool = False,
+):
+    return listar_habilidades_rav_pre_conselho(
+        periodo_id=periodo_id,
+        disciplina_id=disciplina_id,
+        turma_id=turma_id,
+        incluir_inativos=incluir_inativos,
+    )
+
+
 def list_periods():
     return listar_periodos_pre_conselho()
 
 
 def list_records(*args, **kwargs):
     return listar_registros_pre_conselho(*args, **kwargs)
+
+
+def list_rav_by_classroom(*args, **kwargs):
+    return listar_rav_pre_conselho_por_turma(*args, **kwargs)
 
 
 def get_user(usuario_id: int):

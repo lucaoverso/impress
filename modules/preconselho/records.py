@@ -9,6 +9,7 @@ from .service import (
     is_admin_user,
     is_record_editable_for_user,
     is_teacher_user,
+    list_active_valid_rav_skills,
     list_active_valid_reasons,
     optional_text,
     require_preconselho_access,
@@ -76,6 +77,21 @@ def save_preconselho_record(payload, usuario: dict) -> dict:
         max_len=1000,
     )
     estudante_em_rav = bool(payload.estudante_em_rav) if bool(periodo.get("tem_rav")) else False
+    rav_acoes = (
+        optional_text(payload.rav_acoes, "Acoes de RAV", max_len=1000)
+        if estudante_em_rav
+        else ""
+    )
+    rav_habilidades = (
+        list_active_valid_rav_skills(
+            payload.rav_habilidade_ids,
+            int(disciplina["id"]),
+            int(periodo["id"]),
+            int(turma["id"]),
+        )
+        if estudante_em_rav
+        else []
+    )
     try:
         nivel_atencao = validar_nivel_atencao_pre_conselho(payload.nivel_atencao)
         (
@@ -98,6 +114,13 @@ def save_preconselho_record(payload, usuario: dict) -> dict:
             pos_preconselho_observacao=observacao_pos_preconselho,
             estudante_em_rav=estudante_em_rav,
         )
+        if estudante_em_rav and rav_habilidades:
+            texto["texto"] = (
+                f"{texto['texto']} Habilidades a recuperar: "
+                f"{'; '.join(str(item['descricao']) for item in rav_habilidades)}."
+            )
+        if estudante_em_rav and rav_acoes:
+            texto["texto"] = f"{texto['texto']} Acoes previstas: {rav_acoes}."
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 
@@ -118,6 +141,8 @@ def save_preconselho_record(payload, usuario: dict) -> dict:
         pos_preconselho_motivo_ids=pos_preconselho_motivo_ids,
         pos_preconselho_observacao=observacao_pos_preconselho,
         estudante_em_rav=estudante_em_rav,
+        rav_habilidade_ids=[int(item["id"]) for item in rav_habilidades],
+        rav_acoes=rav_acoes,
     )
 
     registro = repository.get_record(registro_id)

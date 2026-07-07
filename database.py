@@ -864,6 +864,7 @@ def criar_tabelas():
             pos_preconselho_motivos TEXT NOT NULL DEFAULT '[]',
             pos_preconselho_observacao TEXT NOT NULL DEFAULT '',
             estudante_em_rav INTEGER NOT NULL DEFAULT 0,
+            rav_acoes TEXT NOT NULL DEFAULT '',
             texto_gerado TEXT NOT NULL DEFAULT '',
             criado_em TEXT NOT NULL DEFAULT (datetime('now')),
             atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
@@ -885,6 +886,46 @@ def criar_tabelas():
             FOREIGN KEY(registro_id) REFERENCES pre_conselho_registros(id) ON DELETE CASCADE,
             FOREIGN KEY(motivo_id) REFERENCES pre_conselho_motivos(id),
             UNIQUE(registro_id, motivo_id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pre_conselho_habilidades_rav (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            periodo_id INTEGER,
+            disciplina_id INTEGER NOT NULL,
+            codigo TEXT NOT NULL DEFAULT '',
+            descricao TEXT NOT NULL,
+            ativo INTEGER NOT NULL DEFAULT 1,
+            ordem INTEGER NOT NULL DEFAULT 0,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(periodo_id) REFERENCES pre_conselho_periodos(id),
+            FOREIGN KEY(disciplina_id) REFERENCES disciplinas(id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pre_conselho_habilidade_rav_turmas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            habilidade_id INTEGER NOT NULL,
+            turma_id INTEGER NOT NULL,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(habilidade_id) REFERENCES pre_conselho_habilidades_rav(id) ON DELETE CASCADE,
+            FOREIGN KEY(turma_id) REFERENCES turmas(id),
+            UNIQUE(habilidade_id, turma_id)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pre_conselho_registro_habilidades_rav (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            registro_id INTEGER NOT NULL,
+            habilidade_id INTEGER NOT NULL,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(registro_id) REFERENCES pre_conselho_registros(id) ON DELETE CASCADE,
+            FOREIGN KEY(habilidade_id) REFERENCES pre_conselho_habilidades_rav(id),
+            UNIQUE(registro_id, habilidade_id)
         )
     """)
 
@@ -1013,6 +1054,7 @@ def _aplicar_compatibilidade_schema_legada(cursor):
     _garantir_tabela_apc_preview_jobs(cursor)
     _garantir_colunas_pre_conselho_periodos(cursor)
     _garantir_colunas_pre_conselho_motivos(cursor)
+    _garantir_colunas_pre_conselho_habilidades_rav(cursor)
     _garantir_colunas_pre_conselho_registros(cursor)
     _garantir_colunas_pre_conselho_registro_motivos(cursor)
     _garantir_colunas_ocorrencias(cursor)
@@ -2274,6 +2316,74 @@ def _garantir_colunas_pre_conselho_motivos(cursor):
     """)
 
 
+def _garantir_colunas_pre_conselho_habilidades_rav(cursor):
+    cursor.execute("""
+        SELECT name
+        FROM sqlite_master
+        WHERE type = 'table'
+          AND name = 'pre_conselho_habilidades_rav'
+    """)
+    if not cursor.fetchone():
+        return
+
+    cursor.execute("PRAGMA table_info(pre_conselho_habilidades_rav)")
+    colunas = {row["name"] for row in cursor.fetchall()}
+
+    if "periodo_id" not in colunas:
+        cursor.execute("ALTER TABLE pre_conselho_habilidades_rav ADD COLUMN periodo_id INTEGER")
+    if "codigo" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_habilidades_rav ADD COLUMN codigo TEXT NOT NULL DEFAULT ''"
+        )
+    if "disciplina_id" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_habilidades_rav ADD COLUMN disciplina_id INTEGER NOT NULL DEFAULT 0"
+        )
+    if "descricao" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_habilidades_rav ADD COLUMN descricao TEXT NOT NULL DEFAULT ''"
+        )
+    if "ativo" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_habilidades_rav ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1"
+        )
+    if "ordem" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_habilidades_rav ADD COLUMN ordem INTEGER NOT NULL DEFAULT 0"
+        )
+    if "criado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_habilidades_rav ADD COLUMN criado_em TEXT NOT NULL DEFAULT (datetime('now'))"
+        )
+    if "atualizado_em" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_habilidades_rav ADD COLUMN atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))"
+        )
+
+    cursor.execute("""
+        UPDATE pre_conselho_habilidades_rav
+        SET codigo = ''
+        WHERE codigo IS NULL
+    """)
+    cursor.execute("""
+        UPDATE pre_conselho_habilidades_rav
+        SET ativo = 1
+        WHERE ativo IS NULL
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pre_conselho_habilidade_rav_turmas (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            habilidade_id INTEGER NOT NULL,
+            turma_id INTEGER NOT NULL,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(habilidade_id) REFERENCES pre_conselho_habilidades_rav(id) ON DELETE CASCADE,
+            FOREIGN KEY(turma_id) REFERENCES turmas(id),
+            UNIQUE(habilidade_id, turma_id)
+        )
+    """)
+
+
 def _garantir_colunas_pre_conselho_registros(cursor):
     cursor.execute("""
         SELECT name
@@ -2347,6 +2457,10 @@ def _garantir_colunas_pre_conselho_registros(cursor):
         cursor.execute(
             "ALTER TABLE pre_conselho_registros ADD COLUMN pos_preconselho_observacao TEXT NOT NULL DEFAULT ''"
         )
+    if "rav_acoes" not in colunas:
+        cursor.execute(
+            "ALTER TABLE pre_conselho_registros ADD COLUMN rav_acoes TEXT NOT NULL DEFAULT ''"
+        )
     if "texto_gerado" not in colunas:
         cursor.execute(
             "ALTER TABLE pre_conselho_registros ADD COLUMN texto_gerado TEXT NOT NULL DEFAULT ''"
@@ -2376,6 +2490,11 @@ def _garantir_colunas_pre_conselho_registros(cursor):
         UPDATE pre_conselho_registros
         SET pos_preconselho_observacao = ''
         WHERE pos_preconselho_observacao IS NULL
+    """)
+    cursor.execute("""
+        UPDATE pre_conselho_registros
+        SET rav_acoes = ''
+        WHERE rav_acoes IS NULL
     """)
     cursor.execute("""
         UPDATE pre_conselho_registros
@@ -11602,6 +11721,42 @@ def _sincronizar_motivos_registro_pre_conselho(cursor, registro_id: int, motivo_
         )
 
 
+def _sincronizar_habilidades_rav_registro_pre_conselho(
+    cursor,
+    registro_id: int,
+    habilidade_ids: list[int],
+):
+    ids_validos = []
+    for habilidade_id in habilidade_ids or []:
+        try:
+            valor = int(habilidade_id)
+        except (TypeError, ValueError):
+            continue
+        if valor > 0 and valor not in ids_validos:
+            ids_validos.append(valor)
+
+    cursor.execute(
+        """
+        DELETE FROM pre_conselho_registro_habilidades_rav
+        WHERE registro_id = ?
+    """,
+        (int(registro_id),),
+    )
+
+    for habilidade_id in ids_validos:
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO pre_conselho_registro_habilidades_rav (
+                registro_id,
+                habilidade_id,
+                criado_em
+            )
+            VALUES (?, ?, datetime('now'))
+        """,
+            (int(registro_id), habilidade_id),
+        )
+
+
 def _carregar_motivos_pre_conselho_por_registro_ids(
     cursor, registro_ids: list[int]
 ) -> dict[int, list[dict]]:
@@ -11646,6 +11801,156 @@ def _carregar_motivos_pre_conselho_por_registro_ids(
     return mapa
 
 
+def _sincronizar_turmas_habilidade_rav_pre_conselho(
+    cursor,
+    habilidade_id: int,
+    turma_ids: list[int] | tuple[int, ...],
+) -> None:
+    ids_validos = []
+    for turma_id in turma_ids or []:
+        try:
+            valor = int(turma_id)
+        except (TypeError, ValueError):
+            continue
+        if valor > 0 and valor not in ids_validos:
+            ids_validos.append(valor)
+
+    cursor.execute(
+        "DELETE FROM pre_conselho_habilidade_rav_turmas WHERE habilidade_id = ?",
+        (int(habilidade_id),),
+    )
+    for turma_id in ids_validos:
+        cursor.execute(
+            """
+            INSERT OR IGNORE INTO pre_conselho_habilidade_rav_turmas (
+                habilidade_id,
+                turma_id,
+                criado_em
+            )
+            VALUES (?, ?, datetime('now'))
+        """,
+            (int(habilidade_id), turma_id),
+        )
+
+
+def _carregar_turmas_habilidades_rav(cursor, habilidade_ids: list[int]) -> dict[int, list[dict]]:
+    ids_validos = []
+    for habilidade_id in habilidade_ids or []:
+        try:
+            valor = int(habilidade_id)
+        except (TypeError, ValueError):
+            continue
+        if valor > 0 and valor not in ids_validos:
+            ids_validos.append(valor)
+
+    if not ids_validos:
+        return {}
+
+    placeholders = ",".join("?" for _ in ids_validos)
+    cursor.execute(
+        f"""
+        SELECT
+            ht.habilidade_id,
+            t.id,
+            COALESCE(t.nome, '') AS nome,
+            COALESCE(t.turno, '') AS turno
+        FROM pre_conselho_habilidade_rav_turmas ht
+        INNER JOIN turmas t ON t.id = ht.turma_id
+        WHERE ht.habilidade_id IN ({placeholders})
+        ORDER BY t.nome COLLATE NOCASE ASC, t.id ASC
+    """,
+        ids_validos,
+    )
+
+    mapa = {habilidade_id: [] for habilidade_id in ids_validos}
+    for row in cursor.fetchall():
+        item = dict(row)
+        habilidade_id = int(item.pop("habilidade_id"))
+        mapa.setdefault(habilidade_id, []).append(
+            {
+                "id": int(item.get("id") or 0),
+                "nome": item.get("nome", "") or "",
+                "turno": item.get("turno", "") or "",
+            }
+        )
+    return mapa
+
+
+def _normalizar_linha_habilidade_rav(
+    item: dict,
+    turmas_map: dict[int, list[dict]] | None = None,
+) -> dict:
+    habilidade_id = int(item.get("id") or 0)
+    turmas = list(turmas_map.get(habilidade_id, [])) if turmas_map else []
+    return {
+        "id": habilidade_id,
+        "periodo_id": int(item.get("periodo_id") or 0) or None,
+        "periodo_nome": item.get("periodo_nome", "") or "",
+        "disciplina_id": int(item.get("disciplina_id") or 0),
+        "disciplina_nome": item.get("disciplina_nome", "") or "",
+        "codigo": item.get("codigo", "") or "",
+        "descricao": item.get("descricao", "") or "",
+        "turma_ids": [int(turma["id"]) for turma in turmas],
+        "turmas": turmas,
+        "ativo": int(item.get("ativo") or 0),
+        "ordem": int(item.get("ordem") or 0),
+        "criado_em": item.get("criado_em", "") or "",
+        "atualizado_em": item.get("atualizado_em", "") or "",
+    }
+
+
+def _carregar_habilidades_rav_por_registro_ids(cursor, registro_ids: list[int]) -> dict[int, list[dict]]:
+    ids_validos = []
+    for registro_id in registro_ids or []:
+        try:
+            valor = int(registro_id)
+        except (TypeError, ValueError):
+            continue
+        if valor > 0 and valor not in ids_validos:
+            ids_validos.append(valor)
+
+    if not ids_validos:
+        return {}
+
+    placeholders = ",".join("?" for _ in ids_validos)
+    cursor.execute(
+        f"""
+        SELECT
+            rh.registro_id,
+            h.id,
+            h.periodo_id,
+            COALESCE(p.nome, '') AS periodo_nome,
+            h.disciplina_id,
+            COALESCE(d.nome, '') AS disciplina_nome,
+            h.codigo,
+            h.descricao,
+            h.ativo,
+            h.ordem,
+            h.criado_em,
+            h.atualizado_em
+        FROM pre_conselho_registro_habilidades_rav rh
+        INNER JOIN pre_conselho_habilidades_rav h ON h.id = rh.habilidade_id
+        LEFT JOIN pre_conselho_periodos p ON p.id = h.periodo_id
+        LEFT JOIN disciplinas d ON d.id = h.disciplina_id
+        WHERE rh.registro_id IN ({placeholders})
+        ORDER BY h.ordem ASC, h.descricao COLLATE NOCASE ASC, h.id ASC
+    """,
+        ids_validos,
+    )
+
+    rows = cursor.fetchall()
+    turmas_map = _carregar_turmas_habilidades_rav(
+        cursor,
+        [int(row["id"]) for row in rows],
+    )
+    mapa = {registro_id: [] for registro_id in ids_validos}
+    for row in rows:
+        item = dict(row)
+        registro_id = int(item.pop("registro_id"))
+        mapa.setdefault(registro_id, []).append(_normalizar_linha_habilidade_rav(item, turmas_map))
+    return mapa
+
+
 def _normalizar_campos_pos_preconselho(item: dict) -> dict:
     motivo_ids = _desserializar_lista_texto(item.get("pos_preconselho_motivos"))
     observacao = item.get("pos_preconselho_observacao", "") or ""
@@ -11663,10 +11968,13 @@ def _normalizar_campos_pos_preconselho(item: dict) -> dict:
 
 
 def _normalizar_linha_registro_pre_conselho(
-    item: dict, motivos_map: dict[int, list[dict]] | None = None
+    item: dict,
+    motivos_map: dict[int, list[dict]] | None = None,
+    habilidades_map: dict[int, list[dict]] | None = None,
 ) -> dict:
     registro_id = int(item["id"])
     motivos = list(motivos_map.get(registro_id, [])) if motivos_map else []
+    habilidades = list(habilidades_map.get(registro_id, [])) if habilidades_map else []
     pos_preconselho = _normalizar_campos_pos_preconselho(item)
     return {
         "id": registro_id,
@@ -11692,6 +12000,9 @@ def _normalizar_linha_registro_pre_conselho(
         "periodo_status": item.get("periodo_status", "") or "",
         "periodo_tem_rav": bool(int(item.get("periodo_tem_rav") or 0)),
         "estudante_em_rav": bool(int(item.get("estudante_em_rav") or 0)),
+        "rav_habilidade_ids": [int(habilidade["id"]) for habilidade in habilidades],
+        "rav_habilidades": habilidades,
+        "rav_acoes": item.get("rav_acoes", "") or "",
         **pos_preconselho,
     }
 
@@ -11714,6 +12025,8 @@ def criar_ou_atualizar_registro_pre_conselho(
     pos_preconselho_motivo_ids: list[str] | None = None,
     pos_preconselho_observacao: str = "",
     estudante_em_rav: bool = False,
+    rav_habilidade_ids: list[int] | None = None,
+    rav_acoes: str = "",
 ):
     conn = get_connection()
     cursor = conn.cursor()
@@ -11736,6 +12049,7 @@ def criar_ou_atualizar_registro_pre_conselho(
     pos_preconselho_motivos_json = _serializar_lista_texto(pos_preconselho_motivo_ids)
     pos_preconselho_observacao_limpa = _normalizar_nome_catalogo(pos_preconselho_observacao)
     estudante_em_rav_valor = int(bool(estudante_em_rav))
+    rav_acoes_limpo = _normalizar_nome_catalogo(rav_acoes) if estudante_em_rav_valor else ""
     texto_gerado_limpo = str(texto_gerado or "").strip()
 
     motivo_ids_validos = []
@@ -11753,6 +12067,15 @@ def criar_ou_atualizar_registro_pre_conselho(
             for motivo in buscar_motivos_pre_conselho_por_ids(motivo_ids_validos)
         ]
     )
+    rav_habilidade_ids_validos = []
+    if estudante_em_rav_valor:
+        for habilidade_id in rav_habilidade_ids or []:
+            try:
+                valor = int(habilidade_id)
+            except (TypeError, ValueError):
+                continue
+            if valor > 0 and valor not in rav_habilidade_ids_validos:
+                rav_habilidade_ids_validos.append(valor)
 
     registro_id = _buscar_registro_pre_conselho_unico(
         cursor,
@@ -11783,6 +12106,7 @@ def criar_ou_atualizar_registro_pre_conselho(
                 pos_preconselho_motivos = ?,
                 pos_preconselho_observacao = ?,
                 estudante_em_rav = ?,
+                rav_acoes = ?,
                 texto_gerado = ?,
                 atualizado_em = datetime('now')
             WHERE id = ?
@@ -11804,6 +12128,7 @@ def criar_ou_atualizar_registro_pre_conselho(
                 pos_preconselho_motivos_json,
                 pos_preconselho_observacao_limpa,
                 estudante_em_rav_valor,
+                rav_acoes_limpo,
                 texto_gerado_limpo,
                 int(registro_id),
             ),
@@ -11828,11 +12153,12 @@ def criar_ou_atualizar_registro_pre_conselho(
                 pos_preconselho_motivos,
                 pos_preconselho_observacao,
                 estudante_em_rav,
+                rav_acoes,
                 texto_gerado,
                 criado_em,
                 atualizado_em
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
         """,
             (
                 periodo_id_valor,
@@ -11851,12 +12177,18 @@ def criar_ou_atualizar_registro_pre_conselho(
                 pos_preconselho_motivos_json,
                 pos_preconselho_observacao_limpa,
                 estudante_em_rav_valor,
+                rav_acoes_limpo,
                 texto_gerado_limpo,
             ),
         )
         registro_id = int(cursor.lastrowid)
 
     _sincronizar_motivos_registro_pre_conselho(cursor, int(registro_id), motivo_ids_validos)
+    _sincronizar_habilidades_rav_registro_pre_conselho(
+        cursor,
+        int(registro_id),
+        rav_habilidade_ids_validos,
+    )
     conn.commit()
     conn.close()
     return int(registro_id)
@@ -11896,6 +12228,7 @@ def listar_registros_pre_conselho(
             COALESCE(r.pos_preconselho_motivos, '[]') AS pos_preconselho_motivos,
             COALESCE(r.pos_preconselho_observacao, '') AS pos_preconselho_observacao,
             COALESCE(r.estudante_em_rav, 0) AS estudante_em_rav,
+            COALESCE(r.rav_acoes, '') AS rav_acoes,
             COALESCE(r.texto_gerado, '') AS texto_gerado,
             r.criado_em,
             r.atualizado_em
@@ -11939,7 +12272,14 @@ def listar_registros_pre_conselho(
         cursor,
         [int(row["id"]) for row in rows],
     )
-    itens = [_normalizar_linha_registro_pre_conselho(dict(row), motivos_map) for row in rows]
+    habilidades_map = _carregar_habilidades_rav_por_registro_ids(
+        cursor,
+        [int(row["id"]) for row in rows],
+    )
+    itens = [
+        _normalizar_linha_registro_pre_conselho(dict(row), motivos_map, habilidades_map)
+        for row in rows
+    ]
     conn.close()
     return itens
 
@@ -11972,6 +12312,7 @@ def buscar_registro_pre_conselho_por_id(registro_id: int):
             COALESCE(r.pos_preconselho_motivos, '[]') AS pos_preconselho_motivos,
             COALESCE(r.pos_preconselho_observacao, '') AS pos_preconselho_observacao,
             COALESCE(r.estudante_em_rav, 0) AS estudante_em_rav,
+            COALESCE(r.rav_acoes, '') AS rav_acoes,
             COALESCE(r.texto_gerado, '') AS texto_gerado,
             r.criado_em,
             r.atualizado_em
@@ -11992,7 +12333,8 @@ def buscar_registro_pre_conselho_por_id(registro_id: int):
         return None
 
     motivos_map = _carregar_motivos_pre_conselho_por_registro_ids(cursor, [int(registro_id)])
-    item = _normalizar_linha_registro_pre_conselho(dict(row), motivos_map)
+    habilidades_map = _carregar_habilidades_rav_por_registro_ids(cursor, [int(registro_id)])
+    item = _normalizar_linha_registro_pre_conselho(dict(row), motivos_map, habilidades_map)
     conn.close()
     return item
 
@@ -12022,6 +12364,7 @@ def listar_estudantes_pre_conselho_painel(
             COALESCE(r.pos_preconselho_motivos, '[]') AS pos_preconselho_motivos,
             COALESCE(r.pos_preconselho_observacao, '') AS pos_preconselho_observacao,
             COALESCE(r.estudante_em_rav, 0) AS estudante_em_rav,
+            COALESCE(r.rav_acoes, '') AS rav_acoes,
             COALESCE(r.texto_gerado, '') AS texto_gerado
         FROM estudantes e
         LEFT JOIN turmas t ON t.id = e.turma_id
@@ -12058,6 +12401,7 @@ def listar_estudantes_pre_conselho_painel(
     rows = cursor.fetchall()
     registro_ids = [int(row["registro_id"]) for row in rows if row["registro_id"] is not None]
     motivos_map = _carregar_motivos_pre_conselho_por_registro_ids(cursor, registro_ids)
+    habilidades_map = _carregar_habilidades_rav_por_registro_ids(cursor, registro_ids)
     conn.close()
 
     itens = []
@@ -12065,6 +12409,7 @@ def listar_estudantes_pre_conselho_painel(
         item = dict(row)
         registro_id = int(item["registro_id"]) if item["registro_id"] is not None else None
         motivos = list(motivos_map.get(int(registro_id), [])) if registro_id else []
+        habilidades = list(habilidades_map.get(int(registro_id), [])) if registro_id else []
         pos_preconselho = _normalizar_campos_pos_preconselho(item)
         itens.append(
             {
@@ -12080,10 +12425,295 @@ def listar_estudantes_pre_conselho_painel(
                 "motivo_ids": [int(motivo["id"]) for motivo in motivos],
                 "motivos": motivos,
                 "estudante_em_rav": bool(int(item.get("estudante_em_rav") or 0)),
+                "rav_habilidade_ids": [int(habilidade["id"]) for habilidade in habilidades],
+                "rav_habilidades": habilidades,
+                "rav_acoes": item.get("rav_acoes", "") or "",
                 **pos_preconselho,
             }
         )
     return itens
+
+
+def listar_habilidades_rav_pre_conselho(
+    *,
+    periodo_id: int | None = None,
+    disciplina_id: int | None = None,
+    turma_id: int | None = None,
+    incluir_inativos: bool = False,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = """
+        SELECT
+            h.id,
+            h.periodo_id,
+            COALESCE(p.nome, '') AS periodo_nome,
+            h.disciplina_id,
+            COALESCE(d.nome, '') AS disciplina_nome,
+            h.codigo,
+            h.descricao,
+            h.ativo,
+            h.ordem,
+            h.criado_em,
+            h.atualizado_em
+        FROM pre_conselho_habilidades_rav h
+        LEFT JOIN pre_conselho_periodos p ON p.id = h.periodo_id
+        LEFT JOIN disciplinas d ON d.id = h.disciplina_id
+        WHERE 1 = 1
+    """
+    params = []
+    if periodo_id is not None and int(periodo_id or 0) > 0:
+        query += " AND h.periodo_id = ?"
+        params.append(int(periodo_id))
+    if disciplina_id is not None and int(disciplina_id or 0) > 0:
+        query += " AND h.disciplina_id = ?"
+        params.append(int(disciplina_id))
+    if turma_id is not None and int(turma_id or 0) > 0:
+        query += """
+            AND EXISTS (
+                SELECT 1
+                FROM pre_conselho_habilidade_rav_turmas ht
+                WHERE ht.habilidade_id = h.id
+                  AND ht.turma_id = ?
+            )
+        """
+        params.append(int(turma_id))
+    if not incluir_inativos:
+        query += " AND h.ativo = 1"
+    query += """
+        ORDER BY
+            p.ano_letivo DESC,
+            p.etapa DESC,
+            d.nome COLLATE NOCASE ASC,
+            h.ordem ASC,
+            h.codigo COLLATE NOCASE ASC,
+            h.descricao COLLATE NOCASE ASC,
+            h.id ASC
+    """
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    turmas_map = _carregar_turmas_habilidades_rav(cursor, [int(row["id"]) for row in rows])
+    itens = [_normalizar_linha_habilidade_rav(dict(row), turmas_map) for row in rows]
+    conn.close()
+    return itens
+
+
+def buscar_habilidade_rav_pre_conselho_por_id(habilidade_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT
+            h.id,
+            h.periodo_id,
+            COALESCE(p.nome, '') AS periodo_nome,
+            h.disciplina_id,
+            COALESCE(d.nome, '') AS disciplina_nome,
+            h.codigo,
+            h.descricao,
+            h.ativo,
+            h.ordem,
+            h.criado_em,
+            h.atualizado_em
+        FROM pre_conselho_habilidades_rav h
+        LEFT JOIN pre_conselho_periodos p ON p.id = h.periodo_id
+        LEFT JOIN disciplinas d ON d.id = h.disciplina_id
+        WHERE h.id = ?
+    """,
+        (int(habilidade_id),),
+    )
+    row = cursor.fetchone()
+    turmas_map = _carregar_turmas_habilidades_rav(cursor, [int(habilidade_id)]) if row else {}
+    conn.close()
+    return _normalizar_linha_habilidade_rav(dict(row), turmas_map) if row else None
+
+
+def buscar_habilidade_rav_pre_conselho_por_chave(
+    *,
+    periodo_id: int,
+    disciplina_id: int,
+    codigo: str = "",
+    descricao: str = "",
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    codigo_limpo = _normalizar_nome_catalogo(codigo)
+    descricao_limpa = _normalizar_nome_catalogo(descricao)
+    if codigo_limpo:
+        cursor.execute(
+            """
+            SELECT id
+            FROM pre_conselho_habilidades_rav
+            WHERE periodo_id = ?
+              AND disciplina_id = ?
+              AND codigo = ?
+            LIMIT 1
+        """,
+            (int(periodo_id), int(disciplina_id), codigo_limpo),
+        )
+    else:
+        cursor.execute(
+            """
+            SELECT id
+            FROM pre_conselho_habilidades_rav
+            WHERE periodo_id = ?
+              AND disciplina_id = ?
+              AND codigo = ''
+              AND descricao = ?
+            LIMIT 1
+        """,
+            (int(periodo_id), int(disciplina_id), descricao_limpa),
+        )
+    row = cursor.fetchone()
+    conn.close()
+    return buscar_habilidade_rav_pre_conselho_por_id(int(row["id"])) if row else None
+
+
+def buscar_habilidades_rav_pre_conselho_por_ids(habilidade_ids: list[int] | tuple[int, ...]):
+    ids_validos = []
+    for habilidade_id in habilidade_ids or []:
+        try:
+            valor = int(habilidade_id)
+        except (TypeError, ValueError):
+            continue
+        if valor > 0 and valor not in ids_validos:
+            ids_validos.append(valor)
+    if not ids_validos:
+        return []
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    placeholders = ",".join("?" for _ in ids_validos)
+    cursor.execute(
+        f"""
+        SELECT
+            h.id,
+            h.periodo_id,
+            COALESCE(p.nome, '') AS periodo_nome,
+            h.disciplina_id,
+            COALESCE(d.nome, '') AS disciplina_nome,
+            h.codigo,
+            h.descricao,
+            h.ativo,
+            h.ordem,
+            h.criado_em,
+            h.atualizado_em
+        FROM pre_conselho_habilidades_rav h
+        LEFT JOIN pre_conselho_periodos p ON p.id = h.periodo_id
+        LEFT JOIN disciplinas d ON d.id = h.disciplina_id
+        WHERE h.id IN ({placeholders})
+        ORDER BY h.ordem ASC, h.descricao COLLATE NOCASE ASC, h.id ASC
+    """,
+        ids_validos,
+    )
+    rows = cursor.fetchall()
+    turmas_map = _carregar_turmas_habilidades_rav(cursor, [int(row["id"]) for row in rows])
+    itens = [_normalizar_linha_habilidade_rav(dict(row), turmas_map) for row in rows]
+    conn.close()
+    return itens
+
+
+def criar_habilidade_rav_pre_conselho(
+    *,
+    periodo_id: int,
+    disciplina_id: int,
+    codigo: str = "",
+    descricao: str,
+    turma_ids: list[int] | tuple[int, ...] | None = None,
+    ordem: int = 0,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO pre_conselho_habilidades_rav (
+            periodo_id,
+            disciplina_id,
+            codigo,
+            descricao,
+            ativo,
+            ordem,
+            criado_em,
+            atualizado_em
+        )
+        VALUES (?, ?, ?, ?, 1, ?, datetime('now'), datetime('now'))
+    """,
+        (
+            int(periodo_id),
+            int(disciplina_id),
+            _normalizar_nome_catalogo(codigo),
+            _normalizar_nome_catalogo(descricao),
+            int(ordem or 0),
+        ),
+    )
+    habilidade_id = int(cursor.lastrowid)
+    _sincronizar_turmas_habilidade_rav_pre_conselho(cursor, habilidade_id, turma_ids or [])
+    conn.commit()
+    conn.close()
+    return habilidade_id
+
+
+def atualizar_habilidade_rav_pre_conselho_dados(
+    habilidade_id: int,
+    *,
+    periodo_id: int,
+    disciplina_id: int,
+    codigo: str = "",
+    descricao: str,
+    turma_ids: list[int] | tuple[int, ...] | None = None,
+    ordem: int = 0,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE pre_conselho_habilidades_rav
+        SET periodo_id = ?,
+            disciplina_id = ?,
+            codigo = ?,
+            descricao = ?,
+            ordem = ?,
+            atualizado_em = datetime('now')
+        WHERE id = ?
+    """,
+        (
+            int(periodo_id),
+            int(disciplina_id),
+            _normalizar_nome_catalogo(codigo),
+            _normalizar_nome_catalogo(descricao),
+            int(ordem or 0),
+            int(habilidade_id),
+        ),
+    )
+    alterado = cursor.rowcount > 0
+    if alterado:
+        _sincronizar_turmas_habilidade_rav_pre_conselho(cursor, int(habilidade_id), turma_ids or [])
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def atualizar_status_habilidade_rav_pre_conselho(habilidade_id: int, ativo: bool):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE pre_conselho_habilidades_rav
+        SET ativo = ?,
+            atualizado_em = datetime('now')
+        WHERE id = ?
+    """,
+        (1 if ativo else 0, int(habilidade_id)),
+    )
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def listar_rav_pre_conselho_por_turma(*, periodo_id: int, turma_id: int | None = None):
+    registros = listar_registros_pre_conselho(periodo_id=periodo_id, turma_id=turma_id)
+    return [item for item in registros if item.get("estudante_em_rav")]
 
 
 def excluir_registro_pre_conselho(registro_id: int, *, professor_usuario_id: int | None = None):

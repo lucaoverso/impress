@@ -121,6 +121,7 @@ def build_preconselho_context(usuario: dict) -> dict:
             disciplinas_professor if is_teacher_user(usuario) else repository.list_active_disciplines()
         ),
         "motivos": repository.list_reasons(incluir_inativos=is_admin_user(usuario)),
+        "rav_habilidades": repository.list_rav_skills(incluir_inativos=is_admin_user(usuario)),
         "professores": professores,
         "niveis_atencao": listar_niveis_atencao_pre_conselho(),
         "motivos_pos_preconselho": listar_motivos_pos_pre_conselho(),
