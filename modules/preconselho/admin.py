@@ -25,6 +25,8 @@ from services.preconselho_service import (
     validar_status_periodo_pre_conselho,
 )
 
+RAV_HABILIDADE_DESCRICAO_MAX_LEN = 1000
+
 
 def list_preconselho_periods(usuario: dict) -> list[dict]:
     require_preconselho_access(usuario)
@@ -157,7 +159,11 @@ def create_preconselho_rav_skill(payload, usuario: dict) -> dict:
             periodo_id=int(payload.periodo_id),
             disciplina_id=int(payload.disciplina_id),
             codigo=optional_text(payload.codigo, "Codigo", max_len=80),
-            descricao=require_text(payload.descricao, "Habilidade", max_len=500),
+            descricao=require_text(
+                payload.descricao,
+                "Habilidade",
+                max_len=RAV_HABILIDADE_DESCRICAO_MAX_LEN,
+            ),
             turma_ids=turma_ids,
             ordem=int(payload.ordem or 0),
         )
@@ -179,7 +185,11 @@ def update_preconselho_rav_skill(habilidade_id: int, payload, usuario: dict) -> 
         periodo_id=int(payload.periodo_id),
         disciplina_id=int(payload.disciplina_id),
         codigo=optional_text(payload.codigo, "Codigo", max_len=80),
-        descricao=require_text(payload.descricao, "Habilidade", max_len=500),
+        descricao=require_text(
+            payload.descricao,
+            "Habilidade",
+            max_len=RAV_HABILIDADE_DESCRICAO_MAX_LEN,
+        ),
         turma_ids=turma_ids,
         ordem=int(payload.ordem or 0),
     )
@@ -263,7 +273,11 @@ def import_preconselho_rav_skills(payload, usuario: dict) -> dict:
             periodo_id = int(periodo["id"])
             disciplina = _resolver_disciplina_habilidade(item)
             turma_ids = _resolver_turmas_habilidade(item)
-            descricao = require_text(item.descricao or item.texto, "Habilidade", max_len=500)
+            descricao = require_text(
+                item.descricao or item.texto,
+                "Habilidade",
+                max_len=RAV_HABILIDADE_DESCRICAO_MAX_LEN,
+            )
             codigo = optional_text(item.codigo, "Codigo", max_len=80)
             existente = repository.get_rav_skill_by_key(
                 periodo_id=periodo_id,

@@ -24,6 +24,7 @@ impressao.db
 # Dados locais
 data/
 spool/
+operacional/
 
 # IDE
 .vscode/

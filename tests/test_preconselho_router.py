@@ -786,6 +786,62 @@ class PreConselhoRouterTest(unittest.TestCase):
 
             self.assertEqual(int(motivo_inativo["ativo"]), 0)
 
+    def test_admin_cadastra_e_importa_habilidade_rav_com_mil_caracteres(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, preconselho_router, models = _reload_modulos(db_path)
+            database.criar_tabelas()
+
+            turma_id = int(database.criar_turma("1 E.M Z", "VESPERTINO_EM", 30))
+            disciplina_id = int(database.criar_disciplina("Lingua Portuguesa", 5))
+            periodo = preconselho_router.criar_periodo_preconselho_api(
+                payload=models.PreConselhoPeriodoCreateIn(
+                    nome="1º Bimestre 2037",
+                    ano_letivo=2037,
+                    etapa=1,
+                    data_inicio="2037-01-20",
+                    data_fim="2037-04-30",
+                    status="ABERTO",
+                    tem_rav=True,
+                ),
+                usuario=self._usuario_admin(),
+            )
+            descricao_mil = "A" * 1000
+
+            habilidade = preconselho_router.criar_habilidade_rav_preconselho_api(
+                payload=models.PreConselhoRavHabilidadeCreateIn(
+                    periodo_id=int(periodo["id"]),
+                    disciplina_id=disciplina_id,
+                    codigo="MS.TESTE.1000",
+                    descricao=descricao_mil,
+                    turma_ids=[turma_id],
+                    ordem=10,
+                ),
+                usuario=self._usuario_admin(),
+            )
+
+            self.assertEqual(habilidade["descricao"], descricao_mil)
+            self.assertEqual(len(habilidade["descricao"]), 1000)
+
+            resultado = preconselho_router.importar_habilidades_rav_preconselho_api(
+                payload=models.PreConselhoRavHabilidadeImportIn(
+                    periodo="1º Bimestre 2037",
+                    habilidades=[
+                        models.PreConselhoRavHabilidadeJsonItemIn(
+                            codigo="MS.TESTE.IMPORT.1000",
+                            texto="B" * 1000,
+                            disciplina="Lingua Portuguesa",
+                            turma="1 E.M Z",
+                        )
+                    ],
+                ),
+                usuario=self._usuario_admin(),
+            )
+
+            self.assertEqual(resultado["criadas"], 1)
+            self.assertEqual(resultado["ignoradas"], 0)
+            self.assertEqual(resultado["erros"], [])
+
 
 if __name__ == "__main__":
     unittest.main()
