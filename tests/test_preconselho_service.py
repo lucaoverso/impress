@@ -178,5 +178,47 @@ class PreConselhoServiceTest(unittest.TestCase):
         self.assertIn("não há registros de estudantes sinalizados no pré-conselho", resultado["texto"])
 
 
+    def test_texto_consolidado_ordena_estudantes_por_nome(self):
+        motivo = {"codigo": "nao_entregou_trabalho", "descricao": "NÃ£o entregou o trabalho"}
+        registros = [
+            {
+                "estudante_nome": "Clara",
+                "estudante_id": 3,
+                "turma_nome": "7A",
+                "disciplina_nome": "Historia",
+                "professor_nome": "Prof. A",
+                "motivos": [motivo],
+            },
+            {
+                "estudante_nome": "Álvaro",
+                "estudante_id": 2,
+                "turma_nome": "7A",
+                "disciplina_nome": "Matematica",
+                "professor_nome": "Prof. B",
+                "motivos": [motivo],
+            },
+            {
+                "estudante_nome": "Beatriz",
+                "estudante_id": 1,
+                "turma_nome": "7A",
+                "disciplina_nome": "Ciencias",
+                "professor_nome": "Prof. C",
+                "motivos": [motivo],
+            },
+        ]
+
+        resultado = gerar_texto_consolidado_pre_conselho(
+            periodo_nome="1Âº Bimestre 2032",
+            turma_nome="7A",
+            disciplina_nome="Todas as disciplinas",
+            registros=registros,
+        )
+
+        self.assertEqual(
+            [item["estudante_nome"] for item in resultado["itens_agrupados"]],
+            ["ÁLVARO", "BEATRIZ", "CLARA"],
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

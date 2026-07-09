@@ -1,5 +1,6 @@
 from collections import Counter
 from datetime import date
+import unicodedata
 
 
 STATUS_PERIODO_PRE_CONSELHO_ABERTO = "ABERTO"
@@ -254,6 +255,14 @@ def _formatar_lista_pt_br(itens) -> str:
 
 def _texto_caixa_alta(valor) -> str:
     return _texto_limpo(valor).upper()
+
+
+def _texto_para_ordenacao(valor) -> str:
+    texto = _texto_limpo(valor).casefold()
+    normalizado = unicodedata.normalize("NFD", texto)
+    return "".join(
+        caractere for caractere in normalizado if unicodedata.category(caractere) != "Mn"
+    )
 
 
 def _garantir_ponto_final(frase: str) -> str:
@@ -613,7 +622,13 @@ def _agrupar_registros_por_estudante(registros: list[dict]) -> list[list[dict]]:
             ordem_chaves.append(chave)
         grupos[chave].append(dict(registro))
 
-    return [grupos[chave] for chave in ordem_chaves]
+    return sorted(
+        (grupos[chave] for chave in ordem_chaves),
+        key=lambda grupo: (
+            _texto_para_ordenacao(grupo[0].get("estudante_nome") if grupo else ""),
+            int(grupo[0].get("estudante_id") or 0) if grupo else 0,
+        ),
+    )
 
 
 def _resumir_registros_por_disciplina(registros: list[dict]) -> list[dict]:
