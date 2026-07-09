@@ -70,12 +70,18 @@ class OccurrencePreRegistrationsTest(unittest.TestCase):
                 student_ids=[student_id],
                 reason_ids=[reason["id"]],
                 responsible_contact="communicate",
+                description="Estudante usou o celular apos orientacao em sala.",
             )
             listed = service.list_pre_registrations(professor)
 
             self.assertEqual(created["student_id"], student_id)
             self.assertEqual(created["responsible_contact"], "communicate")
+            self.assertEqual(
+                created["description"],
+                "Estudante usou o celular apos orientacao em sala.",
+            )
             self.assertEqual([item["id"] for item in listed], [created["id"]])
+            self.assertEqual(listed[0]["description"], created["description"])
 
     def test_inactive_reason_cannot_be_used(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

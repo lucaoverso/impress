@@ -19,6 +19,7 @@ class PreRegistrationCreate(BaseModel):
     student_ids: list[int]
     reason_ids: list[int]
     responsible_contact: ResponsibleContact
+    description: str = ""
 
 
 class PreRegistrationComplete(BaseModel):

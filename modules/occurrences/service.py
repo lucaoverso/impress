@@ -96,6 +96,7 @@ def create_pre_registration(
     student_ids: list[int],
     reason_ids: list[int],
     responsible_contact: str,
+    description: str = "",
 ) -> dict:
     if not usuario_eh_professor(user):
         raise HTTPException(403, "Apenas professores podem criar pre-registros.")
@@ -114,6 +115,9 @@ def create_pre_registration(
     contact = str(responsible_contact or "").strip()
     if contact not in RESPONSIBLE_CONTACTS:
         raise HTTPException(400, "Opcao de contato com responsavel invalida.")
+    clean_description = str(description or "").strip()
+    if len(clean_description) > 1000:
+        raise HTTPException(400, "Informe uma observacao com ate 1000 caracteres.")
     occurred_at = datetime.now()
     class_context = _resolve_class_context(
         _user_id(user),
@@ -128,6 +132,7 @@ def create_pre_registration(
         discipline=class_context["discipline"],
         lesson=class_context["lesson"],
         occurred_at=occurred_at.strftime("%Y-%m-%d %H:%M:%S"),
+        description=clean_description,
     )
 
 

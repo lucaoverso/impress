@@ -71,6 +71,7 @@ def post_pre_registration(
         student_ids=payload.student_ids,
         reason_ids=payload.reason_ids,
         responsible_contact=payload.responsible_contact,
+        description=payload.description,
     )
 
 

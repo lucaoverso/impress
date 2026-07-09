@@ -10,6 +10,7 @@ def create_pre_registration(
     discipline: str,
     lesson: str,
     occurred_at: str,
+    description: str,
 ) -> dict:
     primary_student_id = int(student_ids[0])
     primary_reason_id = int(reason_ids[0])
@@ -25,11 +26,12 @@ def create_pre_registration(
             discipline,
             lesson,
             occurred_at,
+            description,
             status,
             created_at,
             updated_at
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'), datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending', datetime('now'), datetime('now'))
         """,
         (
             primary_student_id,
@@ -39,6 +41,7 @@ def create_pre_registration(
             discipline,
             lesson,
             occurred_at,
+            description,
         ),
     )
     pre_registration_id = int(cursor.lastrowid)
@@ -114,6 +117,7 @@ def list_pre_registrations(
             pr.discipline,
             pr.lesson,
             COALESCE(NULLIF(pr.occurred_at, ''), pr.created_at) AS occurred_at,
+            COALESCE(pr.description, '') AS description,
             pr.status,
             pr.occurrence_id,
             pr.created_at,

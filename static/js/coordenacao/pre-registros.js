@@ -146,6 +146,7 @@ function criarCardPreRegistro(item, { manager = false } = {}) {
         `Motivo(s): ${(item.reasons || []).map((reason) => reason.name).join(", ") || item.reason_name}`,
         item.discipline ? `Disciplina: ${item.discipline}` : "",
         item.lesson ? `Aula: ${item.lesson}` : "",
+        item.description ? `Relato: ${item.description}` : "",
         PRE_REGISTRATION_CONTACT_LABELS[item.responsible_contact] || item.responsible_contact,
         manager ? `Professor: ${item.professor_name}` : "",
         `Registrado em: ${formatarDataHora(item.occurred_at || item.created_at)}`
@@ -202,6 +203,7 @@ async function salvarPreRegistroProfessor(event) {
         document.querySelectorAll('[name="preRegistroMotivo"]:checked')
     ).map((input) => Number(input.value));
     const contact = document.querySelector('[name="preRegistroContatoResponsavel"]:checked')?.value || "none";
+    const description = String(el("preRegistroObservacao")?.value || "").trim();
     if (!studentIds.length) {
         setMensagemPreRegistro("msgPreRegistroProfessor", "Selecione pelo menos um estudante.", true);
         el("preRegistroBuscaEstudante").focus();
@@ -218,7 +220,8 @@ async function salvarPreRegistroProfessor(event) {
         body: JSON.stringify({
             student_ids: studentIds,
             reason_ids: reasonIds,
-            responsible_contact: contact
+            responsible_contact: contact,
+            description
         })
     });
     el("formPreRegistroProfessor").reset();
@@ -291,9 +294,13 @@ function iniciarComplementacaoPreRegistro(item) {
         el("ocorrenciaData").value = datePart;
         el("ocorrenciaHorario").value = timePart.slice(0, 5);
     }
-    definirDescricaoEditor({
-        texto: `Motivos informados no pre-registro: ${(item.reasons || []).map((reason) => reason.name).join("; ") || item.reason_name}.\n${PRE_REGISTRATION_CONTACT_LABELS[item.responsible_contact] || ""}`
-    });
+    const relatoProfessor = String(item.description || "").trim();
+    const descricaoInicial = [
+        `Motivos informados no pre-registro: ${(item.reasons || []).map((reason) => reason.name).join("; ") || item.reason_name}.`,
+        relatoProfessor ? `Relato do professor: ${relatoProfessor}` : "",
+        PRE_REGISTRATION_CONTACT_LABELS[item.responsible_contact] || ""
+    ].filter(Boolean).join("\n");
+    definirDescricaoEditor({ texto: descricaoInicial });
     el("tituloFormOcorrencia").innerText = "Complementar pre-registro";
     ativarEtapaFormularioOcorrencia(1);
     atualizarPreviewOcorrencia();
