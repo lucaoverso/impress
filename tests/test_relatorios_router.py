@@ -15,6 +15,9 @@ def _reload_modulos(db_path: str):
         "database",
         "db._proxy",
         "db.relatorios",
+        "modules.reports.repository",
+        "modules.reports.service",
+        "modules.reports",
         "routers.relatorios_router",
     ):
         if nome_modulo in sys.modules:
@@ -270,6 +273,74 @@ class RelatoriosRouterTest(unittest.TestCase):
                 resposta["recursos"]["ranking_professores"][0]["total_reservas"],
                 2,
             )
+
+    def test_dashboard_inclui_impressoes_do_admin(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, relatorios_router = _reload_modulos(db_path)
+            database.criar_tabelas()
+
+            database.criar_usuario_se_nao_existir(
+                nome="Admin Relatorio",
+                email="admin.relatorio@escola",
+                senha_hash="hash-admin",
+                perfil="admin",
+                cargo="ADMIN",
+            )
+            admin = database.buscar_usuario_por_email("admin.relatorio@escola")
+            job_admin = database.criar_job(
+                usuario_id=int(admin["id"]),
+                arquivo="documento-admin.pdf",
+                arquivo_path="/tmp/documento-admin.pdf",
+                copias=1,
+                paginas_totais=18,
+                tags_json='["Gestao"]',
+            )
+            database.atualizar_status(job_admin, database.STATUS_CONCLUIDO)
+
+            resposta = relatorios_router.dashboard_relatorios_api(
+                data_inicio="2026-05-01",
+                data_fim="2026-05-31",
+                usuario=self._usuario_gestor(),
+            )
+
+            self.assertEqual(resposta["impressoes"]["resumo"]["total_paginas"], 18)
+            self.assertEqual(resposta["impressoes"]["ranking_professores"][0]["nome"], "Admin Relatorio")
+            cards = self._cards_por_id(resposta)
+            self.assertEqual(cards["top_impressao"]["valor"], "Admin Relatorio")
+
+    def test_relatorio_professor_pdf_retorna_pdf(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, relatorios_router = _reload_modulos(db_path)
+            database.criar_tabelas()
+
+            database.criar_usuario_se_nao_existir(
+                nome="Ana PDF",
+                email="ana.pdf@escola",
+                senha_hash="hash-ana",
+                perfil="professor",
+                cargo="PROFESSOR",
+            )
+            professora = database.buscar_usuario_por_email("ana.pdf@escola")
+            job = database.criar_job(
+                usuario_id=int(professora["id"]),
+                arquivo="atividade-pdf.pdf",
+                arquivo_path="/tmp/atividade-pdf.pdf",
+                copias=1,
+                paginas_totais=7,
+            )
+            database.atualizar_status(job, database.STATUS_CONCLUIDO)
+
+            resposta = relatorios_router.relatorio_professor_pdf_api(
+                int(professora["id"]),
+                data_inicio="2026-05-01",
+                data_fim="2026-05-31",
+                usuario=self._usuario_gestor(),
+            )
+
+            self.assertEqual(resposta.media_type, "application/pdf")
+            self.assertTrue(bytes(resposta.body).startswith(b"%PDF"))
 
     def test_dashboard_gera_insights_da_gestao_por_regras(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

@@ -76,6 +76,10 @@
                 aria-selected="false" type="button">
                 Central de Anexos
             </button>
+            <button class="admin-tab-btn" data-relatorios-tab-trigger="professores"
+                aria-selected="false" type="button">
+                Professores
+            </button>
             <button class="admin-tab-btn reports-tab-btn-disabled" data-relatorios-tab-trigger="coordenacao"
                 aria-selected="false" type="button" disabled>
                 Coordenacao
@@ -334,6 +338,105 @@
                                 </tr>
                             </thead>
                             <tbody id="tabelaAnexosRecentesBody"></tbody>
+                        </table>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="admin-tab-panel" data-relatorios-tab-panel="professores" hidden>
+            <article class="calendar-card reports-teacher-tool">
+                <header class="booking-card-header">
+                    <div>
+                        <h3>Relatorio individual para professor</h3>
+                        <p class="booking-empty">Gere um PDF com impressões, reservas e pendências de anexos do período selecionado.</p>
+                    </div>
+                </header>
+
+                <div class="reports-teacher-controls">
+                    <div class="reports-filter-field">
+                        <label for="relProfessorSelect">Professor</label>
+                        <select id="relProfessorSelect">
+                            <option value="">Carregando professores...</option>
+                        </select>
+                    </div>
+
+                    <div class="reports-teacher-actions">
+                        <button id="btnCarregarRelatorioProfessor" class="btn-destaque" type="button">Ver resumo</button>
+                        <button id="btnBaixarRelatorioProfessor" type="button" disabled>Baixar PDF</button>
+                        <button id="btnEnviarRelatorioProfessor" type="button" disabled>Enviar por email</button>
+                    </div>
+                </div>
+
+                <p id="msgRelatorioProfessor" class="reports-message"></p>
+            </article>
+
+            <div id="professorResumo" class="reports-summary-grid"></div>
+
+            <div class="reports-grid">
+                <article class="calendar-card reports-table-card">
+                    <header class="booking-card-header">
+                        <h3>Pontos de atenção</h3>
+                        <p class="booking-empty">Resumo textual que acompanha o PDF.</p>
+                    </header>
+                    <ul id="listaAlertasProfessor" class="reports-teacher-list"></ul>
+                </article>
+
+                <article class="calendar-card reports-table-card">
+                    <header class="booking-card-header">
+                        <h3>Pendências de anexos</h3>
+                        <p class="booking-empty">Documentos esperados ainda sem envio registrado.</p>
+                    </header>
+                    <div class="reports-table-wrap">
+                        <table class="reports-table">
+                            <thead>
+                                <tr>
+                                    <th>Documento</th>
+                                    <th>Prazo</th>
+                                    <th>Situação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaProfessorPendenciasBody"></tbody>
+                        </table>
+                    </div>
+                </article>
+
+                <article class="calendar-card reports-table-card reports-chart-card-wide">
+                    <header class="booking-card-header">
+                        <h3>Impressões recentes do professor</h3>
+                        <p class="booking-empty">Jobs concluídos no período selecionado.</p>
+                    </header>
+                    <div class="reports-table-wrap">
+                        <table class="reports-table">
+                            <thead>
+                                <tr>
+                                    <th>Arquivo</th>
+                                    <th>Data</th>
+                                    <th>Páginas</th>
+                                    <th>Cópias</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaProfessorImpressoesBody"></tbody>
+                        </table>
+                    </div>
+                </article>
+
+                <article class="calendar-card reports-table-card reports-chart-card-wide">
+                    <header class="booking-card-header">
+                        <h3>Reservas recentes do professor</h3>
+                        <p class="booking-empty">Recursos tecnológicos utilizados no período.</p>
+                    </header>
+                    <div class="reports-table-wrap">
+                        <table class="reports-table">
+                            <thead>
+                                <tr>
+                                    <th>Data</th>
+                                    <th>Recurso</th>
+                                    <th>Turma</th>
+                                    <th>Tema</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelaProfessorRecursosBody"></tbody>
                         </table>
                     </div>
                 </article>

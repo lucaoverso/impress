@@ -15,6 +15,8 @@ const graficos = {};
 const VIEWPORT_TABLET_MAX = 960;
 let dashboardAtual = null;
 let anexosAtual = null;
+let professoresRelatorio = [];
+let relatorioProfessorAtual = null;
 let viewportCompactoAtual = viewportEhCompactoInicial();
 
 function viewportEhCompactoInicial() {
@@ -433,6 +435,13 @@ function renderTabelaRecentesAnexos(itens = []) {
     ]);
 }
 
+function setMensagemProfessor(texto, tipo = "info") {
+    const msg = el("msgRelatorioProfessor");
+    if (!msg) return;
+    msg.innerText = texto || "";
+    msg.dataset.tipo = tipo;
+}
+
 function renderDashboard(payload = {}) {
     renderCards(payload.cards || []);
 
@@ -769,6 +778,144 @@ function renderAnexos(payload = {}) {
     renderTabelaRecentesAnexos(payload.tabelas?.entregas_recentes || []);
 }
 
+function preencherSelectProfessores(itens = []) {
+    const select = el("relProfessorSelect");
+    if (!select) return;
+    select.innerHTML = "";
+
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.innerText = Array.isArray(itens) && itens.length > 0
+        ? "Selecione um professor"
+        : "Nenhum professor disponivel";
+    select.appendChild(placeholder);
+
+    itens.forEach((professor) => {
+        const option = document.createElement("option");
+        option.value = String(professor.id || "");
+        option.innerText = professor.email
+            ? `${professor.nome} (${professor.email})`
+            : professor.nome;
+        select.appendChild(option);
+    });
+}
+
+async function carregarProfessoresRelatorio() {
+    professoresRelatorio = await fetchJson("/api/relatorios/professores", { headers });
+    preencherSelectProfessores(professoresRelatorio);
+}
+
+function obterProfessorRelatorioSelecionadoId() {
+    return Number(el("relProfessorSelect")?.value || 0);
+}
+
+function atualizarAcoesRelatorioProfessor(habilitado) {
+    const podeAgir = Boolean(habilitado);
+    el("btnBaixarRelatorioProfessor").disabled = !podeAgir;
+    el("btnEnviarRelatorioProfessor").disabled = !podeAgir;
+}
+
+function renderListaAlertasProfessor(alertas = []) {
+    const lista = el("listaAlertasProfessor");
+    lista.innerHTML = "";
+    const itens = Array.isArray(alertas) && alertas.length > 0
+        ? alertas
+        : ["Sem alertas relevantes para o periodo."];
+
+    itens.forEach((texto) => {
+        const li = document.createElement("li");
+        li.innerText = texto;
+        lista.appendChild(li);
+    });
+}
+
+function renderTabelaProfessorPendencias(itens = []) {
+    renderTabelaComLinhas("tabelaProfessorPendenciasBody", itens, 3, (item) => [
+        item.documento || "Documento nao informado",
+        formatarDataHoraRelatorios(item.prazo),
+        item.situacao || "Pendente",
+    ]);
+}
+
+function renderTabelaProfessorImpressoes(itens = []) {
+    renderTabelaComLinhas("tabelaProfessorImpressoesBody", itens, 4, (item) => [
+        item.arquivo || "Arquivo nao informado",
+        formatarDataHoraRelatorios(item.criado_em),
+        formatarNumero(item.paginas_totais || 0),
+        formatarNumero(item.copias || 1),
+    ]);
+}
+
+function renderTabelaProfessorRecursos(itens = []) {
+    renderTabelaComLinhas("tabelaProfessorRecursosBody", itens, 4, (item) => [
+        paraDataBr(item.data || ""),
+        item.recurso_nome || "Recurso nao informado",
+        item.turma || "-",
+        item.tema_aula || "-",
+    ]);
+}
+
+function renderRelatorioProfessor(payload = {}) {
+    const resumo = payload.resumo || {};
+    renderResumoSimples("professorResumo", [
+        { titulo: "Paginas impressas", valor: formatarNumero(resumo.total_paginas || 0) },
+        { titulo: "Jobs de impressao", valor: formatarNumero(resumo.total_jobs || 0) },
+        { titulo: "Reservas de recursos", valor: formatarNumero(resumo.total_reservas || 0) },
+        { titulo: "Pendencias de anexos", valor: formatarNumero(resumo.total_pendencias || 0) },
+        { titulo: "Entregas registradas", valor: formatarNumero(resumo.total_entregas || 0) },
+    ]);
+    renderListaAlertasProfessor(payload.alertas || []);
+    renderTabelaProfessorPendencias(payload.anexos?.pendencias || []);
+    renderTabelaProfessorImpressoes(payload.impressoes?.recentes || []);
+    renderTabelaProfessorRecursos(payload.recursos?.recentes || []);
+}
+
+async function carregarRelatorioProfessor() {
+    const professorId = obterProfessorRelatorioSelecionadoId();
+    if (!professorId) {
+        setMensagemProfessor("Selecione um professor para gerar o resumo.", "erro");
+        atualizarAcoesRelatorioProfessor(false);
+        return;
+    }
+
+    setMensagemProfessor("Carregando resumo do professor...");
+    relatorioProfessorAtual = await fetchJson(
+        `/api/relatorios/professores/${professorId}/resumo${queryPeriodo()}`,
+        { headers }
+    );
+    renderRelatorioProfessor(relatorioProfessorAtual);
+    atualizarAcoesRelatorioProfessor(true);
+    setMensagemProfessor("Resumo do professor atualizado.");
+}
+
+function baixarRelatorioProfessorPdf() {
+    const professorId = obterProfessorRelatorioSelecionadoId();
+    if (!professorId) {
+        setMensagemProfessor("Selecione um professor antes de baixar o PDF.", "erro");
+        return;
+    }
+    window.open(`/api/relatorios/professores/${professorId}/pdf${queryPeriodo()}`, "_blank", "noopener");
+}
+
+async function enviarRelatorioProfessorEmail() {
+    const professorId = obterProfessorRelatorioSelecionadoId();
+    if (!professorId) {
+        setMensagemProfessor("Selecione um professor antes de enviar o relatorio.", "erro");
+        return;
+    }
+
+    setMensagemProfessor("Enviando relatorio por email...");
+    const resposta = await fetchJson(
+        `/api/relatorios/professores/${professorId}/email${queryPeriodo()}`,
+        {
+            method: "POST",
+            headers: Object.assign({}, headers, { "Content-Type": "application/json" }),
+            body: JSON.stringify({}),
+        }
+    );
+    setMensagemProfessor(resposta?.mensagem || "Relatorio enviado com sucesso.");
+}
+
 function ativarTab(tabId) {
     document.querySelectorAll("[data-relatorios-tab-trigger]").forEach((botao) => {
         const ativo = botao.dataset.relatoriosTabTrigger === tabId;
@@ -810,6 +957,9 @@ async function carregarRelatorios() {
     renderImpressoes(payloadDashboard);
     renderRecursos(payloadDashboard);
     renderAnexos(payloadAnexos);
+    if (obterProfessorRelatorioSelecionadoId()) {
+        await carregarRelatorioProfessor();
+    }
     setMensagem("Relatorios atualizados.");
 }
 
@@ -867,6 +1017,32 @@ function registrarEventos() {
                 ativarTab(botao.dataset.relatoriosTabTrigger);
             });
         });
+
+    el("btnCarregarRelatorioProfessor").addEventListener("click", async () => {
+        try {
+            await carregarRelatorioProfessor();
+        } catch (err) {
+            setMensagemProfessor(err.message || "Nao foi possivel carregar o relatorio do professor.", "erro");
+        }
+    });
+
+    el("btnBaixarRelatorioProfessor").addEventListener("click", () => {
+        baixarRelatorioProfessorPdf();
+    });
+
+    el("btnEnviarRelatorioProfessor").addEventListener("click", async () => {
+        try {
+            await enviarRelatorioProfessorEmail();
+        } catch (err) {
+            setMensagemProfessor(err.message || "Nao foi possivel enviar o relatorio.", "erro");
+        }
+    });
+
+    el("relProfessorSelect").addEventListener("change", () => {
+        relatorioProfessorAtual = null;
+        atualizarAcoesRelatorioProfessor(false);
+        setMensagemProfessor("");
+    });
 }
 
 async function init() {
@@ -878,6 +1054,7 @@ async function init() {
         if (!usuario) {
             return;
         }
+        await carregarProfessoresRelatorio();
         await carregarRelatorios();
     } catch (err) {
         setMensagem(err.message || "Erro ao carregar o modulo de relatorios.", "erro");

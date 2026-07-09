@@ -280,6 +280,35 @@
     gap: 8px;
 }
 
+.reports-teacher-tool {
+    padding: 16px;
+}
+
+.reports-teacher-controls {
+    display: grid;
+    grid-template-columns: minmax(260px, 360px) minmax(240px, 1fr);
+    gap: 14px;
+    align-items: end;
+}
+
+.reports-teacher-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.reports-teacher-actions button {
+    min-height: 42px;
+}
+
+.reports-teacher-list {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding-left: 18px;
+    color: #223447;
+}
+
 .reports-placeholder-card h3,
 .reports-placeholder-card p {
     margin: 0;
@@ -298,6 +327,7 @@
 
 @media (max-width: 960px) {
     .reports-filter-grid,
+    .reports-teacher-controls,
     .reports-grid {
         grid-template-columns: 1fr;
     }

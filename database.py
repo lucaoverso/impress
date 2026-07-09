@@ -7946,13 +7946,16 @@ def gerar_relatorio_impressao(data_inicio: str = None, data_fim: str = None):
         SELECT
             u.id AS usuario_id,
             u.nome,
+            u.email,
+            u.perfil,
+            u.cargo,
             COUNT(j.id) AS total_jobs,
             COALESCE(SUM(j.paginas_totais), 0) AS total_paginas
         FROM usuarios u
         LEFT JOIN jobs j
             ON j.usuario_id = u.id
            AND j.status IN (?, ?)
-        WHERE u.perfil = 'professor'
+        WHERE LOWER(COALESCE(u.perfil, '')) IN ('professor', 'admin', 'coordenador')
     """
     params = [STATUS_CONCLUIDO, STATUS_FINALIZADO_LEGADO]
 
@@ -7965,7 +7968,7 @@ def gerar_relatorio_impressao(data_inicio: str = None, data_fim: str = None):
         params.append(data_fim)
 
     query += """
-        GROUP BY u.id, u.nome
+        GROUP BY u.id, u.nome, u.email, u.perfil, u.cargo
         ORDER BY total_paginas DESC, total_jobs DESC, u.nome ASC
     """
 
@@ -8312,6 +8315,7 @@ def gerar_relatorio_anexos(data_inicio: str | None = None, data_fim: str | None 
             itens_consolidados.append(
                 {
                     "periodo_id": int(periodo_painel.get("id") or 0),
+                    "professor_id": int(item.get("professor_id") or 0),
                     "professor": str(item.get("professor_nome") or "").strip() or "Professor nao informado",
                     "documento": _descricao_documento_relatorio_anexos(periodo_painel, item),
                     "prazo": str(periodo_painel.get("prazo_envio") or "").strip(),
@@ -8335,6 +8339,7 @@ def gerar_relatorio_anexos(data_inicio: str | None = None, data_fim: str | None 
     professores_pendencias = [
         {
             "professor": item["professor"],
+            "professor_id": int(item.get("professor_id") or 0),
             "documento": item["documento"],
             "prazo": item["prazo"],
             "situacao": item["situacao"],
@@ -8352,6 +8357,7 @@ def gerar_relatorio_anexos(data_inicio: str | None = None, data_fim: str | None 
     entregas_recentes = [
         {
             "professor": item["professor"],
+            "professor_id": int(item.get("professor_id") or 0),
             "documento": item["documento"],
             "primeiro_envio": item["primeiro_envio"],
             "data_envio": item["data_envio"],

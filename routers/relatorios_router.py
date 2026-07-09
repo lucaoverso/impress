@@ -1,9 +1,11 @@
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 
 from auth import get_usuario_logado
-from db.relatorios import gerar_dashboard_relatorios, gerar_relatorio_anexos
+from modules.reports import service as reports_service
+from modules.reports.schemas import TeacherReportEmailIn
 
 from .common import usuario_tem_acesso_coordenacao, validar_data_agendamento
 
@@ -47,7 +49,7 @@ def dashboard_relatorios_api(
 ):
     _exigir_acesso_relatorios(usuario)
     inicio, fim = _resolver_periodo(data_inicio, data_fim)
-    return gerar_dashboard_relatorios(inicio, fim)
+    return reports_service.get_dashboard(inicio, fim)
 
 
 @router.get("/api/relatorios/anexos")
@@ -58,4 +60,63 @@ def relatorios_anexos_api(
 ):
     _exigir_acesso_relatorios(usuario)
     inicio, fim = _resolver_periodo(data_inicio, data_fim)
-    return gerar_relatorio_anexos(inicio, fim)
+    return reports_service.get_attachments(inicio, fim)
+
+
+@router.get("/api/relatorios/professores")
+def relatorios_professores_api(usuario=Depends(get_usuario_logado)):
+    _exigir_acesso_relatorios(usuario)
+    return reports_service.list_teacher_report_recipients()
+
+
+@router.get("/api/relatorios/professores/{professor_id}/resumo")
+def relatorio_professor_resumo_api(
+    professor_id: int,
+    data_inicio: str | None = None,
+    data_fim: str | None = None,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_acesso_relatorios(usuario)
+    inicio, fim = _resolver_periodo(data_inicio, data_fim)
+    return reports_service.build_teacher_report(professor_id, inicio, fim)
+
+
+@router.get("/api/relatorios/professores/{professor_id}/pdf")
+def relatorio_professor_pdf_api(
+    professor_id: int,
+    data_inicio: str | None = None,
+    data_fim: str | None = None,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_acesso_relatorios(usuario)
+    inicio, fim = _resolver_periodo(data_inicio, data_fim)
+    pdf_bytes = reports_service.generate_teacher_report_pdf(professor_id, inicio, fim)
+    return Response(
+        content=pdf_bytes,
+        media_type="application/pdf",
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="relatorio-professor-{professor_id}-{inicio}-{fim}.pdf"'
+            )
+        },
+    )
+
+
+@router.post("/api/relatorios/professores/{professor_id}/email")
+def relatorio_professor_email_api(
+    professor_id: int,
+    payload: TeacherReportEmailIn,
+    data_inicio: str | None = None,
+    data_fim: str | None = None,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_acesso_relatorios(usuario)
+    inicio, fim = _resolver_periodo(data_inicio, data_fim)
+    return reports_service.send_teacher_report_email(
+        professor_id,
+        inicio,
+        fim,
+        destino_email=payload.destino_email,
+        assunto=payload.assunto,
+        mensagem=payload.mensagem,
+    )
