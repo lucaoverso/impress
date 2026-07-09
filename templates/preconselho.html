@@ -479,12 +479,21 @@
                                 <select id="preconselhoTurmaRav"></select>
                             </label>
 
+                            <label class="pcpi-field" for="preconselhoModoRav">
+                                <span>Visualizar por</span>
+                                <select id="preconselhoModoRav">
+                                    <option value="estudante" selected>Estudante</option>
+                                    <option value="disciplina">Disciplina</option>
+                                    <option value="habilidade">Habilidade</option>
+                                </select>
+                            </label>
+
                             <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
                                 <button id="btnAtualizarRavPreconselho" class="btn-destaque" type="submit">Atualizar RAV</button>
                             </div>
                         </form>
 
-                        <div class="preconselho-summary-grid">
+                        <div class="preconselho-summary-grid preconselho-summary-grid-report">
                             <article class="preconselho-summary-card">
                                 <span>Estudantes em RAV</span>
                                 <strong id="preconselhoResumoRavEstudantes">0</strong>
@@ -494,6 +503,11 @@
                                 <span>Registros RAV</span>
                                 <strong id="preconselhoResumoRavRegistros">0</strong>
                                 <small>Disciplinas marcadas com RAV.</small>
+                            </article>
+                            <article class="preconselho-summary-card">
+                                <span>Habilidades</span>
+                                <strong id="preconselhoResumoRavHabilidades">0</strong>
+                                <small>Habilidades selecionadas nos registros.</small>
                             </article>
                             <article class="preconselho-summary-card">
                                 <span>Turma</span>
@@ -509,7 +523,7 @@
                         <div class="pcpi-card-header">
                             <div>
                                 <p class="pcpi-eyebrow">RAV</p>
-                                <h2>Estudantes e habilidades</h2>
+                                <h2>Estudantes, disciplinas e habilidades</h2>
                             </div>
                         </div>
                         <ul id="listaRavPreconselho" class="pcpi-list" aria-live="polite"></ul>

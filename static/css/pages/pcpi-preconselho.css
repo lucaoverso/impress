@@ -708,6 +708,39 @@
     font-size: 13px;
 }
 
+.preconselho-rav-group-list {
+    display: grid;
+    gap: 10px;
+}
+
+.preconselho-rav-group-block {
+    display: grid;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid #dbe4ef;
+    border-radius: 12px;
+    background: #ffffff;
+}
+
+.preconselho-rav-group-title {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.preconselho-rav-group-title strong {
+    color: #16314c;
+    font-size: 14px;
+}
+
+.preconselho-rav-group-title span {
+    color: #64748b;
+    font-size: 12px;
+    font-weight: 700;
+}
+
 #preconselhoRavHabilidadeTurmas {
     min-height: 116px;
     padding: 8px;
