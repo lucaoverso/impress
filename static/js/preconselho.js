@@ -1283,6 +1283,24 @@ function renderizarConsolidacao() {
     }).join("");
 }
 
+function criarHtmlTextoConsolidadoComEstudantesEmNegrito(dados) {
+    const texto = String(dados?.texto || "");
+    if (!texto) return "";
+
+    let html = escaparHtml(texto);
+    const itensAgrupados = Array.isArray(dados?.itens_agrupados) ? dados.itens_agrupados : [];
+    itensAgrupados.forEach((item) => {
+        const estudanteNome = String(item?.estudante_nome || "").trim();
+        if (!estudanteNome) return;
+
+        const alvo = escaparHtml(`O estudante ${estudanteNome}`);
+        const substituto = `O estudante <strong>${escaparHtml(estudanteNome)}</strong>`;
+        html = html.split(alvo).join(substituto);
+    });
+
+    return html.replace(/\r?\n/g, "<br>");
+}
+
 async function carregarConsolidacao() {
     limparMensagem("msgPreconselhoConsolidacao");
     const periodoId = Number(el("preconselhoPeriodoConsolidacao").value || 0);
@@ -2442,7 +2460,7 @@ async function excluirRegistroDocente(registroId) {
     }
 }
 
-async function copiarTexto(idCampo, idMensagem, sucesso) {
+async function copiarTexto(idCampo, idMensagem, sucesso, opcoes = {}) {
     const campo = el(idCampo);
     const texto = String(campo?.value || "").trim();
     if (!texto) {
@@ -2451,7 +2469,15 @@ async function copiarTexto(idCampo, idMensagem, sucesso) {
     }
 
     try {
-        if (navigator.clipboard?.writeText) {
+        const html = typeof opcoes.html === "function" ? String(opcoes.html(texto) || "") : "";
+        if (html && navigator.clipboard?.write && window.ClipboardItem) {
+            await navigator.clipboard.write([
+                new ClipboardItem({
+                    "text/plain": new Blob([texto], { type: "text/plain" }),
+                    "text/html": new Blob([html], { type: "text/html" }),
+                }),
+            ]);
+        } else if (navigator.clipboard?.writeText) {
             await navigator.clipboard.writeText(texto);
         } else {
             campo.select();
@@ -2739,7 +2765,12 @@ function registrarEventos() {
     });
 
     el("btnCopiarTextoConsolidado").addEventListener("click", async () => {
-        await copiarTexto("preconselhoTextoConsolidado", "msgPreconselhoConsolidacao", "Texto consolidado copiado.");
+        await copiarTexto(
+            "preconselhoTextoConsolidado",
+            "msgPreconselhoConsolidacao",
+            "Texto consolidado copiado.",
+            { html: () => criarHtmlTextoConsolidadoComEstudantesEmNegrito(estadoConsolidacao.dados) }
+        );
     });
 
     el("formRelatorioPreconselho").addEventListener("submit", async (event) => {
