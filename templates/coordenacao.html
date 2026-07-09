@@ -72,7 +72,11 @@
                 <nav class="admin-tabs coordenacao-tabs" aria-label="Abas do módulo de coordenação">
                     <button class="admin-tab-btn is-active" data-coord-tab-trigger="ocorrencias"
                         aria-controls="coord-tab-ocorrencias" aria-selected="true" type="button">
-                        Pendências e registros
+                        Ocorrências
+                    </button>
+                    <button class="admin-tab-btn" data-coord-tab-trigger="registros-pendentes"
+                        aria-controls="coord-tab-registros-pendentes" aria-selected="false" type="button">
+                        Registros pendentes
                     </button>
                     <button class="admin-tab-btn" data-coord-tab-trigger="pre-registros"
                         aria-controls="coord-tab-pre-registros" aria-selected="false" type="button">
@@ -105,8 +109,8 @@
                     <article class="coordenacao-card coordenacao-ocorrencias-hub">
                         <div class="coordenacao-ocorrencias-hub-main">
                             <div class="coordenacao-ocorrencias-copy">
-                                <h2>Fila e histórico no mesmo fluxo</h2>
-                                <p>Resolva o que chegou da sala e acompanhe os registros já tratados sem trocar de área.</p>
+                                <h2>Histórico e acompanhamento</h2>
+                                <p>Acompanhe os registros já tratados, filtre ocorrências e revise cada documento.</p>
                             </div>
                             <div class="coordenacao-ocorrencias-hub-side">
                                 <button id="btnNovaOcorrencia" class="btn-destaque" type="button"
@@ -147,39 +151,24 @@
                         </div>
                     </article>
 
-                    <section class="coordenacao-triagem-layout">
-                        <article class="coordenacao-card coordenacao-pending-card">
-                            <div class="coordenacao-section-header">
-                                <div>
-                                    <h2>Envios aguardando conclusão</h2>
-                                    <p>Esses pre-registros ainda precisam de descrição final, encaminhamento e base legal.</p>
-                                </div>
-                                <button id="btnAtualizarPreRegistros" type="button">Atualizar fila</button>
+                    <aside class="coordenacao-card coordenacao-ocorrencias-detail-card">
+                        <div class="coordenacao-section-header">
+                            <div>
+                                <h2>Registro selecionado</h2>
+                                <p>Revise contexto, base legal e documento antes de editar.</p>
                             </div>
-                            <p id="msgPreRegistrosGestao" class="coordenacao-status-copy" role="status"></p>
-                            <div id="listaPreRegistrosGestao"
-                                class="coordenacao-pre-registration-list coordenacao-pre-registration-list-queue"></div>
-                        </article>
-
-                        <aside class="coordenacao-card coordenacao-ocorrencias-detail-card">
-                            <div class="coordenacao-section-header">
-                                <div>
-                                    <h2>Registro selecionado</h2>
-                                    <p>Revise contexto, base legal e documento antes de editar.</p>
-                                </div>
-                            </div>
-                            <div id="detalhesOcorrencia" class="coordenacao-details">
-                                Selecione um registro para visualizar os detalhes.
-                            </div>
-                        </aside>
-                    </section>
+                        </div>
+                        <div id="detalhesOcorrencia" class="coordenacao-details">
+                            Selecione um registro para visualizar os detalhes.
+                        </div>
+                    </aside>
 
                     <section class="coordenacao-ocorrencias-board">
                         <article class="coordenacao-card coordenacao-ocorrencias-list-card">
                             <div class="coordenacao-panel-header">
                                 <div>
                                     <h2>Histórico de ocorrências</h2>
-                                    <p>Use os filtros para localizar registros sem perder a fila principal de vista.</p>
+                                    <p>Use os filtros para localizar registros por estudante, professor, período ou status.</p>
                                 </div>
                             </div>
 
@@ -1043,6 +1032,24 @@
                 </section>
             </section>
 
+            <section id="coord-tab-registros-pendentes" class="coordenacao-tab-panel"
+                data-coord-tab-panel="registros-pendentes" hidden>
+                <section class="coordenacao-stack">
+                    <article class="coordenacao-card coordenacao-pending-card">
+                        <div class="coordenacao-section-header">
+                            <div>
+                                <h2>Registros pendentes dos professores</h2>
+                                <p>Todos os pre-registros enviados pelos professores ficam aqui até a coordenação concluir a ocorrência.</p>
+                            </div>
+                            <button id="btnAtualizarPreRegistros" type="button">Atualizar fila</button>
+                        </div>
+                        <p id="msgPreRegistrosGestao" class="coordenacao-status-copy" role="status"></p>
+                        <div id="listaPreRegistrosGestao"
+                            class="coordenacao-pre-registration-list coordenacao-pre-registration-list-queue"></div>
+                    </article>
+                </section>
+            </section>
+
             <section id="coord-tab-regimento" class="coordenacao-tab-panel" data-coord-tab-panel="regimento" hidden>
                 <section class="coordenacao-grid">
                     <article class="coordenacao-card">
@@ -1284,10 +1291,10 @@
                         </div>
                         <ol class="coordenacao-flow-list">
                             <li>O professor informa o estudante e a causa da ocorrência.</li>
-                            <li>A coordenação recebe o envio na fila principal de pendências.</li>
+                            <li>A coordenação recebe o envio na aba de registros pendentes.</li>
                             <li>O caso é concluído com descrição final, encaminhamento e base legal.</li>
                         </ol>
-                        <p class="coordenacao-field-hint">As pendências ativas ficam na aba <strong>Pendências e registros</strong>. Esta área serve para manter o vocabulário de uso rápido.</p>
+                        <p class="coordenacao-field-hint">As pendências ativas ficam na aba <strong>Registros pendentes</strong>. Esta área serve para manter o vocabulário de uso rápido.</p>
                     </article>
                     </section>
                 </section>

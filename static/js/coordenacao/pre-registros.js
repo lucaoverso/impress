@@ -184,7 +184,10 @@ function renderPreRegistros(containerId, items, options = {}) {
 }
 
 async function carregarPreRegistros({ manager = false } = {}) {
-    const items = await fetchJson("/occurrences/pre-registrations", { headers });
+    const endpoint = manager
+        ? "/occurrences/pre-registrations?status=pending"
+        : "/occurrences/pre-registrations";
+    const items = await fetchJson(endpoint, { headers });
     renderPreRegistros(
         manager ? "listaPreRegistrosGestao" : "listaMeusPreRegistros",
         Array.isArray(items) ? items : [],
