@@ -289,19 +289,8 @@ def _texto_relato_complementar_consolidado(
         return ""
 
     disciplina = _texto_limpo(disciplina_nome) or "Disciplina não informada"
-    professor = _texto_limpo(professor_nome)
-    if professor:
-        partes_nome = [parte.strip(".,;:") for parte in professor.split() if parte.strip(".,;:")]
-        prefixos = {"prof", "professor", "professora"}
-        primeiro_nome = ""
-        for parte in partes_nome:
-            if parte.casefold() in prefixos:
-                continue
-            primeiro_nome = parte
-            break
-        if primeiro_nome:
-            return f"em {disciplina}, Prof {_texto_caixa_alta(primeiro_nome)} relatou que {observacao}"
-    return f"em {disciplina}, foi relatado que {observacao}"
+    professor = _texto_limpo(professor_nome) or "Professor não informado"
+    return f"{professor} ({disciplina}), {observacao}"
 
 
 def listar_niveis_atencao_pre_conselho() -> list[dict]:
@@ -708,18 +697,6 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
         f"em razão de {_formatar_lista_pt_br(motivos)}."
     )
 
-    detalhes_disciplina = ""
-    if len(disciplinas_resumidas) > 1:
-        detalhes = [
-            f"em {item['disciplina']}, {_formatar_lista_pt_br(item['motivos'])}"
-            for item in disciplinas_resumidas
-            if item["motivos"]
-        ]
-        if detalhes:
-            detalhes_disciplina = _garantir_ponto_final(
-                "Por disciplina, observaram-se " + "; ".join(detalhes)
-            )
-
     recomendacao = _texto_recomendacao_nivel(nivel_atencao)
     rav_txt = _texto_rav(estudante_em_rav)
     observacao_txt = ""
@@ -760,7 +737,6 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
             abertura,
             rav_txt,
             recomendacao,
-            detalhes_disciplina,
             observacao_txt,
             pos_preconselho_txt,
         )

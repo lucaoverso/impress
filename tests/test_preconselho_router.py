@@ -326,7 +326,15 @@ class PreConselhoRouterTest(unittest.TestCase):
                 "No pós-pré-conselho, registrou-se que",
                 consolidado["itens_agrupados"][0]["texto"],
             )
-            self.assertIn("Prof REGISTRO", consolidado["itens_agrupados"][0]["texto"])
+            self.assertNotIn("Por disciplina", consolidado["itens_agrupados"][0]["texto"])
+            self.assertIn(
+                "Professor Registro (Matematica), precisa retomar a rotina de estudos",
+                consolidado["itens_agrupados"][0]["texto"],
+            )
+            self.assertIn(
+                "Professor Registro (Historia), apresentou dificuldade para retomar os conteudos",
+                consolidado["itens_agrupados"][0]["texto"],
+            )
             self.assertNotIn("Professora Sem Registro", consolidado["itens_agrupados"][0]["texto"])
             self.assertNotIn("Professora Estrutural", consolidado["itens_agrupados"][0]["texto"])
 
