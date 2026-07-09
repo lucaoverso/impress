@@ -155,8 +155,9 @@ class PreConselhoServiceTest(unittest.TestCase):
         self.assertIn(
             "Relatos complementares registrados", resultado["itens_agrupados"][0]["texto"]
         )
+        self.assertNotIn("Por disciplina", resultado["itens_agrupados"][0]["texto"])
         self.assertIn(
-            "em Matematica, Prof ANA relatou que precisa retomar a rotina de estudos",
+            "Prof. Ana (Matematica), precisa retomar a rotina de estudos",
             resultado["itens_agrupados"][0]["texto"],
         )
         self.assertIn("em razão de", resultado["itens_agrupados"][0]["texto"])
