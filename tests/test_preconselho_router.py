@@ -374,20 +374,52 @@ class PreConselhoRouterTest(unittest.TestCase):
                 payload=models.PreConselhoPeriodoStatusIn(status="EM_REAVALIACAO"),
                 usuario=self._usuario_admin(),
             )
+            motivo_personalizado = preconselho_router.criar_motivo_reavaliacao_api(
+                payload=models.PreConselhoMotivoReavaliacaoCreateIn(
+                    resultado="recuperado",
+                    codigo="recuperou_com_projeto_personalizado",
+                    descricao="Recuperou a aprendizagem por meio do projeto personalizado",
+                    ordem=5,
+                ),
+                usuario=self._usuario_admin(),
+            )
             motivo_recuperado = preconselho_router.obter_contexto_preconselho_api(
                 usuario=self._usuario_professor(professor_id, "Professor Registro"),
-            )["motivos_pos_preconselho"]["recuperado"][0]["id"]
+            )["motivos_pos_preconselho"]["recuperado"]
+            self.assertIn(
+                motivo_personalizado["codigo"],
+                [item["id"] for item in motivo_recuperado],
+            )
             reavaliado = preconselho_router.reavaliar_registro_preconselho_api(
                 registro_id=int(salvo["id"]),
                 payload=models.PreConselhoReavaliacaoIn(
                     recuperado=True,
-                    motivo_ids=[motivo_recuperado],
+                    motivo_ids=[motivo_personalizado["codigo"]],
                     observacao="Recuperou após nova atividade avaliativa.",
                 ),
                 usuario=self._usuario_professor(professor_id, "Professor Registro"),
             )
             self.assertTrue(reavaliado["pos_preconselho_recuperado"])
+            self.assertIn("projeto personalizado", reavaliado["pos_preconselho_motivos"][0])
             self.assertEqual(reavaliado["texto_gerado"], texto_inicial)
+
+            motivo_inativo = preconselho_router.atualizar_status_motivo_reavaliacao_api(
+                motivo_id=int(motivo_personalizado["id"]),
+                payload=models.PreConselhoMotivoStatusIn(ativo=False),
+                usuario=self._usuario_admin(),
+            )
+            self.assertEqual(int(motivo_inativo["ativo"]), 0)
+            contexto_apos_inativar = preconselho_router.obter_contexto_preconselho_api(
+                usuario=self._usuario_professor(professor_id, "Professor Registro"),
+            )
+            self.assertNotIn(
+                motivo_personalizado["codigo"],
+                [item["id"] for item in contexto_apos_inativar["motivos_pos_preconselho"]["recuperado"]],
+            )
+            self.assertIn(
+                "projeto personalizado",
+                database.buscar_registro_pre_conselho_por_id(int(salvo["id"]))["pos_preconselho_motivos"][0],
+            )
 
             conselho_sem_mantidos = preconselho_router.gerar_consolidado_preconselho_api(
                 periodo_id=periodo_id,

@@ -466,6 +466,26 @@ def list_preconselho_reasons(*, incluir_inativos: bool, usuario: dict) -> list[d
     return _list_preconselho_reasons(incluir_inativos=incluir_inativos, usuario=usuario)
 
 
+def list_review_reasons(*, incluir_inativos: bool, usuario: dict) -> list[dict]:
+    from .admin import list_review_reasons as _fn
+    return _fn(incluir_inativos=incluir_inativos, usuario=usuario)
+
+
+def create_review_reason(payload, usuario: dict) -> dict:
+    from .admin import create_review_reason as _fn
+    return _fn(payload, usuario)
+
+
+def update_review_reason(motivo_id: int, payload, usuario: dict) -> dict:
+    from .admin import update_review_reason as _fn
+    return _fn(motivo_id, payload, usuario)
+
+
+def update_review_reason_status(motivo_id: int, payload, usuario: dict) -> dict:
+    from .admin import update_review_reason_status as _fn
+    return _fn(motivo_id, payload, usuario)
+
+
 def list_preconselho_rav_skills(
     *,
     periodo_id: int | None,

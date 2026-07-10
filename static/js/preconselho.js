@@ -2150,6 +2150,71 @@ function renderizarTabelaMotivos() {
     `).join("");
 }
 
+function sincronizarCatalogoReavaliacao(itens) {
+    contextoAtual.motivos_reavaliacao_admin = itens;
+    contextoAtual.motivos_pos_preconselho = {
+        recuperado: itens.filter((item) => item.resultado === "recuperado" && Number(item.ativo) === 1)
+            .map((item) => ({ id: item.codigo, descricao: item.descricao })),
+        nao_recuperado: itens.filter((item) => item.resultado === "nao_recuperado" && Number(item.ativo) === 1)
+            .map((item) => ({ id: item.codigo, descricao: item.descricao })),
+    };
+}
+
+function renderizarTabelaMotivosReavaliacao() {
+    const tbody = el("tbodyMotivosReavaliacao");
+    if (!tbody) return;
+    const itens = contextoAtual?.motivos_reavaliacao_admin || [];
+    tbody.innerHTML = itens.map((item) => `
+        <tr>
+            <td data-label="Resultado">${item.resultado === "recuperado" ? "Recuperado" : "Ficou para o conselho"}</td>
+            <td data-label="Código">${escaparHtml(item.codigo || "")}</td>
+            <td data-label="Descrição">${escaparHtml(item.descricao || "")}</td>
+            <td data-label="Status">${Number(item.ativo) === 1 ? "Ativo" : "Inativo"}</td>
+            <td data-label="Ações"><div class="preconselho-table-actions">
+                <button type="button" data-action="editar-motivo-reavaliacao" data-id="${Number(item.id)}">Editar</button>
+                <button type="button" data-action="status-motivo-reavaliacao" data-id="${Number(item.id)}" data-ativo="${Number(item.ativo)}">${Number(item.ativo) === 1 ? "Inativar" : "Ativar"}</button>
+            </div></td>
+        </tr>`).join("");
+}
+
+async function carregarMotivosReavaliacaoAdmin() {
+    if (!contextoAtual?.pode_configurar) return;
+    const resposta = await fetchComAuth("/preconselho/motivos-reavaliacao?incluir_inativos=true", { headers });
+    if (!resposta.ok) throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível carregar os motivos da reavaliação."));
+    sincronizarCatalogoReavaliacao(await resposta.json());
+    renderizarTabelaMotivosReavaliacao();
+}
+
+function limparFormularioMotivoReavaliacao() {
+    el("preconselhoMotivoReavaliacaoId").value = "";
+    el("preconselhoMotivoReavaliacaoResultado").value = "recuperado";
+    el("preconselhoMotivoReavaliacaoCodigo").value = "";
+    el("preconselhoMotivoReavaliacaoCodigo").disabled = false;
+    el("preconselhoMotivoReavaliacaoDescricao").value = "";
+    el("preconselhoMotivoReavaliacaoOrdem").value = "0";
+}
+
+async function salvarMotivoReavaliacao(event) {
+    event.preventDefault();
+    limparMensagem("msgMotivoReavaliacao");
+    const id = Number(el("preconselhoMotivoReavaliacaoId").value || 0);
+    const payload = {
+        resultado: el("preconselhoMotivoReavaliacaoResultado").value,
+        descricao: el("preconselhoMotivoReavaliacaoDescricao").value.trim(),
+        ordem: Number(el("preconselhoMotivoReavaliacaoOrdem").value || 0),
+    };
+    if (!id) payload.codigo = el("preconselhoMotivoReavaliacaoCodigo").value.trim();
+    try {
+        const resposta = await fetchComAuth(id ? `/preconselho/motivos-reavaliacao/${id}` : "/preconselho/motivos-reavaliacao", {
+            method: id ? "PUT" : "POST", headers: headersJson, body: JSON.stringify(payload)
+        });
+        if (!resposta.ok) throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível salvar o motivo."));
+        await carregarMotivosReavaliacaoAdmin();
+        limparFormularioMotivoReavaliacao();
+        definirMensagem("msgMotivoReavaliacao", "Motivo salvo com sucesso.");
+    } catch (erro) { definirMensagem("msgMotivoReavaliacao", erro.message, true); }
+}
+
 function renderizarTabelaHabilidadesRav() {
     const tbody = el("tbodyHabilidadesRavPreconselho");
     if (!tbody) {
@@ -2325,6 +2390,7 @@ async function recarregarHabilidadesRav() {
     };
     renderizarHabilidadesRavDocente();
     renderizarTabelaHabilidadesRav();
+    await carregarMotivosReavaliacaoAdmin();
 }
 
 async function salvarPeriodo(event) {
@@ -3118,6 +3184,35 @@ function registrarEventos() {
     el("btnLimparMotivoPreconselho").addEventListener("click", () => {
         limparMensagem("msgPreconselhoMotivo");
         limparFormularioMotivo();
+    });
+    el("formMotivoReavaliacao").addEventListener("submit", salvarMotivoReavaliacao);
+    el("btnLimparMotivoReavaliacao").addEventListener("click", limparFormularioMotivoReavaliacao);
+    el("tbodyMotivosReavaliacao").addEventListener("click", async (event) => {
+        const editar = event.target.closest("button[data-action='editar-motivo-reavaliacao']");
+        const status = event.target.closest("button[data-action='status-motivo-reavaliacao']");
+        if (editar) {
+            const item = (contextoAtual.motivos_reavaliacao_admin || []).find((motivo) => Number(motivo.id) === Number(editar.dataset.id));
+            if (!item) return;
+            el("preconselhoMotivoReavaliacaoId").value = String(item.id);
+            el("preconselhoMotivoReavaliacaoResultado").value = item.resultado;
+            el("preconselhoMotivoReavaliacaoCodigo").value = item.codigo;
+            el("preconselhoMotivoReavaliacaoCodigo").disabled = true;
+            el("preconselhoMotivoReavaliacaoDescricao").value = item.descricao;
+            el("preconselhoMotivoReavaliacaoOrdem").value = String(item.ordem || 0);
+            return;
+        }
+        if (status) {
+            const resposta = await fetchComAuth(`/preconselho/motivos-reavaliacao/${Number(status.dataset.id)}/status`, {
+                method: "PUT", headers: headersJson,
+                body: JSON.stringify({ ativo: Number(status.dataset.ativo) !== 1 })
+            });
+            if (!resposta.ok) {
+                definirMensagem("msgMotivoReavaliacao", await obterMensagemErroResposta(resposta, "Não foi possível alterar o status."), true);
+                return;
+            }
+            await carregarMotivosReavaliacaoAdmin();
+            definirMensagem("msgMotivoReavaliacao", "Status atualizado.");
+        }
     });
 
     el("formHabilidadeRavPreconselho").addEventListener("submit", salvarHabilidadeRav);

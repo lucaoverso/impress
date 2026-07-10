@@ -103,6 +103,7 @@ def save_preconselho_record(payload, usuario: dict) -> dict:
             payload.pos_preconselho_motivo_ids,
             payload.pos_preconselho_recuperado,
             observacao_pos_preconselho,
+            catalogo_personalizado=_review_reasons_catalog(),
         )
         texto = gerar_texto_pre_conselho_individual(
             motivos=motivos,
@@ -185,6 +186,7 @@ def review_preconselho_record(registro_id: int, payload, usuario: dict) -> dict:
             payload.motivo_ids,
             payload.recuperado,
             observacao,
+            catalogo_personalizado=_review_reasons_catalog(),
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -202,6 +204,17 @@ def review_preconselho_record(registro_id: int, payload, usuario: dict) -> dict:
     if not atualizado:
         raise HTTPException(500, "Falha ao carregar a reavaliação salva.")
     return {**atualizado, "editavel": is_record_editable_for_user(usuario, atualizado)}
+
+
+def _review_reasons_catalog() -> dict[str, list[dict]]:
+    motivos = repository.list_review_reasons(incluir_inativos=False)
+    return {
+        resultado: [
+            {"id": item["codigo"], "descricao": item["descricao"]}
+            for item in motivos if item["resultado"] == resultado
+        ]
+        for resultado in ("recuperado", "nao_recuperado")
+    }
 
 
 def list_preconselho_records(

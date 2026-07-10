@@ -14,6 +14,7 @@ from services.preconselho_service import (
     STATUS_PERIODO_PRE_CONSELHO_ABERTO,
     catalogo_motivos_iniciais_pre_conselho,
     descrever_motivos_pos_pre_conselho,
+    listar_motivos_pos_pre_conselho,
     nome_periodo_pre_conselho,
     normalizar_status_pos_pre_conselho,
     periodos_padrao_pre_conselho,
@@ -844,6 +845,28 @@ def criar_tabelas():
             atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
         )
     """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS pre_conselho_motivos_reavaliacao (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            resultado TEXT NOT NULL,
+            codigo TEXT NOT NULL UNIQUE,
+            descricao TEXT NOT NULL,
+            ativo INTEGER NOT NULL DEFAULT 1,
+            ordem INTEGER NOT NULL DEFAULT 0,
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            atualizado_em TEXT NOT NULL DEFAULT (datetime('now'))
+        )
+    """)
+    motivos_reavaliacao_padrao = listar_motivos_pos_pre_conselho()
+    for resultado, motivos_padrao in motivos_reavaliacao_padrao.items():
+        for ordem, motivo in enumerate(motivos_padrao, start=1):
+            cursor.execute(
+                """INSERT OR IGNORE INTO pre_conselho_motivos_reavaliacao
+                   (resultado, codigo, descricao, ativo, ordem)
+                   VALUES (?, ?, ?, 1, ?)""",
+                (resultado, motivo["id"], motivo["descricao"], ordem * 10),
+            )
 
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS pre_conselho_registros (
@@ -11450,6 +11473,71 @@ def listar_motivos_pre_conselho(*, incluir_inativos: bool = False):
     return [dict(row) for row in rows]
 
 
+def listar_motivos_reavaliacao_pre_conselho(*, incluir_inativos: bool = False):
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT * FROM pre_conselho_motivos_reavaliacao"
+    if not incluir_inativos:
+        query += " WHERE ativo = 1"
+    query += " ORDER BY resultado, ordem, descricao COLLATE NOCASE"
+    cursor.execute(query)
+    rows = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def buscar_motivo_reavaliacao_pre_conselho_por_id(motivo_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM pre_conselho_motivos_reavaliacao WHERE id = ?", (int(motivo_id),))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def criar_motivo_reavaliacao_pre_conselho(*, resultado: str, codigo: str, descricao: str, ordem: int = 0):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """INSERT INTO pre_conselho_motivos_reavaliacao
+           (resultado, codigo, descricao, ativo, ordem, criado_em, atualizado_em)
+           VALUES (?, ?, ?, 1, ?, datetime('now'), datetime('now'))""",
+        (resultado, codigo, descricao, int(ordem or 0)),
+    )
+    motivo_id = int(cursor.lastrowid)
+    conn.commit()
+    conn.close()
+    return motivo_id
+
+
+def atualizar_motivo_reavaliacao_pre_conselho(motivo_id: int, *, resultado: str, descricao: str, ordem: int = 0):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """UPDATE pre_conselho_motivos_reavaliacao
+           SET resultado = ?, descricao = ?, ordem = ?, atualizado_em = datetime('now')
+           WHERE id = ?""",
+        (resultado, descricao, int(ordem or 0), int(motivo_id)),
+    )
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def atualizar_status_motivo_reavaliacao_pre_conselho(motivo_id: int, ativo: bool):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "UPDATE pre_conselho_motivos_reavaliacao SET ativo = ?, atualizado_em = datetime('now') WHERE id = ?",
+        (int(bool(ativo)), int(motivo_id)),
+    )
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
 def buscar_motivo_pre_conselho_por_id(motivo_id: int):
     conn = get_connection()
     cursor = conn.cursor()
@@ -11965,10 +12053,21 @@ def _normalizar_campos_pos_preconselho(item: dict) -> dict:
         motivo_ids,
         observacao,
     )
+    motivos_catalogo = listar_motivos_reavaliacao_pre_conselho(incluir_inativos=True)
+    catalogo_agrupado = {
+        "recuperado": [
+            {"id": motivo["codigo"], "descricao": motivo["descricao"]}
+            for motivo in motivos_catalogo if motivo["resultado"] == "recuperado"
+        ],
+        "nao_recuperado": [
+            {"id": motivo["codigo"], "descricao": motivo["descricao"]}
+            for motivo in motivos_catalogo if motivo["resultado"] == "nao_recuperado"
+        ],
+    }
     return {
         "pos_preconselho_recuperado": recuperado,
         "pos_preconselho_motivo_ids": motivo_ids if recuperado is not None else [],
-        "pos_preconselho_motivos": descrever_motivos_pos_pre_conselho(motivo_ids, recuperado),
+        "pos_preconselho_motivos": descrever_motivos_pos_pre_conselho(motivo_ids, recuperado, catalogo_agrupado),
         "pos_preconselho_observacao": observacao,
     }
 

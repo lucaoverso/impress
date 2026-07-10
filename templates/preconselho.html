@@ -807,6 +807,47 @@
                             </table>
                         </div>
                     </article>
+
+                    <article class="calendar-card pcpi-card pcpi-card-full">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <h2>Motivos da reavaliação</h2>
+                            </div>
+                        </div>
+                        <form id="formMotivoReavaliacao" class="pcpi-form-grid">
+                            <input id="preconselhoMotivoReavaliacaoId" type="hidden">
+                            <label class="pcpi-field">
+                                <span>Resultado</span>
+                                <select id="preconselhoMotivoReavaliacaoResultado">
+                                    <option value="recuperado">Recuperado</option>
+                                    <option value="nao_recuperado">Ficou para o conselho</option>
+                                </select>
+                            </label>
+                            <label class="pcpi-field">
+                                <span>Código</span>
+                                <input id="preconselhoMotivoReavaliacaoCodigo" maxlength="120" required>
+                            </label>
+                            <label class="pcpi-field pcpi-field-wide">
+                                <span>Descrição</span>
+                                <input id="preconselhoMotivoReavaliacaoDescricao" maxlength="255" required>
+                            </label>
+                            <label class="pcpi-field">
+                                <span>Ordem</span>
+                                <input id="preconselhoMotivoReavaliacaoOrdem" type="number" value="0">
+                            </label>
+                            <div class="pcpi-inline-actions pcpi-field-wide">
+                                <button class="btn-destaque" type="submit">Salvar motivo</button>
+                                <button id="btnLimparMotivoReavaliacao" type="button">Limpar</button>
+                            </div>
+                            <p id="msgMotivoReavaliacao" class="pcpi-status-copy pcpi-field-wide"></p>
+                        </form>
+                        <div class="preconselho-table-wrap">
+                            <table class="preconselho-table">
+                                <thead><tr><th>Resultado</th><th>Código</th><th>Descrição</th><th>Status</th><th>Ações</th></tr></thead>
+                                <tbody id="tbodyMotivosReavaliacao"></tbody>
+                            </table>
+                        </div>
+                    </article>
                 </section>
             </section>
         </section>

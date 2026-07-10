@@ -36,6 +36,11 @@ from db.preconselho import (
     listar_estudantes_pre_conselho_painel,
     listar_habilidades_rav_pre_conselho,
     listar_motivos_pre_conselho,
+    listar_motivos_reavaliacao_pre_conselho,
+    buscar_motivo_reavaliacao_pre_conselho_por_id,
+    criar_motivo_reavaliacao_pre_conselho,
+    atualizar_motivo_reavaliacao_pre_conselho,
+    atualizar_status_motivo_reavaliacao_pre_conselho,
     listar_periodos_pre_conselho,
     listar_rav_pre_conselho_por_turma,
     listar_registros_pre_conselho,
@@ -195,6 +200,26 @@ def list_panel_students(*args, **kwargs):
 
 def list_reasons(*, incluir_inativos: bool = False):
     return listar_motivos_pre_conselho(incluir_inativos=incluir_inativos)
+
+
+def list_review_reasons(*, incluir_inativos: bool = False):
+    return listar_motivos_reavaliacao_pre_conselho(incluir_inativos=incluir_inativos)
+
+
+def get_review_reason(motivo_id: int):
+    return buscar_motivo_reavaliacao_pre_conselho_por_id(motivo_id)
+
+
+def create_review_reason(**kwargs):
+    return criar_motivo_reavaliacao_pre_conselho(**kwargs)
+
+
+def update_review_reason(motivo_id: int, **kwargs):
+    return atualizar_motivo_reavaliacao_pre_conselho(motivo_id, **kwargs)
+
+
+def update_review_reason_status(motivo_id: int, ativo: bool):
+    return atualizar_status_motivo_reavaliacao_pre_conselho(motivo_id, ativo)
 
 
 def list_rav_skills(

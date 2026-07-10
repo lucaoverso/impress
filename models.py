@@ -240,6 +240,28 @@ class PreConselhoMotivoStatusIn(BaseModel):
     ativo: bool
 
 
+class PreConselhoMotivoReavaliacaoOut(BaseModel):
+    id: int
+    resultado: str
+    codigo: str
+    descricao: str
+    ativo: int | bool = True
+    ordem: int = 0
+
+
+class PreConselhoMotivoReavaliacaoCreateIn(BaseModel):
+    resultado: str
+    codigo: str
+    descricao: str
+    ordem: int = 0
+
+
+class PreConselhoMotivoReavaliacaoUpdateIn(BaseModel):
+    resultado: str
+    descricao: str
+    ordem: int = 0
+
+
 class PreConselhoRavHabilidadeOut(BaseModel):
     id: int
     periodo_id: int | None = None

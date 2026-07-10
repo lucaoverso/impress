@@ -20,7 +20,6 @@ from .service import (
 )
 from services.preconselho_service import (
     STATUS_PERIODO_PRE_CONSELHO_ABERTO,
-    listar_motivos_pos_pre_conselho,
     listar_niveis_atencao_pre_conselho,
     periodo_editavel_para_cargo,
 )
@@ -124,7 +123,14 @@ def build_preconselho_context(usuario: dict) -> dict:
         "rav_habilidades": repository.list_rav_skills(incluir_inativos=is_admin_user(usuario)),
         "professores": professores,
         "niveis_atencao": listar_niveis_atencao_pre_conselho(),
-        "motivos_pos_preconselho": listar_motivos_pos_pre_conselho(),
+        "motivos_pos_preconselho": {
+            resultado: [
+                {"id": item["codigo"], "descricao": item["descricao"]}
+                for item in repository.list_review_reasons(incluir_inativos=False)
+                if item["resultado"] == resultado
+            ]
+            for resultado in ("recuperado", "nao_recuperado")
+        },
         "minhas_turmas_disciplinas": minhas_turmas_disciplinas,
     }
 

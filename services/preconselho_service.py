@@ -366,15 +366,17 @@ def normalizar_status_pos_pre_conselho(
 def descrever_motivos_pos_pre_conselho(
     motivo_ids: list[str] | None,
     recuperado: bool | None,
+    catalogo_personalizado: dict[str, list[dict]] | None = None,
 ) -> list[str]:
     status = normalizar_status_pos_pre_conselho(recuperado, motivo_ids)
     if status is None:
         return []
 
     chave = "recuperado" if status else "nao_recuperado"
+    catalogo_fonte = catalogo_personalizado or listar_motivos_pos_pre_conselho()
     catalogo = {
         _texto_limpo(item["id"]): _texto_limpo(item["descricao"])
-        for item in MOTIVOS_POS_PRE_CONSELHO[chave]
+        for item in catalogo_fonte.get(chave, [])
     }
     descricoes = []
     for motivo_id in _lista_unica_texto(motivo_ids):
@@ -388,6 +390,7 @@ def validar_motivos_pos_pre_conselho(
     motivo_ids: list[str] | None,
     recuperado: bool | None,
     observacao: str = "",
+    catalogo_personalizado: dict[str, list[dict]] | None = None,
 ) -> tuple[bool | None, list[str], list[str]]:
     status = normalizar_status_pos_pre_conselho(recuperado, motivo_ids, observacao)
     ids_normalizados = _lista_unica_texto(motivo_ids)
@@ -397,7 +400,8 @@ def validar_motivos_pos_pre_conselho(
         return None, [], []
 
     chave = "recuperado" if status else "nao_recuperado"
-    catalogo = {_texto_limpo(item["id"]): item for item in MOTIVOS_POS_PRE_CONSELHO[chave]}
+    catalogo_fonte = catalogo_personalizado or listar_motivos_pos_pre_conselho()
+    catalogo = {_texto_limpo(item["id"]): item for item in catalogo_fonte.get(chave, [])}
     ids_invalidos = [motivo_id for motivo_id in ids_normalizados if motivo_id not in catalogo]
     if ids_invalidos:
         raise ValueError("Existe motivo inválido na etapa de pós pré-conselho.")

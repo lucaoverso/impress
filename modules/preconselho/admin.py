@@ -124,6 +124,55 @@ def list_preconselho_reasons(*, incluir_inativos: bool, usuario: dict) -> list[d
     return repository.list_reasons(incluir_inativos=incluir_inativos)
 
 
+def list_review_reasons(*, incluir_inativos: bool, usuario: dict) -> list[dict]:
+    require_preconselho_access(usuario)
+    if incluir_inativos and not is_admin_user(usuario):
+        raise HTTPException(403, "Acesso negado.")
+    return repository.list_review_reasons(incluir_inativos=incluir_inativos)
+
+
+def _review_result(value: str) -> str:
+    result = str(value or "").strip().lower()
+    if result not in {"recuperado", "nao_recuperado"}:
+        raise HTTPException(400, "Resultado de reavaliação inválido.")
+    return result
+
+
+def create_review_reason(payload, usuario: dict) -> dict:
+    require_admin_access(usuario)
+    try:
+        motivo_id = repository.create_review_reason(
+            resultado=_review_result(payload.resultado),
+            codigo=require_text(payload.codigo, "Código", max_len=120).casefold(),
+            descricao=require_text(payload.descricao, "Descrição", max_len=255),
+            ordem=int(payload.ordem or 0),
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(400, "Código já cadastrado ou dados inválidos.") from exc
+    return repository.get_review_reason(motivo_id)
+
+
+def update_review_reason(motivo_id: int, payload, usuario: dict) -> dict:
+    require_admin_access(usuario)
+    if not repository.update_review_reason(
+        motivo_id,
+        resultado=_review_result(payload.resultado),
+        descricao=require_text(payload.descricao, "Descrição", max_len=255),
+        ordem=int(payload.ordem or 0),
+    ):
+        raise HTTPException(404, "Motivo de reavaliação não encontrado.")
+    return repository.get_review_reason(motivo_id)
+
+
+def update_review_reason_status(motivo_id: int, payload, usuario: dict) -> dict:
+    require_admin_access(usuario)
+    if not repository.update_review_reason_status(motivo_id, bool(payload.ativo)):
+        raise HTTPException(404, "Motivo de reavaliação não encontrado.")
+    return repository.get_review_reason(motivo_id)
+
+
 def list_preconselho_rav_skills(
     *,
     periodo_id: int | None,

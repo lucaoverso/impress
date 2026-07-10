@@ -11,6 +11,9 @@ from models import (
     PreConselhoMotivoOut,
     PreConselhoMotivoStatusIn,
     PreConselhoMotivoUpdateIn,
+    PreConselhoMotivoReavaliacaoOut,
+    PreConselhoMotivoReavaliacaoCreateIn,
+    PreConselhoMotivoReavaliacaoUpdateIn,
     PreConselhoPeriodoCreateIn,
     PreConselhoPeriodoOut,
     PreConselhoPeriodoStatusIn,
@@ -39,6 +42,7 @@ from .service import (
     create_preconselho_period,
     create_preconselho_rav_skill,
     create_preconselho_reason,
+    create_review_reason,
     delete_preconselho_record,
     import_preconselho_rav_skills,
     list_my_classroom_disciplines,
@@ -47,6 +51,7 @@ from .service import (
     list_preconselho_periods,
     list_preconselho_rav_skills,
     list_preconselho_reasons,
+    list_review_reasons,
     list_preconselho_records,
     preview_preconselho_text,
     review_preconselho_record,
@@ -57,6 +62,8 @@ from .service import (
     update_preconselho_rav_skill_status,
     update_preconselho_reason,
     update_preconselho_reason_status,
+    update_review_reason,
+    update_review_reason_status,
 )
 
 router = APIRouter()
@@ -258,6 +265,26 @@ def atualizar_status_motivo_preconselho_api(
     usuario=Depends(get_usuario_logado),
 ):
     return update_preconselho_reason_status(motivo_id, payload, usuario)
+
+
+@router.get("/preconselho/motivos-reavaliacao", response_model=list[PreConselhoMotivoReavaliacaoOut])
+def listar_motivos_reavaliacao_api(incluir_inativos: bool = Query(default=False), usuario=Depends(get_usuario_logado)):
+    return list_review_reasons(incluir_inativos=incluir_inativos, usuario=usuario)
+
+
+@router.post("/preconselho/motivos-reavaliacao", response_model=PreConselhoMotivoReavaliacaoOut)
+def criar_motivo_reavaliacao_api(payload: PreConselhoMotivoReavaliacaoCreateIn, usuario=Depends(get_usuario_logado)):
+    return create_review_reason(payload, usuario)
+
+
+@router.put("/preconselho/motivos-reavaliacao/{motivo_id}", response_model=PreConselhoMotivoReavaliacaoOut)
+def atualizar_motivo_reavaliacao_api(motivo_id: int, payload: PreConselhoMotivoReavaliacaoUpdateIn, usuario=Depends(get_usuario_logado)):
+    return update_review_reason(motivo_id, payload, usuario)
+
+
+@router.put("/preconselho/motivos-reavaliacao/{motivo_id}/status", response_model=PreConselhoMotivoReavaliacaoOut)
+def atualizar_status_motivo_reavaliacao_api(motivo_id: int, payload: PreConselhoMotivoStatusIn, usuario=Depends(get_usuario_logado)):
+    return update_review_reason_status(motivo_id, payload, usuario)
 
 
 @router.get("/preconselho/habilidades-rav", response_model=list[PreConselhoRavHabilidadeOut])

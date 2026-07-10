@@ -13,6 +13,11 @@ atualizar_status_habilidade_rav_pre_conselho = proxy(
 atualizar_reavaliacao_registro_pre_conselho = proxy(
     "atualizar_reavaliacao_registro_pre_conselho"
 )
+listar_motivos_reavaliacao_pre_conselho = proxy("listar_motivos_reavaliacao_pre_conselho")
+buscar_motivo_reavaliacao_pre_conselho_por_id = proxy("buscar_motivo_reavaliacao_pre_conselho_por_id")
+criar_motivo_reavaliacao_pre_conselho = proxy("criar_motivo_reavaliacao_pre_conselho")
+atualizar_motivo_reavaliacao_pre_conselho = proxy("atualizar_motivo_reavaliacao_pre_conselho")
+atualizar_status_motivo_reavaliacao_pre_conselho = proxy("atualizar_status_motivo_reavaliacao_pre_conselho")
 buscar_habilidade_rav_pre_conselho_por_id = proxy("buscar_habilidade_rav_pre_conselho_por_id")
 buscar_habilidade_rav_pre_conselho_por_chave = proxy(
     "buscar_habilidade_rav_pre_conselho_por_chave"
@@ -47,6 +52,11 @@ __all__ = [
     "atualizar_status_periodo_pre_conselho",
     "atualizar_status_habilidade_rav_pre_conselho",
     "atualizar_reavaliacao_registro_pre_conselho",
+    "listar_motivos_reavaliacao_pre_conselho",
+    "buscar_motivo_reavaliacao_pre_conselho_por_id",
+    "criar_motivo_reavaliacao_pre_conselho",
+    "atualizar_motivo_reavaliacao_pre_conselho",
+    "atualizar_status_motivo_reavaliacao_pre_conselho",
     "buscar_habilidade_rav_pre_conselho_por_id",
     "buscar_habilidade_rav_pre_conselho_por_chave",
     "buscar_habilidades_rav_pre_conselho_por_ids",
