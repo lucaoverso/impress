@@ -26,31 +26,31 @@
             </div>
         </header>
 
-        <nav id="preconselhoTabs" class="admin-tabs" aria-label="Abas do módulo de pré-conselho">
+        <nav id="preconselhoTabs" class="admin-tabs" role="tablist" aria-label="Abas do módulo de pré-conselho">
             <button id="tabBtnDocente" class="admin-tab-btn" data-preconselho-tab-trigger="docente"
-                aria-controls="preconselho-tab-docente" aria-selected="false" type="button" hidden>
+                role="tab" aria-controls="preconselho-tab-docente" aria-selected="false" tabindex="-1" type="button" hidden>
                 Meu preenchimento
             </button>
             <button id="tabBtnConsolidacao" class="admin-tab-btn" data-preconselho-tab-trigger="consolidacao"
-                aria-controls="preconselho-tab-consolidacao" aria-selected="false" type="button" hidden>
+                role="tab" aria-controls="preconselho-tab-consolidacao" aria-selected="false" tabindex="-1" type="button" hidden>
                 Consolidação
             </button>
             <button id="tabBtnRelatorio" class="admin-tab-btn" data-preconselho-tab-trigger="relatorio"
-                aria-controls="preconselho-tab-relatorio" aria-selected="false" type="button" hidden>
+                role="tab" aria-controls="preconselho-tab-relatorio" aria-selected="false" tabindex="-1" type="button" hidden>
                 Relatório
             </button>
             <button id="tabBtnRav" class="admin-tab-btn" data-preconselho-tab-trigger="rav"
-                aria-controls="preconselho-tab-rav" aria-selected="false" type="button" hidden>
+                role="tab" aria-controls="preconselho-tab-rav" aria-selected="false" tabindex="-1" type="button" hidden>
                 RAV
             </button>
             <button id="tabBtnConfiguracoes" class="admin-tab-btn" data-preconselho-tab-trigger="configuracoes"
-                aria-controls="preconselho-tab-configuracoes" aria-selected="false" type="button" hidden>
+                role="tab" aria-controls="preconselho-tab-configuracoes" aria-selected="false" tabindex="-1" type="button" hidden>
                 Configurações
             </button>
         </nav>
 
         <section class="preconselho-tab-panels">
-            <section id="preconselho-tab-docente" class="admin-tab-panel" data-preconselho-tab-panel="docente" hidden>
+            <section id="preconselho-tab-docente" class="admin-tab-panel" role="tabpanel" aria-labelledby="tabBtnDocente" data-preconselho-tab-panel="docente" hidden>
                 <section class="preconselho-workspace-grid">
                     <article class="calendar-card panel-card pcpi-card pcpi-card-full">
                         <div class="pcpi-card-header section-header">
@@ -116,8 +116,8 @@
                             <div class="pcpi-card-header section-header">
                                 <div class="section-header-main">
                                     <p class="pcpi-eyebrow section-eyebrow">Turma</p>
-                                    <h2>Lista de estudantes</h2>
-                                    <p>Busque por nome, filtre por situação e clique no estudante para abrir a janela de
+                                    <h2 id="preconselhoListaEstudantesTitulo">Lista de estudantes</h2>
+                                    <p id="preconselhoListaEstudantesDescricao">Busque por nome, filtre por situação e clique no estudante para abrir a janela de
                                         sinalização.</p>
                                 </div>
                             </div>
@@ -130,7 +130,7 @@
                                         placeholder="Digite parte do nome">
                                 </label>
 
-                                <label class="pcpi-field field" for="preconselhoStatusEstudante">
+                                <label id="preconselhoStatusEstudanteField" class="pcpi-field field" for="preconselhoStatusEstudante">
                                     <span class="field-label">Filtro</span>
                                     <select id="preconselhoStatusEstudante">
                                         <option value="todos">Todos</option>
@@ -152,9 +152,9 @@
                             role="dialog" aria-modal="true" aria-labelledby="preconselhoModalTitulo" tabindex="-1">
                             <div class="pcpi-card-header preconselho-modal-header">
                                 <div>
-                                    <p class="pcpi-eyebrow">Registro individual</p>
+                                    <p id="preconselhoModalEyebrow" class="pcpi-eyebrow">Registro individual</p>
                                     <h2 id="preconselhoModalTitulo">Parecer por estudante</h2>
-                                    <p>Preencha os relatos, selecione os motivos e salve para aplicar a sinalização do
+                                    <p id="preconselhoModalDescricao">Preencha os relatos, selecione os motivos e salve para aplicar a sinalização do
                                         estudante.</p>
                                 </div>
                                 <button id="btnFecharModalRegistroDocente" type="button"
@@ -175,7 +175,7 @@
                                             aqui.</small>
                                     </div>
 
-                                    <div class="preconselho-status-banner pcpi-field pcpi-field-wide"
+                                    <div class="preconselho-status-banner pcpi-field pcpi-field-wide" data-modal-state="registro"
                                         style="display: none;">
                                         <span>Sinalização</span>
                                         <strong id="preconselhoStatusSelecionadoTitulo">Nenhum estudante em
@@ -185,11 +185,33 @@
                                             automaticamente.</small>
                                     </div>
 
-                                    <div class="pcpi-field pcpi-field-wide">
+                                    <section id="preconselhoReavaliacaoField"
+                                        class="preconselho-review-panel pcpi-field pcpi-field-wide" hidden>
+                                        <div class="pcpi-subsection-header">
+                                            <div>
+                                                <h3>Reavaliação para o conselho de classe</h3>
+                                            </div>
+                                        </div>
+                                        <fieldset class="preconselho-review-options">
+                                            <legend>Resultado</legend>
+                                            <label class="preconselho-review-choice is-recuperado"><input type="radio" name="preconselhoResultadoReavaliacao" value="recuperado"> Recuperado</label>
+                                            <label class="preconselho-review-choice is-conselho"><input type="radio" name="preconselhoResultadoReavaliacao" value="nao_recuperado"> Ficou para o conselho</label>
+                                        </fieldset>
+                                        <div id="preconselhoMotivosReavaliacao" class="preconselho-review-reasons"></div>
+                                        <label class="pcpi-field" for="preconselhoObservacaoReavaliacao">
+                                            <span>Observação da reavaliação (opcional)</span>
+                                            <textarea id="preconselhoObservacaoReavaliacao" rows="3" maxlength="1000"></textarea>
+                                        </label>
+                                        <div class="pcpi-inline-actions preconselho-modal-primary-actions">
+                                            <button id="btnSalvarReavaliacao" class="btn-destaque" type="button">Salvar reavaliação</button>
+                                        </div>
+                                    </section>
+
+                                    <div class="pcpi-field pcpi-field-wide" data-modal-state="registro">
                                         <div id="preconselhoMotivosDocente" class="preconselho-motivos-board"></div>
                                     </div>
 
-                                    <div id="preconselhoRavRegistroField"
+                                    <div id="preconselhoRavRegistroField" data-modal-state="registro"
                                         class="preconselho-toggle-field pcpi-field pcpi-field-wide" hidden>
                                         <label class="preconselho-toggle-row" for="preconselhoEstudanteEmRav">
                                             <input id="preconselhoEstudanteEmRav" type="checkbox">
@@ -198,7 +220,7 @@
                                         <small class="pcpi-hint">Este campo aparece somente em períodos marcados com RAV.</small>
                                     </div>
 
-                                    <div id="preconselhoRavDetalhesField"
+                                    <div id="preconselhoRavDetalhesField" data-modal-state="registro"
                                         class="preconselho-rav-details pcpi-field pcpi-field-wide" hidden>
                                         <div class="pcpi-subsection-header">
                                             <h3>Plano de recuperacao RAV</h3>
@@ -222,18 +244,18 @@
                                         </label>
                                     </div>
 
-                                    <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
-                                        <button id="btnSalvarRegistroDocente" class="btn-destaque" type="submit">Salvar
+                                    <div class="pcpi-inline-actions pcpi-field pcpi-field-wide preconselho-modal-actions">
+                                        <button id="btnSalvarRegistroDocente" data-modal-state="registro" class="btn-destaque" type="submit">Salvar
                                             registro</button>
-                                        <button id="btnLimparRegistroDocente" type="button">Limpar formulário</button>
-                                        <button id="btnExcluirRegistroDocente" type="button">Excluir registro</button>
+                                        <button id="btnLimparRegistroDocente" data-modal-state="registro" type="button">Limpar formulário</button>
+                                        <button id="btnExcluirRegistroDocente" data-modal-state="registro" type="button">Excluir registro</button>
                                         <button id="btnFecharModalRegistroDocenteRodape" type="button">Fechar</button>
                                     </div>
 
                                     <p id="msgPreconselhoRegistro" class="pcpi-status-copy pcpi-field-wide"></p>
                                 </form>
 
-                                <div class="preconselho-preview-stack">
+                                <div class="preconselho-preview-stack" data-modal-state="registro">
 
                                     <label class="pcpi-field" for="preconselhoNivelAtencao">
                                         <span>Nível de atenção</span>
@@ -271,7 +293,7 @@
                 </section>
             </section>
 
-            <section id="preconselho-tab-consolidacao" class="admin-tab-panel" data-preconselho-tab-panel="consolidacao"
+            <section id="preconselho-tab-consolidacao" class="admin-tab-panel" role="tabpanel" aria-labelledby="tabBtnConsolidacao" data-preconselho-tab-panel="consolidacao"
                 hidden>
                 <section class="preconselho-workspace-grid">
                     <article class="calendar-card pcpi-card pcpi-card-full">
@@ -308,6 +330,14 @@
                                 <select id="preconselhoDisciplinaConsolidacao"></select>
                             </label>
 
+                            <label class="pcpi-field" for="preconselhoVersaoConsolidacao">
+                                <span>Versão do texto</span>
+                                <select id="preconselhoVersaoConsolidacao">
+                                    <option value="preconselho">Pré-conselho (original)</option>
+                                    <option value="conselho">Conselho de classe</option>
+                                </select>
+                            </label>
+
                             <div class="pcpi-inline-actions pcpi-field pcpi-field-wide">
                                 <button id="btnAtualizarConsolidacao" class="btn-destaque" type="submit">Atualizar
                                     consolidação</button>
@@ -333,6 +363,7 @@
                         </div>
 
                         <p id="msgPreconselhoConsolidacao" class="pcpi-status-copy"></p>
+                        <p id="preconselhoResumoReavaliacaoConsolidado" class="pcpi-hint"></p>
                     </article>
 
                     <article class="calendar-card pcpi-card">
@@ -364,7 +395,7 @@
                 </section>
             </section>
 
-            <section id="preconselho-tab-relatorio" class="admin-tab-panel" data-preconselho-tab-panel="relatorio"
+            <section id="preconselho-tab-relatorio" class="admin-tab-panel" role="tabpanel" aria-labelledby="tabBtnRelatorio" data-preconselho-tab-panel="relatorio"
                 hidden>
                 <section class="preconselho-workspace-grid">
                     <article class="calendar-card pcpi-card pcpi-card-full">
@@ -457,7 +488,7 @@
                 </section>
             </section>
 
-            <section id="preconselho-tab-rav" class="admin-tab-panel" data-preconselho-tab-panel="rav" hidden>
+            <section id="preconselho-tab-rav" class="admin-tab-panel" role="tabpanel" aria-labelledby="tabBtnRav" data-preconselho-tab-panel="rav" hidden>
                 <section class="preconselho-workspace-grid">
                     <article class="calendar-card pcpi-card pcpi-card-full">
                         <div class="pcpi-card-header">
@@ -531,7 +562,7 @@
                 </section>
             </section>
 
-            <section id="preconselho-tab-configuracoes" class="admin-tab-panel"
+            <section id="preconselho-tab-configuracoes" class="admin-tab-panel" role="tabpanel" aria-labelledby="tabBtnConfiguracoes"
                 data-preconselho-tab-panel="configuracoes" hidden>
                 <section class="preconselho-config-grid">
                     <article class="calendar-card pcpi-card">
@@ -589,7 +620,8 @@
                                 <span>Status inicial ou desejado</span>
                                 <select id="preconselhoPeriodoStatusForm">
                                     <option value="ABERTO">Aberto</option>
-                                    <option value="FECHADO">Fechado</option>
+                                    <option value="EM_REAVALIACAO">Em reavaliação</option>
+                                    <option value="ENCERRADO">Encerrado</option>
                                 </select>
                             </label>
 

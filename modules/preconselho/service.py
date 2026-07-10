@@ -376,6 +376,12 @@ def delete_preconselho_record(registro_id: int, usuario: dict) -> dict:
     return _delete_preconselho_record(registro_id, usuario)
 
 
+def review_preconselho_record(registro_id: int, payload, usuario: dict) -> dict:
+    from .records import review_preconselho_record as _review_preconselho_record
+
+    return _review_preconselho_record(registro_id, payload, usuario)
+
+
 def list_preconselho_records(
     *,
     periodo_id: int,
@@ -536,6 +542,7 @@ def build_preconselho_consolidated(
     disciplina_id: int | None,
     professor_id: int | None,
     usuario: dict,
+    versao: str = "preconselho",
     enrich_teachers_in_records=None,
 ) -> dict:
     from .reports import build_preconselho_consolidated as _build_preconselho_consolidated
@@ -545,6 +552,7 @@ def build_preconselho_consolidated(
         turma_id=turma_id,
         disciplina_id=disciplina_id,
         professor_id=professor_id,
+        versao=versao,
         usuario=usuario,
         enrich_teachers_in_records=enrich_teachers_in_records,
     )

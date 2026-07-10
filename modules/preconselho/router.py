@@ -23,6 +23,7 @@ from models import (
     PreConselhoRavHabilidadeUpdateIn,
     PreConselhoRavTurmaOut,
     PreConselhoRegistroSaveIn,
+    PreConselhoReavaliacaoIn,
     PreConselhoRegistrosOut,
     PreConselhoRelatorioOut,
     PreConselhoTextoOut,
@@ -48,6 +49,7 @@ from .service import (
     list_preconselho_reasons,
     list_preconselho_records,
     preview_preconselho_text,
+    review_preconselho_record,
     save_preconselho_record,
     update_preconselho_period,
     update_preconselho_period_status,
@@ -121,6 +123,15 @@ def excluir_registro_preconselho_api(
     return delete_preconselho_record(registro_id, usuario)
 
 
+@router.put("/preconselho/registros/{registro_id}/reavaliacao")
+def reavaliar_registro_preconselho_api(
+    registro_id: int,
+    payload: PreConselhoReavaliacaoIn,
+    usuario=Depends(get_usuario_logado),
+):
+    return review_preconselho_record(registro_id, payload, usuario)
+
+
 @router.get("/preconselho/registros", response_model=PreConselhoRegistrosOut)
 def listar_registros_preconselho_api(
     periodo_id: int = Query(...),
@@ -144,6 +155,7 @@ def gerar_consolidado_preconselho_api(
     turma_id: int | None = Query(default=None),
     disciplina_id: int | None = Query(default=None),
     professor_id: int | None = Query(default=None),
+    versao: str = "preconselho",
     usuario=Depends(get_usuario_logado),
 ):
     return build_preconselho_consolidated(
@@ -151,6 +163,7 @@ def gerar_consolidado_preconselho_api(
         turma_id=turma_id,
         disciplina_id=disciplina_id,
         professor_id=professor_id,
+        versao=versao,
         usuario=usuario,
     )
 

@@ -24,6 +24,7 @@ from .service import (
 from services.preconselho_service import (
     gerar_texto_pre_conselho_individual,
     periodo_editavel_para_cargo,
+    periodo_em_reavaliacao,
     validar_motivos_pos_pre_conselho,
     validar_nivel_atencao_pre_conselho,
 )
@@ -165,6 +166,42 @@ def delete_preconselho_record(registro_id: int, usuario: dict) -> dict:
     ):
         raise HTTPException(500, "Falha ao excluir o registro.")
     return {"ok": True}
+
+
+def review_preconselho_record(registro_id: int, payload, usuario: dict) -> dict:
+    require_preconselho_access(usuario)
+    registro = repository.get_record(registro_id)
+    if not registro:
+        raise HTTPException(404, "Registro não encontrado.")
+    if not is_admin_user(usuario):
+        if not is_teacher_user(usuario) or int(registro.get("professor_id") or 0) != get_user_id(usuario):
+            raise HTTPException(403, "Apenas o professor responsável pode reavaliar este registro.")
+        if not periodo_em_reavaliacao(registro.get("periodo_status")):
+            raise HTTPException(403, "O período não está aberto para reavaliação.")
+
+    observacao = optional_text(payload.observacao, "Observação da reavaliação", max_len=1000)
+    try:
+        recuperado, motivo_ids, _ = validar_motivos_pos_pre_conselho(
+            payload.motivo_ids,
+            payload.recuperado,
+            observacao,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if not motivo_ids:
+        raise HTTPException(400, "Selecione ao menos um motivo para a reavaliação.")
+
+    if not repository.update_record_review(
+        registro_id,
+        recuperado=bool(recuperado),
+        motivo_ids=motivo_ids,
+        observacao=observacao,
+    ):
+        raise HTTPException(404, "Registro não encontrado.")
+    atualizado = repository.get_record(registro_id)
+    if not atualizado:
+        raise HTTPException(500, "Falha ao carregar a reavaliação salva.")
+    return {**atualizado, "editavel": is_record_editable_for_user(usuario, atualizado)}
 
 
 def list_preconselho_records(

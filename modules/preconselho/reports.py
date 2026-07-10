@@ -35,6 +35,7 @@ def build_preconselho_consolidated(
     disciplina_id: int | None,
     professor_id: int | None,
     usuario: dict,
+    versao: str = "preconselho",
     enrich_teachers_in_records=None,
 ) -> dict:
     if not has_manager_access(usuario):
@@ -47,15 +48,36 @@ def build_preconselho_consolidated(
     if professor_id is not None:
         professor = resolve_teacher(usuario, professor_id, permitir_gestor=True)
 
-    itens = repository.list_records(
+    versao_normalizada = str(versao or "preconselho").strip().lower()
+    if versao_normalizada not in {"preconselho", "conselho"}:
+        raise HTTPException(400, "Versão de consolidado inválida.")
+
+    itens_originais = repository.list_records(
         periodo_id=int(periodo["id"]),
         turma_id=int(turma["id"]) if turma else None,
         disciplina_id=int(disciplina["id"]) if disciplina else None,
         professor_usuario_id=int(professor["id"]) if professor else None,
     )
-    itens = enrich_editable_records(usuario, itens)
+    itens_originais = enrich_editable_records(usuario, itens_originais)
     enrich_teachers_in_records = enrich_teachers_in_records or repository_enrich_teachers_in_records
-    itens = enrich_teachers_in_records(itens)
+    itens_originais = enrich_teachers_in_records(itens_originais)
+    total_recuperados = sum(item.get("pos_preconselho_recuperado") is True for item in itens_originais)
+    total_mantidos = sum(item.get("pos_preconselho_recuperado") is False for item in itens_originais)
+    total_pendentes = sum(item.get("pos_preconselho_recuperado") is None for item in itens_originais)
+    itens = (
+        [item for item in itens_originais if item.get("pos_preconselho_recuperado") is False]
+        if versao_normalizada == "conselho"
+        else [
+            {
+                **item,
+                "pos_preconselho_recuperado": None,
+                "pos_preconselho_motivo_ids": [],
+                "pos_preconselho_motivos": [],
+                "pos_preconselho_observacao": "",
+            }
+            for item in itens_originais
+        ]
+    )
     consolidado = gerar_texto_consolidado_pre_conselho(
         periodo_nome=str(periodo["nome"]),
         turma_nome=str(turma["nome"]) if turma else "Todas as turmas",
@@ -72,8 +94,12 @@ def build_preconselho_consolidated(
         "disciplina_nome": disciplina["nome"] if disciplina else "",
         "professor_id": int(professor["id"]) if professor else None,
         "professor_nome": professor["nome"] if professor else "",
+        "versao": versao_normalizada,
         "total_registros": int(consolidado["total_registros"]),
         "total_estudantes": int(consolidado["total_estudantes"]),
+        "total_recuperados": total_recuperados,
+        "total_mantidos": total_mantidos,
+        "total_pendentes": total_pendentes,
         "motivos_frequentes": consolidado["motivos_frequentes"],
         "texto": consolidado["texto"],
         "itens_agrupados": consolidado["itens_agrupados"],

@@ -395,6 +395,12 @@ class PreConselhoRegistroSaveIn(BaseModel):
     professor_id: int | None = None
 
 
+class PreConselhoReavaliacaoIn(BaseModel):
+    recuperado: bool
+    motivo_ids: list[str] = Field(default_factory=list)
+    observacao: str = ""
+
+
 class PreConselhoTextoPreviewIn(BaseModel):
     motivo_ids: list[int] = Field(default_factory=list)
     observacao_professor: str = ""
@@ -477,8 +483,12 @@ class PreConselhoConsolidadoOut(BaseModel):
     disciplina_nome: str = ""
     professor_id: int | None = None
     professor_nome: str = ""
+    versao: str = "preconselho"
     total_registros: int = 0
     total_estudantes: int = 0
+    total_recuperados: int = 0
+    total_mantidos: int = 0
+    total_pendentes: int = 0
     motivos_frequentes: list[str] = Field(default_factory=list)
     texto: str = ""
     itens_agrupados: list[PreConselhoConsolidadoEstudanteOut] = Field(default_factory=list)

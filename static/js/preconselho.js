@@ -34,8 +34,14 @@ let contextoAtual = null;
 let abaAtiva = "";
 let timerPreviewDocente = null;
 let ultimoElementoFocadoModal = null;
+let modalDocenteAlterado = false;
+let modalDocenteSalvando = false;
+let timerBuscaEstudante = null;
+let buscaEstudanteController = null;
+let buscaEstudanteSequencia = 0;
 
 const estadoDocente = {
+    modo: "registro",
     periodoId: null,
     combos: [],
     turmaId: null,
@@ -70,6 +76,8 @@ function definirMensagem(id, texto, erro = false) {
 
     alvo.textContent = texto || "";
     alvo.dataset.state = erro ? "erro" : "ok";
+    alvo.setAttribute("role", erro ? "alert" : "status");
+    alvo.setAttribute("aria-live", erro ? "assertive" : "polite");
 }
 
 function criarEstadoVazio(mensagem) {
@@ -92,7 +100,40 @@ function statusPeriodoClasse(status) {
 }
 
 function rotuloStatusPeriodo(status) {
-    return String(status || "").trim().toUpperCase() === "ABERTO" ? "Aberto" : "Fechado";
+    const valor = String(status || "").trim().toUpperCase();
+    if (valor === "ABERTO") return "Aberto";
+    if (valor === "EM_REAVALIACAO") return "Em reavaliação";
+    return "Encerrado";
+}
+
+function periodoEmReavaliacao(periodo = periodoDocenteAtual()) {
+    return String(periodo?.status || "").trim().toUpperCase() === "EM_REAVALIACAO";
+}
+
+function atualizarModoDocente() {
+    estadoDocente.modo = periodoEmReavaliacao() ? "reavaliacao" : "registro";
+    const emReavaliacao = estadoDocente.modo === "reavaliacao";
+    const filtroStatus = el("preconselhoStatusEstudante");
+    if (emReavaliacao) filtroStatus.value = "sinalizados";
+    el("preconselhoStatusEstudanteField").hidden = emReavaliacao;
+    el("formFiltrosEstudantesDocente").dataset.state = estadoDocente.modo;
+    el("listaEstudantesDocente").dataset.state = estadoDocente.modo;
+    el("preconselhoListaEstudantesTitulo").textContent = emReavaliacao
+        ? "Estudantes para reavaliação"
+        : "Lista de estudantes";
+    el("preconselhoListaEstudantesDescricao").hidden = emReavaliacao;
+    el("preconselhoListaEstudantesDescricao").textContent = emReavaliacao
+        ? ""
+        : "Busque por nome, filtre por situação e clique no estudante para abrir a janela de sinalização.";
+
+    const modal = el("preconselhoModalEditor");
+    modal.dataset.state = estadoDocente.modo;
+    el("preconselhoModalEyebrow").textContent = emReavaliacao ? "Etapa de reavaliação" : "Registro individual";
+    el("preconselhoModalTitulo").textContent = emReavaliacao ? "Reavaliar estudante" : "Parecer por estudante";
+    el("preconselhoModalDescricao").hidden = emReavaliacao;
+    el("preconselhoModalDescricao").textContent = emReavaliacao
+        ? ""
+        : "Preencha os relatos, selecione os motivos e salve para aplicar a sinalização do estudante.";
 }
 
 function nomeTurno(turno) {
@@ -406,15 +447,63 @@ function resetarScrollModalRegistroDocente() {
 
 function focarInicioModalRegistroDocente() {
     const painel = el("preconselhoPainelEditor");
-    if (!painel || typeof painel.focus !== "function") {
+    const controles = obterControlesFocaveisModal();
+    const primeiroControle = controles.find((item) => item.closest("#formRegistroDocente")) || controles[0] || painel;
+    if (!primeiroControle || typeof primeiroControle.focus !== "function") {
         return;
     }
 
     try {
-        painel.focus({ preventScroll: true });
+        primeiroControle.focus({ preventScroll: true });
     } catch (_erro) {
-        painel.focus();
+        primeiroControle.focus();
     }
+}
+
+function obterControlesFocaveisModal() {
+    const painel = el("preconselhoPainelEditor");
+    if (!painel) return [];
+    return Array.from(painel.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    )).filter((item) => !item.hidden && item.getClientRects().length > 0);
+}
+
+function prenderFocoNoModal(event) {
+    if (event.key !== "Tab" || !modalRegistroDocenteAberto()) return;
+    const controles = obterControlesFocaveisModal();
+    if (controles.length === 0) {
+        event.preventDefault();
+        el("preconselhoPainelEditor")?.focus();
+        return;
+    }
+    const primeiro = controles[0];
+    const ultimo = controles[controles.length - 1];
+    if (!el("preconselhoPainelEditor")?.contains(document.activeElement)) {
+        event.preventDefault();
+        primeiro.focus();
+    } else if (event.shiftKey && document.activeElement === primeiro) {
+        event.preventDefault();
+        ultimo.focus();
+    } else if (!event.shiftKey && document.activeElement === ultimo) {
+        event.preventDefault();
+        primeiro.focus();
+    }
+}
+
+function definirEstadoSalvamentoModal(salvando) {
+    modalDocenteSalvando = Boolean(salvando);
+    el("preconselhoPainelEditor")?.setAttribute("aria-busy", salvando ? "true" : "false");
+    const botaoRegistro = el("btnSalvarRegistroDocente");
+    const botaoReavaliacao = el("btnSalvarReavaliacao");
+    if (botaoRegistro) {
+        botaoRegistro.textContent = salvando ? "Salvando..." : "Salvar registro";
+        if (salvando) botaoRegistro.disabled = true;
+    }
+    if (botaoReavaliacao) {
+        botaoReavaliacao.textContent = salvando ? "Salvando..." : "Salvar reavaliação";
+        if (salvando) botaoReavaliacao.disabled = true;
+    }
+    if (!salvando) atualizarEstadoFormularioDocente();
 }
 
 function abrirModalRegistroDocente() {
@@ -423,6 +512,7 @@ function abrirModalRegistroDocente() {
         return;
     }
 
+    atualizarModoDocente();
     if (modal.hidden) {
         const focoAtual = document.activeElement;
         ultimoElementoFocadoModal = focoAtual && typeof focoAtual.focus === "function" ? focoAtual : null;
@@ -435,10 +525,16 @@ function abrirModalRegistroDocente() {
     });
 }
 
-function fecharModalRegistroDocente({ limparFormulario = true, restaurarFoco = true } = {}) {
+function fecharModalRegistroDocente({ limparFormulario = true, restaurarFoco = true, forcar = false } = {}) {
     const modal = el("preconselhoModalEditor");
     if (!modal) {
-        return;
+        return false;
+    }
+    if (modalDocenteSalvando && !forcar) {
+        return false;
+    }
+    if (!forcar && modalDocenteAlterado && !window.confirm("Descartar as alterações não salvas?")) {
+        return false;
     }
 
     modal.hidden = true;
@@ -453,6 +549,8 @@ function fecharModalRegistroDocente({ limparFormulario = true, restaurarFoco = t
         ultimoElementoFocadoModal.focus();
     }
     ultimoElementoFocadoModal = null;
+    modalDocenteAlterado = false;
+    return true;
 }
 
 function abrirModalComEstudante(estudante) {
@@ -476,6 +574,9 @@ function limparFormularioDocente() {
     el("preconselhoEstudanteEmRav").checked = false;
     el("preconselhoRavBuscaHabilidade").value = "";
     el("preconselhoRavAcoes").value = "";
+    document.querySelectorAll('[name="preconselhoResultadoReavaliacao"]').forEach((radio) => { radio.checked = false; });
+    el("preconselhoObservacaoReavaliacao").value = "";
+    el("preconselhoMotivosReavaliacao").innerHTML = "";
     aplicarSelecaoMotivosDocente([]);
     aplicarSelecaoHabilidadesRavDocente([]);
     renderizarHabilidadesRavDocente();
@@ -485,6 +586,7 @@ function limparFormularioDocente() {
     atualizarVisibilidadeRavDocente();
     atualizarEstadoFormularioDocente();
     renderizarEstudantesDocente();
+    modalDocenteAlterado = false;
 }
 
 function definirBotoesDocenteHabilitados() {
@@ -493,6 +595,7 @@ function definirBotoesDocenteHabilitados() {
     const possuiEstudante = Number(estadoDocente.estudanteId || 0) > 0;
     const podeEditar = Boolean(periodo?.editavel);
     const camposHabilitados = possuiEstudante && podeEditar;
+    const podeReavaliar = possuiEstudante && Boolean(registro) && periodoEmReavaliacao(periodo);
 
     el("preconselhoNivelAtencao").disabled = !camposHabilitados;
     el("preconselhoObservacaoProfessor").disabled = !camposHabilitados;
@@ -505,14 +608,20 @@ function definirBotoesDocenteHabilitados() {
     document.querySelectorAll("[data-action='remover-habilidade-rav']").forEach((botao) => {
         botao.disabled = !camposHabilitados || !periodoTemRav(periodo) || !Boolean(el("preconselhoEstudanteEmRav").checked);
     });
-    el("btnSalvarRegistroDocente").disabled = !possuiEstudante || !podeEditar;
+    el("btnSalvarRegistroDocente").disabled = modalDocenteSalvando || !possuiEstudante || !podeEditar;
     el("btnExcluirRegistroDocente").disabled = !registro || !podeEditar;
+    el("preconselhoReavaliacaoField").hidden = !periodoEmReavaliacao(periodo) || !registro;
+    document.querySelectorAll('[name="preconselhoResultadoReavaliacao"], .preconselho-review-reason').forEach((campo) => {
+        campo.disabled = !podeReavaliar;
+    });
+    el("preconselhoObservacaoReavaliacao").disabled = !podeReavaliar;
+    el("btnSalvarReavaliacao").disabled = modalDocenteSalvando || !podeReavaliar;
 
     if (!possuiEstudante) {
         el("preconselhoPreviewAjuda").textContent = "Selecione um estudante para preencher o formulário.";
         return;
     }
-    if (!podeEditar) {
+    if (!podeEditar && !podeReavaliar) {
         el("preconselhoPreviewAjuda").textContent = "O período selecionado está fechado para edição do professor. Os dados permanecem disponíveis para consulta.";
         return;
     }
@@ -523,6 +632,18 @@ function definirBotoesDocenteHabilitados() {
 
     el("preconselhoPreviewAjuda").textContent =
         "O texto é atualizado automaticamente conforme os motivos e a observação selecionados.";
+}
+
+function renderizarMotivosReavaliacao() {
+    const container = el("preconselhoMotivosReavaliacao");
+    const resultado = document.querySelector('[name="preconselhoResultadoReavaliacao"]:checked')?.value || "";
+    const registro = registroDocenteAtual();
+    const catalogo = contextoAtual?.motivos_pos_preconselho?.[resultado] || [];
+    const selecionados = new Set(registro?.pos_preconselho_motivo_ids || []);
+    container.innerHTML = catalogo.length
+        ? catalogo.map((motivo) => `<label><input class="preconselho-review-reason" type="checkbox" value="${escaparHtml(motivo.id || "")}" ${selecionados.has(String(motivo.id || "")) ? "checked" : ""}> <span>${escaparHtml(motivo.descricao || "")}</span></label>`).join("")
+        : (resultado ? '<p class="pcpi-hint">Nenhum motivo disponível.</p>' : "");
+    atualizarEstadoFormularioDocente();
 }
 
 function atualizarEstadoFormularioDocente() {
@@ -575,6 +696,7 @@ function ativarAba(aba) {
         const ativa = botao.dataset.preconselhoTabTrigger === abaAtiva;
         botao.classList.toggle("is-active", ativa);
         botao.setAttribute("aria-selected", ativa ? "true" : "false");
+        botao.tabIndex = ativa ? 0 : -1;
     });
 
     document.querySelectorAll("[data-preconselho-tab-panel]").forEach((painel) => {
@@ -591,7 +713,7 @@ function renderizarSelectPeriodos() {
         el("preconselhoPeriodoDocente"),
         periodos,
         (item) => item.id,
-        (item) => `${rotuloPeriodo(item)}${item.status === "ABERTO" ? " - aberto" : " - fechado"}`,
+        (item) => `${rotuloPeriodo(item)} - ${rotuloStatusPeriodo(item.status).toLowerCase()}`,
         "Selecione um período",
         {
             permitirVazio: false,
@@ -875,6 +997,7 @@ function renderizarCombosDocente() {
         const ativo = Number(item.turma_id) === Number(estadoDocente.turmaId) && Number(item.disciplina_id) === Number(estadoDocente.disciplinaId);
         return `
             <button type="button" class="preconselho-selection-card ${ativo ? "is-active" : ""}"
+                aria-pressed="${ativo ? "true" : "false"}"
                 data-turma-id="${Number(item.turma_id)}"
                 data-disciplina-id="${Number(item.disciplina_id)}">
                 <strong>${escaparHtml(item.turma_nome || "")} • ${escaparHtml(item.disciplina_nome || "")}</strong>
@@ -899,42 +1022,82 @@ function renderizarEstudantesDocente() {
     }
 
     if (!Array.isArray(estadoDocente.estudantes) || estadoDocente.estudantes.length === 0) {
-        lista.innerHTML = criarEstadoVazio("Nenhum estudante encontrado para os filtros aplicados.");
+        lista.innerHTML = criarEstadoVazio(
+            estadoDocente.modo === "reavaliacao"
+                ? "Nenhum estudante foi sinalizado nesta turma e disciplina."
+                : "Nenhum estudante encontrado para os filtros aplicados."
+        );
         el("preconselhoResumoEstudantesDocente").textContent = `${combo.turma_nome} • ${combo.disciplina_nome}`;
         return;
     }
 
+    const trilho = lista.closest(".preconselho-rail-scroll");
+    const scrollAnterior = trilho?.scrollTop || 0;
     lista.innerHTML = estadoDocente.estudantes.map((item) => {
         const selecionado = Number(item.estudante_id) === Number(estadoDocente.estudanteId);
         const nivel = rotuloNivelAtencao(item.nivel_atencao);
+        const statusReavaliacao = item.pos_preconselho_recuperado === true
+            ? "Recuperado"
+            : (item.pos_preconselho_recuperado === false ? "Ficou para o conselho" : "Reavaliação pendente");
+        const classeStatusReavaliacao = item.pos_preconselho_recuperado === true
+            ? "pcpi-chip-status-recuperado"
+            : (item.pos_preconselho_recuperado === false ? "pcpi-chip-status-conselho" : "pcpi-chip-status-pendente");
+        const classeCardReavaliacao = estadoDocente.modo === "reavaliacao"
+            ? (item.pos_preconselho_recuperado === true
+                ? "preconselho-card-status-recuperado"
+                : (item.pos_preconselho_recuperado === false
+                    ? "preconselho-card-status-conselho"
+                    : "preconselho-card-status-pendente"))
+            : "";
+        const descricaoItem = estadoDocente.modo === "reavaliacao"
+            ? ""
+            : (item.sinalizado
+                ? `${item.motivos.length} motivo(s) selecionado(s)`
+                    + (nivel ? ` • Atenção ${nivel}` : "")
+                    + (item.motivos.length ? `\n${item.motivos.map((m) => `- ${m.descricao || ""}`).join("\n")}` : "")
+                : "Clique para abrir um relato.");
         return `
-            <li class="pcpi-item ${item.sinalizado ? "pcpi-item-manual" : "pcpi-item-automatico"}">
-                <button type="button" class="preconselho-list-button ${selecionado ? "is-active" : ""}" data-estudante-id="${Number(item.estudante_id)}">
+            <li class="pcpi-item ${item.sinalizado ? "pcpi-item-manual" : "pcpi-item-automatico"} ${classeCardReavaliacao}">
+                <button type="button" class="preconselho-list-button ${selecionado ? "is-active" : ""}" aria-pressed="${selecionado ? "true" : "false"}" data-estudante-id="${Number(item.estudante_id)}">
                     <span class="preconselho-list-button-top">
                         <strong>${escaparHtml(item.nome || "")}</strong>
                         <span class="pcpi-tag-group">
-                            <span class="pcpi-chip ${item.sinalizado ? "pcpi-chip-manual" : "pcpi-chip-automatico"}">${item.sinalizado ? "Sinalizado" : "Estudante Ok"}</span>
+                            ${estadoDocente.modo === "registro" ? `<span class="pcpi-chip ${item.sinalizado ? "pcpi-chip-manual" : "pcpi-chip-automatico"}">${item.sinalizado ? "Sinalizado" : "Estudante Ok"}</span>` : ""}
+                            ${periodoEmReavaliacao() && item.sinalizado ? `<span class="pcpi-chip ${classeStatusReavaliacao}">${escaparHtml(statusReavaliacao)}</span>` : ""}
                         </span>
                     </span>
-                    <span class="pcpi-item-note">${escaparHtml(
-                        item.sinalizado
-                            ? `${item.motivos.length} motivo(s) selecionado(s)`
-                            + (nivel ? ` • Atenção ${nivel}` : "")
-                            + (item.motivos.length
-                                ? `\n${item.motivos.map((m) => `- ${escaparHtml(m.descricao || "")}`).join("\n")}`
-                                : ""
-                            )
-                            : "Clique para abrir um relato.")}
-                    </span>
+                    ${descricaoItem ? `<span class="pcpi-item-note">${escaparHtml(descricaoItem)}</span>` : ""}
                 </button>
             </li>
         `;
     }).join("");
+    if (trilho) trilho.scrollTop = scrollAnterior;
 
     const total = estadoDocente.estudantes.length;
     const totalSinalizados = estadoDocente.estudantes.filter((item) => item.sinalizado).length;
-    el("preconselhoResumoEstudantesDocente").textContent =
-        `${combo.turma_nome} • ${combo.disciplina_nome} • ${total} estudante(s), ${totalSinalizados} sinalizado(s).`;
+    el("preconselhoResumoEstudantesDocente").textContent = estadoDocente.modo === "reavaliacao"
+        ? `${combo.turma_nome} • ${combo.disciplina_nome} • ${total} estudante(s) para reavaliação.`
+        : `${combo.turma_nome} • ${combo.disciplina_nome} • ${total} estudante(s), ${totalSinalizados} sinalizado(s).`;
+}
+
+function aplicarReavaliacaoNoEstado(registroAtualizado) {
+    const registro = normalizarRegistroDocente(registroAtualizado);
+    estadoDocente.registros = estadoDocente.registros.map((item) =>
+        Number(item.id) === Number(registro.id) ? registro : item
+    );
+    estadoDocente.estudantes = estadoDocente.estudantes.map((item) =>
+        Number(item.estudante_id) === Number(registro.estudante_id)
+            ? {
+                ...item,
+                pos_preconselho_recuperado: registro.pos_preconselho_recuperado,
+                pos_preconselho_motivo_ids: registro.pos_preconselho_motivo_ids,
+                pos_preconselho_motivos: registro.pos_preconselho_motivos,
+                pos_preconselho_observacao: registro.pos_preconselho_observacao,
+            }
+            : item
+    );
+    renderizarEstudantesDocente();
+    renderizarRegistrosDocente();
 }
 
 function formatarMotivosRegistro(motivos = []) {
@@ -1011,18 +1174,28 @@ function preencherFormularioComEstudante(estudante) {
     el("preconselhoRegistroAtualId").value = registro ? String(registro.id) : "";
     el("preconselhoEstudanteAtualId").value = String(estudante.estudante_id);
     el("preconselhoEstudanteSelecionadoNome").textContent = estudante.nome || "Estudante";
-    el("preconselhoEstudanteSelecionadoMeta").textContent = estudante.sinalizado
+    const resultadoReavaliacao = estudante.pos_preconselho_recuperado === true
+        ? "recuperado"
+        : (estudante.pos_preconselho_recuperado === false ? "nao_recuperado" : "");
+    el("preconselhoEstudanteSelecionadoMeta").textContent = estadoDocente.modo === "reavaliacao"
+        ? `${estudante.turma_nome || ""} • ${comboDocenteAtual()?.disciplina_nome || ""} • ${resultadoReavaliacao ? "Reavaliação já registrada" : "Reavaliação pendente"}.`
+        : estudante.sinalizado
         ? `${estudante.turma_nome || ""} • Registro já salvo para a seleção atual.`
         : `${estudante.turma_nome || ""} • Ainda não sinalizado neste período e disciplina.`;
     el("preconselhoSinalizarEstudante").checked = true;
     el("preconselhoNivelAtencao").value = String(estudante.nivel_atencao || "");
     el("preconselhoObservacaoProfessor").value = String(estudante.observacao_professor || "");
+    document.querySelectorAll('[name="preconselhoResultadoReavaliacao"]').forEach((radio) => {
+        radio.checked = radio.value === resultadoReavaliacao;
+    });
+    el("preconselhoObservacaoReavaliacao").value = String(estudante.pos_preconselho_observacao || "");
     el("preconselhoEstudanteEmRav").checked = periodoTemRav() && Boolean(estudante.estudante_em_rav);
     el("preconselhoRavBuscaHabilidade").value = "";
     el("preconselhoRavAcoes").value = String(estudante.rav_acoes || "");
     aplicarSelecaoMotivosDocente(estudante.motivo_ids || []);
     renderizarHabilidadesRavDocente();
     aplicarSelecaoHabilidadesRavDocente(estudante.rav_habilidade_ids || []);
+    renderizarMotivosReavaliacao();
     atualizarStatusSinalizacaoDocente({
         possuiEstudante: true,
         possuiRegistro: Boolean(estudante.sinalizado),
@@ -1032,6 +1205,7 @@ function preencherFormularioComEstudante(estudante) {
     renderizarEstudantesDocente();
     atualizarEstadoFormularioDocente();
     void atualizarPreviewDocente();
+    modalDocenteAlterado = false;
 }
 
 async function atualizarPreviewDocente() {
@@ -1131,20 +1305,38 @@ async function carregarEstudantesDocente() {
         return;
     }
 
+    atualizarModoDocente();
     const params = new URLSearchParams({
         periodo_id: String(estadoDocente.periodoId),
         turma_id: String(combo.turma_id),
         disciplina_id: String(combo.disciplina_id),
         q: String(el("preconselhoBuscaEstudante").value || "").trim(),
-        status: String(el("preconselhoStatusEstudante").value || "todos")
+        status: estadoDocente.modo === "reavaliacao"
+            ? "sinalizados"
+            : String(el("preconselhoStatusEstudante").value || "todos")
     });
 
-    const resposta = await fetchComAuth(`/preconselho/estudantes?${params.toString()}`, { headers });
+    if (buscaEstudanteController) buscaEstudanteController.abort();
+    buscaEstudanteController = new AbortController();
+    const sequenciaAtual = ++buscaEstudanteSequencia;
+    let resposta;
+    try {
+        resposta = await fetchComAuth(`/preconselho/estudantes?${params.toString()}`, {
+            headers,
+            signal: buscaEstudanteController.signal
+        });
+    } catch (erro) {
+        if (erro?.name === "AbortError") return;
+        throw erro;
+    }
+    if (sequenciaAtual !== buscaEstudanteSequencia) return;
     if (!resposta.ok) {
         throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível carregar os estudantes."));
     }
 
-    estadoDocente.estudantes = await resposta.json();
+    const estudantes = await resposta.json();
+    if (sequenciaAtual !== buscaEstudanteSequencia) return;
+    estadoDocente.estudantes = estudantes;
     if (!estadoDocente.estudantes.some((item) => Number(item.estudante_id) === Number(estadoDocente.estudanteId))) {
         estadoDocente.estudanteId = null;
     }
@@ -1178,6 +1370,7 @@ async function carregarRegistrosDocente() {
 async function carregarPainelDocente(estudanteIdParaReabrir = null) {
     limparMensagem("msgPreconselhoDocente");
     try {
+        atualizarModoDocente();
         await carregarCombosDocente();
         await Promise.all([carregarEstudantesDocente(), carregarRegistrosDocente()]);
 
@@ -1220,6 +1413,7 @@ function construirParametrosConsolidacao() {
     if (professorId) params.set("professor_id", professorId);
     if (turmaId) params.set("turma_id", turmaId);
     if (disciplinaId) params.set("disciplina_id", disciplinaId);
+    params.set("versao", String(el("preconselhoVersaoConsolidacao").value || "preconselho"));
     return params;
 }
 
@@ -1233,6 +1427,7 @@ function renderizarConsolidacao() {
         el("preconselhoResumoConsolidadoMotivos").textContent = "0";
         el("preconselhoMotivosFrequentes").textContent = "A síntese agrupada por estudante aparecerá após a aplicação dos filtros.";
         el("preconselhoTextoConsolidado").value = "";
+        el("preconselhoResumoReavaliacaoConsolidado").textContent = "";
         lista.innerHTML = criarEstadoVazio("Nenhum estudante consolidado disponível.");
         return;
     }
@@ -1244,6 +1439,8 @@ function renderizarConsolidacao() {
         ? `Motivos mais frequentes: ${dados.motivos_frequentes.join(", ")}.`
         : "Nenhum motivo recorrente foi destacado nesta consolidação.";
     el("preconselhoTextoConsolidado").value = String(dados.texto || "");
+    el("preconselhoResumoReavaliacaoConsolidado").textContent =
+        `Reavaliação: ${Number(dados.total_recuperados || 0)} recuperado(s), ${Number(dados.total_mantidos || 0)} mantido(s) e ${Number(dados.total_pendentes || 0)} pendente(s).`;
 
     const itensAgrupados = Array.isArray(dados.itens_agrupados) ? dados.itens_agrupados : [];
     if (itensAgrupados.length === 0) {
@@ -1890,7 +2087,7 @@ function renderizarTabelaPeriodos() {
                 <div class="preconselho-table-actions">
                     <button type="button" data-action="editar-periodo" data-periodo-id="${Number(item.id)}">Editar</button>
                     <button type="button" data-action="status-periodo" data-periodo-id="${Number(item.id)}" data-status="${escaparHtml(item.status || "")}">
-                        ${item.status === "ABERTO" ? "Fechar" : "Abrir"}
+                        ${item.status === "ABERTO" ? "Iniciar reavaliação" : (item.status === "EM_REAVALIACAO" ? "Encerrar" : "Reabrir")}
                     </button>
                 </div>
             </td>
@@ -2027,7 +2224,7 @@ function carregarPeriodoNoFormulario(periodoId) {
     el("preconselhoPeriodoEtapa").value = String(periodo.etapa || "1");
     el("preconselhoPeriodoDataInicio").value = String(periodo.data_inicio || "");
     el("preconselhoPeriodoDataFim").value = String(periodo.data_fim || "");
-    el("preconselhoPeriodoStatusForm").value = String(periodo.status || "FECHADO");
+    el("preconselhoPeriodoStatusForm").value = String(periodo.status === "FECHADO" ? "ENCERRADO" : (periodo.status || "ENCERRADO"));
     el("preconselhoPeriodoTemRav").checked = Boolean(periodo.tem_rav);
 }
 
@@ -2182,12 +2379,16 @@ async function salvarPeriodo(event) {
 
 async function alternarStatusPeriodo(periodoId, statusAtual) {
     limparMensagem("msgPreconselhoPeriodo");
+    const statusNormalizado = String(statusAtual || "").toUpperCase();
+    const proximoStatus = statusNormalizado === "ABERTO"
+        ? "EM_REAVALIACAO"
+        : (statusNormalizado === "EM_REAVALIACAO" ? "ENCERRADO" : "EM_REAVALIACAO");
     try {
         const resposta = await fetchComAuth(`/preconselho/periodos/${Number(periodoId)}/status`, {
             method: "PUT",
             headers: headersJson,
             body: JSON.stringify({
-                status: String(statusAtual || "").toUpperCase() === "ABERTO" ? "FECHADO" : "ABERTO"
+                status: proximoStatus
             })
         });
 
@@ -2411,6 +2612,7 @@ async function salvarRegistroDocente(event) {
             definirMensagem("msgPreconselhoRegistro", "Selecione ao menos um motivo para salvar o registro.", true);
             return;
         }
+        definirEstadoSalvamentoModal(true);
 
         const resposta = await fetchComAuth("/preconselho/registros", {
             method: "POST",
@@ -2444,9 +2646,49 @@ async function salvarRegistroDocente(event) {
             return;
         }
         definirMensagem("msgPreconselhoDocente", `Registro de ${String(salvo.estudante_nome || "estudante")} salvo com sucesso.`);
-        fecharModalRegistroDocente({ restaurarFoco: false });
+        modalDocenteAlterado = false;
+        fecharModalRegistroDocente({ restaurarFoco: false, forcar: true });
     } catch (erro) {
         definirMensagem("msgPreconselhoRegistro", erro.message || "Erro ao salvar o registro.", true);
+    } finally {
+        definirEstadoSalvamentoModal(false);
+    }
+}
+
+async function salvarReavaliacaoDocente() {
+    limparMensagem("msgPreconselhoRegistro");
+    const registro = registroDocenteAtual();
+    const resultado = document.querySelector('[name="preconselhoResultadoReavaliacao"]:checked')?.value || "";
+    const motivoIds = Array.from(document.querySelectorAll(".preconselho-review-reason:checked")).map((item) => item.value);
+    if (!registro || !periodoEmReavaliacao()) {
+        definirMensagem("msgPreconselhoRegistro", "Este registro não está disponível para reavaliação.", true);
+        return;
+    }
+    if (!resultado || motivoIds.length === 0) {
+        definirMensagem("msgPreconselhoRegistro", "Selecione o resultado e ao menos um motivo.", true);
+        return;
+    }
+    try {
+        definirEstadoSalvamentoModal(true);
+        const resposta = await fetchComAuth(`/preconselho/registros/${Number(registro.id)}/reavaliacao`, {
+            method: "PUT",
+            headers: headersJson,
+            body: JSON.stringify({
+                recuperado: resultado === "recuperado",
+                motivo_ids: motivoIds,
+                observacao: String(el("preconselhoObservacaoReavaliacao").value || "").trim()
+            })
+        });
+        if (!resposta.ok) throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível salvar a reavaliação."));
+        const registroAtualizado = await resposta.json();
+        aplicarReavaliacaoNoEstado(registroAtualizado);
+        definirMensagem("msgPreconselhoDocente", "Reavaliação salva com sucesso.");
+        modalDocenteAlterado = false;
+        fecharModalRegistroDocente({ restaurarFoco: false, forcar: true });
+    } catch (erro) {
+        definirMensagem("msgPreconselhoRegistro", erro.message || "Erro ao salvar a reavaliação.", true);
+    } finally {
+        definirEstadoSalvamentoModal(false);
     }
 }
 
@@ -2557,9 +2799,30 @@ async function carregarPainelInicial() {
 }
 
 function registrarEventos() {
+    window.addEventListener("beforeunload", (event) => {
+        if (!modalDocenteAlterado && !modalDocenteSalvando) return;
+        event.preventDefault();
+        event.returnValue = "";
+    });
     document.querySelectorAll("[data-preconselho-tab-trigger]").forEach((botao) => {
         botao.addEventListener("click", () => {
             ativarAba(botao.dataset.preconselhoTabTrigger || "");
+        });
+        botao.addEventListener("keydown", (event) => {
+            if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+            const abas = Array.from(document.querySelectorAll("[data-preconselho-tab-trigger]"))
+                .filter((item) => !item.hidden);
+            const indiceAtual = abas.indexOf(botao);
+            if (indiceAtual < 0 || abas.length === 0) return;
+            event.preventDefault();
+            let proximoIndice = indiceAtual;
+            if (event.key === "Home") proximoIndice = 0;
+            if (event.key === "End") proximoIndice = abas.length - 1;
+            if (event.key === "ArrowRight") proximoIndice = (indiceAtual + 1) % abas.length;
+            if (event.key === "ArrowLeft") proximoIndice = (indiceAtual - 1 + abas.length) % abas.length;
+            const proxima = abas[proximoIndice];
+            ativarAba(proxima.dataset.preconselhoTabTrigger || "");
+            proxima.focus();
         });
     });
 
@@ -2577,13 +2840,16 @@ function registrarEventos() {
 
     el("formPreconselhoDocentePeriodo").addEventListener("submit", async (event) => {
         event.preventDefault();
-        fecharModalRegistroDocente({ restaurarFoco: false });
+        if (!fecharModalRegistroDocente({ restaurarFoco: false })) return;
         estadoDocente.periodoId = Number(el("preconselhoPeriodoDocente").value || 0);
         await carregarPainelDocente();
     });
 
     el("preconselhoPeriodoDocente").addEventListener("change", async () => {
-        fecharModalRegistroDocente({ restaurarFoco: false });
+        if (!fecharModalRegistroDocente({ restaurarFoco: false })) {
+            el("preconselhoPeriodoDocente").value = String(estadoDocente.periodoId || "");
+            return;
+        }
         estadoDocente.periodoId = Number(el("preconselhoPeriodoDocente").value || 0);
         await carregarPainelDocente();
     });
@@ -2593,9 +2859,9 @@ function registrarEventos() {
         if (!botao) {
             return;
         }
+        if (!fecharModalRegistroDocente({ restaurarFoco: false })) return;
         estadoDocente.turmaId = Number(botao.dataset.turmaId || 0);
         estadoDocente.disciplinaId = Number(botao.dataset.disciplinaId || 0);
-        fecharModalRegistroDocente({ restaurarFoco: false });
         renderizarCombosDocente();
         await Promise.all([carregarEstudantesDocente(), carregarRegistrosDocente()]);
         limparFormularioDocente();
@@ -2606,8 +2872,11 @@ function registrarEventos() {
         await Promise.all([carregarEstudantesDocente(), carregarRegistrosDocente()]);
     });
 
-    el("preconselhoBuscaEstudante").addEventListener("input", async () => {
-        await carregarEstudantesDocente();
+    el("preconselhoBuscaEstudante").addEventListener("input", () => {
+        if (timerBuscaEstudante) window.clearTimeout(timerBuscaEstudante);
+        timerBuscaEstudante = window.setTimeout(() => {
+            void carregarEstudantesDocente();
+        }, 250);
     });
 
     el("preconselhoStatusEstudante").addEventListener("change", async () => {
@@ -2657,6 +2926,16 @@ function registrarEventos() {
     });
 
     el("formRegistroDocente").addEventListener("submit", salvarRegistroDocente);
+    el("formRegistroDocente").addEventListener("input", () => {
+        if (modalRegistroDocenteAberto() && !modalDocenteSalvando) modalDocenteAlterado = true;
+    });
+    el("formRegistroDocente").addEventListener("change", () => {
+        if (modalRegistroDocenteAberto() && !modalDocenteSalvando) modalDocenteAlterado = true;
+    });
+    document.querySelectorAll('[name="preconselhoResultadoReavaliacao"]').forEach((radio) => {
+        radio.addEventListener("change", renderizarMotivosReavaliacao);
+    });
+    el("btnSalvarReavaliacao").addEventListener("click", salvarReavaliacaoDocente);
     el("btnLimparRegistroDocente").addEventListener("click", () => {
         limparMensagem("msgPreconselhoRegistro");
         limparFormularioDocente();
@@ -2697,6 +2976,7 @@ function registrarEventos() {
         }
     });
     document.addEventListener("keydown", (event) => {
+        prenderFocoNoModal(event);
         if (event.key === "Escape" && modalRegistroDocenteAberto()) {
             fecharModalRegistroDocente();
         }
@@ -2761,6 +3041,9 @@ function registrarEventos() {
         await carregarConsolidacao();
     });
     el("preconselhoDisciplinaConsolidacao").addEventListener("change", async () => {
+        await carregarConsolidacao();
+    });
+    el("preconselhoVersaoConsolidacao").addEventListener("change", async () => {
         await carregarConsolidacao();
     });
 

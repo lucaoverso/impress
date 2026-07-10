@@ -12200,6 +12200,37 @@ def criar_ou_atualizar_registro_pre_conselho(
     return int(registro_id)
 
 
+def atualizar_reavaliacao_registro_pre_conselho(
+    registro_id: int,
+    *,
+    recuperado: bool,
+    motivo_ids: list[str] | None = None,
+    observacao: str = "",
+) -> bool:
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE pre_conselho_registros
+        SET pos_preconselho_recuperado = ?,
+            pos_preconselho_motivos = ?,
+            pos_preconselho_observacao = ?,
+            atualizado_em = datetime('now')
+        WHERE id = ?
+        """,
+        (
+            int(bool(recuperado)),
+            _serializar_lista_texto(motivo_ids),
+            _normalizar_nome_catalogo(observacao),
+            int(registro_id),
+        ),
+    )
+    atualizado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return atualizado
+
+
 def listar_registros_pre_conselho(
     *,
     periodo_id: int | None = None,

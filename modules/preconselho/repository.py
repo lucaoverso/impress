@@ -16,6 +16,7 @@ from db.preconselho import (
     atualizar_habilidade_rav_pre_conselho_dados,
     atualizar_motivo_pre_conselho_dados,
     atualizar_periodo_pre_conselho_dados,
+    atualizar_reavaliacao_registro_pre_conselho,
     atualizar_status_habilidade_rav_pre_conselho,
     atualizar_status_motivo_pre_conselho,
     atualizar_status_periodo_pre_conselho,
@@ -130,6 +131,10 @@ def update_rav_skill_status(habilidade_id: int, ativo: bool):
 
 def update_period_status(periodo_id: int, status: str):
     return atualizar_status_periodo_pre_conselho(periodo_id, status)
+
+
+def update_record_review(registro_id: int, **kwargs):
+    return atualizar_reavaliacao_registro_pre_conselho(registro_id, **kwargs)
 
 
 def get_reason(motivo_id: int):

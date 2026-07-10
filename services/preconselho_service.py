@@ -5,9 +5,13 @@ import unicodedata
 
 STATUS_PERIODO_PRE_CONSELHO_ABERTO = "ABERTO"
 STATUS_PERIODO_PRE_CONSELHO_FECHADO = "FECHADO"
+STATUS_PERIODO_PRE_CONSELHO_EM_REAVALIACAO = "EM_REAVALIACAO"
+STATUS_PERIODO_PRE_CONSELHO_ENCERRADO = "ENCERRADO"
 STATUS_PERIODO_PRE_CONSELHO_VALIDOS = (
     STATUS_PERIODO_PRE_CONSELHO_ABERTO,
     STATUS_PERIODO_PRE_CONSELHO_FECHADO,
+    STATUS_PERIODO_PRE_CONSELHO_EM_REAVALIACAO,
+    STATUS_PERIODO_PRE_CONSELHO_ENCERRADO,
 )
 
 NIVEIS_ATENCAO_PRE_CONSELHO = (
@@ -421,6 +425,10 @@ def periodo_editavel_para_cargo(status: str, cargo: str) -> bool:
 
 def periodo_esta_aberto(status: str) -> bool:
     return _texto_limpo(status).upper() == STATUS_PERIODO_PRE_CONSELHO_ABERTO
+
+
+def periodo_em_reavaliacao(status: str) -> bool:
+    return _texto_limpo(status).upper() == STATUS_PERIODO_PRE_CONSELHO_EM_REAVALIACAO
 
 
 def catalogo_motivos_iniciais_pre_conselho() -> list[dict]:

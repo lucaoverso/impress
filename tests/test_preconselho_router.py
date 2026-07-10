@@ -322,7 +322,7 @@ class PreConselhoRouterTest(unittest.TestCase):
                 sorted(consolidado["itens_agrupados"][0]["professores"]),
                 ["PROFESSOR REGISTRO"],
             )
-            self.assertIn(
+            self.assertNotIn(
                 "No pós-pré-conselho, registrou-se que",
                 consolidado["itens_agrupados"][0]["texto"],
             )
@@ -337,6 +337,67 @@ class PreConselhoRouterTest(unittest.TestCase):
             )
             self.assertNotIn("Professora Sem Registro", consolidado["itens_agrupados"][0]["texto"])
             self.assertNotIn("Professora Estrutural", consolidado["itens_agrupados"][0]["texto"])
+
+            consolidado_conselho = preconselho_router.gerar_consolidado_preconselho_api(
+                periodo_id=periodo_id,
+                turma_id=turma_id,
+                disciplina_id=None,
+                professor_id=professor_id,
+                versao="conselho",
+                usuario=self._usuario_coord(coordenador_id, "Coordenadora"),
+            )
+            self.assertEqual(consolidado_conselho["total_registros"], 1)
+            self.assertEqual(consolidado_conselho["total_recuperados"], 1)
+            self.assertEqual(consolidado_conselho["total_mantidos"], 1)
+            self.assertEqual(consolidado_conselho["total_pendentes"], 0)
+            self.assertIn("Matematica", consolidado_conselho["texto"])
+            self.assertNotIn("Historia", consolidado_conselho["texto"])
+            self.assertIn(
+                "No pós-pré-conselho, registrou-se que",
+                consolidado_conselho["itens_agrupados"][0]["texto"],
+            )
+
+            texto_inicial = salvo["texto_gerado"]
+            with self.assertRaises(preconselho_router.HTTPException) as ctx_reavaliacao:
+                preconselho_router.reavaliar_registro_preconselho_api(
+                    registro_id=int(salvo["id"]),
+                    payload=models.PreConselhoReavaliacaoIn(
+                        recuperado=True,
+                        motivo_ids=["recuperou_nota"],
+                    ),
+                    usuario=self._usuario_professor(professor_id, "Professor Registro"),
+                )
+            self.assertEqual(ctx_reavaliacao.exception.status_code, 403)
+
+            preconselho_router.atualizar_status_periodo_preconselho_api(
+                periodo_id=periodo_id,
+                payload=models.PreConselhoPeriodoStatusIn(status="EM_REAVALIACAO"),
+                usuario=self._usuario_admin(),
+            )
+            motivo_recuperado = preconselho_router.obter_contexto_preconselho_api(
+                usuario=self._usuario_professor(professor_id, "Professor Registro"),
+            )["motivos_pos_preconselho"]["recuperado"][0]["id"]
+            reavaliado = preconselho_router.reavaliar_registro_preconselho_api(
+                registro_id=int(salvo["id"]),
+                payload=models.PreConselhoReavaliacaoIn(
+                    recuperado=True,
+                    motivo_ids=[motivo_recuperado],
+                    observacao="Recuperou após nova atividade avaliativa.",
+                ),
+                usuario=self._usuario_professor(professor_id, "Professor Registro"),
+            )
+            self.assertTrue(reavaliado["pos_preconselho_recuperado"])
+            self.assertEqual(reavaliado["texto_gerado"], texto_inicial)
+
+            conselho_sem_mantidos = preconselho_router.gerar_consolidado_preconselho_api(
+                periodo_id=periodo_id,
+                turma_id=turma_id,
+                disciplina_id=None,
+                professor_id=professor_id,
+                versao="conselho",
+                usuario=self._usuario_coord(coordenador_id, "Coordenadora"),
+            )
+            self.assertEqual(conselho_sem_mantidos["total_registros"], 0)
 
     def test_professor_com_acesso_coordenacao_tem_visao_docente_e_consolidacao(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

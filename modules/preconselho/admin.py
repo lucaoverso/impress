@@ -17,6 +17,7 @@ from .service import (
 )
 from services.preconselho_service import (
     STATUS_PERIODO_PRE_CONSELHO_ABERTO,
+    STATUS_PERIODO_PRE_CONSELHO_ENCERRADO,
     listar_niveis_atencao_pre_conselho,
     nome_periodo_pre_conselho,
     periodo_editavel_para_cargo,
@@ -96,6 +97,17 @@ def update_preconselho_period(periodo_id: int, payload, usuario: dict) -> dict:
 def update_preconselho_period_status(periodo_id: int, payload, usuario: dict) -> dict:
     require_admin_access(usuario)
     status = validar_status_periodo_pre_conselho(payload.status)
+    if status == STATUS_PERIODO_PRE_CONSELHO_ENCERRADO:
+        pendentes = [
+            item
+            for item in repository.list_records(periodo_id=int(periodo_id))
+            if item.get("pos_preconselho_recuperado") is None
+        ]
+        if pendentes:
+            raise HTTPException(
+                400,
+                f"Existem {len(pendentes)} reavaliação(ões) pendente(s). Conclua-as antes de encerrar.",
+            )
     atualizado = repository.update_period_status(periodo_id, status)
     if not atualizado:
         raise HTTPException(404, "Período não encontrado.")
