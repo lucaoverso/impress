@@ -708,6 +708,15 @@ function ativarAba(aba) {
 
 function renderizarSelectPeriodos() {
     const periodos = obterPeriodos();
+    if (!estadoDocente.periodoId && periodos.length > 0) {
+        const periodoReavaliacao = periodos.find(
+            (item) => String(item.status || "").toUpperCase() === "EM_REAVALIACAO"
+        );
+        const periodoAberto = periodos.find(
+            (item) => String(item.status || "").toUpperCase() === "ABERTO"
+        );
+        estadoDocente.periodoId = Number(periodoReavaliacao?.id || periodoAberto?.id || periodos[0].id);
+    }
 
     preencherSelect(
         el("preconselhoPeriodoDocente"),
@@ -757,9 +766,7 @@ function renderizarSelectPeriodos() {
         }
     );
 
-    if (!estadoDocente.periodoId && periodos.length > 0) {
-        const periodoAberto = periodos.find((item) => item.status === "ABERTO");
-        estadoDocente.periodoId = Number(periodoAberto?.id || periodos[0].id);
+    if (estadoDocente.periodoId) {
         el("preconselhoPeriodoDocente").value = String(estadoDocente.periodoId);
     }
 }
@@ -1081,7 +1088,17 @@ function renderizarEstudantesDocente() {
 }
 
 function aplicarReavaliacaoNoEstado(registroAtualizado) {
-    const registro = normalizarRegistroDocente(registroAtualizado);
+    const registroAnterior = estadoDocente.registros.find(
+        (item) => Number(item.id) === Number(registroAtualizado?.id)
+    ) || {};
+    const registro = {
+        ...registroAnterior,
+        ...registroAtualizado,
+        motivo_ids: Array.isArray(registroAtualizado?.motivo_ids) ? registroAtualizado.motivo_ids : (registroAnterior.motivo_ids || []),
+        motivos: Array.isArray(registroAtualizado?.motivos) ? registroAtualizado.motivos : (registroAnterior.motivos || []),
+        pos_preconselho_motivo_ids: Array.isArray(registroAtualizado?.pos_preconselho_motivo_ids) ? registroAtualizado.pos_preconselho_motivo_ids : [],
+        pos_preconselho_motivos: Array.isArray(registroAtualizado?.pos_preconselho_motivos) ? registroAtualizado.pos_preconselho_motivos : [],
+    };
     estadoDocente.registros = estadoDocente.registros.map((item) =>
         Number(item.id) === Number(registro.id) ? registro : item
     );
