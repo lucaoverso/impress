@@ -1,3 +1,3 @@
-from . import repository, schemas, service
+from . import pdf_service, repository, schemas, service
 
-__all__ = ["repository", "schemas", "service"]
+__all__ = ["pdf_service", "repository", "schemas", "service"]

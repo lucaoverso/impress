@@ -15,6 +15,7 @@ def _reload_modulos(db_path: str):
         "database",
         "db._proxy",
         "db.relatorios",
+        "modules.reports.pdf_service",
         "modules.reports.repository",
         "modules.reports.service",
         "modules.reports",
@@ -297,6 +298,19 @@ class RelatoriosRouterTest(unittest.TestCase):
                 tags_json='["Gestao"]',
             )
             database.atualizar_status(job_admin, database.STATUS_CONCLUIDO)
+            conn = database.get_connection()
+            try:
+                conn.execute(
+                    """
+                    UPDATE jobs
+                    SET criado_em = ?, finalizado_em = ?
+                    WHERE id = ?
+                    """,
+                    ("2026-05-10 08:00:00", "2026-05-10 08:05:00", int(job_admin)),
+                )
+                conn.commit()
+            finally:
+                conn.close()
 
             resposta = relatorios_router.dashboard_relatorios_api(
                 data_inicio="2026-05-01",
@@ -306,6 +320,13 @@ class RelatoriosRouterTest(unittest.TestCase):
 
             self.assertEqual(resposta["impressoes"]["resumo"]["total_paginas"], 18)
             self.assertEqual(resposta["impressoes"]["ranking_professores"][0]["nome"], "Admin Relatorio")
+            self.assertEqual(
+                resposta["dashboard_geral"]["graficos"]["movimento_periodo"]["paginas"][9],
+                18,
+            )
+            relatorio_impressao = database.gerar_relatorio_impressao("2026-05-01", "2026-05-31")
+            self.assertEqual(relatorio_impressao[0]["nome"], "Admin Relatorio")
+            self.assertEqual(relatorio_impressao[0]["total_paginas"], 18)
             cards = self._cards_por_id(resposta)
             self.assertEqual(cards["top_impressao"]["valor"], "Admin Relatorio")
 
