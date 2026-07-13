@@ -19,6 +19,7 @@ let previewAbortController = null;
 let previewLoadSeq = 0;
 let previewEmCarregamento = false;
 let envioEmAndamento = false;
+let cliqueEnvioBloqueado = false;
 let filaPollingTimer = null;
 let usuarioAtual = null;
 let professoresImpressao = [];
@@ -1521,11 +1522,12 @@ function atualizarEstadoEnvio(ativo, mensagem = "") {
         botao.dataset.labelPadrao = botao.innerText || "Imprimir";
     }
 
+    const enviando = ativo || cliqueEnvioBloqueado;
     const bloqueado = impressaoBloqueadaSemPapel();
-    botao.disabled = ativo || bloqueado;
-    botao.classList.toggle("is-loading", ativo);
-    botao.setAttribute("aria-busy", ativo ? "true" : "false");
-    botao.innerText = ativo
+    botao.disabled = enviando || bloqueado;
+    botao.classList.toggle("is-loading", enviando);
+    botao.setAttribute("aria-busy", enviando ? "true" : "false");
+    botao.innerText = enviando
         ? "Enviando..."
         : (bloqueado ? "Impressao indisponivel" : botao.dataset.labelPadrao);
 
@@ -2705,8 +2707,21 @@ function registrarEventos() {
     el("btnFecharModalSemPapelImpressao")?.addEventListener("click", () => {
         fecharModalSemPapel();
     });
-    el("btnEnviar").addEventListener("click", () => {
-        enviarImpressao(false);
+    el("btnEnviar").addEventListener("click", async () => {
+        if (cliqueEnvioBloqueado || envioEmAndamento) {
+            return;
+        }
+
+        cliqueEnvioBloqueado = true;
+        atualizarEstadoEnvio(true, "Preparando o envio da impressao...");
+        try {
+            await enviarImpressao(false);
+        } finally {
+            cliqueEnvioBloqueado = false;
+            if (!envioEmAndamento) {
+                atualizarEstadoFluxoImpressao();
+            }
+        }
     });
     el("btnAnterior").addEventListener("click", folhaAnterior);
     el("btnProxima").addEventListener("click", proximaFolha);
@@ -2973,10 +2988,11 @@ function sincronizarEstadoAcaoEnvio(mensagem = "") {
             ? obterMensagemSemPapel()
             : (deveMostrarValidacao ? validacao.mensagem : ""));
 
-    botao.disabled = envioEmAndamento || bloqueado || !validacao.valido;
-    botao.classList.toggle("is-loading", envioEmAndamento);
-    botao.setAttribute("aria-busy", envioEmAndamento ? "true" : "false");
-    botao.innerText = envioEmAndamento
+    const enviando = cliqueEnvioBloqueado || envioEmAndamento;
+    botao.disabled = enviando || bloqueado || !validacao.valido;
+    botao.classList.toggle("is-loading", enviando);
+    botao.setAttribute("aria-busy", enviando ? "true" : "false");
+    botao.innerText = enviando
         ? "Enviando..."
         : (bloqueado ? "Impressao indisponivel" : botao.dataset.labelPadrao);
 
