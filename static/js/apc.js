@@ -32,6 +32,7 @@ let calendarioDrawerTimerApc = null;
 let focoAntesCalendarioApc = null;
 let envioPreviewApc = null;
 let envioPreviewApcId = null;
+const professoresAbertosPorPeriodoApc = new Map();
 let arquivoPreviewUrlApc = "";
 let arquivoPreviewNomeApc = "";
 let focoAntesPreviewApc = null;
@@ -1989,13 +1990,24 @@ function renderListaGestaoApc(detalhe) {
     }
 
     const grupos = agruparItensGestaoPorProfessor(detalhe.itens);
+    const periodoId = Number(periodo?.id || periodoSelecionadoApcId || 0);
+    const professoresAbertos = professoresAbertosPorPeriodoApc.get(periodoId) || new Set();
     const wrap = document.createElement("div");
     wrap.className = "apc-professor-group-list";
 
     grupos.forEach((grupo) => {
         const details = document.createElement("details");
         details.className = "apc-professor-group";
-        details.open = false;
+        details.open = professoresAbertos.has(Number(grupo.professor_id));
+        details.addEventListener("toggle", () => {
+            const abertos = professoresAbertosPorPeriodoApc.get(periodoId) || new Set();
+            if (details.open) {
+                abertos.add(Number(grupo.professor_id));
+            } else {
+                abertos.delete(Number(grupo.professor_id));
+            }
+            professoresAbertosPorPeriodoApc.set(periodoId, abertos);
+        });
 
         const summary = document.createElement("summary");
         summary.className = "apc-professor-group-summary";
