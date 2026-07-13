@@ -351,9 +351,14 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertEqual(consolidado_conselho["total_mantidos"], 1)
             self.assertEqual(consolidado_conselho["total_pendentes"], 0)
             self.assertIn("Matematica", consolidado_conselho["texto"])
-            self.assertNotIn("Historia", consolidado_conselho["texto"])
-            self.assertIn(
+            self.assertIn("PROFESSOR REGISTRO (Matematica e Historia)", consolidado_conselho["texto"])
+            self.assertNotIn("Historia", consolidado_conselho["itens_agrupados"][0]["texto"])
+            self.assertNotIn(
                 "No pós-pré-conselho, registrou-se que",
+                consolidado_conselho["itens_agrupados"][0]["texto"],
+            )
+            self.assertIn(
+                "Após o pré-conselho, o estudante manteve baixo rendimento",
                 consolidado_conselho["itens_agrupados"][0]["texto"],
             )
 

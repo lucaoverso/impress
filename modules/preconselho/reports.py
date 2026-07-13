@@ -84,6 +84,7 @@ def build_preconselho_consolidated(
         disciplina_nome=str(disciplina["nome"]) if disciplina else "Todas as disciplinas",
         registros=itens,
         professor_nome=str(professor["nome"]) if professor else "",
+        versao=versao_normalizada,
     )
     return {
         "periodo_id": int(periodo["id"]),

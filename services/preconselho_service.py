@@ -684,7 +684,7 @@ def _resumir_registros_por_disciplina(registros: list[dict]) -> list[dict]:
     return [agrupados[chave] for chave in ordem]
 
 
-def _texto_estudante_consolidado(registros: list[dict]) -> dict:
+def _texto_estudante_consolidado(registros: list[dict], *, versao: str = "preconselho") -> dict:
     if not registros:
         return {
             "estudante_id": 0,
@@ -725,7 +725,7 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
     )
 
     recomendacao = _texto_recomendacao_nivel(nivel_atencao)
-    rav_txt = _texto_rav(estudante_em_rav)
+    rav_txt = "" if versao == "conselho" else _texto_rav(estudante_em_rav)
     observacao_txt = ""
     if observacoes:
         observacao_txt = _garantir_ponto_final(
@@ -753,7 +753,21 @@ def _texto_estudante_consolidado(registros: list[dict]) -> dict:
             frase += f", com observação de que {_formatar_lista_pt_br(observacoes_pos)}"
         detalhes_pos_preconselho.append(frase)
 
-    if detalhes_pos_preconselho:
+    if detalhes_pos_preconselho and versao == "conselho":
+        disciplinas_mantidas = [
+            item["disciplina"]
+            for item in disciplinas_resumidas
+            if any(
+                registro.get("recuperado") is False
+                for registro in (item.get("pos_preconselho") or [])
+            )
+        ]
+        if disciplinas_mantidas:
+            pos_preconselho_txt = _garantir_ponto_final(
+                "Após o pré-conselho, o estudante manteve baixo rendimento "
+                f"{_descricao_disciplinas(disciplinas_mantidas)}"
+            )
+    elif detalhes_pos_preconselho:
         pos_preconselho_txt = _garantir_ponto_final(
             "No pós-pré-conselho, registrou-se que " + "; ".join(detalhes_pos_preconselho)
         )
@@ -844,6 +858,36 @@ def _texto_professores_sinalizadores(registros: list[dict]) -> str:
     return f"Os professores que sinalizaram estudante(s) foram {_formatar_lista_pt_br(itens)}."
 
 
+def _texto_corpo_docente(registros: list[dict]) -> str:
+    docentes = {}
+    for registro in registros or []:
+        corpo_docente = registro.get("corpo_docente_turma") or []
+        for item in corpo_docente:
+            professor = _texto_caixa_alta(item.get("professor_nome"))
+            if not professor:
+                continue
+            disciplinas = docentes.setdefault(professor, [])
+            for disciplina in item.get("disciplinas") or []:
+                disciplina_limpa = _texto_limpo(disciplina)
+                if disciplina_limpa and disciplina_limpa not in disciplinas:
+                    disciplinas.append(disciplina_limpa)
+
+    if not docentes:
+        for registro in registros or []:
+            professor = _texto_caixa_alta(registro.get("professor_nome"))
+            disciplina = _texto_limpo(registro.get("disciplina_nome"))
+            if professor:
+                disciplinas = docentes.setdefault(professor, [])
+                if disciplina and disciplina not in disciplinas:
+                    disciplinas.append(disciplina)
+
+    itens = [
+        f"{professor} ({_formatar_lista_pt_br(disciplinas)})"
+        for professor, disciplinas in docentes.items()
+    ]
+    return "Corpo docente da turma: " + "; ".join(itens) + "." if itens else ""
+
+
 def _resolver_periodo_atual() -> tuple[int, int]:
     hoje = date.today()
     if hoje.month <= 4:
@@ -891,13 +935,16 @@ def gerar_texto_consolidado_pre_conselho(
     registros: list[dict],
     *,
     professor_nome: str = "",
+    versao: str = "preconselho",
 ) -> dict:
+    versao_normalizada = str(versao or "preconselho").strip().lower()
     itens = [dict(item) for item in registros or []]
     total_registros = len(itens)
     total_estudantes = len(_lista_unica_texto(item.get("estudante_nome") for item in itens))
     motivos_frequentes = _motivos_frequentes(itens)
     itens_agrupados = [
-        _texto_estudante_consolidado(grupo) for grupo in _agrupar_registros_por_estudante(itens)
+        _texto_estudante_consolidado(grupo, versao=versao_normalizada)
+        for grupo in _agrupar_registros_por_estudante(itens)
     ]
 
     if total_registros == 0:
@@ -927,7 +974,11 @@ def gerar_texto_consolidado_pre_conselho(
     if motivos_frequentes:
         fatores = f"Os motivos mais recorrentes foram {_formatar_lista_pt_br(motivos_frequentes)}."
 
-    professores_txt = _texto_professores_sinalizadores(itens)
+    professores_txt = (
+        _texto_corpo_docente(itens)
+        if versao_normalizada == "conselho"
+        else _texto_professores_sinalizadores(itens)
+    )
 
     estudantes_txt = "\n\n".join(
         item["texto"] for item in itens_agrupados if _texto_limpo(item.get("texto"))

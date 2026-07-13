@@ -178,6 +178,43 @@ class PreConselhoServiceTest(unittest.TestCase):
         self.assertIn("não há registros de estudantes sinalizados no pré-conselho", resultado["texto"])
 
 
+    def test_conselho_lista_corpo_docente_e_omite_rav(self):
+        registros = [
+            {
+                "estudante_nome": "Ana", "estudante_id": 1, "turma_nome": "7A",
+                "disciplina_nome": "Matemática", "professor_nome": "Prof. Ana",
+                "corpo_docente_turma": [
+                    {"professor_nome": "Prof. Ana", "disciplinas": ["Matemática"]},
+                    {"professor_nome": "Prof. Bruno", "disciplinas": ["História", "Geografia"]},
+                ],
+                "nivel_atencao": "alto",
+                "motivos": [{"codigo": "baixo_rendimento", "descricao": "Baixo rendimento"}],
+                "pos_preconselho_recuperado": False, "estudante_em_rav": True,
+            },
+            {
+                "estudante_nome": "Ana", "estudante_id": 1, "turma_nome": "7A",
+                "disciplina_nome": "História", "professor_nome": "Prof. Bruno",
+                "nivel_atencao": "alto",
+                "motivos": [{"codigo": "baixo_rendimento", "descricao": "Baixo rendimento"}],
+                "pos_preconselho_recuperado": False, "estudante_em_rav": True,
+            },
+        ]
+
+        resultado = gerar_texto_consolidado_pre_conselho(
+            periodo_nome="1º Bimestre 2032", turma_nome="7A",
+            disciplina_nome="Todas as disciplinas", registros=registros,
+            versao="conselho",
+        )
+
+        self.assertIn("PROF. ANA (Matemática)", resultado["texto"])
+        self.assertIn("PROF. BRUNO (História e Geografia)", resultado["texto"])
+        self.assertNotIn("Recuperar para Avançar (RAV)", resultado["texto"])
+        self.assertNotIn("No pós-pré-conselho", resultado["texto"])
+        self.assertIn(
+            "Após o pré-conselho, o estudante manteve baixo rendimento nas disciplinas de Matemática e História.",
+            resultado["itens_agrupados"][0]["texto"],
+        )
+
     def test_texto_consolidado_ordena_estudantes_por_nome(self):
         motivo = {"codigo": "nao_entregou_trabalho", "descricao": "NÃ£o entregou o trabalho"}
         registros = [
