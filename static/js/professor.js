@@ -2713,7 +2713,7 @@ function registrarEventos() {
         }
 
         cliqueEnvioBloqueado = true;
-        atualizarEstadoEnvio(true, "Preparando o envio da impressao...");
+        sincronizarEstadoAcaoEnvio("Preparando o envio da impressao...");
         try {
             await enviarImpressao(false);
         } finally {
