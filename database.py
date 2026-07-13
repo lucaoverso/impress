@@ -11738,6 +11738,12 @@ def contar_registros_pre_conselho_por_professor_periodo(periodo_id: int, profess
         FROM pre_conselho_registros
         WHERE periodo_id = ?
           AND professor_usuario_id = ?
+          AND EXISTS (
+              SELECT 1
+              FROM estudantes e
+              WHERE e.id = pre_conselho_registros.estudante_id
+                AND e.ativo = 1
+          )
         GROUP BY turma_id, disciplina_id
     """,
         (int(periodo_id), int(professor_usuario_id)),
@@ -12374,7 +12380,7 @@ def listar_registros_pre_conselho(
         LEFT JOIN turmas t ON t.id = r.turma_id
         LEFT JOIN disciplinas d ON d.id = r.disciplina_id
         LEFT JOIN estudantes e ON e.id = r.estudante_id
-        WHERE 1 = 1
+        WHERE e.ativo = 1
     """
     params = []
 

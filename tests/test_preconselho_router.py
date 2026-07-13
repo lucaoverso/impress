@@ -436,6 +436,33 @@ class PreConselhoRouterTest(unittest.TestCase):
             )
             self.assertEqual(conselho_sem_mantidos["total_registros"], 0)
 
+            database.atualizar_status_estudante(estudante_id, False)
+            self.assertEqual(
+                database.contar_registros_pre_conselho_por_professor_periodo(
+                    periodo_id,
+                    professor_id,
+                ),
+                {},
+            )
+            self.assertEqual(
+                database.listar_registros_pre_conselho(
+                    periodo_id=periodo_id,
+                    turma_id=turma_id,
+                    professor_usuario_id=professor_id,
+                ),
+                [],
+            )
+            self.assertEqual(
+                database.listar_estudantes_pre_conselho_painel(
+                    periodo_id=periodo_id,
+                    turma_id=turma_id,
+                    disciplina_id=disciplina_id,
+                    professor_usuario_id=professor_id,
+                    status="sinalizados",
+                ),
+                [],
+            )
+
     def test_professor_com_acesso_coordenacao_tem_visao_docente_e_consolidacao(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")
