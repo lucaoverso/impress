@@ -292,18 +292,29 @@ function aspectRatioGrafico(tipo = "padrao") {
     const compacto = viewportEhCompacto();
 
     if (tipo === "linha-amplo") {
-        return compacto ? 1.45 : 2.25;
+        return compacto ? 1.45 : 3.1;
     }
     if (tipo === "barra-amplo") {
-        return compacto ? 1.35 : 2.0;
+        return compacto ? 1.35 : 2.7;
     }
     if (tipo === "barra") {
-        return compacto ? 1.18 : 1.45;
+        return compacto ? 1.18 : 1.8;
     }
     if (tipo === "rosca") {
-        return compacto ? 1.1 : 1.22;
+        return compacto ? 1.1 : 1.65;
     }
-    return compacto ? 1.2 : 1.55;
+    return compacto ? 1.2 : 1.8;
+}
+
+function gerarPdfPainel() {
+    if (!dashboardAtual) {
+        setMensagem("Aguarde o carregamento dos relatorios antes de gerar o PDF.", "erro");
+        return;
+    }
+
+    Object.values(graficos).forEach((grafico) => grafico.resize());
+    setMensagem("Na proxima tela, escolha 'Salvar como PDF'.");
+    window.requestAnimationFrame(() => window.print());
 }
 
 function opcoesBaseGrafico(extra = {}) {
@@ -1009,6 +1020,8 @@ function registrarEventos() {
             setMensagem(err.message || "Nao foi possivel carregar os relatorios.", "erro");
         }
     });
+
+    el("btnExportarPdf").addEventListener("click", gerarPdfPainel);
 
     document
         .querySelectorAll("[data-relatorios-tab-trigger]:not([disabled])")

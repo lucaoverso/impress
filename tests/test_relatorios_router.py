@@ -772,6 +772,7 @@ class RelatoriosRouterTest(unittest.TestCase):
         self.assertEqual(resposta.status_code, 200)
         self.assertIn("text/html", resposta.headers.get("content-type", "").lower())
         self.assertIn("Relatorios gerenciais", html)
+        self.assertIn('<button id="btnExportarPdf" type="button">Gerar PDF</button>', html)
         self.assertIn("js/relatorios.js?v=build-relatorios-http", html)
         self.assertIn("/relatorios", [route.path for route in pages_router.router.routes])
 

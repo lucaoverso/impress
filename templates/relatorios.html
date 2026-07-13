@@ -16,7 +16,6 @@
     <main class="page-shell page-shell--wide reports-page">
         <section class="page-header">
             <div class="page-header-main">
-                <span class="section-eyebrow">MVP de relatorios</span>
                 <h1 class="page-title">Relatorios gerenciais</h1>
                 <p class="page-lead">
                     Acompanhe impressoes, uso de recursos tecnologicos e indicadores para apoiar a tomada de decisao da gestao escolar.
@@ -24,7 +23,7 @@
                 <p id="relatoriosUsuario" class="page-user-copy"></p>
             </div>
             <div class="page-actions">
-                <button id="btnExportarPdf" type="button" disabled>PDF em breve</button>
+                <button id="btnExportarPdf" type="button">Gerar PDF</button>
                 <button id="btnExportarExcel" type="button" disabled>Excel em breve</button>
             </div>
         </section>
@@ -33,7 +32,7 @@
             <div class="section-header">
                 <div class="section-header-main">
                     <h2>Filtro por periodo</h2>
-                    <p class="section-copy">Selecione a data inicial e a data final para atualizar o dashboard.</p>
+                    <p class="section-copy">Selecione a data inicial e a data final para atualizar o painel.</p>
                 </div>
             </div>
 
@@ -49,7 +48,7 @@
                 </div>
 
                 <div class="reports-filter-actions">
-                    <button id="btnAplicarRelatorios" class="btn-destaque" type="button">Atualizar dashboard</button>
+                    <button id="btnAplicarRelatorios" class="btn-destaque" type="button">Atualizar painel</button>
                     <button id="btnPeriodoAtual" type="button">Mes atual</button>
                 </div>
             </div>
@@ -63,7 +62,7 @@
         <nav class="admin-tabs" aria-label="Abas do modulo de relatorios">
             <button class="admin-tab-btn is-active" data-relatorios-tab-trigger="dashboard" aria-selected="true"
                 type="button">
-                Dashboard Geral
+                Painel geral
             </button>
             <button class="admin-tab-btn" data-relatorios-tab-trigger="impressoes" aria-selected="false"
                 type="button">
