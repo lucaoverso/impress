@@ -1015,6 +1015,19 @@ function renderizarCombosDocente() {
     }).join("");
 }
 
+function levarProfessorParaListaEstudantes() {
+    const secao = el("preconselhoSecaoEstudantes");
+    if (!secao || !window.matchMedia("(max-width: 980px)").matches) return;
+
+    const reduzirMovimento = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    window.requestAnimationFrame(() => {
+        secao.scrollIntoView({
+            behavior: reduzirMovimento ? "auto" : "smooth",
+            block: "start"
+        });
+    });
+}
+
 function renderizarEstudantesDocente() {
     const lista = el("listaEstudantesDocente");
     if (!lista) {
@@ -2948,6 +2961,7 @@ function registrarEventos() {
         renderizarCombosDocente();
         await Promise.all([carregarEstudantesDocente(), carregarRegistrosDocente()]);
         limparFormularioDocente();
+        levarProfessorParaListaEstudantes();
     });
 
     el("formFiltrosEstudantesDocente").addEventListener("submit", async (event) => {

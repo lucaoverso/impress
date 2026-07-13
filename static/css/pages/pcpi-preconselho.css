@@ -590,6 +590,11 @@
 
 .preconselho-docente-column {
     min-height: 0;
+    min-width: 0;
+}
+
+#preconselhoSecaoEstudantes {
+    scroll-margin-top: 16px;
 }
 
 .preconselho-relatorio-body {
@@ -1096,7 +1101,7 @@ body.preconselho-modal-open {
     .preconselho-rail-scroll,
     .preconselho-registros-list {
         max-height: none;
-        overflow: auto;
+        overflow: visible;
         padding-right: 0;
     }
 
@@ -1108,7 +1113,16 @@ body.preconselho-modal-open {
 
 @media (max-width: 760px) {
     .pcpi-page {
-        padding: 18px 12px 24px;
+        padding: 18px max(12px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    }
+
+    .preconselho-docente-board,
+    .preconselho-docente-column,
+    .preconselho-selection-list,
+    .pcpi-list,
+    .pcpi-item {
+        min-width: 0;
+        max-width: 100%;
     }
 
     .pcpi-filter-grid,
@@ -1140,22 +1154,28 @@ body.preconselho-modal-open {
     }
 
     .preconselho-modal {
-        padding: 12px;
+        place-items: stretch;
+        padding: 0;
     }
 
     .preconselho-modal-card {
         width: 100%;
-        max-height: calc(100vh - 24px);
-        max-height: calc(100dvh - 24px);
-        border-radius: 18px;
+        height: 100vh;
+        height: 100dvh;
+        max-height: 100vh;
+        max-height: 100dvh;
+        border: 0;
+        border-radius: 0;
     }
 
     .preconselho-editor-scroll {
-        max-height: calc(100dvh - 170px);
+        flex: 1 1 auto;
+        max-height: none;
+        overflow: auto;
         padding-bottom: max(12px, env(safe-area-inset-bottom));
+        overscroll-behavior: contain;
     }
 
-    .preconselho-modal-actions,
     .preconselho-modal-primary-actions {
         position: sticky;
         bottom: 0;
@@ -1163,6 +1183,10 @@ body.preconselho-modal-open {
         padding: 10px 0 max(10px, env(safe-area-inset-bottom));
         border-top: 1px solid var(--line-soft);
         background: var(--surface-0);
+    }
+
+    .preconselho-modal-actions {
+        position: static;
     }
 
     .preconselho-table-wrap {
@@ -1229,6 +1253,14 @@ body.preconselho-modal-open {
         letter-spacing: 0.05em;
         text-transform: uppercase;
         color: #5b6b7f;
+    }
+}
+
+@media (pointer: coarse) {
+    .preconselho-selection-card,
+    .preconselho-list-button,
+    .preconselho-modal-close {
+        min-height: 44px;
     }
 }
 
