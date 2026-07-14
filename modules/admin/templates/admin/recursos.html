@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recursos - Administração</title>
+    {% include "includes/style_bundle.html" %}
+</head>
+<body data-admin-active-tab="recursos">
+    {% set navbar_context = "Painel de gestao" %}
+    {% set navbar_current = "gestao" %}
+    {% include "includes/app_navbar.html" %}
+    {% set admin_active_tab = "recursos" %}
+    {% include "includes/app_sidebar_config.html" %}
+
+    <main class="admin-page">
+        <header class="admin-header admin-header-shell">
+            <div class="admin-header-main">
+                <h1>Recursos</h1>
+                <p>Cadastre e mantenha os equipamentos disponíveis para agendamento.</p>
+            </div>
+        </header>
+
+        <div class="admin-section-layout">
+            <section class="admin-section-content admin-grid">
+                <article class="admin-card">
+                    <h2 id="tituloFormRecurso">Cadastrar recurso</h2>
+                    <form id="formRecurso" class="admin-form">
+                        <label for="recursoNome">Nome</label>
+                        <input id="recursoNome" type="text" placeholder="Ex.: Projetor da biblioteca" required>
+                        <label for="recursoTipo">Tipo</label>
+                        <input id="recursoTipo" type="text" placeholder="Ex.: Projetor" required>
+                        <label for="recursoDescricao">Descrição</label>
+                        <input id="recursoDescricao" type="text" placeholder="Informação opcional">
+                        <label for="recursoQuantidadeItens">Quantidade disponível</label>
+                        <input id="recursoQuantidadeItens" type="number" min="1" value="1" required>
+                        <input id="recursoImagemCapa" type="hidden">
+                        <div class="admin-upload-field admin-resource-image-field">
+                            <span>Imagem de capa</span>
+                            <small>Use JPG, PNG ou WEBP para o card do agendamento.</small>
+                            <div id="recursoImagemPreview" class="admin-resource-image-preview" hidden></div>
+                            <input id="recursoImagemArquivo" type="file" accept="image/png,image/jpeg,image/webp">
+                            <div class="admin-inline">
+                                <button id="btnUploadImagemRecurso" type="button">Enviar imagem</button>
+                                <button id="btnRemoverImagemRecurso" type="button">Remover imagem</button>
+                            </div>
+                        </div>
+                        <div class="admin-inline">
+                            <button id="btnSalvarRecurso" class="btn-destaque" type="submit">Cadastrar recurso</button>
+                            <button id="btnCancelarEdicaoRecurso" type="button" style="display: none;">Cancelar edição</button>
+                        </div>
+                    </form>
+                    <p id="msgRecurso" role="status"></p>
+                </article>
+
+                <article class="admin-card">
+                    <h2>Recursos cadastrados</h2>
+                    <ul id="listaRecursosAdmin" class="admin-list"></ul>
+                </article>
+            </section>
+        </div>
+    </main>
+
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/core.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/recursos.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/recursos-page.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+</html>

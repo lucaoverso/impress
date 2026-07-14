@@ -52,6 +52,7 @@ def preview_preconselho_text(payload, usuario: dict) -> dict:
             ),
             nivel_atencao=nivel_atencao,
             estudante_nome=str(payload.estudante_nome or "").strip(),
+            estudante_sexo=payload.estudante_sexo,
             disciplina_nome=str(payload.disciplina_nome or "").strip(),
             pos_preconselho_recuperado=pos_preconselho_recuperado,
             pos_preconselho_motivos=pos_preconselho_motivos,

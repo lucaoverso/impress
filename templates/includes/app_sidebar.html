@@ -1,0 +1,57 @@
+{% set sidebar_title = sidebar_title | default(navbar_context | default("Módulo")) %}
+{% set sidebar_items = sidebar_items | default([]) %}
+
+<aside class="app-sidebar" data-app-sidebar aria-label="Navegação do módulo {{ sidebar_title }}">
+    <button class="app-sidebar-mobile-toggle" type="button" aria-expanded="false"
+        aria-controls="appSidebarNav">
+        <span>
+            <small>{{ sidebar_title }}</small>
+            <strong data-app-sidebar-current>Selecionar página</strong>
+        </span>
+        <i class="bi bi-chevron-down" aria-hidden="true"></i>
+    </button>
+
+    <div class="app-sidebar-panel" id="appSidebarNav">
+        <header class="app-sidebar-header">
+            <small>Páginas do módulo</small>
+            <strong>{{ sidebar_title }}</strong>
+        </header>
+        <nav aria-label="Páginas de {{ sidebar_title }}">
+            {% for item in sidebar_items %}
+                {% if item.disabled %}
+                <span class="app-sidebar-link is-disabled" aria-disabled="true">
+                    <i class="bi {{ item.icon }}" aria-hidden="true"></i>
+                    <span>{{ item.label }}<small>Em breve</small></span>
+                </span>
+                {% elif item.href %}
+                <a class="app-sidebar-link{% if item.active %} is-active{% endif %}{% if item.admin_only %} admin-only{% endif %}" href="{{ item.href }}"
+                    {% if item.admin_only %}data-admin-only="true"{% endif %}
+                    {% if item.active %}aria-current="page"{% endif %}>
+                    <i class="bi {{ item.icon }}" aria-hidden="true"></i>
+                    <span>{{ item.label }}</span>
+                </a>
+                {% elif item.tab_group %}
+                <button class="app-sidebar-link{% if item.active %} is-active{% endif %}" type="button"
+                    data-app-sidebar-tab-group="{{ item.tab_group }}" data-app-sidebar-tab-value="{{ item.tab_value }}"
+                    {% if item.active %}aria-current="page"{% endif %}>
+                    <i class="bi {{ item.icon }}" aria-hidden="true"></i>
+                    <span>{{ item.label }}</span>
+                </button>
+                {% elif item.target_id %}
+                <button class="app-sidebar-link{% if item.active %} is-active{% endif %}" type="button"
+                    data-app-sidebar-click-target="{{ item.target_id }}"{% if item.active %} aria-current="page"{% endif %}>
+                    <i class="bi {{ item.icon }}" aria-hidden="true"></i>
+                    <span>{{ item.label }}</span>
+                </button>
+                {% else %}
+                <button class="app-sidebar-link{% if item.active %} is-active{% endif %}" type="button"
+                    data-app-sidebar-action="{{ item.action }}"{% if item.active %} aria-current="page"{% endif %}>
+                    <i class="bi {{ item.icon }}" aria-hidden="true"></i>
+                    <span>{{ item.label }}</span>
+                </button>
+                {% endif %}
+            {% endfor %}
+        </nav>
+    </div>
+</aside>
+<script src="{{ request.url_for('static', path='js/core/app_sidebar.js') }}?v={{ asset_version | default('1') }}"></script>

@@ -736,7 +736,7 @@
                                 <h2 id="tituloFormEstudante">Cadastrar estudante</h2>
                                 <p>Mantenha a base atualizada para agilizar a abertura de novas ocorrências.</p>
                             </div>
-                            <p id="msgEstudantes"></p>
+                            <p id="msgEstudantes" role="status" aria-live="polite"></p>
                         </div>
                         <form id="formEstudante" class="coordenacao-form">
                             <label class="coordenacao-field" for="estudanteNome">
@@ -747,8 +747,16 @@
                                 <span>Turma</span>
                                 <select id="estudanteTurmaId" required></select>
                             </label>
-                                <div class="coordenacao-inline coordenacao-form-actions">
-                                    <button class="btn-destaque" type="submit">Salvar estudante</button>
+                            <label class="coordenacao-field" for="estudanteSexo">
+                                <span>Sexo</span>
+                                <select id="estudanteSexo">
+                                    <option value="">Não informado</option>
+                                    <option value="F">Feminino</option>
+                                    <option value="M">Masculino</option>
+                                </select>
+                            </label>
+                            <div class="coordenacao-inline coordenacao-form-actions">
+                                <button class="btn-destaque" type="submit">Salvar estudante</button>
                                 <button id="btnCancelarEdicaoEstudante" type="button" style="display: none;">Cancelar
                                     edição</button>
                             </div>
@@ -784,7 +792,7 @@
                         <div class="coordenacao-section-header">
                             <div>
                                 <h2>Estudantes cadastrados</h2>
-                                <p>Consulte e atualize o cadastro sem sair da coordenação.</p>
+                                <p>Selecione a turma e atribua o sexo diretamente na lista. A alteração é salva automaticamente.</p>
                             </div>
                         </div>
                         <form id="formFiltrosEstudantes" class="coordenacao-filter-grid coordenacao-filter-inline">
@@ -816,6 +824,7 @@
                                     <tr>
                                         <th>Nome</th>
                                         <th>Turma</th>
+                                        <th>Sexo</th>
                                         <th>Status</th>
                                         <th>Atualizado em</th>
                                         <th>Acoes</th>

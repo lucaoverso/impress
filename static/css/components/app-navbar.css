@@ -1,0 +1,177 @@
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+.app-navbar {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(260px, 560px) minmax(180px, 1fr);
+    align-items: center;
+    gap: 24px;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+}
+
+.app-navbar-brand,
+.app-navbar-account,
+.app-navbar-profile-header,
+.app-navbar-profile-action {
+    display: flex;
+    align-items: center;
+}
+
+.app-navbar-brand { gap: 12px; min-width: 0; }
+.app-navbar-account { justify-content: flex-end; position: relative; }
+
+.app-navbar-search { position: relative; }
+.app-navbar-search > .bi-search {
+    position: absolute;
+    top: 50%;
+    left: 15px;
+    z-index: 1;
+    color: var(--text-soft, #4b5563);
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.app-navbar-search input {
+    width: 100%;
+    height: 44px;
+    padding: 0 42px;
+    border: 1px solid var(--line, #d8dee8);
+    border-radius: 12px;
+    background: var(--surface-0, #fff);
+    color: var(--text-main, #1f2a37);
+    font: inherit;
+}
+
+.app-navbar-search input:focus-visible,
+.app-navbar-avatar:focus-visible,
+.app-navbar-profile-action:focus-visible,
+.app-profile-dialog button:focus-visible,
+.app-profile-dialog input:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--brand, #0f766e) 28%, transparent);
+    outline-offset: 2px;
+    border-color: var(--brand, #0f766e);
+}
+
+.app-navbar-search-results,
+.app-navbar-profile-menu {
+    position: absolute;
+    top: calc(100% + 10px);
+    z-index: 30;
+    border: 1px solid var(--line, #d8dee8);
+    border-radius: 16px;
+    background: var(--surface-0, #fff);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, .14);
+}
+
+.app-navbar-search-results { left: 0; right: 0; padding: 8px; }
+.app-navbar-search-results[hidden],
+.app-navbar-profile-menu[hidden] { display: none; }
+
+.app-navbar-search-result {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    color: var(--text-main, #1f2a37);
+    text-decoration: none;
+}
+.app-navbar-search-result:hover,
+.app-navbar-search-result.is-active { background: var(--brand-soft, #d6f2ef); }
+.app-navbar-search-result strong,
+.app-navbar-search-result small { display: block; }
+.app-navbar-search-result small { margin-top: 2px; color: var(--text-soft, #4b5563); }
+.app-navbar-search-empty { margin: 0; padding: 12px; color: var(--text-soft, #4b5563); }
+
+.app-navbar-avatar,
+.app-navbar-profile-initials {
+    width: 44px;
+    height: 44px;
+    flex: 0 0 44px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--brand, #0f766e);
+    background: var(--brand, #0f766e);
+    color: #fff;
+    font-weight: 800;
+}
+.app-navbar-avatar { padding: 0; cursor: pointer; }
+.app-navbar-avatar:hover { background: var(--brand-strong, #0b5b55); }
+
+.app-navbar-profile-menu { right: 0; width: min(360px, calc(100vw - 32px)); padding: 16px; }
+.app-navbar-profile-header { gap: 12px; padding-bottom: 14px; border-bottom: 1px solid var(--line, #d8dee8); }
+.app-navbar-profile-header div { min-width: 0; }
+.app-navbar-profile-header strong,
+.app-navbar-profile-header span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.app-navbar-profile-header span { margin-top: 3px; color: var(--text-soft, #4b5563); font-size: 13px; }
+.app-navbar-usage { padding: 14px 0; border-bottom: 1px solid var(--line, #d8dee8); }
+.app-navbar-usage > * { display: block; }
+.app-navbar-usage span { color: var(--text-soft, #4b5563); font-size: 13px; }
+.app-navbar-usage strong { margin-top: 4px; font-size: 18px; }
+.app-navbar-usage small { margin-top: 3px; color: var(--text-soft, #4b5563); }
+
+.app-navbar-profile-action {
+    width: 100%;
+    min-height: 44px;
+    gap: 10px;
+    justify-content: flex-start;
+    margin-top: 8px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-main, #1f2a37);
+    cursor: pointer;
+}
+.app-navbar-profile-action:hover { background: var(--surface-muted, #eef3f8); }
+.app-navbar-profile-action.is-danger { color: var(--danger, #dc2626); }
+
+.app-profile-dialog {
+    width: min(520px, calc(100vw - 32px));
+    padding: 0;
+    border: 0;
+    border-radius: 20px;
+    color: var(--text-main, #1f2a37);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, .18);
+}
+.app-profile-dialog::backdrop { background: rgba(15, 23, 42, .48); }
+.app-profile-dialog form { padding: 24px; }
+.app-profile-dialog header,
+.app-profile-dialog footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.app-profile-dialog h2 { margin: 0; font-size: 24px; }
+.app-profile-dialog header p { margin: 4px 0 0; color: var(--text-soft, #4b5563); }
+.app-profile-dialog-close { width: 44px; height: 44px; padding: 0; border-radius: 12px; }
+.app-profile-dialog-fields { display: grid; gap: 8px; margin: 24px 0; }
+.app-profile-dialog-fields label { margin-top: 8px; font-weight: 700; }
+.app-profile-dialog-fields label span,
+.app-profile-dialog-fields small { color: var(--text-soft, #4b5563); font-weight: 400; }
+.app-profile-dialog-fields input { height: 48px; padding: 0 14px; border: 1px solid var(--line, #d8dee8); border-radius: 12px; font: inherit; }
+.app-profile-feedback { margin: -8px 0 16px; color: var(--danger, #dc2626); }
+.app-profile-feedback.is-success { color: var(--success, #15803d); }
+.app-profile-dialog footer { justify-content: flex-end; }
+.app-profile-dialog footer button { min-height: 44px; padding: 0 16px; border-radius: 12px; }
+.app-profile-dialog-submit { border-color: var(--brand, #0f766e); background: var(--brand, #0f766e); color: #fff; }
+
+@media (max-width: 760px) {
+    .app-navbar { grid-template-columns: auto 1fr auto; gap: 10px; padding-inline: 12px; }
+    .app-navbar .app-topbar-context { display: none; }
+    .app-navbar-search input { padding-right: 12px; }
+    .app-navbar-search input::placeholder { color: transparent; }
+    .app-navbar-search-results { position: fixed; top: 72px; left: 12px; right: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-navbar *, .app-profile-dialog * { scroll-behavior: auto !important; transition: none !important; }
+}

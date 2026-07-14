@@ -1,0 +1,82 @@
+{% if navbar_current == "agendamento" %}
+    {% set sidebar_title = "Agendamento" %}
+    {% set sidebar_items = [
+        {"label": "Novo agendamento", "icon": "bi-calendar-plus", "href": "/agendamento", "active": true},
+        {"label": "Meus agendamentos", "icon": "bi-calendar-check", "action": "open-my-schedules"},
+        {"label": "Catálogo de recursos", "icon": "bi-projector", "disabled": true}
+    ] %}
+{% elif navbar_current == "impressao" %}
+    {% set sidebar_title = "Impressão" %}
+    {% set sidebar_items = [
+        {"label": "Nova impressão", "icon": "bi-printer", "href": "/impressao", "active": true},
+        {"label": "Meu histórico", "icon": "bi-clock-history", "target_id": "btnAbrirHistorico"},
+        {"label": "Impressão adaptada", "icon": "bi-universal-access", "disabled": true}
+    ] %}
+{% elif navbar_current == "download" %}
+    {% set sidebar_title = "Download" %}
+    {% set sidebar_items = [
+        {"label": "Novo download", "icon": "bi-cloud-arrow-down", "href": "/download", "active": true}
+    ] %}
+{% elif navbar_current == "horario" %}
+    {% set sidebar_title = "Horário escolar" %}
+    {% set sidebar_items = [
+        {"label": "Grade de horários", "icon": "bi-calendar-week", "href": "/horario-escolar", "active": true}
+    ] %}
+{% elif navbar_current == "apc" %}
+    {% set sidebar_title = "Central de anexos" %}
+    {% set sidebar_items = [
+        {"label": "Entregas e solicitações", "icon": "bi-paperclip", "href": "/apc", "active": true},
+        {"label": "Calendário mensal", "icon": "bi-calendar3", "target_id": "btnAlternarCalendarioApc"}
+    ] %}
+{% elif navbar_current == "pcpi" %}
+    {% set sidebar_title = "PCPI" %}
+    {% set sidebar_items = [
+        {"label": "Registro do turno", "icon": "bi-journal-text", "href": "/pcpi", "active": true}
+    ] %}
+{% elif navbar_current == "coordenacao" %}
+    {% set sidebar_title = "Coordenação" %}
+    {% set sidebar_items = [
+        {"label": "Ocorrências", "icon": "bi-clipboard2-check", "tab_group": "coord", "tab_value": "ocorrencias"},
+        {"label": "Registros pendentes", "icon": "bi-hourglass-split", "tab_group": "coord", "tab_value": "registros-pendentes"},
+        {"label": "Fluxo do professor", "icon": "bi-person-check", "tab_group": "coord", "tab_value": "pre-registros"},
+        {"label": "Base legal", "icon": "bi-journal-bookmark", "tab_group": "coord", "tab_value": "regimento"},
+        {"label": "Estudantes", "icon": "bi-people", "tab_group": "coord", "tab_value": "estudantes"},
+        {"label": "Acompanhamento docente", "icon": "bi-person-lines-fill", "tab_group": "coord", "tab_value": "acompanhamento-docente"},
+        {"label": "Relatórios", "icon": "bi-bar-chart", "tab_group": "coord", "tab_value": "relatorios"}
+    ] %}
+{% elif navbar_current == "relatorios" %}
+    {% set sidebar_title = "Relatórios" %}
+    {% set sidebar_items = [
+        {"label": "Dashboard geral", "icon": "bi-grid", "tab_group": "relatorios", "tab_value": "dashboard"},
+        {"label": "Impressões", "icon": "bi-printer", "tab_group": "relatorios", "tab_value": "impressoes"},
+        {"label": "Recursos tecnológicos", "icon": "bi-projector", "tab_group": "relatorios", "tab_value": "recursos"},
+        {"label": "Central de anexos", "icon": "bi-paperclip", "tab_group": "relatorios", "tab_value": "anexos"},
+        {"label": "Professores", "icon": "bi-person-video3", "tab_group": "relatorios", "tab_value": "professores"},
+        {"label": "Coordenação", "icon": "bi-diagram-3", "tab_group": "relatorios", "tab_value": "coordenacao"},
+        {"label": "Ocorrências", "icon": "bi-exclamation-circle", "tab_group": "relatorios", "tab_value": "ocorrencias"},
+        {"label": "Pré-conselho", "icon": "bi-clipboard-data", "tab_group": "relatorios", "tab_value": "preconselho"}
+    ] %}
+{% elif navbar_current == "preconselho" %}
+    {% set sidebar_title = "Pré-conselho" %}
+    {% set sidebar_items = [
+        {"label": "Meu preenchimento", "icon": "bi-pencil-square", "tab_group": "preconselho", "tab_value": "docente"},
+        {"label": "Consolidação", "icon": "bi-collection", "tab_group": "preconselho", "tab_value": "consolidacao"},
+        {"label": "Relatório", "icon": "bi-file-earmark-text", "tab_group": "preconselho", "tab_value": "relatorio"},
+        {"label": "RAV", "icon": "bi-ui-checks", "tab_group": "preconselho", "tab_value": "rav"},
+        {"label": "Configurações", "icon": "bi-gear", "tab_group": "preconselho", "tab_value": "configuracoes"}
+    ] %}
+{% elif navbar_current == "gestao" %}
+    {% set sidebar_title = "Gestão" %}
+    {% set sidebar_items = [
+        {"label": "Professores", "icon": "bi-people", "href": "/admin/professores", "active": admin_active_tab == "professores", "admin_only": true},
+        {"label": "Atribuições docentes", "icon": "bi-person-vcard", "href": "/admin/atribuicoes", "active": admin_active_tab == "atribuicoes", "admin_only": true},
+        {"label": "Turmas e disciplinas", "icon": "bi-journal-bookmark", "href": "/admin/turmas", "active": admin_active_tab == "turmas"},
+        {"label": "Cadastro de aulas", "icon": "bi-clock", "href": "/admin/aulas", "active": admin_active_tab == "aulas"},
+        {"label": "Recursos", "icon": "bi-projector", "href": "/admin/recursos", "active": admin_active_tab == "recursos"},
+        {"label": "Impressão", "icon": "bi-printer", "href": "/admin/impressao", "active": admin_active_tab == "impressao"},
+        {"label": "Relatórios", "icon": "bi-bar-chart", "href": "/admin/relatorios", "active": admin_active_tab == "relatorios"},
+        {"label": "Atividades", "icon": "bi-activity", "href": "/admin/auditoria", "active": admin_active_tab == "auditoria", "admin_only": true}
+    ] %}
+{% endif %}
+
+{% if sidebar_items | default([]) %}{% include "includes/app_sidebar.html" %}{% endif %}

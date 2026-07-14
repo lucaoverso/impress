@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastro de aulas - Administração</title>
+    {% include "includes/style_bundle.html" %}
+</head>
+<body data-admin-active-tab="aulas">
+    {% set navbar_context = "Painel de gestao" %}
+    {% set navbar_current = "gestao" %}
+    {% include "includes/app_navbar.html" %}
+    {% set admin_active_tab = "aulas" %}
+    {% include "includes/app_sidebar_config.html" %}
+
+    <main class="admin-page">
+        <header class="admin-header admin-header-shell">
+            <div class="admin-header-main">
+                <h1>Cadastro de aulas</h1>
+                <p>Organize aulas e intervalos na ordem utilizada pela escola.</p>
+            </div>
+        </header>
+
+        <div class="admin-section-layout">
+            <section class="admin-section-content admin-grid">
+                <article class="admin-card">
+                    <h2 id="tituloFormConfiguracaoAula">Cadastrar aula</h2>
+                    <form id="formConfiguracaoAula" class="admin-form">
+                        <label for="configAulaTipo">Tipo</label>
+                        <select id="configAulaTipo" required>
+                            <option value="AULA">Aula</option>
+                            <option value="INTERVALO">Intervalo</option>
+                        </select>
+                        <label for="configAulaNome">Nome</label>
+                        <input id="configAulaNome" type="text" placeholder="Ex.: Aula 1 ou Intervalo da manhã" required>
+                        <label for="configAulaNumero">Número global da aula</label>
+                        <input id="configAulaNumero" type="number" min="1" placeholder="Ex.: 1">
+                        <label for="configAulaOrdemVisual">Ordem na grade</label>
+                        <input id="configAulaOrdemVisual" type="number" min="1" required>
+                        <div class="admin-inline">
+                            <label>Início <input id="configAulaHorarioInicio" type="time" required></label>
+                            <label>Fim <input id="configAulaHorarioFim" type="time" required></label>
+                        </div>
+                        <label class="admin-checkbox-item">
+                            <input id="configAulaAtivo" type="checkbox" checked>
+                            <span>Item ativo na grade</span>
+                        </label>
+                        <div class="admin-inline">
+                            <button id="btnSalvarConfiguracaoAula" class="btn-destaque" type="submit">Cadastrar aula</button>
+                            <button id="btnCancelarEdicaoConfiguracaoAula" type="button" style="display: none;">Cancelar edição</button>
+                        </div>
+                    </form>
+                    <p id="msgConfiguracaoAula" role="status"></p>
+                </article>
+
+                <article class="admin-card">
+                    <h2>Grade cadastrada</h2>
+                    <p class="booking-detail">Cadastre aulas e intervalos na sequência em que aparecem no horário escolar.</p>
+                    <ul id="listaConfiguracaoAulasAdmin" class="admin-list"></ul>
+                </article>
+            </section>
+        </div>
+    </main>
+
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/core.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/grade-aulas.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/aulas.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/aulas-page.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+</html>

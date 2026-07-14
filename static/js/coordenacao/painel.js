@@ -394,6 +394,62 @@ function criarCelulaTabela(rotulo, conteudo = "") {
     return td;
 }
 
+function criarSelectSexoEstudante(estudante) {
+    const select = document.createElement("select");
+    const nome = String(estudante.nome || "estudante").trim();
+    select.setAttribute("aria-label", `Sexo de ${nome}`);
+    select.setAttribute("aria-describedby", "msgEstudantes");
+
+    [
+        ["", "Não informado"],
+        ["F", "Feminino"],
+        ["M", "Masculino"]
+    ].forEach(([valor, rotulo]) => {
+        const option = document.createElement("option");
+        option.value = valor;
+        option.textContent = rotulo;
+        select.appendChild(option);
+    });
+    select.value = String(estudante.sexo || "");
+
+    select.addEventListener("change", async () => {
+        const sexoAnterior = String(estudante.sexo || "");
+        select.disabled = true;
+        select.setAttribute("aria-busy", "true");
+        setMensagemEstudantes(`Salvando sexo de ${nome}...`);
+
+        try {
+            const atualizado = await fetchJson(`/estudantes/${estudante.id}`, {
+                method: "PUT",
+                headers: headersJson,
+                body: JSON.stringify({
+                    nome: estudante.nome,
+                    turma_id: Number(estudante.turma_id),
+                    sexo: select.value || null,
+                    ativo: Boolean(estudante.ativo)
+                })
+            });
+            Object.assign(estudante, atualizado);
+            select.value = String(estudante.sexo || "");
+            const celulaAtualizada = select
+                .closest("tr")
+                ?.querySelector('[data-label="Atualizado em"]');
+            if (celulaAtualizada) {
+                celulaAtualizada.textContent = formatarDataHora(estudante.atualizado_em);
+            }
+            setMensagemEstudantes(`Sexo de ${nome} atualizado com sucesso.`);
+        } catch (err) {
+            select.value = sexoAnterior;
+            setMensagemEstudantes(`Não foi possível atualizar o sexo de ${nome}. ${err.message}`, true);
+        } finally {
+            select.disabled = false;
+            select.removeAttribute("aria-busy");
+        }
+    });
+
+    return select;
+}
+
 function renderTabelaOcorrencias() {
     const tbody = el("tbodyOcorrencias");
     atualizarResumoOcorrencias();
@@ -481,7 +537,7 @@ function renderTabelaEstudantes() {
     if (estudantesFiltrados.length === 0) {
         const tr = document.createElement("tr");
         const td = document.createElement("td");
-        td.colSpan = 5;
+        td.colSpan = 6;
         td.className = "booking-empty";
         td.innerText = "Nenhum estudante encontrado.";
         tr.appendChild(td);
@@ -493,6 +549,7 @@ function renderTabelaEstudantes() {
         const tr = document.createElement("tr");
         tr.appendChild(criarCelulaTabela("Nome", estudante.nome || ""));
         tr.appendChild(criarCelulaTabela("Turma", estudante.turma_nome || ""));
+        tr.appendChild(criarCelulaTabela("Sexo", criarSelectSexoEstudante(estudante)));
 
         const badge = document.createElement("span");
         badge.className = `status-chip ${classeStatusEstudante(Boolean(estudante.ativo))}`;

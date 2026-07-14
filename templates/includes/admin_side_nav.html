@@ -1,0 +1,10 @@
+<nav class="admin-side-nav" aria-label="Áreas da administração">
+    <a href="/admin/professores" class="admin-side-link{% if admin_active_tab == 'professores' %} is-active{% endif %} admin-only" data-admin-only="true">Professores</a>
+    <a href="/admin/atribuicoes" class="admin-side-link{% if admin_active_tab == 'atribuicoes' %} is-active{% endif %} admin-only" data-admin-only="true">Atribuições docentes</a>
+    <a href="/admin/turmas" class="admin-side-link{% if admin_active_tab == 'turmas' %} is-active{% endif %}">Turmas e disciplinas</a>
+    <a href="/admin/aulas" class="admin-side-link{% if admin_active_tab == 'aulas' %} is-active{% endif %}">Cadastro de aulas</a>
+    <a href="/admin/recursos" class="admin-side-link{% if admin_active_tab == 'recursos' %} is-active{% endif %}">Recursos</a>
+    <a href="/admin/impressao" class="admin-side-link{% if admin_active_tab == 'impressao' %} is-active{% endif %}">Impressão</a>
+    <a href="/admin/relatorios" class="admin-side-link{% if admin_active_tab == 'relatorios' %} is-active{% endif %}">Relatórios</a>
+    <a href="/admin/auditoria" class="admin-side-link{% if admin_active_tab == 'auditoria' %} is-active{% endif %} admin-only" data-admin-only="true">Atividades</a>
+</nav>

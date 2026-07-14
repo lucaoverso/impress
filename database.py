@@ -34,6 +34,7 @@ STATUS_OCORRENCIA_VALIDOS = (
     STATUS_OCORRENCIA_AGUARDANDO_RESPONSAVEL,
     STATUS_OCORRENCIA_RESOLVIDO,
 )
+SEXOS_ESTUDANTE_VALIDOS = ("M", "F")
 TIPO_REGISTRO_OCORRENCIA_ESTUDANTE = "estudante"
 TIPO_REGISTRO_OCORRENCIA_PROFESSOR = "professor"
 TIPO_REGISTRO_OCORRENCIA_GERAL = "geral"
@@ -590,6 +591,7 @@ def criar_tabelas():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             nome TEXT NOT NULL,
             turma_id INTEGER NOT NULL,
+            sexo TEXT CHECK (sexo IS NULL OR sexo IN ('M', 'F')),
             ativo INTEGER NOT NULL DEFAULT 1,
             criado_em TEXT NOT NULL DEFAULT (datetime('now')),
             atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
@@ -5564,6 +5566,7 @@ def listar_estudantes(
             e.id,
             e.nome,
             e.turma_id,
+            e.sexo,
             COALESCE(t.nome, '') AS turma_nome,
             e.ativo,
             e.criado_em,
@@ -5611,6 +5614,7 @@ def buscar_estudante_por_id(estudante_id: int):
             e.id,
             e.nome,
             e.turma_id,
+            e.sexo,
             COALESCE(t.nome, '') AS turma_nome,
             e.ativo,
             e.criado_em,
@@ -5642,6 +5646,7 @@ def buscar_estudante_por_nome_turma(nome: str, turma_id: int):
             e.id,
             e.nome,
             e.turma_id,
+            e.sexo,
             COALESCE(t.nome, '') AS turma_nome,
             e.ativo,
             e.criado_em,
@@ -5661,9 +5666,24 @@ def buscar_estudante_por_nome_turma(nome: str, turma_id: int):
     return dict(row) if row else None
 
 
-def criar_estudante(nome: str, turma_id: int, ativo: bool = True):
+def _normalizar_sexo_estudante(sexo: str | None) -> str | None:
+    sexo_limpo = str(sexo or "").strip().upper()
+    if not sexo_limpo:
+        return None
+    if sexo_limpo not in SEXOS_ESTUDANTE_VALIDOS:
+        raise ValueError("Sexo do estudante inválido.")
+    return sexo_limpo
+
+
+def criar_estudante(
+    nome: str,
+    turma_id: int,
+    ativo: bool = True,
+    sexo: str | None = None,
+):
     nome_limpo = _normalizar_nome_catalogo(nome)
     turma_id_valor = int(turma_id or 0)
+    sexo_limpo = _normalizar_sexo_estudante(sexo)
     if not nome_limpo:
         raise ValueError("Nome do estudante é obrigatório.")
     if turma_id_valor <= 0:
@@ -5673,10 +5693,10 @@ def criar_estudante(nome: str, turma_id: int, ativo: bool = True):
     cursor = conn.cursor()
     cursor.execute(
         """
-        INSERT INTO estudantes (nome, turma_id, ativo, criado_em, atualizado_em)
-        VALUES (?, ?, ?, datetime('now'), datetime('now'))
+        INSERT INTO estudantes (nome, turma_id, sexo, ativo, criado_em, atualizado_em)
+        VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
     """,
-        (nome_limpo, turma_id_valor, 1 if ativo else 0),
+        (nome_limpo, turma_id_valor, sexo_limpo, 1 if ativo else 0),
     )
 
     estudante_id = cursor.lastrowid
@@ -5685,7 +5705,12 @@ def criar_estudante(nome: str, turma_id: int, ativo: bool = True):
     return estudante_id
 
 
-def criar_ou_atualizar_estudante_por_nome_turma(nome: str, turma_id: int, ativo: bool = True):
+def criar_ou_atualizar_estudante_por_nome_turma(
+    nome: str,
+    turma_id: int,
+    ativo: bool = True,
+    sexo: str | None = None,
+):
     existente = buscar_estudante_por_nome_turma(nome, turma_id)
     if existente:
         atualizar_estudante(
@@ -5693,16 +5718,29 @@ def criar_ou_atualizar_estudante_por_nome_turma(nome: str, turma_id: int, ativo:
             nome=nome,
             turma_id=turma_id,
             ativo=ativo,
+            sexo=sexo if sexo is not None else existente.get("sexo"),
         )
         return int(existente["id"]), False
 
-    estudante_id = criar_estudante(nome=nome, turma_id=turma_id, ativo=ativo)
+    estudante_id = criar_estudante(
+        nome=nome,
+        turma_id=turma_id,
+        ativo=ativo,
+        sexo=sexo,
+    )
     return int(estudante_id), True
 
 
-def atualizar_estudante(estudante_id: int, nome: str, turma_id: int, ativo: bool):
+def atualizar_estudante(
+    estudante_id: int,
+    nome: str,
+    turma_id: int,
+    ativo: bool,
+    sexo: str | None = None,
+):
     nome_limpo = _normalizar_nome_catalogo(nome)
     turma_id_valor = int(turma_id or 0)
+    sexo_limpo = _normalizar_sexo_estudante(sexo)
     if not nome_limpo:
         raise ValueError("Nome do estudante é obrigatório.")
     if turma_id_valor <= 0:
@@ -5713,10 +5751,10 @@ def atualizar_estudante(estudante_id: int, nome: str, turma_id: int, ativo: bool
     cursor.execute(
         """
         UPDATE estudantes
-        SET nome = ?, turma_id = ?, ativo = ?, atualizado_em = datetime('now')
+        SET nome = ?, turma_id = ?, sexo = ?, ativo = ?, atualizado_em = datetime('now')
         WHERE id = ?
     """,
-        (nome_limpo, turma_id_valor, 1 if ativo else 0, int(estudante_id)),
+        (nome_limpo, turma_id_valor, sexo_limpo, 1 if ativo else 0, int(estudante_id)),
     )
 
     alterado = cursor.rowcount > 0
@@ -12101,6 +12139,7 @@ def _normalizar_linha_registro_pre_conselho(
         "disciplina_nome": item.get("disciplina_nome", "") or "",
         "estudante_id": int(item.get("estudante_id") or 0),
         "estudante_nome": item.get("estudante_nome", "") or "",
+        "estudante_sexo": item.get("estudante_sexo"),
         "nivel_atencao": item.get("nivel_atencao", "") or "",
         "observacao_professor": item.get("observacao_professor", "") or "",
         "texto_gerado": item.get("texto_gerado", "") or "",
@@ -12364,6 +12403,7 @@ def listar_registros_pre_conselho(
             COALESCE(d.nome, r.disciplina, '') AS disciplina_nome,
             r.estudante_id,
             COALESCE(e.nome, '') AS estudante_nome,
+            e.sexo AS estudante_sexo,
             COALESCE(r.nivel_atencao, '') AS nivel_atencao,
             COALESCE(r.observacao_professor, r.observacoes, '') AS observacao_professor,
             r.pos_preconselho_recuperado,
@@ -12448,6 +12488,7 @@ def buscar_registro_pre_conselho_por_id(registro_id: int):
             COALESCE(d.nome, r.disciplina, '') AS disciplina_nome,
             r.estudante_id,
             COALESCE(e.nome, '') AS estudante_nome,
+            e.sexo AS estudante_sexo,
             COALESCE(r.nivel_atencao, '') AS nivel_atencao,
             COALESCE(r.observacao_professor, r.observacoes, '') AS observacao_professor,
             r.pos_preconselho_recuperado,
@@ -12498,6 +12539,7 @@ def listar_estudantes_pre_conselho_painel(
             e.id AS estudante_id,
             e.nome,
             e.turma_id,
+            e.sexo,
             COALESCE(t.nome, '') AS turma_nome,
             r.id AS registro_id,
             COALESCE(r.nivel_atencao, '') AS nivel_atencao,
@@ -12558,6 +12600,7 @@ def listar_estudantes_pre_conselho_painel(
                 "estudante_id": int(item["estudante_id"]),
                 "nome": item["nome"],
                 "turma_id": int(item["turma_id"]),
+                "sexo": item.get("sexo"),
                 "turma_nome": item["turma_nome"],
                 "sinalizado": registro_id is not None,
                 "registro_id": registro_id,

@@ -1374,6 +1374,7 @@ def criar_estudante_api(payload: EstudanteCreateIn, usuario=Depends(get_usuario_
             nome=_texto_obrigatorio(payload.nome, "Nome do estudante"),
             turma_id=turma_id,
             ativo=True,
+            sexo=payload.sexo,
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -1415,6 +1416,7 @@ def atualizar_estudante_api(
             nome=_texto_obrigatorio(payload.nome, "Nome do estudante"),
             turma_id=turma_id,
             ativo=bool(payload.ativo),
+            sexo=payload.sexo,
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc

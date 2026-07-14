@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de impressão - Administração</title>
+    {% include "includes/style_bundle.html" %}
+</head>
+<body data-admin-active-tab="impressao">
+    {% set navbar_context = "Painel de gestao" %}
+    {% set navbar_current = "gestao" %}
+    {% include "includes/app_navbar.html" %}
+    {% set admin_active_tab = "impressao" %}
+    {% include "includes/app_sidebar_config.html" %}
+
+    <main class="admin-page">
+        <header class="admin-header admin-header-shell">
+            <div class="admin-header-main">
+                <h1>Gestão de impressão</h1>
+                <p>Controle a disponibilidade, as impressoras cadastradas e os pedidos enviados.</p>
+            </div>
+        </header>
+
+        <div class="admin-section-layout">
+            <section class="admin-section-content admin-grid">
+            <article class="admin-card">
+                <h2>Disponibilidade</h2>
+                <form id="formStatusImpressao" class="admin-form admin-only" data-admin-only="true">
+                    <label class="admin-checkbox-item admin-checkbox-item-stack">
+                        <input id="statusSemPapel" type="checkbox">
+                        <span class="admin-checkbox-content">
+                            <strong>Estamos sem papel</strong>
+                            <small class="admin-checkbox-detail">Bloqueia novos pedidos e avisa os professores.</small>
+                        </span>
+                    </label>
+                    <label for="statusMensagemImpressao">Mensagem exibida aos professores</label>
+                    <input id="statusMensagemImpressao" type="text" maxlength="220"
+                        placeholder="Ex.: Impressão indisponível até a reposição do papel.">
+                    <button class="btn-destaque" type="submit">Salvar disponibilidade</button>
+                </form>
+                <div id="statusResumoImpressao" class="admin-status-box"></div>
+                <p id="msgStatusImpressao" role="status"></p>
+            </article>
+
+            <article class="admin-card admin-only" data-admin-only="true">
+                <h2>Impressoras cadastradas</h2>
+                <p class="admin-table-meta">Use exatamente o nome da fila exibido pelo CUPS.</p>
+                <form id="formImpressora" class="admin-form">
+                    <label for="nomeImpressora">Nome exato no CUPS</label>
+                    <input id="nomeImpressora" type="text" maxlength="128" required placeholder="Ex.: HP_Secretaria">
+                    <button class="btn-destaque" type="submit">Cadastrar impressora</button>
+                </form>
+                <p id="msgImpressoras" role="status"></p>
+                <ul id="listaImpressorasAdmin" class="admin-list"></ul>
+            </article>
+
+            <article class="admin-card">
+                <h2>Fila atual</h2>
+                <ul id="fila-admin" class="admin-list"></ul>
+            </article>
+
+            <article class="admin-card">
+                <h2>Histórico</h2>
+                <div class="admin-inline">
+                    <label>Início <input type="date" id="inicio"></label>
+                    <label>Fim <input type="date" id="fim"></label>
+                    <button id="btnBuscarHistorico" type="button">Filtrar</button>
+                </div>
+                <p id="msgRelatorios" role="status"></p>
+                <ul id="historico-admin" class="admin-list"></ul>
+            </article>
+            </section>
+        </div>
+    </main>
+
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/core.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/operacao.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/impressao-page.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+</html>

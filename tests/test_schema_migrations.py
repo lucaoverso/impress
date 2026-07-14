@@ -65,6 +65,26 @@ class SchemaMigrationsTest(unittest.TestCase):
             self.assertEqual(status["pending"], [])
             self.assertEqual(status["applied"], schema_migrations.list_migration_names())
 
+    def test_migration_adiciona_sexo_opcional_a_estudantes(self):
+        migration = _load_migration_module("20260714_add_sexo_to_estudantes.py")
+        conn = sqlite3.connect(":memory:")
+        try:
+            conn.execute(
+                "CREATE TABLE estudantes (id INTEGER PRIMARY KEY, nome TEXT NOT NULL)"
+            )
+            conn.execute("INSERT INTO estudantes (id, nome) VALUES (1, 'Carina')")
+
+            migration.upgrade(conn)
+
+            estudante = conn.execute(
+                "SELECT nome, sexo FROM estudantes WHERE id = 1"
+            ).fetchone()
+            self.assertEqual(estudante, ("Carina", None))
+            with self.assertRaises(sqlite3.IntegrityError):
+                conn.execute("UPDATE estudantes SET sexo = 'X' WHERE id = 1")
+        finally:
+            conn.close()
+
     def test_migration_20260613_remove_colisao_legada_antes_de_globalizar_horario(self):
         migration = _load_migration_module("20260613_create_global_schedule_config.py")
         conn = sqlite3.connect(":memory:")

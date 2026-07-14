@@ -31,6 +31,42 @@ class OcorrenciasRouterTest(unittest.TestCase):
         self.assertIsNotNone(professor)
         return professor
 
+    def test_cadastro_estudante_permite_informar_e_editar_sexo(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, ocorrencias_router = _reload_modulos(db_path)
+            database.criar_tabelas()
+            turma_id = int(database.criar_turma("7A", "MATUTINO", 30))
+
+            criado = ocorrencias_router.criar_estudante_api(
+                ocorrencias_router.EstudanteCreateIn(
+                    nome="Carina",
+                    turma_id=turma_id,
+                    sexo="F",
+                ),
+                usuario={"cargo": "ADMIN"},
+            )
+            self.assertEqual(criado["sexo"], "F")
+
+            database.criar_ou_atualizar_estudante_por_nome_turma(
+                nome="Carina",
+                turma_id=turma_id,
+                ativo=True,
+            )
+            self.assertEqual(database.buscar_estudante_por_id(int(criado["id"]))["sexo"], "F")
+
+            atualizado = ocorrencias_router.atualizar_estudante_api(
+                int(criado["id"]),
+                ocorrencias_router.EstudanteUpdateIn(
+                    nome="Carina",
+                    turma_id=turma_id,
+                    sexo="M",
+                    ativo=True,
+                ),
+                usuario={"cargo": "ADMIN"},
+            )
+            self.assertEqual(atualizado["sexo"], "M")
+
     def test_criar_ocorrencia_persiste_base_legal(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")

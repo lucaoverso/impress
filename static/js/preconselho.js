@@ -1271,6 +1271,7 @@ async function atualizarPreviewDocente() {
                 rav_habilidade_ids: obterHabilidadesRavSelecionadasDocente(),
                 rav_acoes: String(el("preconselhoRavAcoes").value || "").trim(),
                 estudante_nome: String(estudante?.nome || "").trim(),
+                estudante_sexo: estudante?.sexo || null,
                 periodo_id: Number(estadoDocente.periodoId || 0) || null,
                 turma_id: Number(combo?.turma_id || 0) || null,
                 disciplina_id: Number(combo?.disciplina_id || 0) || null,

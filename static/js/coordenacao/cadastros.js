@@ -9,6 +9,7 @@ function iniciarEdicaoEstudante(estudante) {
     estudanteEmEdicao = estudante;
     el("estudanteNome").value = estudante.nome || "";
     el("estudanteTurmaId").value = String(estudante.turma_id || "");
+    el("estudanteSexo").value = String(estudante.sexo || "");
     el("tituloFormEstudante").innerText = "Editar estudante";
     el("btnCancelarEdicaoEstudante").style.display = "inline-block";
     ativarAbaCoordenacao("estudantes");
@@ -445,7 +446,8 @@ async function salvarEstudante(event) {
     event.preventDefault();
     const payload = {
         nome: el("estudanteNome").value.trim(),
-        turma_id: Number(el("estudanteTurmaId").value)
+        turma_id: Number(el("estudanteTurmaId").value),
+        sexo: el("estudanteSexo").value || null
     };
 
     try {

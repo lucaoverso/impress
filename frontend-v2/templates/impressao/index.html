@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#f2efe9">
+    <title>Suite Escolar - Impressão de Atividades</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito+Sans:wght@400;600;700;800&amp;family=Material+Symbols+Outlined:wght@400&amp;display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="../../src/styles/index.css">
+    <link rel="stylesheet" href="./style.css">
+    <script src="/static/js/core/auth.js" defer></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js" defer></script>
+    <script src="./script.js" defer></script>
+</head>
+<body class="printing-page">
+    <div class="printing-flow" data-printing-flow>
+        <header class="printing-mobile-header">
+            <button class="printing-icon-button" type="button" aria-label="Voltar" data-back>
+                <span class="ui-icon" aria-hidden="true">arrow_back</span>
+            </button>
+            <h1>Impressão de Atividades</h1>
+            <button class="printing-icon-button" type="button" aria-label="Abrir opções">
+                <span class="ui-icon" aria-hidden="true">more_vert</span>
+            </button>
+        </header>
+
+        <form id="printingForm" class="printing-form" action="/imprimir" method="post" enctype="multipart/form-data">
+            <main>
+                <section class="printing-flow__content" data-step="1">
+                    <section class="printing-progress" aria-label="Progresso">
+                        <div class="printing-progress__labels"><strong>Passo 1 de 5</strong><span>Arquivo e Turma</span></div>
+                        <div class="printing-progress__segments" aria-hidden="true"><span class="is-done"></span><span></span><span></span><span></span><span></span></div>
+                    </section>
+                    <label class="printing-field" for="turmaImpressao">
+                        <span class="printing-label">Selecione a Turma</span>
+                        <span class="printing-select-wrap">
+                            <select id="turmaImpressao" name="turma"><option value="">Escolha uma turma...</option></select>
+                            <span class="ui-icon" aria-hidden="true">keyboard_arrow_down</span>
+                        </span>
+                        <span class="printing-field-hint" data-class-summary>Selecione uma turma para preencher as cópias automaticamente.</span>
+                    </label>
+                    <section class="printing-field" aria-labelledby="arquivoAtividadeTitulo">
+                        <h2 id="arquivoAtividadeTitulo" class="printing-label">Arquivo de Atividade</h2>
+                        <label class="printing-upload" for="arquivoAtividade">
+                            <input id="arquivoAtividade" name="arquivo" type="file" accept=".pdf,.doc,.docx">
+                            <span class="printing-upload__icon" aria-hidden="true"><span class="ui-icon">upload_file</span></span>
+                            <span class="printing-upload__title" data-file-title>Toque para buscar arquivos</span>
+                            <span class="printing-upload__hint" data-file-hint>PDF, DOC ou DOCX até 10MB</span>
+                        </label>
+                    </section>
+                    <section class="printing-recents" aria-labelledby="arquivosRecentesTitulo">
+                        <h2 id="arquivosRecentesTitulo">Arquivos recentes</h2>
+                        <div class="printing-recents__list">
+                            <button class="printing-file-card" type="button" data-recent-file="Prova_Matematica_1Bim.pdf">
+                                <span class="printing-file-card__icon" aria-hidden="true"><span class="ui-icon">picture_as_pdf</span></span>
+                                <span class="printing-file-card__copy"><strong>Prova_Matematica_1Bim.pdf</strong><span>Hoje, 08:30 • 2.4 MB</span></span>
+                            </button>
+                        </div>
+                    </section>
+                </section>
+
+                <section class="printing-settings" data-step="2" hidden>
+                    <section class="printing-progress" aria-label="Progresso">
+                        <div class="printing-progress__labels"><strong>Passo 2 de 5</strong><span>Configurações</span></div>
+                        <div class="printing-progress__segments" aria-hidden="true"><span class="is-done"></span><span class="is-done"></span><span></span><span></span><span></span></div>
+                    </section>
+                    <h2 class="printing-settings__title">Configurações de Cópia</h2>
+                    <section class="printing-card">
+                        <h3>Número de Cópias</h3>
+                        <div class="printing-counter" role="group" aria-label="Número de cópias">
+                            <button type="button" data-copy="-1" aria-label="Diminuir cópias"><span class="ui-icon">remove</span></button>
+                            <output id="copyCount">1</output>
+                            <button type="button" data-copy="1" aria-label="Aumentar cópias"><span class="ui-icon">add</span></button>
+                        </div>
+                    </section>
+                    <section class="printing-card">
+                        <h3>Páginas a Imprimir</h3>
+                        <div class="printing-radio-list">
+                            <label class="printing-radio-option"><input type="radio" name="modoPaginas" value="all" checked><span>Todas as páginas</span></label>
+                            <label class="printing-radio-option"><input type="radio" name="modoPaginas" value="custom"><span>Intervalo <strong>Ex: 1-5, 8, 11-13</strong></span></label>
+                        </div>
+                        <label class="printing-field printing-interval-field" data-interval-field hidden for="intervaloPaginas">
+                            <span class="printing-label">Intervalo personalizado</span>
+                            <input class="printing-input" id="intervaloPaginas" name="intervalo_paginas" type="text" placeholder="Ex.: 1-5, 8, 11-13" autocomplete="off">
+                            <span class="printing-field-hint">Use vírgulas para separar páginas e hífen para sequências.</span>
+                        </label>
+                    </section>
+                    <section class="printing-card">
+                        <label class="printing-field" for="paginasPorFolha">
+                            <span class="printing-label">Páginas por folha</span>
+                            <span class="printing-select-wrap">
+                                <select id="paginasPorFolha" name="paginas_por_folha"><option value="1">1 página</option><option value="2">2 páginas</option><option value="4">4 páginas</option></select>
+                                <span class="ui-icon" aria-hidden="true">keyboard_arrow_down</span>
+                            </span>
+                        </label>
+                    </section>
+                    <section class="printing-card">
+                        <h3>Orientação</h3>
+                        <div class="printing-orientation" role="radiogroup" aria-label="Orientação">
+                            <label><input type="radio" name="orientacao" value="retrato" checked><span class="ui-icon">portrait</span><strong>Retrato</strong></label>
+                            <label><input type="radio" name="orientacao" value="paisagem"><span class="ui-icon">landscape</span><strong>Paisagem</strong></label>
+                        </div>
+                    </section>
+                    <section class="printing-card printing-duplex">
+                        <div><h3>Frente e verso</h3><p>Imprimir em ambos os lados</p></div>
+                        <label class="printing-toggle"><span class="sr-only">Ativar frente e verso</span><input type="checkbox" id="duplexBase"></label>
+                    </section>
+                </section>
+
+                <section class="printing-settings printing-finish" data-step="3" hidden>
+                    <section class="printing-progress" aria-label="Progresso">
+                        <div class="printing-progress__labels"><strong>Passo 3 de 5</strong><span>Acabamento</span></div>
+                        <div class="printing-progress__segments" aria-hidden="true"><span class="is-done"></span><span class="is-done"></span><span class="is-done"></span><span></span><span></span></div>
+                    </section>
+                    <section class="printing-section">
+                        <h2>Selecione a Impressora</h2>
+                        <div class="printing-printer-list" data-printer-list>
+                            <label class="printing-printer-card"><input type="radio" name="impressora" value="Secretaria - Principal" checked><span class="printing-printer-card__icon"><span class="ui-icon">print</span></span><span class="printing-printer-card__copy"><strong>Secretaria - Principal</strong><span>Fila: Vazia • Toner: 85%</span></span></label>
+                            <label class="printing-printer-card"><input type="radio" name="impressora" value="Sala dos Professores"><span class="printing-printer-card__icon"><span class="ui-icon">print</span></span><span class="printing-printer-card__copy"><strong>Sala dos Professores</strong><span>Fila: 2 docs • Toner: 40%</span></span></label>
+                        </div>
+                    </section>
+                    <section class="printing-section"><h2>Tags da Impressão</h2><div class="printing-tags" data-tags></div><p class="printing-field-hint" data-tags-status aria-live="polite"></p></section>
+                    <section class="printing-section">
+                        <h2>Acabamento</h2>
+                        <div class="printing-card printing-finish-list">
+                            <label class="printing-finish-row"><span class="ui-icon">palette</span><span><strong>Impressão Colorida</strong><small>Custo adicional aplicável</small></span><span class="printing-toggle"><input type="checkbox" id="colorida"></span></label>
+                            <label class="printing-finish-row"><span class="ui-icon">layers</span><span><strong>Frente e Verso</strong><small>Economiza papel</small></span><span class="printing-toggle"><input type="checkbox" id="duplexAcabamento" checked></span></label>
+                            <label class="printing-finish-row"><span class="ui-icon">sell</span><span><strong>Grampear</strong><small>Canto superior esquerdo</small></span><span class="printing-toggle"><input type="checkbox" id="grampear"></span></label>
+                        </div>
+                    </section>
+                </section>
+
+                <section class="printing-settings printing-review" data-step="4" hidden>
+                    <section class="printing-progress" aria-label="Progresso">
+                        <div class="printing-progress__labels"><strong>Passo 4 de 5</strong><span>Resumo</span></div>
+                        <div class="printing-progress__segments" aria-hidden="true"><span class="is-done"></span><span class="is-done"></span><span class="is-done"></span><span class="is-done"></span><span></span></div>
+                    </section>
+                    <section class="printing-review-list" aria-label="Resumo da solicitação">
+                        <details class="printing-review-card" open><summary><span class="ui-icon">description</span><strong>Detalhes do Arquivo</strong><span class="ui-icon">expand_less</span></summary><div class="printing-review-file"><span class="printing-review-file__badge">PDF</span><div><h2 data-review-file>Arquivo selecionado</h2><p data-review-meta>4 Páginas • 2.4 MB</p><span class="printing-valid-badge"><span class="ui-icon">check_circle</span>Validado</span></div></div></details>
+                        <details class="printing-review-card"><summary><span class="ui-icon">settings</span><strong>Configurações de Impressão</strong><span class="ui-icon">expand_more</span></summary><div class="printing-review-details" data-review-settings></div></details>
+                        <details class="printing-review-card"><summary><span class="ui-icon">print</span><strong>Acabamento e Destino</strong><span class="ui-icon">expand_more</span></summary><div class="printing-review-details" data-review-finish></div></details>
+                    </section>
+                </section>
+
+                <section class="printing-success" data-step="5" hidden>
+                    <section class="printing-progress" aria-label="Progresso">
+                        <div class="printing-progress__labels"><strong>Passo 5 de 5</strong><span>Sucesso</span></div>
+                        <div class="printing-progress__segments" aria-hidden="true"><span class="is-done"></span><span class="is-done"></span><span class="is-done"></span><span class="is-done"></span><span class="is-done"></span></div>
+                    </section>
+                    <div class="printing-success-hero"><span class="ui-icon">check</span></div>
+                    <h2 data-success-title>Sucesso!</h2>
+                    <p><span data-success-message>Enviando para Impressora...</span> <strong data-submit-progress>100%</strong></p>
+                    <div class="printing-success-bar"><span data-submit-bar></span></div>
+                    <section class="printing-card printing-order-summary">
+                        <h3>Resumo do Pedido</h3>
+                        <dl>
+                            <div><span class="ui-icon">print</span><dt>Impressora</dt><dd data-success-printer>Sala dos Professores</dd></div>
+                            <div><span class="ui-icon">content_copy</span><dt>Cópias</dt><dd data-success-copies>45 exemplares</dd></div>
+                            <div><span class="ui-icon">auto_awesome</span><dt>Acabamento</dt><dd data-success-finish>Grampeado</dd></div>
+                        </dl>
+                    </section>
+                    <section class="printing-collection"><span class="ui-icon">check_circle</span><strong>Visualização do Documento</strong><b data-collection-status>PRONTO PARA COLETA</b><div class="printing-preview-strip"><button class="printing-page-thumb printing-page-thumb--document" type="button"></button><button class="printing-page-thumb printing-page-thumb--document" type="button"></button><button class="printing-page-thumb printing-page-thumb--document" type="button"></button></div></section>
+                </section>
+            </main>
+
+            <aside class="printing-preview-dock" data-preview-panel data-preview-state="normal" aria-label="Prévia das páginas">
+                <button class="printing-preview-handle" type="button" data-preview-handle aria-label="Expandir prévia"></button>
+                <h2 data-preview-title>Prévia das Páginas (4)</h2>
+                <div class="printing-preview-strip" data-preview-pages></div>
+            </aside>
+
+            <nav class="printing-bottom-bar" data-actions aria-label="Navegação da impressão">
+                <button class="printing-back-link" type="button" data-back><span class="ui-icon">chevron_left</span><span>Voltar</span></button>
+                <button class="printing-next-button" type="button" data-next><span data-next-label>Próximo</span><span class="ui-icon" data-next-icon>chevron_right</span></button>
+            </nav>
+            <p class="printing-feedback" data-feedback aria-live="polite"></p>
+        </form>
+    </div>
+</body>
+</html>

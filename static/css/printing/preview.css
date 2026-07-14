@@ -1,0 +1,146 @@
+/* Preview e conferencia da impressao conforme docs/DESIGN.md. */
+.professor-page .print-preview-stage {
+    min-height: var(--print-preview-height);
+    height: var(--print-preview-height);
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--print-color-border);
+    border-radius: var(--print-radius-surface);
+    background: var(--print-color-surface);
+    box-shadow: var(--print-shadow-sm);
+}
+
+.professor-page .print-preview-header { min-height: 56px; padding: var(--space-2) var(--space-3); border-bottom: 1px solid var(--print-color-border); }
+.professor-page .print-preview-title { display: flex; align-items: center; gap: var(--space-3); min-width: 0; }
+.professor-page .print-preview-title > svg { width: 22px; height: 22px; flex: 0 0 22px; fill: none; stroke: var(--print-color-primary); stroke-width: 1.8; }
+.professor-page .print-preview-title > div { display: grid; gap: 2px; }
+.professor-page .print-preview-title h2 { font-family: var(--font-sans); font-size: 17px; letter-spacing: 0; }
+.professor-page .print-preview-title p { font-size: 12px; }
+
+.professor-page .print-preview-pane {
+    min-height: 0;
+    height: auto;
+    padding: var(--space-3);
+    border: 0;
+    border-radius: 0;
+    background: var(--print-color-surface-muted);
+}
+
+.professor-page #previewContainer { padding: 0; }
+.professor-page #previewContainer.is-desktop-focus { justify-content: center; padding: 0; }
+.professor-page .print-preview-featured { padding: 0; }
+.professor-page .print-preview-thumbs { display: none; }
+.professor-page #previewContainer .print-sheet { border-radius: 2px; box-shadow: 0 2px 8px rgba(15, 23, 42, 0.1); }
+.professor-page .print-preview-footer { display: flex; min-height: 44px; align-items: center; justify-content: center; padding: var(--space-1) var(--space-3); border-top: 1px solid var(--print-color-border); background: var(--print-color-surface); }
+
+.professor-page .print-pagination {
+    min-width: 172px;
+    border: 0;
+    background: transparent;
+}
+
+.professor-page .print-pagination button {
+    width: 32px;
+    height: 32px;
+    min-height: 32px;
+    padding: 0;
+    border-color: transparent;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    color: var(--print-color-primary);
+    font-size: 24px;
+}
+
+.professor-page #contadorFolha {
+    color: var(--print-color-text);
+}
+
+.professor-page #previewContainer .print-sheet,
+.professor-page #previewContainer .preview-cell {
+    border-color: var(--print-color-border);
+    border-radius: var(--print-radius-sm);
+    background: var(--print-color-surface);
+}
+
+.professor-page #previewContainer .print-sheet-thumb.is-active .print-sheet,
+.professor-page #previewContainer .preview-cell.is-selected {
+    border-color: var(--print-color-primary);
+    box-shadow: 0 0 0 2px rgba(0, 67, 61, 0.16), var(--print-shadow-sm);
+}
+
+.professor-page #previewContainer .preview-cell::before,
+.professor-page #previewContainer .print-sheet-thumb::after {
+    border-color: var(--print-color-border);
+    background: var(--print-color-surface);
+    color: var(--print-color-text-muted);
+}
+
+.professor-page #previewContainer .preview-cell.is-selected::before,
+.professor-page #previewContainer .print-sheet-thumb.is-active::after {
+    border-color: var(--print-color-primary);
+    background: var(--print-color-primary-light);
+    color: var(--print-color-primary);
+}
+
+.professor-page .print-summary-list {
+    gap: var(--print-space-2);
+}
+
+.professor-page .print-summary-list > div {
+    grid-template-columns: minmax(130px, 0.34fr) minmax(0, 1fr);
+    gap: var(--print-space-4);
+    padding: var(--print-space-3) var(--print-space-4);
+    border: 0;
+    border-bottom: 1px solid var(--print-color-border);
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.professor-page .print-summary-list dt {
+    color: var(--print-color-text-muted);
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.professor-page .print-summary-list dd {
+    color: var(--print-color-text);
+}
+
+.professor-page .print-visible-feedback p:not(:empty),
+.professor-page .print-submit-state.is-active {
+    border: 1px solid var(--print-color-border);
+    border-radius: var(--print-radius-md);
+    background: var(--print-color-surface);
+    color: var(--print-color-text);
+}
+
+@media (max-width: 980px) {
+    .professor-page .print-preview-stage {
+        padding: 0;
+    }
+
+    body.professor-page.print-preview-modal-open #painelPreview,
+    body.professor-page.print-preview-modal-open #painelPreview[hidden] {
+        min-height: calc(100svh - 32px);
+        height: auto;
+        padding: var(--print-space-4);
+        border-radius: var(--print-radius-xl);
+        background: var(--print-color-surface);
+    }
+}
+
+@media (max-width: 640px) {
+    .professor-page .print-preview-header {
+        flex-direction: column;
+    }
+
+    .professor-page .print-summary-list > div {
+        grid-template-columns: 1fr;
+        gap: var(--print-space-1);
+    }
+}

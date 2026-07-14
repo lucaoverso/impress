@@ -511,10 +511,24 @@ def _texto_recomendacao_nivel(nivel_atencao: str) -> str:
     return ""
 
 
+def _referencia_estudante(
+    sexo: str | None,
+    nome: str = "",
+    *,
+    inicio_frase: bool = True,
+) -> str:
+    artigo = "A" if str(sexo or "").strip().upper() == "F" else "O"
+    if not inicio_frase:
+        artigo = artigo.lower()
+    nome_limpo = _texto_limpo(nome)
+    return f"{artigo} estudante {nome_limpo}" if nome_limpo else f"{artigo} estudante"
+
+
 def _texto_pos_pre_conselho(
     recuperado: bool | None,
     motivos_pos_pre_conselho: list[str] | None = None,
     observacao_pos_pre_conselho: str = "",
+    estudante_sexo: str | None = None,
 ) -> str:
     status = normalizar_status_pos_pre_conselho(
         recuperado,
@@ -525,11 +539,13 @@ def _texto_pos_pre_conselho(
         return ""
 
     observacao = _texto_lista_observacao(observacao_pos_pre_conselho)
+    estudante = _referencia_estudante(estudante_sexo, inicio_frase=False)
 
     if status:
-        abertura = "Após o pré-conselho, o estudante foi recuperado por meio da recuperação paralela"
+        recuperado_txt = "recuperada" if str(estudante_sexo or "").upper() == "F" else "recuperado"
+        abertura = f"Após o pré-conselho, {estudante} foi {recuperado_txt} por meio da recuperação paralela"
     else:
-        abertura = "Após o pré-conselho, o estudante manteve baixo rendimento, mesmo após a recuperação paralela"
+        abertura = f"Após o pré-conselho, {estudante} manteve baixo rendimento, mesmo após a recuperação paralela"
 
     partes = [_garantir_ponto_final(abertura)]
     if observacao:
@@ -541,10 +557,10 @@ def _texto_pos_pre_conselho(
     return " ".join(parte for parte in partes if parte)
 
 
-def _texto_rav(estudante_em_rav: bool) -> str:
+def _texto_rav(estudante_em_rav: bool, estudante_sexo: str | None = None) -> str:
     if not estudante_em_rav:
         return ""
-    return "O estudante encontra-se em Recuperar para Avançar (RAV)."
+    return f"{_referencia_estudante(estudante_sexo)} encontra-se em Recuperar para Avançar (RAV)."
 
 
 def gerar_texto_pre_conselho_individual(
@@ -552,6 +568,7 @@ def gerar_texto_pre_conselho_individual(
     observacao_professor: str = "",
     nivel_atencao: str | None = None,
     estudante_nome: str = "",
+    estudante_sexo: str | None = None,
     disciplina_nome: str = "",
     pos_preconselho_recuperado: bool | None = None,
     pos_preconselho_motivos: list[str] | None = None,
@@ -566,11 +583,7 @@ def gerar_texto_pre_conselho_individual(
     if not fragmentos_motivos:
         raise ValueError("Não foi possível gerar o texto com os motivos selecionados.")
 
-    sujeito = (
-        f"O estudante {_texto_limpo(estudante_nome)}"
-        if _texto_limpo(estudante_nome)
-        else "O estudante"
-    )
+    sujeito = _referencia_estudante(estudante_sexo, estudante_nome)
     abertura = (
         f"{sujeito} obteve baixo rendimento {_descricao_disciplinas([disciplina_nome])}, "
         f"em razão de {_formatar_lista_pt_br(fragmentos_motivos)}."
@@ -582,8 +595,9 @@ def gerar_texto_pre_conselho_individual(
         pos_preconselho_recuperado,
         pos_preconselho_motivos,
         pos_preconselho_observacao,
+        estudante_sexo,
     )
-    rav = _texto_rav(estudante_em_rav)
+    rav = _texto_rav(estudante_em_rav, estudante_sexo)
     texto = " ".join(
         parte
         for parte in (
@@ -719,13 +733,14 @@ def _texto_estudante_consolidado(registros: list[dict], *, versao: str = "precon
     estudante_em_rav = any(bool(registro.get("estudante_em_rav")) for registro in registros)
 
     estudante_nome = _texto_caixa_alta(base.get("estudante_nome")) or "ESTUDANTE NÃO IDENTIFICADO"
+    estudante_sexo = base.get("estudante_sexo")
     abertura = (
-        f"O estudante {estudante_nome} obteve baixo rendimento {_descricao_disciplinas(disciplinas)}, "
+        f"{_referencia_estudante(estudante_sexo, estudante_nome)} obteve baixo rendimento {_descricao_disciplinas(disciplinas)}, "
         f"em razão de {_formatar_lista_pt_br(motivos)}."
     )
 
     recomendacao = _texto_recomendacao_nivel(nivel_atencao)
-    rav_txt = "" if versao == "conselho" else _texto_rav(estudante_em_rav)
+    rav_txt = "" if versao == "conselho" else _texto_rav(estudante_em_rav, estudante_sexo)
     observacao_txt = ""
     if observacoes:
         observacao_txt = _garantir_ponto_final(
@@ -747,7 +762,7 @@ def _texto_estudante_consolidado(registros: list[dict], *, versao: str = "precon
         frase = (
             f"em {item['disciplina']}, houve recuperação por meio da recuperação paralela"
             if recuperado
-            else f"em {item['disciplina']}, o estudante manteve baixo rendimento após a recuperação paralela"
+            else f"em {item['disciplina']}, {_referencia_estudante(estudante_sexo, inicio_frase=False)} manteve baixo rendimento após a recuperação paralela"
         )
         if observacoes_pos:
             frase += f", com observação de que {_formatar_lista_pt_br(observacoes_pos)}"
@@ -764,7 +779,7 @@ def _texto_estudante_consolidado(registros: list[dict], *, versao: str = "precon
         ]
         if disciplinas_mantidas:
             pos_preconselho_txt = _garantir_ponto_final(
-                "Após o pré-conselho, o estudante manteve baixo rendimento "
+                f"Após o pré-conselho, {_referencia_estudante(estudante_sexo, inicio_frase=False)} manteve baixo rendimento "
                 f"{_descricao_disciplinas(disciplinas_mantidas)}"
             )
     elif detalhes_pos_preconselho:
@@ -786,6 +801,7 @@ def _texto_estudante_consolidado(registros: list[dict], *, versao: str = "precon
     return {
         "estudante_id": int(base.get("estudante_id") or 0),
         "estudante_nome": estudante_nome,
+        "estudante_sexo": estudante_sexo,
         "turma_nome": _texto_limpo(base.get("turma_nome")),
         "nivel_atencao": nivel_atencao,
         "total_registros": len(registros),

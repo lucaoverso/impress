@@ -120,7 +120,7 @@ class PreConselhoRouterTest(unittest.TestCase):
             disciplina_id = int(database.criar_disciplina("Matematica", 5))
             disciplina_historia_id = int(database.criar_disciplina("Historia", 3))
             disciplina_geografia_id = int(database.criar_disciplina("Geografia Aplicada", 2))
-            estudante_id = int(database.criar_estudante("Ana", turma_id))
+            estudante_id = int(database.criar_estudante("Ana", turma_id, sexo="F"))
             professor_id = int(
                 database.criar_professor(
                     nome="Professor Registro",
@@ -235,7 +235,7 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertEqual(int(salvo["estudante_id"]), estudante_id)
             self.assertEqual(int(salvo["disciplina_id"]), disciplina_id)
             self.assertIn(
-                "O estudante Ana obteve baixo rendimento na disciplina de Matematica",
+                "A estudante Ana obteve baixo rendimento na disciplina de Matematica",
                 salvo["texto_gerado"],
             )
             self.assertIn("em razão de", salvo["texto_gerado"])
@@ -267,6 +267,7 @@ class PreConselhoRouterTest(unittest.TestCase):
             )
 
             self.assertEqual(int(salvo_historia["disciplina_id"]), disciplina_historia_id)
+            self.assertIn("a estudante foi recuperada", salvo_historia["texto_gerado"])
 
             listagem = preconselho_router.listar_registros_preconselho_api(
                 periodo_id=periodo_id,
@@ -308,6 +309,7 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertEqual(consolidado["total_estudantes"], 1)
             self.assertIn("No período 1º Bimestre 2032", consolidado["texto"])
             self.assertIn("ANA", consolidado["texto"])
+            self.assertIn("A estudante ANA obteve baixo rendimento", consolidado["texto"])
             self.assertIn("Historia", consolidado["texto"])
             self.assertIn("Matematica", consolidado["texto"])
             self.assertIn("Recuperar para Avançar (RAV)", consolidado["texto"])
@@ -358,7 +360,7 @@ class PreConselhoRouterTest(unittest.TestCase):
                 consolidado_conselho["itens_agrupados"][0]["texto"],
             )
             self.assertIn(
-                "Após o pré-conselho, o estudante manteve baixo rendimento",
+                "Após o pré-conselho, a estudante manteve baixo rendimento",
                 consolidado_conselho["itens_agrupados"][0]["texto"],
             )
 

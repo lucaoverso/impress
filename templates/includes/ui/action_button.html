@@ -1,0 +1,6 @@
+{% macro action_button(id="", label="", icon="", type="button", class_name="suite-action-button", aria_label="", aria_controls="", aria_expanded="", hidden=false, attrs="") -%}
+<button{% if id %} id="{{ id }}"{% endif %} class="{{ class_name }}" type="{{ type }}"{% if aria_label %} aria-label="{{ aria_label }}"{% endif %}{% if aria_controls %} aria-controls="{{ aria_controls }}"{% endif %}{% if aria_expanded %} aria-expanded="{{ aria_expanded }}"{% endif %}{% if hidden %} hidden{% endif %}{% if attrs %} {{ attrs | safe }}{% endif %}>
+    {% if icon %}<i class="bi bi-{{ icon }}" aria-hidden="true"></i>{% endif %}
+    <span data-button-label>{{ label }}</span>
+</button>
+{%- endmacro %}

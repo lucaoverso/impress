@@ -1,5 +1,7 @@
 """Pydantic schemas for pre-conselho APIs."""
 
+from typing import Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -207,6 +209,7 @@ class PreConselhoEstudantePainelOut(BaseModel):
     estudante_id: int
     nome: str
     turma_id: int
+    sexo: Literal["M", "F"] | None = None
     turma_nome: str = ""
     sinalizado: bool = False
     registro_id: int | None = None
@@ -254,6 +257,7 @@ class PreConselhoTextoPreviewIn(BaseModel):
     observacao_professor: str = ""
     nivel_atencao: str | None = None
     estudante_nome: str = ""
+    estudante_sexo: Literal["M", "F"] | None = None
     periodo_id: int | None = None
     turma_id: int | None = None
     disciplina_id: int | None = None
@@ -280,6 +284,7 @@ class PreConselhoRegistroOut(BaseModel):
     disciplina_nome: str = ""
     estudante_id: int
     estudante_nome: str = ""
+    estudante_sexo: Literal["M", "F"] | None = None
     nivel_atencao: str = ""
     observacao_professor: str = ""
     criado_em: str = ""
@@ -311,6 +316,7 @@ class PreConselhoTextoOut(BaseModel):
 class PreConselhoConsolidadoEstudanteOut(BaseModel):
     estudante_id: int = 0
     estudante_nome: str = ""
+    estudante_sexo: Literal["M", "F"] | None = None
     turma_nome: str = ""
     nivel_atencao: str = ""
     total_registros: int = 0

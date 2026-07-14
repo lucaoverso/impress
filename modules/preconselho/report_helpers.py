@@ -126,6 +126,14 @@ def map_teaching_staff_by_classrooms(classrooms: dict[int, str]) -> dict[int, di
                 if str(item or "").strip()
             }
             if classroom_name_casefold in workload_classrooms:
+                teaching_staff = teachers_by_classroom.get(classroom_id, {}).get(
+                    "corpo_docente", []
+                )
+                if any(
+                    item.get("professor_nome") == teacher.get("nome")
+                    for item in teaching_staff
+                ):
+                    continue
                 register_teacher(
                     classroom_id,
                     teacher.get("nome"),

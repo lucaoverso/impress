@@ -1,0 +1,38 @@
+{
+  "generated_at": "2026-07-14T12:50:16.836452+00:00",
+  "nodes": {
+    "db_schema_migrations": {
+      "code_fingerprint": "db3d0eecd167de377737fe00385e448560a09b457ef53d733baf17f9e217f8ea",
+      "label": "schema_migrations.py",
+      "last": "2026-07-14T12:43:23.586269+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-14T12:43:23.586269+00:00",
+          "outcome": "useful",
+          "q": "Adicionar sexo ao cadastro de estudantes e adequar o artigo no texto consolidado do pré-conselho"
+        }
+      ],
+      "score": 0.999889496,
+      "source_file": "db/schema_migrations.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "static_js_coordenacao_cadastros": {
+      "code_fingerprint": "65d1053fb9c66aaec4a0964e2730bb01cec78b1a929f1da854dac9d8dd721d7b",
+      "label": "cadastros.js",
+      "last": "2026-07-14T12:43:23.586269+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-14T12:43:23.586269+00:00",
+          "outcome": "useful",
+          "q": "Adicionar sexo ao cadastro de estudantes e adequar o artigo no texto consolidado do pré-conselho"
+        }
+      ],
+      "score": 0.999889496,
+      "source_file": "static/js/coordenacao/cadastros.js",
+      "status": "tentative",
+      "uses": 1
+    }
+  },
+  "version": 1
+}

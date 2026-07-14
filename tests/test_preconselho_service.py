@@ -1,5 +1,7 @@
 import unittest
+from unittest.mock import patch
 
+from modules.preconselho.report_helpers import map_teaching_staff_by_classrooms
 from services.preconselho_service import (
     gerar_texto_consolidado_pre_conselho,
     gerar_texto_pre_conselho_individual,
@@ -7,6 +9,47 @@ from services.preconselho_service import (
 
 
 class PreConselhoServiceTest(unittest.TestCase):
+    @patch("modules.preconselho.report_helpers.repository.list_teacher_workloads_by_user_ids")
+    @patch("modules.preconselho.report_helpers.repository.list_available_teachers")
+    @patch("modules.preconselho.report_helpers.repository.list_admin_classroom_disciplines")
+    @patch("modules.preconselho.report_helpers.repository.list_teacher_assignments")
+    def test_corpo_docente_mantem_disciplinas_especificas_de_cada_turma(
+        self,
+        list_teacher_assignments,
+        list_admin_classroom_disciplines,
+        list_available_teachers,
+        list_teacher_workloads_by_user_ids,
+    ):
+        list_teacher_assignments.side_effect = lambda *, classroom_id, **_: (
+            [
+                {"professor_nome": "Professor Fulano", "disciplina_nome": "Matemática"},
+                {"professor_nome": "Professor Fulano", "disciplina_nome": "Matemática R.A"},
+            ]
+            if classroom_id == 1
+            else [
+                {"professor_nome": "Professor Fulano", "disciplina_nome": "Matemática"}
+            ]
+        )
+        list_admin_classroom_disciplines.return_value = []
+        list_available_teachers.return_value = [{"id": 10, "nome": "Professor Fulano"}]
+        list_teacher_workloads_by_user_ids.return_value = {
+            10: {
+                "turmas": ["6 A", "7 A"],
+                "disciplinas": ["Matemática", "Matemática R.A"],
+            }
+        }
+
+        resultado = map_teaching_staff_by_classrooms({1: "6 A", 2: "7 A"})
+
+        self.assertEqual(
+            resultado[1]["corpo_docente"][0]["disciplinas"],
+            ["Matemática", "Matemática R.A"],
+        )
+        self.assertEqual(
+            resultado[2]["corpo_docente"][0]["disciplinas"],
+            ["Matemática"],
+        )
+
     def test_gera_texto_individual_com_categorias_e_observacao(self):
         motivos = [
             {
@@ -55,6 +98,38 @@ class PreConselhoServiceTest(unittest.TestCase):
     def test_texto_individual_exige_motivo(self):
         with self.assertRaises(ValueError):
             gerar_texto_pre_conselho_individual(motivos=[])
+
+    def test_textos_usam_concordancia_feminina_quando_sexo_informado(self):
+        motivo = {"codigo": "baixo_rendimento", "descricao": "Baixo rendimento"}
+        individual = gerar_texto_pre_conselho_individual(
+            motivos=[motivo],
+            estudante_nome="Carina",
+            estudante_sexo="F",
+            disciplina_nome="Matemática",
+            pos_preconselho_recuperado=True,
+            estudante_em_rav=True,
+        )
+        consolidado = gerar_texto_consolidado_pre_conselho(
+            periodo_nome="1º Bimestre 2032",
+            turma_nome="7A",
+            disciplina_nome="Matemática",
+            registros=[
+                {
+                    "estudante_id": 1,
+                    "estudante_nome": "Carina",
+                    "estudante_sexo": "F",
+                    "turma_nome": "7A",
+                    "disciplina_nome": "Matemática",
+                    "professor_nome": "Prof. Ana",
+                    "motivos": [motivo],
+                }
+            ],
+        )
+
+        self.assertIn("A estudante Carina obteve baixo rendimento", individual["texto"])
+        self.assertIn("A estudante encontra-se em", individual["texto"])
+        self.assertIn("a estudante foi recuperada", individual["texto"])
+        self.assertIn("A estudante CARINA obteve baixo rendimento", consolidado["texto"])
 
     def test_gera_texto_consolidado_com_motivos_frequentes(self):
         registros = [

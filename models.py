@@ -1141,11 +1141,13 @@ class OcorrenciaOut(BaseModel):
 class EstudanteCreateIn(BaseModel):
     nome: str
     turma_id: int
+    sexo: Literal["M", "F"] | None = None
 
 
 class EstudanteUpdateIn(BaseModel):
     nome: str
     turma_id: int
+    sexo: Literal["M", "F"] | None = None
     ativo: bool = True
 
 
@@ -1157,6 +1159,7 @@ class EstudanteOut(BaseModel):
     id: int
     nome: str
     turma_id: int
+    sexo: Literal["M", "F"] | None = None
     turma_nome: str = ""
     ativo: int | bool
     criado_em: str

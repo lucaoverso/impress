@@ -110,6 +110,7 @@ def save_preconselho_record(payload, usuario: dict) -> dict:
             observacao_professor=observacao_professor,
             nivel_atencao=nivel_atencao,
             estudante_nome=str(estudante["nome"]),
+            estudante_sexo=estudante.get("sexo"),
             disciplina_nome=str(disciplina["nome"]),
             pos_preconselho_recuperado=pos_preconselho_recuperado,
             pos_preconselho_motivos=pos_preconselho_motivos,
