@@ -1456,6 +1456,36 @@ class ApcRouterTest(unittest.TestCase):
             self.assertEqual(resumo["turmas"], ["9A", "9B"])
             self.assertEqual(resumo["ultimo_envio_em"], "2035-08-18 10:00:00")
 
+    def test_calendario_docente_mantem_pendencias_de_outros_meses_do_ano(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            apc_dir = os.path.join(tmp_dir, "apc")
+            _database, _models, apc_router = _reload_modules(db_path, apc_dir)
+            periodos = [
+                {"id": 1, "ano_letivo": 2036, "data_referencia": "2036-03-10"},
+                {"id": 2, "ano_letivo": 2036, "data_referencia": "2036-04-10"},
+            ]
+
+            with (
+                patch.object(apc_router, "listar_apc_periodos", return_value=periodos) as listar,
+                patch.object(
+                    apc_router,
+                    "_montar_resumo_calendario_para_usuario",
+                    side_effect=lambda periodo, _usuario, _visao: periodo,
+                ),
+            ):
+                resposta = apc_router.listar_calendario_apc_api(
+                    mes="2036-04",
+                    ano_letivo=2036,
+                    usuario=self._usuario_professor(7),
+                )
+
+            listar.assert_called_once_with(ano_letivo=2036)
+            self.assertEqual(
+                [item["data_referencia"] for item in resposta["periodos"]],
+                ["2036-03-10", "2036-04-10"],
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

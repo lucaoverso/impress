@@ -639,15 +639,19 @@ def listar_calendario_apc_api(
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
 
-    periodos = ordenar_periodos_apc(
-        listar_apc_periodos(
-            ano_letivo=int(ano_letivo) if ano_letivo is not None else None,
+    visao_resolvida = _resolver_visao_apc(usuario, visao)
+    ano_consulta = int(ano_letivo) if ano_letivo is not None else int(mes_norm[:4])
+    filtros_periodo = {"ano_letivo": ano_consulta}
+    if visao_resolvida == "gestao":
+        filtros_periodo.update(
             data_inicio=data_inicio,
             data_fim=data_fim,
         )
+
+    periodos = ordenar_periodos_apc(
+        listar_apc_periodos(**filtros_periodo)
     )
 
-    visao_resolvida = _resolver_visao_apc(usuario, visao)
     itens = []
     for periodo in periodos:
         resumo = _montar_resumo_calendario_para_usuario(periodo, usuario, visao_resolvida)

@@ -924,7 +924,7 @@ function atualizarResumoMesApc() {
     const totalSolicitacoes = periodos.length;
     const enviados = periodos.filter((item) => Boolean(item.enviado)).length;
     el("apcResumoMes").innerText =
-        `${pluralizarApc(totalSolicitacoes, "entrega prevista", "entregas previstas")} para voce neste mes | `
+        `${pluralizarApc(totalSolicitacoes, "entrega prevista", "entregas previstas")} para voce neste ano | `
         + `${pluralizarApc(enviados, "arquivo enviado", "arquivos enviados")}.`;
 }
 
@@ -966,7 +966,7 @@ function aplicarVisibilidadeApc() {
         filtrosGestao.hidden = !gestaoAtiva;
     }
     if (tituloSolicitacoes) {
-        tituloSolicitacoes.innerText = layoutProfessor ? "Entregas do mes" : "Demandas de entrega";
+        tituloSolicitacoes.innerText = layoutProfessor ? "Entregas do ano" : "Demandas de entrega";
     }
     if (descricaoSolicitacoes) {
         descricaoSolicitacoes.innerText = layoutProfessor
@@ -2005,7 +2005,7 @@ function renderSolicitacoesDocenteApc(periodos) {
 
     if (!Array.isArray(periodos) || !periodos.length) {
         wrap.innerHTML =
-            '<div class="booking-empty">Nenhuma entrega foi encontrada neste mes.</div>';
+            '<div class="booking-empty">Nenhuma entrega foi encontrada neste ano letivo.</div>';
         return;
     }
 
