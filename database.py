@@ -592,6 +592,8 @@ def criar_tabelas():
             nome TEXT NOT NULL,
             turma_id INTEGER NOT NULL,
             sexo TEXT CHECK (sexo IS NULL OR sexo IN ('M', 'F')),
+            possui_necessidade_especial INTEGER NOT NULL DEFAULT 0 CHECK (possui_necessidade_especial IN (0, 1)),
+            necessidade_especial TEXT,
             ativo INTEGER NOT NULL DEFAULT 1,
             criado_em TEXT NOT NULL DEFAULT (datetime('now')),
             atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
@@ -2148,6 +2150,13 @@ def _garantir_colunas_estudantes(cursor):
         cursor.execute("ALTER TABLE estudantes ADD COLUMN turma_id INTEGER NOT NULL DEFAULT 0")
     if "ativo" not in colunas:
         cursor.execute("ALTER TABLE estudantes ADD COLUMN ativo INTEGER NOT NULL DEFAULT 1")
+    if "possui_necessidade_especial" not in colunas:
+        cursor.execute(
+            "ALTER TABLE estudantes ADD COLUMN possui_necessidade_especial "
+            "INTEGER NOT NULL DEFAULT 0 CHECK (possui_necessidade_especial IN (0, 1))"
+        )
+    if "necessidade_especial" not in colunas:
+        cursor.execute("ALTER TABLE estudantes ADD COLUMN necessidade_especial TEXT")
     if "criado_em" not in colunas:
         cursor.execute(
             "ALTER TABLE estudantes ADD COLUMN criado_em TEXT NOT NULL DEFAULT (datetime('now'))"
@@ -5567,6 +5576,8 @@ def listar_estudantes(
             e.nome,
             e.turma_id,
             e.sexo,
+            e.possui_necessidade_especial,
+            e.necessidade_especial,
             COALESCE(t.nome, '') AS turma_nome,
             e.ativo,
             e.criado_em,
@@ -5615,6 +5626,8 @@ def buscar_estudante_por_id(estudante_id: int):
             e.nome,
             e.turma_id,
             e.sexo,
+            e.possui_necessidade_especial,
+            e.necessidade_especial,
             COALESCE(t.nome, '') AS turma_nome,
             e.ativo,
             e.criado_em,
@@ -5647,6 +5660,8 @@ def buscar_estudante_por_nome_turma(nome: str, turma_id: int):
             e.nome,
             e.turma_id,
             e.sexo,
+            e.possui_necessidade_especial,
+            e.necessidade_especial,
             COALESCE(t.nome, '') AS turma_nome,
             e.ativo,
             e.criado_em,
@@ -5680,10 +5695,18 @@ def criar_estudante(
     turma_id: int,
     ativo: bool = True,
     sexo: str | None = None,
+    possui_necessidade_especial: bool = False,
+    necessidade_especial: str | None = None,
 ):
     nome_limpo = _normalizar_nome_catalogo(nome)
     turma_id_valor = int(turma_id or 0)
     sexo_limpo = _normalizar_sexo_estudante(sexo)
+    necessidade_limpa = _normalizar_nome_catalogo(necessidade_especial) or None
+    possui_necessidade = bool(possui_necessidade_especial)
+    if possui_necessidade and not necessidade_limpa:
+        raise ValueError("Informe qual necessidade especial o estudante possui.")
+    if not possui_necessidade:
+        necessidade_limpa = None
     if not nome_limpo:
         raise ValueError("Nome do estudante é obrigatório.")
     if turma_id_valor <= 0:
@@ -5693,10 +5716,14 @@ def criar_estudante(
     cursor = conn.cursor()
     cursor.execute(
         """
-        INSERT INTO estudantes (nome, turma_id, sexo, ativo, criado_em, atualizado_em)
-        VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+        INSERT INTO estudantes (
+            nome, turma_id, sexo, possui_necessidade_especial, necessidade_especial,
+            ativo, criado_em, atualizado_em
+        )
+        VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     """,
-        (nome_limpo, turma_id_valor, sexo_limpo, 1 if ativo else 0),
+        (nome_limpo, turma_id_valor, sexo_limpo, 1 if possui_necessidade else 0,
+         necessidade_limpa, 1 if ativo else 0),
     )
 
     estudante_id = cursor.lastrowid
@@ -5719,6 +5746,8 @@ def criar_ou_atualizar_estudante_por_nome_turma(
             turma_id=turma_id,
             ativo=ativo,
             sexo=sexo if sexo is not None else existente.get("sexo"),
+            possui_necessidade_especial=bool(existente.get("possui_necessidade_especial")),
+            necessidade_especial=existente.get("necessidade_especial"),
         )
         return int(existente["id"]), False
 
@@ -5737,10 +5766,18 @@ def atualizar_estudante(
     turma_id: int,
     ativo: bool,
     sexo: str | None = None,
+    possui_necessidade_especial: bool = False,
+    necessidade_especial: str | None = None,
 ):
     nome_limpo = _normalizar_nome_catalogo(nome)
     turma_id_valor = int(turma_id or 0)
     sexo_limpo = _normalizar_sexo_estudante(sexo)
+    necessidade_limpa = _normalizar_nome_catalogo(necessidade_especial) or None
+    possui_necessidade = bool(possui_necessidade_especial)
+    if possui_necessidade and not necessidade_limpa:
+        raise ValueError("Informe qual necessidade especial o estudante possui.")
+    if not possui_necessidade:
+        necessidade_limpa = None
     if not nome_limpo:
         raise ValueError("Nome do estudante é obrigatório.")
     if turma_id_valor <= 0:
@@ -5751,10 +5788,12 @@ def atualizar_estudante(
     cursor.execute(
         """
         UPDATE estudantes
-        SET nome = ?, turma_id = ?, sexo = ?, ativo = ?, atualizado_em = datetime('now')
+        SET nome = ?, turma_id = ?, sexo = ?, possui_necessidade_especial = ?,
+            necessidade_especial = ?, ativo = ?, atualizado_em = datetime('now')
         WHERE id = ?
     """,
-        (nome_limpo, turma_id_valor, sexo_limpo, 1 if ativo else 0, int(estudante_id)),
+        (nome_limpo, turma_id_valor, sexo_limpo, 1 if possui_necessidade else 0,
+         necessidade_limpa, 1 if ativo else 0, int(estudante_id)),
     )
 
     alterado = cursor.rowcount > 0

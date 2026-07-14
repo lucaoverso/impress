@@ -163,6 +163,10 @@ function registrarEventosEstudantes() {
     el("formFiltrosEstudantes").addEventListener("submit", filtrarEstudantes);
     el("btnLimparFiltrosEstudantes").addEventListener("click", limparFiltrosEstudantes);
     el("filtroEstudanteStatus").addEventListener("change", renderTabelaEstudantes);
+    el("estudantePossuiNecessidadeEspecial").addEventListener(
+        "change",
+        atualizarCampoNecessidadeEspecialEstudante
+    );
 }
 
 function registrarEventosRegimento() {

@@ -1375,6 +1375,8 @@ def criar_estudante_api(payload: EstudanteCreateIn, usuario=Depends(get_usuario_
             turma_id=turma_id,
             ativo=True,
             sexo=payload.sexo,
+            possui_necessidade_especial=payload.possui_necessidade_especial,
+            necessidade_especial=_texto_opcional(payload.necessidade_especial, max_len=255),
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -1406,7 +1408,8 @@ def atualizar_estudante_api(
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_gestor(usuario)
-    if not buscar_estudante_por_id(estudante_id):
+    estudante_atual = buscar_estudante_por_id(estudante_id)
+    if not estudante_atual:
         raise HTTPException(404, "Estudante nao encontrado.")
 
     turma_id = _validar_turma_id(payload.turma_id)
@@ -1417,6 +1420,16 @@ def atualizar_estudante_api(
             turma_id=turma_id,
             ativo=bool(payload.ativo),
             sexo=payload.sexo,
+            possui_necessidade_especial=(
+                bool(estudante_atual.get("possui_necessidade_especial"))
+                if payload.possui_necessidade_especial is None
+                else payload.possui_necessidade_especial
+            ),
+            necessidade_especial=(
+                estudante_atual.get("necessidade_especial")
+                if payload.possui_necessidade_especial is None
+                else _texto_opcional(payload.necessidade_especial, max_len=255)
+            ),
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc

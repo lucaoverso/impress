@@ -755,6 +755,19 @@
                                     <option value="M">Masculino</option>
                                 </select>
                             </label>
+                            <label class="coordenacao-field" for="estudantePossuiNecessidadeEspecial">
+                                <span>Necessidades especiais</span>
+                                <span class="coordenacao-inline">
+                                    <input id="estudantePossuiNecessidadeEspecial" type="checkbox">
+                                    Possui necessidade especial
+                                </span>
+                            </label>
+                            <label id="campoEstudanteNecessidadeEspecial" class="coordenacao-field"
+                                for="estudanteNecessidadeEspecial" hidden>
+                                <span>Qual necessidade?</span>
+                                <input id="estudanteNecessidadeEspecial" type="text" maxlength="255"
+                                    placeholder="Descreva a necessidade especial">
+                            </label>
                             <div class="coordenacao-inline coordenacao-form-actions">
                                 <button class="btn-destaque" type="submit">Salvar estudante</button>
                                 <button id="btnCancelarEdicaoEstudante" type="button" style="display: none;">Cancelar
@@ -825,6 +838,7 @@
                                         <th>Nome</th>
                                         <th>Turma</th>
                                         <th>Sexo</th>
+                                        <th>Necessidade especial</th>
                                         <th>Status</th>
                                         <th>Atualizado em</th>
                                         <th>Acoes</th>

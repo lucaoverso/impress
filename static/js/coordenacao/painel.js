@@ -426,6 +426,8 @@ function criarSelectSexoEstudante(estudante) {
                     nome: estudante.nome,
                     turma_id: Number(estudante.turma_id),
                     sexo: select.value || null,
+                    possui_necessidade_especial: Boolean(estudante.possui_necessidade_especial),
+                    necessidade_especial: estudante.necessidade_especial || null,
                     ativo: Boolean(estudante.ativo)
                 })
             });
@@ -537,7 +539,7 @@ function renderTabelaEstudantes() {
     if (estudantesFiltrados.length === 0) {
         const tr = document.createElement("tr");
         const td = document.createElement("td");
-        td.colSpan = 6;
+        td.colSpan = 7;
         td.className = "booking-empty";
         td.innerText = "Nenhum estudante encontrado.";
         tr.appendChild(td);
@@ -550,6 +552,10 @@ function renderTabelaEstudantes() {
         tr.appendChild(criarCelulaTabela("Nome", estudante.nome || ""));
         tr.appendChild(criarCelulaTabela("Turma", estudante.turma_nome || ""));
         tr.appendChild(criarCelulaTabela("Sexo", criarSelectSexoEstudante(estudante)));
+        const necessidade = estudante.possui_necessidade_especial
+            ? (estudante.necessidade_especial || "Sim")
+            : "Não";
+        tr.appendChild(criarCelulaTabela("Necessidade especial", necessidade));
 
         const badge = document.createElement("span");
         badge.className = `status-chip ${classeStatusEstudante(Boolean(estudante.ativo))}`;

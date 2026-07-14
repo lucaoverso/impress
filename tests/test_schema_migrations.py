@@ -85,6 +85,29 @@ class SchemaMigrationsTest(unittest.TestCase):
         finally:
             conn.close()
 
+    def test_migration_adiciona_necessidades_especiais_a_estudantes(self):
+        migration = _load_migration_module(
+            "20260714_add_necessidades_especiais_to_estudantes.py"
+        )
+        conn = sqlite3.connect(":memory:")
+        try:
+            conn.execute("CREATE TABLE estudantes (id INTEGER PRIMARY KEY, nome TEXT NOT NULL)")
+            conn.execute("INSERT INTO estudantes (id, nome) VALUES (1, 'Carina')")
+
+            migration.upgrade(conn)
+
+            estudante = conn.execute(
+                "SELECT possui_necessidade_especial, necessidade_especial "
+                "FROM estudantes WHERE id = 1"
+            ).fetchone()
+            self.assertEqual(estudante, (0, None))
+            with self.assertRaises(sqlite3.IntegrityError):
+                conn.execute(
+                    "UPDATE estudantes SET possui_necessidade_especial = 2 WHERE id = 1"
+                )
+        finally:
+            conn.close()
+
     def test_migration_20260613_remove_colisao_legada_antes_de_globalizar_horario(self):
         migration = _load_migration_module("20260613_create_global_schedule_config.py")
         conn = sqlite3.connect(":memory:")

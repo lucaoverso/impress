@@ -3,6 +3,17 @@ function limparFormularioEstudante() {
     el("formEstudante").reset();
     el("tituloFormEstudante").innerText = "Cadastrar estudante";
     el("btnCancelarEdicaoEstudante").style.display = "none";
+    atualizarCampoNecessidadeEspecialEstudante();
+}
+
+function atualizarCampoNecessidadeEspecialEstudante() {
+    const marcado = el("estudantePossuiNecessidadeEspecial").checked;
+    const campo = el("campoEstudanteNecessidadeEspecial");
+    const input = el("estudanteNecessidadeEspecial");
+    campo.hidden = !marcado;
+    input.disabled = !marcado;
+    input.required = marcado;
+    if (!marcado) input.value = "";
 }
 
 function iniciarEdicaoEstudante(estudante) {
@@ -10,6 +21,9 @@ function iniciarEdicaoEstudante(estudante) {
     el("estudanteNome").value = estudante.nome || "";
     el("estudanteTurmaId").value = String(estudante.turma_id || "");
     el("estudanteSexo").value = String(estudante.sexo || "");
+    el("estudantePossuiNecessidadeEspecial").checked = Boolean(estudante.possui_necessidade_especial);
+    el("estudanteNecessidadeEspecial").value = String(estudante.necessidade_especial || "");
+    atualizarCampoNecessidadeEspecialEstudante();
     el("tituloFormEstudante").innerText = "Editar estudante";
     el("btnCancelarEdicaoEstudante").style.display = "inline-block";
     ativarAbaCoordenacao("estudantes");
@@ -447,7 +461,9 @@ async function salvarEstudante(event) {
     const payload = {
         nome: el("estudanteNome").value.trim(),
         turma_id: Number(el("estudanteTurmaId").value),
-        sexo: el("estudanteSexo").value || null
+        sexo: el("estudanteSexo").value || null,
+        possui_necessidade_especial: el("estudantePossuiNecessidadeEspecial").checked,
+        necessidade_especial: el("estudanteNecessidadeEspecial").value.trim() || null
     };
 
     try {

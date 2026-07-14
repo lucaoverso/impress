@@ -1142,12 +1142,16 @@ class EstudanteCreateIn(BaseModel):
     nome: str
     turma_id: int
     sexo: Literal["M", "F"] | None = None
+    possui_necessidade_especial: bool = False
+    necessidade_especial: str | None = None
 
 
 class EstudanteUpdateIn(BaseModel):
     nome: str
     turma_id: int
     sexo: Literal["M", "F"] | None = None
+    possui_necessidade_especial: bool | None = None
+    necessidade_especial: str | None = None
     ativo: bool = True
 
 
@@ -1160,6 +1164,8 @@ class EstudanteOut(BaseModel):
     nome: str
     turma_id: int
     sexo: Literal["M", "F"] | None = None
+    possui_necessidade_especial: int | bool = False
+    necessidade_especial: str | None = None
     turma_nome: str = ""
     ativo: int | bool
     criado_em: str
