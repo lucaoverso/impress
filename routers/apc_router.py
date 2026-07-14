@@ -31,6 +31,13 @@ from db.usuarios import listar_professores_agendamento
 from models import ApcEnvioOut, ApcPeriodoIn, ApcPeriodoOut, ApcPeriodoUpdateIn
 from modules.apc_review.schemas import ApcReviewUpdateIn
 from modules.apc_review.service import update_submission_review
+from modules.apc_activity import repository as apc_activity_repository
+from modules.apc_activity.schemas import ApcActivityIn, ApcActivityOut, ApcActivityPreviewIn
+from modules.apc_activity.service import (
+    prepare_activity_data,
+    render_preview as render_activity_preview,
+    save_activity,
+)
 from modules.audit.models import AuditCategory, AuditOutcome
 from modules.audit.service import record_event
 from modules.printing.attachment_printing import imprimir_anexo_pdf
@@ -927,6 +934,116 @@ def enviar_arquivo_apc_api(
         },
     )
     return envio
+
+
+def _resolver_entrega_professor_apc(
+    *, periodo_id: int, turma_id: int, disciplina_id: int, usuario: dict
+) -> tuple[dict, dict]:
+    if not usuario_eh_professor(usuario):
+        raise HTTPException(403, "Somente professores podem criar atividades.")
+    periodo = buscar_apc_periodo_por_id(periodo_id)
+    if not periodo:
+        raise HTTPException(404, "Solicitacao de entrega nao encontrada.")
+    periodo_norm = enriquecer_periodo_apc(periodo)
+    if not periodo_apc_aberto(periodo_norm):
+        raise HTTPException(409, "O prazo de envio desta solicitacao ja foi encerrado.")
+    painel = montar_painel_professor_apc(
+        periodo_norm,
+        int(usuario["id"]),
+        _obter_elegiveis_periodo(periodo_norm, professor_id=int(usuario["id"])),
+        listar_apc_envios(periodo_id=periodo_id, professor_id=int(usuario["id"])),
+    )
+    item = _selecionar_item_professor_periodo(
+        painel or {}, turma_id=int(turma_id or 0), disciplina_id=int(disciplina_id or 0)
+    )
+    if not item:
+        raise HTTPException(403, "Nao ha entrega prevista para essa disciplina nesta data.")
+    return periodo_norm, item
+
+
+@router.post("/apc/periodos/{periodo_id}/atividade/preview")
+def visualizar_atividade_apc_api(
+    periodo_id: int,
+    payload: ApcActivityPreviewIn,
+    usuario=Depends(get_usuario_logado),
+):
+    periodo, item = _resolver_entrega_professor_apc(
+        periodo_id=periodo_id,
+        turma_id=payload.turma_id,
+        disciplina_id=payload.disciplina_id,
+        usuario=usuario,
+    )
+    try:
+        data = prepare_activity_data(
+            payload, user=usuario, period=periodo, delivery=item, allow_incomplete=True
+        )
+        content = render_activity_preview(data)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return Response(content=content, media_type="application/pdf")
+
+
+@router.post(
+    "/apc/periodos/{periodo_id}/atividade",
+    response_model=ApcActivityOut,
+)
+def criar_atividade_apc_api(
+    periodo_id: int,
+    payload: ApcActivityIn,
+    usuario=Depends(get_usuario_logado),
+):
+    periodo, item = _resolver_entrega_professor_apc(
+        periodo_id=periodo_id,
+        turma_id=payload.turma_id,
+        disciplina_id=payload.disciplina_id,
+        usuario=usuario,
+    )
+    try:
+        data = prepare_activity_data(payload, user=usuario, period=periodo, delivery=item)
+        envio, atividade, _pdf = save_activity(
+            data=data,
+            period_id=periodo_id,
+            user_id=int(usuario["id"]),
+            existing=item.get("envio"),
+            directory=_garantir_diretorio_apc(),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except OSError as exc:
+        raise HTTPException(500, "Nao foi possivel armazenar a atividade gerada.") from exc
+
+    _remover_preview_cache_envio(int(envio["id"]))
+    _agendar_preview_apc(envio)
+    record_event(
+        category=AuditCategory.ATTACHMENTS,
+        action="attachment.generated",
+        outcome=AuditOutcome.SUCCESS,
+        actor=usuario,
+        description=f"APC gerada por {usuario.get('nome') or 'professor'}.",
+        entity_type="apc_submission",
+        entity_id=envio.get("id"),
+        metadata={
+            "period_id": periodo_id,
+            "class_id": item.get("turma_id"),
+            "subject_id": item.get("disciplina_id"),
+            "activity_columns": data["activity_columns"],
+            "replaced_existing": bool(item.get("envio")),
+        },
+    )
+    return {"envio": envio, "atividade": atividade}
+
+
+@router.get("/apc/envios/{envio_id}/atividade")
+def obter_atividade_apc_api(envio_id: int, usuario=Depends(get_usuario_logado)):
+    envio = buscar_apc_envio_por_id(envio_id)
+    if not envio:
+        raise HTTPException(404, "Envio nao encontrado.")
+    if not _pode_gerir_apc(usuario) and int(envio.get("professor_id") or 0) != int(usuario["id"]):
+        raise HTTPException(403, "Acesso negado.")
+    atividade = apc_activity_repository.get_generated_activity(envio_id)
+    if not atividade:
+        raise HTTPException(404, "Este anexo nao foi criado pelo gerador de APC.")
+    return atividade
 
 
 @router.put("/apc/envios/{envio_id}/revisao", response_model=ApcEnvioOut)

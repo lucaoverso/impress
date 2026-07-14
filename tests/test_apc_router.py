@@ -161,7 +161,7 @@ class ApcRouterTest(unittest.TestCase):
                 payload=models.ApcPeriodoIn(
                     ano_letivo=2031,
                     data_referencia="2031-05-08",
-                    prazo_envio="2031-05-08T23:59",
+                    prazo_envio="2031-05-07T23:59",
                     titulo="Atividade pedagogica semanal",
                     observacao="Entrega semanal",
                     publico_alvo="HORARIO_DIA",
@@ -186,6 +186,7 @@ class ApcRouterTest(unittest.TestCase):
                 usuario=self._usuario_coord(),
             )
             self.assertEqual(len(calendario_coord["periodos"]), 2)
+            self.assertEqual(quinta["prazo_envio"], "2031-05-07 23:59:00")
 
             calendario_professor = apc_router.listar_calendario_apc_api(
                 mes="2031-05",

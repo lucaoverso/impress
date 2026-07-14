@@ -264,6 +264,47 @@
         </section>
     </div>
 
+    <div id="apcActivityModal" class="apc-activity-modal" hidden>
+        <section id="apcActivityModalPanel" class="apc-activity-modal-panel" role="dialog" aria-modal="true"
+            aria-labelledby="apcActivityModalTitle" aria-describedby="apcActivityModalDescription" tabindex="-1">
+            <section class="apc-activity-workspace">
+                <header class="apc-activity-modal-header">
+                    <div>
+                        <p class="apc-section-eyebrow">Gerador de APC</p>
+                        <h2 id="apcActivityModalTitle">Criar atividade padronizada</h2>
+                        <p id="apcActivityModalDescription">Preencha o documento e acompanhe o PDF pronto para impressão.</p>
+                    </div>
+                    <button id="btnFecharActivityModalApc" type="button" aria-label="Fechar gerador de APC">Fechar</button>
+                </header>
+                <div id="apcActivityFormSlot" class="apc-activity-form-side"></div>
+                <footer class="apc-activity-modal-footer">
+                    <p id="apcActivityModalMessage" role="status" aria-live="polite"></p>
+                    <div class="apc-inline-actions">
+                        <button id="btnCancelarActivityModalApc" type="button">Cancelar</button>
+                        <button id="btnSalvarActivityModalApc" class="btn-destaque" type="button">Salvar e anexar</button>
+                    </div>
+                </footer>
+            </section>
+
+            <aside class="apc-activity-preview-side" aria-label="Pré-visualização do PDF">
+                <header class="apc-activity-preview-header">
+                    <div>
+                        <h3>Pré-visualização</h3>
+                        <p>O PDF é atualizado automaticamente após cada alteração.</p>
+                    </div>
+                    <span id="apcActivityPageCount" class="apc-activity-page-count">A4</span>
+                </header>
+                <div id="apcActivityPreviewViewport" class="apc-activity-preview-viewport">
+                    <p id="apcActivityPreviewState" class="apc-activity-preview-state" role="status" aria-live="polite">
+                        Preparando a folha da atividade...
+                    </p>
+                    <div id="apcActivityPreviewPages" class="apc-activity-preview-pages"></div>
+                </div>
+            </aside>
+        </section>
+        <div class="apc-activity-modal-backdrop" data-apc-activity-modal-close="true"></div>
+    </div>
+
     <div id="apcArquivoPreviewModal" class="apc-file-preview-modal" hidden>
         <section id="apcArquivoPreviewPanel" class="apc-file-preview-panel" role="dialog" aria-modal="true"
             aria-labelledby="apcArquivoPreviewTitulo" tabindex="-1">

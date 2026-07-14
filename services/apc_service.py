@@ -96,8 +96,6 @@ def normalizar_prazo_envio(data_referencia: str, prazo_envio: str = "") -> str:
         return f"{data_norm} 23:59:00"
 
     prazo = _parse_datetime_local(texto)
-    if prazo.date().isoformat() < data_norm:
-        raise ValueError("O prazo de envio não pode ser anterior à data de referência.")
     return prazo.strftime("%Y-%m-%d %H:%M:%S")
 
 

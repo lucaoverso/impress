@@ -47,6 +47,12 @@ let apcPrintPdfDoc = null;
 let apcPrintPreviewUrl = "";
 let apcPrintFolhaAtual = 1;
 let apcPrintRenderToken = 0;
+let painelAtividadeApc = null;
+let focoAntesAtividadeApc = null;
+let timerPreviewAtividadeApc = null;
+let tokenPreviewAtividadeApc = 0;
+let controllerPreviewAtividadeApc = null;
+let timerFechamentoAtividadeApc = null;
 let opcoesDestinatariosApc = [];
 let selecoesDestinatariosApc = new Set();
 
@@ -119,6 +125,10 @@ function previewArquivoApcAberto() {
 
 function printWizardApcAberto() {
     return !el("apcPrintWizardModal")?.hidden;
+}
+
+function activityModalApcAberto() {
+    return !el("apcActivityModal")?.hidden;
 }
 
 function focarSemRolagemApc(elemento) {
@@ -1606,15 +1616,321 @@ function criarCardEntregaProfessorApc(periodo, item) {
         : "Anexe o arquivo correspondente a esta disciplina.";
     form.appendChild(dica);
 
+    const actions = document.createElement("div");
+    actions.className = "apc-delivery-actions";
+
     const submit = document.createElement("button");
     submit.type = "submit";
     submit.className = "btn-destaque";
     submit.innerText = item.envio?.id ? "Substituir arquivo" : "Enviar arquivo";
-    form.appendChild(submit);
+    actions.appendChild(submit);
+
+    const create = document.createElement("button");
+    create.type = "button";
+    create.className = "apc-create-activity-button";
+    create.innerText = item.envio?.id ? "Criar APC e substituir" : "Criar APC";
+    actions.appendChild(create);
+    form.appendChild(actions);
 
     form.addEventListener("submit", enviarArquivoApc);
     card.appendChild(form);
+    create.addEventListener("click", () => {
+        void abrirModalAtividadeApc(periodo, item, create);
+    });
     return card;
+}
+
+function criarCampoEditorApc(rotulo, elemento) {
+    const label = document.createElement("label");
+    label.className = "apc-activity-field";
+    const span = document.createElement("span");
+    span.innerText = rotulo;
+    label.appendChild(span);
+    label.appendChild(elemento);
+    return label;
+}
+
+function executarComandoEditorApc(editor, comando) {
+    editor.focus();
+    document.execCommand("styleWithCSS", false, false);
+    document.execCommand(comando, false);
+}
+
+function criarAreaRichTextApc(rotulo, placeholder) {
+    const wrap = document.createElement("div");
+    wrap.className = "apc-activity-field";
+    const label = document.createElement("span");
+    label.innerText = rotulo;
+    wrap.appendChild(label);
+    const toolbar = document.createElement("div");
+    toolbar.className = "apc-rich-toolbar";
+    toolbar.setAttribute("role", "toolbar");
+    toolbar.setAttribute("aria-label", `Formatacao de ${rotulo.toLowerCase()}`);
+    const editor = document.createElement("div");
+    editor.className = "apc-rich-editor";
+    editor.contentEditable = "true";
+    editor.dataset.placeholder = placeholder;
+    editor.setAttribute("role", "textbox");
+    editor.setAttribute("aria-multiline", "true");
+    [
+        ["Negrito", "bold"],
+        ["Italico", "italic"],
+        ["Sublinhado", "underline"],
+        ["Lista", "insertUnorderedList"],
+        ["Numeracao", "insertOrderedList"],
+        ["Limpar", "removeFormat"],
+    ].forEach(([texto, comando]) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.innerText = texto;
+        button.addEventListener("mousedown", (event) => event.preventDefault());
+        button.addEventListener("click", () => executarComandoEditorApc(editor, comando));
+        toolbar.appendChild(button);
+    });
+    wrap.appendChild(toolbar);
+    wrap.appendChild(editor);
+    return { wrap, editor };
+}
+
+function payloadAtividadeApc(panel) {
+    return {
+        turma_id: Number(panel.dataset.turmaId || 0),
+        disciplina_id: Number(panel.dataset.disciplinaId || 0),
+        habilidade: panel.querySelector("[data-apc-activity-skill]")?.value || "",
+        conteudo: panel.querySelector("[data-apc-activity-content]")?.value || "",
+        corpo_html: panel.querySelector("[data-apc-activity-body]")?.innerHTML || "",
+        activity_columns: Number(panel.querySelector("input[name='apcActivityColumns']:checked")?.value || 1),
+    };
+}
+
+async function carregarAtividadeExistenteApc(panel) {
+    const envioId = Number(panel.dataset.envioId || 0);
+    if (!envioId || panel.dataset.activityLoaded === "true") return;
+    panel.dataset.activityLoaded = "true";
+    try {
+        const activity = await fetchJson(`/apc/envios/${envioId}/atividade`, { headers: headersApc });
+        const skillParts = [activity.habilidade_codigo_snapshot, activity.habilidade_descricao_snapshot].filter(Boolean);
+        panel.querySelector("[data-apc-activity-skill]").value = skillParts.join(" - ");
+        panel.querySelector("[data-apc-activity-content]").value = activity.conteudo_descricao_snapshot || "";
+        panel.querySelector("[data-apc-activity-body]").innerHTML = [activity.introducao_html, activity.atividades_html].filter(Boolean).join("<p><br></p>");
+        const columns = panel.querySelector(`input[name='apcActivityColumns'][value='${Number(activity.activity_columns || 1)}']`);
+        if (columns) columns.checked = true;
+    } catch (err) {
+        if (Number(err?.status || 0) !== 404) {
+            panel.dataset.activityLoaded = "false";
+            setMensagemApc(err.message || "Nao foi possivel recuperar a APC gerada.", true);
+        }
+    }
+}
+
+function validarPayloadAtividadeApc(payload) {
+    if (!String(payload.habilidade || "").trim()) return "Informe a habilidade da APC.";
+    if (!String(payload.conteudo || "").trim()) return "Informe o conteudo relacionado.";
+    const text = document.createElement("div");
+    text.innerHTML = payload.corpo_html;
+    if (!String(text.textContent || "").trim()) return "Informe o texto da APC.";
+    return "";
+}
+
+function setEstadoPreviewAtividadeApc(texto = "", erro = false) {
+    const state = el("apcActivityPreviewState");
+    if (!state) return;
+    state.innerText = texto;
+    state.hidden = !texto;
+    state.classList.toggle("is-error", Boolean(texto) && erro);
+}
+
+function setMensagemActivityModalApc(texto = "", erro = false) {
+    const message = el("apcActivityModalMessage");
+    if (!message) return;
+    message.innerText = texto;
+    message.classList.toggle("is-error", Boolean(texto) && erro);
+}
+
+function cancelarPreviewAtividadeApc() {
+    window.clearTimeout(timerPreviewAtividadeApc);
+    timerPreviewAtividadeApc = null;
+    tokenPreviewAtividadeApc += 1;
+    controllerPreviewAtividadeApc?.abort();
+    controllerPreviewAtividadeApc = null;
+}
+
+async function renderizarPaginasAtividadeApc(pdfDocument, token) {
+    const pages = el("apcActivityPreviewPages");
+    const viewportElement = el("apcActivityPreviewViewport");
+    if (!pages || !viewportElement || token !== tokenPreviewAtividadeApc) return;
+    pages.innerHTML = "";
+    const total = Number(pdfDocument.numPages || 0);
+    el("apcActivityPageCount").innerText = total === 1 ? "1 página · A4" : `${total} páginas · A4`;
+    const availableWidth = Math.max(300, Math.min(820, viewportElement.clientWidth - 34));
+    const availableHeight = Math.max(420, viewportElement.clientHeight - 34);
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    for (let number = 1; number <= total; number += 1) {
+        if (token !== tokenPreviewAtividadeApc) return;
+        const page = await pdfDocument.getPage(number);
+        const base = page.getViewport({ scale: 1 });
+        const cssScale = Math.min(availableWidth / base.width, availableHeight / base.height);
+        const renderViewport = page.getViewport({ scale: cssScale * dpr });
+        const figure = document.createElement("figure");
+        figure.className = "apc-activity-preview-page";
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.floor(renderViewport.width);
+        canvas.height = Math.floor(renderViewport.height);
+        canvas.style.width = `${Math.floor(renderViewport.width / dpr)}px`;
+        canvas.style.height = `${Math.floor(renderViewport.height / dpr)}px`;
+        canvas.setAttribute("aria-label", `Página ${number} de ${total}`);
+        const caption = document.createElement("figcaption");
+        caption.innerText = `Página ${number} de ${total}`;
+        figure.append(canvas, caption);
+        pages.appendChild(figure);
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport: renderViewport }).promise;
+    }
+}
+
+async function atualizarPreviewAtividadeApc(panel) {
+    const payload = payloadAtividadeApc(panel);
+    if (!window.pdfjsLib) {
+        setEstadoPreviewAtividadeApc("A pré-visualização não está disponível neste navegador.", true);
+        return;
+    }
+    cancelarPreviewAtividadeApc();
+    const token = tokenPreviewAtividadeApc;
+    controllerPreviewAtividadeApc = new AbortController();
+    setEstadoPreviewAtividadeApc("Atualizando o PDF...");
+    el("apcActivityPreviewPages").innerHTML = "";
+    try {
+        const response = await fetchResposta(`/apc/periodos/${panel.dataset.periodoId}/atividade/preview`, {
+            method: "POST",
+            headers: headersJsonApc,
+            body: JSON.stringify(payload),
+            signal: controllerPreviewAtividadeApc.signal,
+        });
+        const buffer = await (await response.blob()).arrayBuffer();
+        if (token !== tokenPreviewAtividadeApc) return;
+        const pdfDocument = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+        if (token !== tokenPreviewAtividadeApc) return;
+        setEstadoPreviewAtividadeApc("");
+        await renderizarPaginasAtividadeApc(pdfDocument, token);
+    } catch (err) {
+        if (err?.name !== "AbortError" && token === tokenPreviewAtividadeApc) {
+            setEstadoPreviewAtividadeApc(err.message || "Não foi possível atualizar a prévia.", true);
+        }
+    } finally {
+        if (token === tokenPreviewAtividadeApc) controllerPreviewAtividadeApc = null;
+    }
+}
+
+function agendarPreviewAtividadeApc(panel, delay = 550) {
+    window.clearTimeout(timerPreviewAtividadeApc);
+    timerPreviewAtividadeApc = window.setTimeout(() => void atualizarPreviewAtividadeApc(panel), delay);
+}
+
+async function abrirModalAtividadeApc(periodo, item, trigger) {
+    const modal = el("apcActivityModal");
+    const slot = el("apcActivityFormSlot");
+    if (!modal || !slot) return;
+    window.clearTimeout(timerFechamentoAtividadeApc);
+    focoAntesAtividadeApc = trigger || document.activeElement;
+    painelAtividadeApc = criarEditorAtividadeApc(periodo, item);
+    slot.replaceChildren(painelAtividadeApc);
+    el("apcActivityModalTitle").innerText = item.envio?.id ? "Editar APC padronizada" : "Criar APC padronizada";
+    el("apcActivityModalDescription").innerText = `${item.disciplina_nome || "Disciplina"} · ${item.turma_nome || "Entrega geral"}`;
+    const saveButton = el("btnSalvarActivityModalApc");
+    saveButton.disabled = false;
+    saveButton.innerText = item.envio?.id ? "Salvar e substituir anexo" : "Salvar e anexar";
+    setMensagemActivityModalApc("");
+    setEstadoPreviewAtividadeApc("Preparando a folha da atividade...");
+    el("apcActivityPreviewPages").innerHTML = "";
+    modal.hidden = false;
+    bloquearScrollModalApc();
+    window.requestAnimationFrame(() => {
+        modal.classList.add("is-visible");
+        focarSemRolagemApc(el("apcActivityModalPanel"));
+    });
+    await carregarAtividadeExistenteApc(painelAtividadeApc);
+    agendarPreviewAtividadeApc(painelAtividadeApc, 0);
+}
+
+function fecharModalAtividadeApc() {
+    const modal = el("apcActivityModal");
+    if (!modal || modal.hidden) return;
+    cancelarPreviewAtividadeApc();
+    modal.classList.remove("is-visible");
+    liberarScrollModalApc();
+    timerFechamentoAtividadeApc = window.setTimeout(() => {
+        modal.hidden = true;
+        el("apcActivityFormSlot")?.replaceChildren();
+        el("apcActivityPreviewPages")?.replaceChildren();
+        painelAtividadeApc = null;
+        timerFechamentoAtividadeApc = null;
+    }, 220);
+    focarSemRolagemApc(focoAntesAtividadeApc);
+    focoAntesAtividadeApc = null;
+}
+
+async function salvarAtividadeApc(event) {
+    event.preventDefault();
+    const panel = event.currentTarget;
+    const payload = payloadAtividadeApc(panel);
+    const error = validarPayloadAtividadeApc(payload);
+    if (error) {
+        setMensagemActivityModalApc(error, true);
+        return;
+    }
+    if (panel.dataset.hasSubmission === "true" && !window.confirm("A APC gerada substituira o anexo atual desta disciplina. Deseja continuar?")) return;
+    const submit = el("btnSalvarActivityModalApc");
+    submit.disabled = true;
+    submit.innerText = "Salvando e anexando...";
+    try {
+        await fetchJson(`/apc/periodos/${panel.dataset.periodoId}/atividade`, {
+            method: "POST",
+            headers: headersJsonApc,
+            body: JSON.stringify(payload),
+        });
+        periodoSelecionadoApcId = Number(panel.dataset.periodoId);
+        fecharModalAtividadeApc();
+        setMensagemApc("APC gerada e anexada com sucesso.");
+        await carregarCalendarioApc();
+    } catch (err) {
+        setMensagemActivityModalApc(err.message || "Não foi possível gerar a APC.", true);
+        submit.disabled = false;
+        submit.innerText = panel.dataset.hasSubmission === "true" ? "Salvar e substituir anexo" : "Salvar e anexar";
+    }
+}
+
+function criarEditorAtividadeApc(periodo, item) {
+    const panel = document.createElement("form");
+    panel.className = "apc-activity-editor";
+    panel.dataset.periodoId = String(periodo.id);
+    panel.dataset.turmaId = String(item.turma_id || 0);
+    panel.dataset.disciplinaId = String(item.disciplina_id || 0);
+    panel.dataset.hasSubmission = String(Boolean(item.envio?.id));
+    panel.dataset.envioId = String(item.envio?.id || 0);
+    const skill = document.createElement("textarea");
+    skill.rows = 3;
+    skill.maxLength = 2000;
+    skill.required = true;
+    skill.placeholder = "Cole o codigo e a descricao da habilidade relacionada.";
+    skill.dataset.apcActivitySkill = "true";
+    panel.appendChild(criarCampoEditorApc("Habilidade", skill));
+    const content = document.createElement("textarea");
+    content.rows = 2;
+    content.maxLength = 1000;
+    content.required = true;
+    content.placeholder = "Conteudo relacionado a habilidade.";
+    content.dataset.apcActivityContent = "true";
+    panel.appendChild(criarCampoEditorApc("Conteudo", content));
+    const body = criarAreaRichTextApc("Texto da APC", "Organize livremente textos, leituras, pesquisas, orientacoes ou questoes.");
+    body.editor.dataset.apcActivityBody = "true";
+    panel.appendChild(body.wrap);
+    const layout = document.createElement("fieldset");
+    layout.className = "apc-activity-layout";
+    layout.innerHTML = `<legend>Layout do texto</legend><label><input type="radio" name="apcActivityColumns" value="1" checked><span>1 coluna<small>Leituras e textos longos</small></span></label><label><input type="radio" name="apcActivityColumns" value="2"><span>2 colunas<small>Blocos curtos e objetivos</small></span></label>`;
+    panel.appendChild(layout);
+    panel.addEventListener("input", () => agendarPreviewAtividadeApc(panel));
+    panel.addEventListener("change", () => agendarPreviewAtividadeApc(panel, 150));
+    panel.addEventListener("submit", salvarAtividadeApc);
+    return panel;
 }
 
 function criarCorpoProfessorPeriodoApc(detalhe) {
@@ -2689,6 +3005,12 @@ function registrarEventosApc() {
         });
     });
     el("formApcImpressao")?.addEventListener("submit", enviarImpressaoApc);
+    el("btnSalvarActivityModalApc")?.addEventListener("click", () => painelAtividadeApc?.requestSubmit());
+    el("btnCancelarActivityModalApc")?.addEventListener("click", fecharModalAtividadeApc);
+    el("btnFecharActivityModalApc")?.addEventListener("click", fecharModalAtividadeApc);
+    document.querySelectorAll("[data-apc-activity-modal-close='true']").forEach((elemento) => {
+        elemento.addEventListener("click", fecharModalAtividadeApc);
+    });
     [
         "apcFiltroProfessor",
         "apcFiltroDisciplina",
@@ -2783,6 +3105,10 @@ function registrarEventosApc() {
         renderDestinatariosApc();
     });
     document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape" && activityModalApcAberto()) {
+            fecharModalAtividadeApc();
+            return;
+        }
         if (event.key === "Escape" && printWizardApcAberto()) {
             fecharPrintWizardApc();
             return;
@@ -2802,6 +3128,7 @@ function registrarEventosApc() {
     window.addEventListener("beforeunload", () => {
         revogarPreviewArquivoApc();
         revogarPreviewPrintApc();
+        cancelarPreviewAtividadeApc();
     });
 }
 
