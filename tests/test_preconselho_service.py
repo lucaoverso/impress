@@ -285,8 +285,8 @@ class PreConselhoServiceTest(unittest.TestCase):
         self.assertIn("PROF. BRUNO (História e Geografia)", resultado["texto"])
         self.assertNotIn("Recuperar para Avançar (RAV)", resultado["texto"])
         self.assertNotIn("No pós-pré-conselho", resultado["texto"])
-        self.assertIn(
-            "Após o pré-conselho, o estudante manteve baixo rendimento nas disciplinas de Matemática e História.",
+        self.assertNotIn(
+            "Após o pré-conselho",
             resultado["itens_agrupados"][0]["texto"],
         )
 

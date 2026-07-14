@@ -359,8 +359,8 @@ class PreConselhoRouterTest(unittest.TestCase):
                 "No pós-pré-conselho, registrou-se que",
                 consolidado_conselho["itens_agrupados"][0]["texto"],
             )
-            self.assertIn(
-                "Após o pré-conselho, a estudante manteve baixo rendimento",
+            self.assertNotIn(
+                "Após o pré-conselho",
                 consolidado_conselho["itens_agrupados"][0]["texto"],
             )
 

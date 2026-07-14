@@ -768,21 +768,7 @@ def _texto_estudante_consolidado(registros: list[dict], *, versao: str = "precon
             frase += f", com observação de que {_formatar_lista_pt_br(observacoes_pos)}"
         detalhes_pos_preconselho.append(frase)
 
-    if detalhes_pos_preconselho and versao == "conselho":
-        disciplinas_mantidas = [
-            item["disciplina"]
-            for item in disciplinas_resumidas
-            if any(
-                registro.get("recuperado") is False
-                for registro in (item.get("pos_preconselho") or [])
-            )
-        ]
-        if disciplinas_mantidas:
-            pos_preconselho_txt = _garantir_ponto_final(
-                f"Após o pré-conselho, {_referencia_estudante(estudante_sexo, inicio_frase=False)} manteve baixo rendimento "
-                f"{_descricao_disciplinas(disciplinas_mantidas)}"
-            )
-    elif detalhes_pos_preconselho:
+    if detalhes_pos_preconselho and versao != "conselho":
         pos_preconselho_txt = _garantir_ponto_final(
             "No pós-pré-conselho, registrou-se que " + "; ".join(detalhes_pos_preconselho)
         )
