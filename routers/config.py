@@ -53,7 +53,12 @@ def _resolver_radius_internal_secret() -> str:
 
 
 RADIUS_INTERNAL_SECRET = _resolver_radius_internal_secret()
-templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+templates = Jinja2Templates(
+    directory=[
+        str(TEMPLATES_DIR),
+        str(BASE_DIR / "modules" / "admin" / "templates"),
+    ]
+)
 templates.env.policies["json.dumps_kwargs"] = {"ensure_ascii": False}
 
 

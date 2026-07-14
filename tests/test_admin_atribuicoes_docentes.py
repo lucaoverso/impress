@@ -5,20 +5,23 @@ import tempfile
 import unittest
 
 
+RELOADED_MODULES = (
+    "services.auth_service",
+    "auth",
+    "ocorrencias_router",
+    "pcpi_router",
+    "preconselho_router",
+    "database",
+    "main",
+    "models",
+)
+
+
 def _reload_modules(db_path: str):
     os.environ["DB_PATH"] = db_path
     os.environ["ENABLE_EMBEDDED_WORKER"] = "0"
 
-    for module_name in (
-        "services.auth_service",
-        "auth",
-        "ocorrencias_router",
-        "pcpi_router",
-        "preconselho_router",
-        "database",
-        "main",
-        "models",
-    ):
+    for module_name in RELOADED_MODULES:
         if module_name in sys.modules:
             del sys.modules[module_name]
 
@@ -32,6 +35,9 @@ class AdminAtribuicoesDocentesTest(unittest.TestCase):
     def setUp(self):
         self._old_db_path = os.environ.get("DB_PATH")
         self._old_embedded_worker = os.environ.get("ENABLE_EMBEDDED_WORKER")
+        self._old_modules = {
+            module_name: sys.modules.get(module_name) for module_name in RELOADED_MODULES
+        }
 
     def tearDown(self):
         if self._old_db_path is None:
@@ -43,6 +49,12 @@ class AdminAtribuicoesDocentesTest(unittest.TestCase):
             os.environ.pop("ENABLE_EMBEDDED_WORKER", None)
         else:
             os.environ["ENABLE_EMBEDDED_WORKER"] = self._old_embedded_worker
+
+        for module_name, module in self._old_modules.items():
+            if module is None:
+                sys.modules.pop(module_name, None)
+            else:
+                sys.modules[module_name] = module
 
     def _usuario_admin(self) -> dict:
         return {"id": 1, "perfil": "admin", "cargo": "ADMIN"}
