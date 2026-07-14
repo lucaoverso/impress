@@ -5,7 +5,14 @@ from unittest.mock import patch
 
 from pypdf import PdfReader
 
-from modules.apc_activity.pdf_service import BODY_FONT_SIZE, CREST_SIZE, LINE_HEIGHT, generate_activity_pdf
+from modules.apc_activity.pdf_service import (
+    BODY_FONT_SIZE,
+    CREST_SIZE,
+    LINE_HEIGHT,
+    _register_font,
+    generate_activity_pdf,
+)
+from reportlab.pdfbase import pdfmetrics
 from modules.apc_activity.sanitizer import sanitize_activity_html, visible_text
 from modules.apc_activity.schemas import ApcActivityIn, ApcActivityPreviewIn
 from modules.apc_activity import service as activity_service
@@ -42,6 +49,12 @@ class ApcActivityPdfTests(unittest.TestCase):
         self.assertAlmostEqual(LINE_HEIGHT * 72 / 150, 18, delta=0.25)
         self.assertAlmostEqual(CREST_SIZE[0] * 25.4 / 150, 19.3, places=1)
         self.assertAlmostEqual(CREST_SIZE[1] * 25.4 / 150, 20.0, places=1)
+
+    def test_font_registration_falls_back_when_system_fonts_are_missing(self):
+        name = "APCTestTimesFallback"
+        _register_font(name, ("/font/path/that/does/not/exist.ttf",), "Times-Roman")
+        self.assertIn(name, pdfmetrics.getRegisteredFontNames())
+        self.assertGreater(pdfmetrics.stringWidth("APC Ciências", name, 12), 0)
 
     def test_pdf_keeps_text_as_vectors_instead_of_page_image(self):
         content = generate_activity_pdf(self._data())

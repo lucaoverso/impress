@@ -30,30 +30,50 @@ FONT_FILES = {
     "APCTimes": (
         "C:/Windows/Fonts/times.ttf",
         "/usr/share/fonts/truetype/liberation2/LiberationSerif-Regular.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSerif.ttf",
     ),
     "APCTimesBold": (
         "C:/Windows/Fonts/timesbd.ttf",
         "/usr/share/fonts/truetype/liberation2/LiberationSerif-Bold.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Bold.ttf",
     ),
     "APCTimesItalic": (
         "C:/Windows/Fonts/timesi.ttf",
         "/usr/share/fonts/truetype/liberation2/LiberationSerif-Italic.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSerif-Italic.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSerif-Italic.ttf",
     ),
     "APCTimesBoldItalic": (
         "C:/Windows/Fonts/timesbi.ttf",
         "/usr/share/fonts/truetype/liberation2/LiberationSerif-BoldItalic.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSerif-BoldItalic.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSerif-BoldItalic.ttf",
     ),
 }
+
+FONT_FALLBACKS = {
+    "APCTimes": "Times-Roman",
+    "APCTimesBold": "Times-Bold",
+    "APCTimesItalic": "Times-Italic",
+    "APCTimesBoldItalic": "Times-BoldItalic",
+}
+
+
+def _register_font(name: str, candidates: tuple[str, ...], fallback: str) -> None:
+    if name in pdfmetrics.getRegisteredFontNames():
+        return
+    path = next((candidate for candidate in candidates if Path(candidate).exists()), None)
+    if path:
+        pdfmetrics.registerFont(TTFont(name, path))
+        return
+    pdfmetrics.registerFont(pdfmetrics.Font(name, fallback, "WinAnsiEncoding"))
 
 
 def _register_fonts() -> None:
     for name, candidates in FONT_FILES.items():
-        if name in pdfmetrics.getRegisteredFontNames():
-            continue
-        path = next((candidate for candidate in candidates if Path(candidate).exists()), None)
-        if not path:
-            raise RuntimeError("Times New Roman ou uma fonte serifada compativel nao foi encontrada.")
-        pdfmetrics.registerFont(TTFont(name, path))
+        _register_font(name, candidates, FONT_FALLBACKS[name])
 
 
 class ActivityPdfRenderer:
