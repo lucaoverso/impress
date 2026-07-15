@@ -55,6 +55,12 @@ const estadoConsolidacao = {
     dados: null
 };
 
+const estadoPainelReavaliacao = {
+    periodo: null,
+    registros: [],
+    estudantesExpandidos: new Set()
+};
+
 const estadoRelatorio = {
     dados: null,
     turmasExpandidas: new Set()
@@ -673,6 +679,7 @@ function renderizarAbasDisponiveis() {
 
     el("tabBtnDocente").hidden = !mostrarDocente;
     el("tabBtnConsolidacao").hidden = !mostrarConsolidacao;
+    el("tabBtnReavaliacao").hidden = !mostrarConsolidacao;
     el("tabBtnRelatorio").hidden = !mostrarRelatorio;
     el("tabBtnRav").hidden = !mostrarRav;
     el("tabBtnConfiguracoes").hidden = !mostrarConfiguracoes;
@@ -680,6 +687,7 @@ function renderizarAbasDisponiveis() {
     const ordem = [
         { aba: "docente", visivel: mostrarDocente },
         { aba: "consolidacao", visivel: mostrarConsolidacao },
+        { aba: "reavaliacao", visivel: mostrarConsolidacao },
         { aba: "relatorio", visivel: mostrarRelatorio },
         { aba: "rav", visivel: mostrarRav },
         { aba: "configuracoes", visivel: mostrarConfiguracoes }
@@ -802,6 +810,17 @@ function renderizarSelectsConsolidacao() {
         "Todas as disciplinas",
         {
             valorSelecionado: el("preconselhoDisciplinaConsolidacao")?.value || ""
+        }
+    );
+
+    preencherSelect(
+        el("preconselhoTurmaReavaliacao"),
+        Array.isArray(contextoAtual?.turmas) ? contextoAtual.turmas : [],
+        (item) => item.id,
+        (item) => item.nome,
+        "Todas as turmas",
+        {
+            valorSelecionado: el("preconselhoTurmaReavaliacao")?.value || ""
         }
     );
 
@@ -1551,6 +1570,102 @@ async function carregarConsolidacao() {
         estadoConsolidacao.dados = null;
         renderizarConsolidacao();
         definirMensagem("msgPreconselhoConsolidacao", erro.message || "Não foi possível carregar a consolidação.", true);
+    }
+}
+
+function statusDisciplinaReavaliacao(registro) {
+    if (registro.pos_preconselho_recuperado === true) {
+        return { rotulo: "Recuperado", classe: "is-recuperado" };
+    }
+    if (registro.pos_preconselho_recuperado === false) {
+        return { rotulo: "Ficou para o conselho", classe: "is-conselho" };
+    }
+    return { rotulo: "Em reavaliação", classe: "is-pendente" };
+}
+
+function agruparRegistrosPainelReavaliacao(registros) {
+    const grupos = new Map();
+    registros.forEach((registro) => {
+        const chave = String(registro.estudante_id || registro.estudante_nome || "");
+        const grupo = grupos.get(chave) || {
+            id: registro.estudante_id,
+            nome: registro.estudante_nome || "Estudante sem nome",
+            turma: registro.turma_nome || "Turma não informada",
+            disciplinas: []
+        };
+        grupo.disciplinas.push(registro);
+        grupos.set(chave, grupo);
+    });
+    return Array.from(grupos.values()).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+}
+
+function renderizarPainelReavaliacao() {
+    const container = el("listaPainelReavaliacao");
+    const periodo = estadoPainelReavaliacao.periodo;
+    const estudantes = agruparRegistrosPainelReavaliacao(estadoPainelReavaliacao.registros);
+    el("preconselhoReavaliacaoPeriodoNome").textContent = periodo ? rotuloPeriodo(periodo) : "Nenhum período ativo";
+
+    if (!periodo) {
+        el("preconselhoResumoPainelReavaliacao").textContent = "Inicie a reavaliação de um período para habilitar este painel.";
+        container.innerHTML = '<p class="preconselho-empty-state">Não há período em reavaliação no momento.</p>';
+        return;
+    }
+    if (estudantes.length === 0) {
+        el("preconselhoResumoPainelReavaliacao").textContent = "Nenhum estudante encontrado para o filtro aplicado.";
+        container.innerHTML = '<p class="preconselho-empty-state">Nenhum estudante está em reavaliação nesta turma.</p>';
+        return;
+    }
+
+    const totalDisciplinas = estudantes.reduce((total, estudante) => total + estudante.disciplinas.length, 0);
+    el("preconselhoResumoPainelReavaliacao").textContent = `${estudantes.length} estudante(s) • ${totalDisciplinas} disciplina(s) sinalizada(s).`;
+    container.innerHTML = estudantes.map((estudante) => {
+        const chave = String(estudante.id || estudante.nome);
+        const expandido = estadoPainelReavaliacao.estudantesExpandidos.has(chave);
+        const disciplinas = estudante.disciplinas
+            .slice()
+            .sort((a, b) => String(a.disciplina_nome || "").localeCompare(String(b.disciplina_nome || ""), "pt-BR"));
+        return `
+            <section class="preconselho-review-student">
+                <button type="button" class="preconselho-review-student-toggle"
+                    data-estudante-reavaliacao="${escaparHtml(chave)}" aria-expanded="${expandido ? "true" : "false"}">
+                    <span><strong>${escaparHtml(estudante.nome)}</strong><small>${escaparHtml(estudante.turma)} • ${disciplinas.length} disciplina(s)</small></span>
+                    <span class="preconselho-review-chevron" aria-hidden="true"></span>
+                </button>
+                <div class="preconselho-review-disciplines" ${expandido ? "" : "hidden"}>
+                    ${disciplinas.map((disciplina) => {
+                        const status = statusDisciplinaReavaliacao(disciplina);
+                        return `<div class="preconselho-review-discipline">
+                            <span>${escaparHtml(disciplina.disciplina_nome || "Disciplina não informada")}</span>
+                            <strong class="preconselho-review-status ${status.classe}">${status.rotulo}</strong>
+                        </div>`;
+                    }).join("")}
+                </div>
+            </section>`;
+    }).join("");
+}
+
+async function carregarPainelReavaliacao() {
+    limparMensagem("msgPreconselhoReavaliacao");
+    const periodo = obterPeriodos().find((item) => String(item.status || "").toUpperCase() === "EM_REAVALIACAO") || null;
+    estadoPainelReavaliacao.periodo = periodo;
+    estadoPainelReavaliacao.registros = [];
+    if (!periodo) {
+        renderizarPainelReavaliacao();
+        return;
+    }
+
+    const params = new URLSearchParams({ periodo_id: String(periodo.id) });
+    const turmaId = String(el("preconselhoTurmaReavaliacao")?.value || "").trim();
+    if (turmaId) params.set("turma_id", turmaId);
+    try {
+        const resposta = await fetchComAuth(`/preconselho/registros?${params.toString()}`, { headers });
+        if (!resposta.ok) throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível carregar as reavaliações."));
+        const dados = await resposta.json();
+        estadoPainelReavaliacao.registros = Array.isArray(dados.itens) ? dados.itens : [];
+        renderizarPainelReavaliacao();
+    } catch (erro) {
+        renderizarPainelReavaliacao();
+        definirMensagem("msgPreconselhoReavaliacao", erro.message || "Não foi possível carregar as reavaliações.", true);
     }
 }
 
@@ -2878,6 +2993,7 @@ async function carregarContexto() {
 
     renderizarRelatorio();
     renderizarRav();
+    renderizarPainelReavaliacao();
 }
 
 async function carregarPainelInicial() {
@@ -2887,6 +3003,7 @@ async function carregarPainelInicial() {
     }
     if (contextoAtual?.pode_consolidar) {
         tarefas.push(carregarConsolidacao());
+        tarefas.push(carregarPainelReavaliacao());
     }
     if (contextoAtual?.pode_relatorio) {
         tarefas.push(carregarRelatorio());
@@ -3145,6 +3262,23 @@ function registrarEventos() {
         await carregarConsolidacao();
     });
 
+    el("preconselhoTurmaReavaliacao").addEventListener("change", async () => {
+        estadoPainelReavaliacao.estudantesExpandidos.clear();
+        await carregarPainelReavaliacao();
+    });
+    el("listaPainelReavaliacao").addEventListener("click", (event) => {
+        const botao = event.target.closest("button[data-estudante-reavaliacao]");
+        if (!botao) return;
+        const chave = String(botao.dataset.estudanteReavaliacao || "");
+        if (estadoPainelReavaliacao.estudantesExpandidos.has(chave)) {
+            estadoPainelReavaliacao.estudantesExpandidos.delete(chave);
+        } else {
+            estadoPainelReavaliacao.estudantesExpandidos.add(chave);
+        }
+        renderizarPainelReavaliacao();
+        el("listaPainelReavaliacao")?.querySelector(`[data-estudante-reavaliacao="${CSS.escape(chave)}"]`)?.focus();
+    });
+
     el("btnCopiarTextoConsolidado").addEventListener("click", async () => {
         await copiarTexto(
             "preconselhoTextoConsolidado",
@@ -3276,6 +3410,7 @@ async function iniciarModulo() {
     } catch (erro) {
         definirMensagem("msgPreconselhoDocente", erro.message || "Não foi possível carregar o módulo de pré-conselho.", true);
         definirMensagem("msgPreconselhoConsolidacao", erro.message || "Não foi possível carregar o módulo de pré-conselho.", true);
+        definirMensagem("msgPreconselhoReavaliacao", erro.message || "Não foi possível carregar o módulo de pré-conselho.", true);
         definirMensagem("msgPreconselhoRelatorio", erro.message || "Não foi possível carregar o módulo de pré-conselho.", true);
     }
 }

@@ -35,6 +35,10 @@
                 role="tab" aria-controls="preconselho-tab-consolidacao" aria-selected="false" tabindex="-1" type="button" hidden>
                 Consolidação
             </button>
+            <button id="tabBtnReavaliacao" class="admin-tab-btn" data-preconselho-tab-trigger="reavaliacao"
+                role="tab" aria-controls="preconselho-tab-reavaliacao" aria-selected="false" tabindex="-1" type="button" hidden>
+                Reavaliação
+            </button>
             <button id="tabBtnRelatorio" class="admin-tab-btn" data-preconselho-tab-trigger="relatorio"
                 role="tab" aria-controls="preconselho-tab-relatorio" aria-selected="false" tabindex="-1" type="button" hidden>
                 Relatório
@@ -391,6 +395,45 @@
                         <p id="preconselhoMotivosFrequentes" class="pcpi-hint"></p>
                         <textarea id="preconselhoTextoConsolidado" class="pcpi-textarea" rows="16" readonly
                             placeholder="A consolidação aparecerá aqui após a aplicação dos filtros."></textarea>
+                    </article>
+                </section>
+            </section>
+
+            <section id="preconselho-tab-reavaliacao" class="admin-tab-panel" role="tabpanel"
+                aria-labelledby="tabBtnReavaliacao" data-preconselho-tab-panel="reavaliacao" hidden>
+                <section class="preconselho-workspace-grid">
+                    <article class="calendar-card pcpi-card pcpi-card-full">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <p class="pcpi-eyebrow">Coordenação</p>
+                                <h2>Estudantes em reavaliação</h2>
+                                <p>Consulte os estudantes sinalizados no período atual e abra cada nome para acompanhar o resultado por disciplina.</p>
+                            </div>
+                        </div>
+
+                        <div class="preconselho-review-toolbar">
+                            <div class="preconselho-review-period" aria-live="polite">
+                                <span>Período em reavaliação</span>
+                                <strong id="preconselhoReavaliacaoPeriodoNome">Nenhum período ativo</strong>
+                            </div>
+                            <label class="pcpi-field" for="preconselhoTurmaReavaliacao">
+                                <span>Filtrar por turma</span>
+                                <select id="preconselhoTurmaReavaliacao"></select>
+                            </label>
+                        </div>
+
+                        <p id="preconselhoResumoPainelReavaliacao" class="pcpi-hint"></p>
+                        <p id="msgPreconselhoReavaliacao" class="pcpi-status-copy"></p>
+                    </article>
+
+                    <article class="calendar-card pcpi-card pcpi-card-full">
+                        <div class="pcpi-card-header">
+                            <div>
+                                <h2>Lista de estudantes</h2>
+                                <p>Clique no nome para visualizar as disciplinas e a situação de cada reavaliação.</p>
+                            </div>
+                        </div>
+                        <div id="listaPainelReavaliacao" class="preconselho-review-student-list" aria-live="polite"></div>
                     </article>
                 </section>
             </section>
