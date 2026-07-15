@@ -10,6 +10,8 @@ def prepare_activity_data(
     payload, *, user: dict, period: dict, delivery: dict, allow_incomplete: bool = False
 ) -> dict:
     body = sanitize_activity_html(payload.corpo_html)
+    if body.count("<img ") > 10:
+        raise ValueError("A APC pode conter no maximo 10 imagens.")
     skill = str(payload.habilidade or "").strip()
     content = str(payload.conteudo or "").strip()
     if not allow_incomplete:

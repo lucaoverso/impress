@@ -10,7 +10,8 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
 
-from .rich_text import Block, Run, parse_html
+from .image_service import resolve_activity_image
+from .rich_text import Block, ImageBlock, Run, parse_html
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -222,6 +223,42 @@ class ActivityPdfRenderer:
                 cursor += run_width
         return len(lines) * LINE_HEIGHT
 
+    def _image_geometry(self, block: ImageBlock, width: float) -> tuple[Path | None, float, float]:
+        path = resolve_activity_image(block.token)
+        if path is None:
+            return None, 0, 0
+        reader = ImageReader(str(path))
+        source_width, source_height = reader.getSize()
+        target_width = width * max(25, min(100, block.width_percent)) / 100
+        target_height = target_width * source_height / source_width
+        max_image_height = PAGE_SIZE[1] - (MARGIN_TOP + 186) - MARGIN_BOTTOM
+        if target_height > max_image_height:
+            scale = max_image_height / target_height
+            target_width *= scale
+            target_height *= scale
+        return path, target_width, target_height
+
+    def _draw_image_block(self, block: ImageBlock, x: float, width: float) -> float:
+        path, image_width, image_height = self._image_geometry(block, width)
+        if path is None:
+            return 0
+        if block.align == "left":
+            image_x = x
+        elif block.align == "right":
+            image_x = x + width - image_width
+        else:
+            image_x = x + (width - image_width) / 2
+        self.pdf.drawImage(
+            ImageReader(str(path)),
+            image_x * SCALE,
+            self.page_height - (self.y + image_height) * SCALE,
+            image_width * SCALE,
+            image_height * SCALE,
+            preserveAspectRatio=True,
+            mask="auto",
+        )
+        return image_height + 18
+
     def _content(self):
         self.y += 8
         blocks = parse_html(self.data["corpo_html"])
@@ -231,14 +268,21 @@ class ActivityPdfRenderer:
         column, start_y = 0, self.y
         x_positions = [MARGIN_X, MARGIN_X + width + gap]
         for block in blocks:
-            height = len(self._layout_block(block, width)) * LINE_HEIGHT
+            if isinstance(block, ImageBlock):
+                _path, _image_width, image_height = self._image_geometry(block, width)
+                height = image_height + 18
+            else:
+                height = len(self._layout_block(block, width)) * LINE_HEIGHT
             if self.y + height > PAGE_SIZE[1] - MARGIN_BOTTOM:
                 if columns == 2 and column == 0:
                     column, self.y = 1, start_y
                 else:
                     self._new_page()
                     column, start_y = 0, self.y
-            self.y += self._draw_block(block, x_positions[column], self.y, width)
+            if isinstance(block, ImageBlock):
+                self.y += self._draw_image_block(block, x_positions[column], width)
+            else:
+                self.y += self._draw_block(block, x_positions[column], self.y, width)
 
     def render(self) -> bytes:
         self._metadata()

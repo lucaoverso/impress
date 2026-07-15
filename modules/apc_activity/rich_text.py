@@ -17,10 +17,18 @@ class Block:
     indent: int = 0
 
 
+@dataclass
+class ImageBlock:
+    token: str
+    width_percent: int = 50
+    align: str = "center"
+    alt: str = ""
+
+
 class _RichParser(HTMLParser):
     def __init__(self):
         super().__init__(convert_charrefs=True)
-        self.blocks: list[Block] = []
+        self.blocks: list[Block | ImageBlock] = []
         self.runs: list[Run] = []
         self.bold = False
         self.italic = False
@@ -37,7 +45,20 @@ class _RichParser(HTMLParser):
 
     def handle_starttag(self, tag: str, attrs):
         tag = tag.lower()
-        if tag == "strong":
+        if tag == "img":
+            self._flush()
+            values = {str(key).lower(): str(value or "") for key, value in attrs}
+            token = values.get("data-apc-image", "")
+            width = values.get("data-width", "50")
+            self.blocks.append(
+                ImageBlock(
+                    token=token,
+                    width_percent=int(width) if width.isdigit() else 50,
+                    align=values.get("data-align", "center"),
+                    alt=values.get("alt", ""),
+                )
+            )
+        elif tag == "strong":
             self.bold = True
         elif tag == "em":
             self.italic = True
@@ -77,14 +98,13 @@ class _RichParser(HTMLParser):
         if data:
             self.runs.append(Run(data, self.bold, self.italic, self.underline))
 
-    def result(self) -> list[Block]:
+    def result(self) -> list[Block | ImageBlock]:
         self._flush()
         return self.blocks
 
 
-def parse_html(value: str) -> list[Block]:
+def parse_html(value: str) -> list[Block | ImageBlock]:
     parser = _RichParser()
     parser.feed(str(value or ""))
     parser.close()
     return parser.result()
-

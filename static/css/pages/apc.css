@@ -2061,12 +2061,60 @@ body.apc-print-wizard-open {
     font-size: 0.82rem;
 }
 
+.apc-rich-image-controls {
+    display: none;
+    flex: 1 1 100%;
+    align-items: center;
+    gap: 6px;
+    padding-top: 7px;
+    border-top: 1px solid var(--apc-border-soft);
+}
+
+.apc-rich-toolbar:has(+ .apc-rich-editor img.is-selected) .apc-rich-image-controls {
+    display: flex;
+    flex-wrap: wrap;
+}
+
 .apc-rich-editor {
     min-height: 320px;
     padding: 14px;
     border-radius: 0 0 12px 12px;
     line-height: 1.55;
     overflow-wrap: anywhere;
+}
+
+.apc-rich-editor img[data-apc-image] {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin-block: 12px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
+.apc-rich-editor img[data-width="25"] { width: 25%; }
+.apc-rich-editor img[data-width="50"] { width: 50%; }
+.apc-rich-editor img[data-width="75"] { width: 75%; }
+.apc-rich-editor img[data-width="100"] { width: 100%; }
+.apc-rich-editor img[data-align="left"] { margin-right: auto; }
+.apc-rich-editor img[data-align="center"] { margin-inline: auto; }
+.apc-rich-editor img[data-align="right"] { margin-left: auto; }
+
+.apc-rich-editor img.is-selected {
+    outline: 3px solid var(--apc-accent);
+    outline-offset: 3px;
+}
+
+.apc-rich-editor img.is-unavailable {
+    min-height: 96px;
+    border: 1px dashed var(--apc-border-strong);
+    background: var(--apc-surface-muted);
+}
+
+.apc-rich-image-hint {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+    line-height: 1.45;
 }
 
 .apc-rich-editor:empty::before {

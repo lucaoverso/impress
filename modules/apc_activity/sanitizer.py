@@ -1,8 +1,12 @@
+import re
 from html import escape
 from html.parser import HTMLParser
 
 
-ALLOWED_TAGS = {"p", "br", "strong", "b", "em", "i", "u", "ol", "ul", "li"}
+ALLOWED_TAGS = {"p", "br", "strong", "b", "em", "i", "u", "ol", "ul", "li", "img"}
+IMAGE_TOKEN_RE = re.compile(r"^[a-f0-9]{32}\.(?:jpg|png)$")
+IMAGE_WIDTHS = {"25", "50", "75", "100"}
+IMAGE_ALIGNS = {"left", "center", "right"}
 
 
 class _ActivityHtmlSanitizer(HTMLParser):
@@ -22,6 +26,21 @@ class _ActivityHtmlSanitizer(HTMLParser):
         if tag == "div":
             tag = "p"
         if tag not in ALLOWED_TAGS:
+            return
+        if tag == "img":
+            values = {str(key).lower(): str(value or "") for key, value in attrs}
+            token = values.get("data-apc-image", "")
+            if not IMAGE_TOKEN_RE.fullmatch(token):
+                return
+            width = values.get("data-width", "50")
+            align = values.get("data-align", "center")
+            width = width if width in IMAGE_WIDTHS else "50"
+            align = align if align in IMAGE_ALIGNS else "center"
+            alt = escape(values.get("alt", "Imagem da atividade")[:180], quote=True)
+            self.parts.append(
+                f'<img data-apc-image="{token}" data-width="{width}" '
+                f'data-align="{align}" alt="{alt}">'
+            )
             return
         normalized = "strong" if tag == "b" else "em" if tag == "i" else tag
         self.parts.append(f"<{normalized}>")
@@ -73,6 +92,8 @@ class _VisibleTextParser(HTMLParser):
     def handle_starttag(self, tag: str, attrs):
         if tag.lower() in {"p", "br", "li"}:
             self.parts.append("\n")
+        elif tag.lower() == "img":
+            self.parts.append(" [Imagem] ")
 
     def handle_endtag(self, tag: str):
         if tag.lower() in {"p", "li"}:

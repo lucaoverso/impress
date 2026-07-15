@@ -1,9 +1,12 @@
 import unittest
+import io
+import os
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from pypdf import PdfReader
+from PIL import Image
 
 from modules.apc_activity.pdf_service import (
     BODY_FONT_SIZE,
@@ -16,6 +19,7 @@ from reportlab.pdfbase import pdfmetrics
 from modules.apc_activity.sanitizer import sanitize_activity_html, visible_text
 from modules.apc_activity.schemas import ApcActivityIn, ApcActivityPreviewIn
 from modules.apc_activity import service as activity_service
+from modules.apc_activity.image_service import store_activity_image
 from modules.apc_activity.service import prepare_activity_data
 from routers import apc_router
 
@@ -88,6 +92,52 @@ class ApcActivityPdfTests(unittest.TestCase):
     def test_sanitizer_preserves_contenteditable_line_breaks(self):
         sanitized = sanitize_activity_html("Primeira linha<div>Segunda linha</div>")
         self.assertEqual(sanitized, "Primeira linha<p>Segunda linha</p>")
+
+    def test_sanitizer_accepts_only_internal_activity_images(self):
+        token = "a" * 32 + ".jpg"
+        sanitized = sanitize_activity_html(
+            f'<img src="https://example.com/bad.jpg" data-apc-image="{token}" '
+            'data-width="75" data-align="right" onerror="bad()">'
+        )
+        self.assertEqual(
+            sanitized,
+            f'<img data-apc-image="{token}" data-width="75" '
+            'data-align="right" alt="Imagem da atividade">',
+        )
+        self.assertNotIn("https://", sanitized)
+        self.assertEqual(sanitize_activity_html('<img src="https://example.com/bad.jpg">'), "")
+
+    def test_activity_image_is_stored_and_rendered_in_pdf(self):
+        source = io.BytesIO()
+        Image.new("RGB", (800, 400), "navy").save(source, "PNG")
+        with TemporaryDirectory() as temp_dir, patch.dict(os.environ, {"APC_DIR": temp_dir}):
+            stored = store_activity_image(source.getvalue())
+            html = (
+                f'<p>Observe a imagem:</p><img data-apc-image="{stored["token"]}" '
+                'data-width="75" data-align="center" alt="Diagrama">'
+            )
+            content = generate_activity_pdf(self._data(activities=html))
+            page = PdfReader(io.BytesIO(content)).pages[0]
+            self.assertGreaterEqual(len(page.images), 2)
+
+    def test_activity_rejects_more_than_ten_images(self):
+        token = "b" * 32 + ".png"
+        payload = ApcActivityPreviewIn(
+            habilidade="EF00",
+            conteudo="Conteudo",
+            corpo_html="".join(
+                f'<img data-apc-image="{token}" alt="Imagem {index}">'
+                for index in range(11)
+            ),
+        )
+        with self.assertRaisesRegex(ValueError, "maximo 10 imagens"):
+            prepare_activity_data(
+                payload,
+                user={"nome": "Professor"},
+                period={"data_referencia": "2026-07-15"},
+                delivery={"turma_id": 1, "disciplina_id": 2},
+                allow_incomplete=True,
+            )
 
 
 class ApcActivityRouterTests(unittest.TestCase):

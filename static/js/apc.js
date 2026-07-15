@@ -1656,6 +1656,51 @@ function executarComandoEditorApc(editor, comando) {
     document.execCommand(comando, false);
 }
 
+function imagemSelecionadaEditorApc(editor) {
+    return editor.querySelector("img.is-selected");
+}
+
+function selecionarImagemEditorApc(editor, imagem) {
+    editor.querySelectorAll("img.is-selected").forEach((item) => item.classList.remove("is-selected"));
+    if (imagem) imagem.classList.add("is-selected");
+}
+
+function notificarMudancaEditorApc(editor) {
+    editor.dispatchEvent(new Event("input", { bubbles: true }));
+}
+
+async function enviarImagemEditorApc(arquivo) {
+    const form = new FormData();
+    form.append("arquivo", arquivo);
+    return fetchJson("/apc/atividade/imagens", {
+        method: "POST",
+        headers: headersApc,
+        body: form,
+    });
+}
+
+async function carregarImagemProtegidaEditorApc(image) {
+    const token = image?.dataset?.apcImage;
+    if (!token) return;
+    const response = await fetchResposta(`/apc/atividade/imagens/${encodeURIComponent(token)}`, {
+        headers: headersApc,
+    });
+    const objectUrl = URL.createObjectURL(await response.blob());
+    const previous = image.dataset.objectUrl;
+    if (previous) URL.revokeObjectURL(previous);
+    image.dataset.objectUrl = objectUrl;
+    image.src = objectUrl;
+}
+
+function hidratarImagensEditorApc(editor) {
+    editor.querySelectorAll("img[data-apc-image]").forEach((image) => {
+        void carregarImagemProtegidaEditorApc(image).catch(() => {
+            image.alt = "Imagem indisponivel";
+            image.classList.add("is-unavailable");
+        });
+    });
+}
+
 function criarAreaRichTextApc(rotulo, placeholder) {
     const wrap = document.createElement("div");
     wrap.className = "apc-activity-field";
@@ -1672,6 +1717,8 @@ function criarAreaRichTextApc(rotulo, placeholder) {
     editor.dataset.placeholder = placeholder;
     editor.setAttribute("role", "textbox");
     editor.setAttribute("aria-multiline", "true");
+    let insertionRange = null;
+    let enviandoImagens = false;
     [
         ["Negrito", "bold"],
         ["Italico", "italic"],
@@ -1687,8 +1734,159 @@ function criarAreaRichTextApc(rotulo, placeholder) {
         button.addEventListener("click", () => executarComandoEditorApc(editor, comando));
         toolbar.appendChild(button);
     });
+    const imageInput = document.createElement("input");
+    imageInput.type = "file";
+    imageInput.accept = "image/jpeg,image/png,image/webp";
+    imageInput.multiple = true;
+    imageInput.hidden = true;
+    const imageButton = document.createElement("button");
+    imageButton.type = "button";
+    imageButton.innerText = "Imagem";
+    imageButton.title = "Inserir imagem (PNG, JPEG ou WebP, ate 5 MB)";
+    imageButton.addEventListener("mousedown", (event) => {
+        event.preventDefault();
+        const selection = window.getSelection();
+        if (selection?.rangeCount && editor.contains(selection.anchorNode)) {
+            insertionRange = selection.getRangeAt(0).cloneRange();
+        }
+    });
+    imageButton.addEventListener("click", () => imageInput.click());
+
+    async function inserirImagensNoEditorApc(arquivos) {
+        if (enviandoImagens) {
+            setMensagemActivityModalApc("Aguarde o envio das imagens atuais.", true);
+            return;
+        }
+        const disponiveis = Math.max(
+            0,
+            10 - editor.querySelectorAll("img[data-apc-image]").length
+        );
+        const imagens = Array.from(arquivos || [])
+            .filter((arquivo) => String(arquivo.type || "").startsWith("image/"))
+            .slice(0, disponiveis);
+        if (!imagens.length) {
+            setMensagemActivityModalApc("A APC pode conter no maximo 10 imagens.", true);
+            return;
+        }
+        enviandoImagens = true;
+        imageButton.disabled = true;
+        imageButton.innerText = "Enviando...";
+        let inseridas = 0;
+        let erroEnvio = "";
+        try {
+            for (const arquivo of imagens) {
+                try {
+                    const uploaded = await enviarImagemEditorApc(arquivo);
+                    const image = document.createElement("img");
+                    image.dataset.apcImage = uploaded.token;
+                    image.alt = arquivo.name || "Imagem colada da area de transferencia";
+                    image.dataset.width = "50";
+                    image.dataset.align = "center";
+                    image.draggable = false;
+                    if (insertionRange && editor.contains(insertionRange.commonAncestorContainer)) {
+                        insertionRange.deleteContents();
+                        insertionRange.insertNode(image);
+                        insertionRange.setStartAfter(image);
+                        insertionRange.collapse(true);
+                    } else {
+                        editor.appendChild(image);
+                    }
+                    selecionarImagemEditorApc(editor, image);
+                    await carregarImagemProtegidaEditorApc(image);
+                    inseridas += 1;
+                } catch (err) {
+                    erroEnvio = err.message || "Uma das imagens nao pode ser inserida.";
+                }
+            }
+            if (inseridas) notificarMudancaEditorApc(editor);
+            const excedeuLimite = Array.from(arquivos || []).length > imagens.length;
+            if (erroEnvio) {
+                setMensagemActivityModalApc(erroEnvio, true);
+            } else if (excedeuLimite) {
+                setMensagemActivityModalApc(
+                    `${inseridas} imagem(ns) inserida(s). O limite da APC e de 10 imagens.`,
+                    true
+                );
+            } else {
+                setMensagemActivityModalApc(`${inseridas} imagem(ns) inserida(s).`);
+            }
+        } finally {
+            enviandoImagens = false;
+            insertionRange = null;
+            imageButton.disabled = false;
+            imageButton.innerText = "Imagem";
+        }
+    }
+
+    imageInput.addEventListener("change", async () => {
+        const arquivos = Array.from(imageInput.files || []);
+        imageInput.value = "";
+        if (arquivos.length) await inserirImagensNoEditorApc(arquivos);
+    });
+    editor.addEventListener("paste", (event) => {
+        const imagens = Array.from(event.clipboardData?.items || [])
+            .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+            .map((item) => item.getAsFile())
+            .filter(Boolean);
+        if (!imagens.length) return;
+        event.preventDefault();
+        const selection = window.getSelection();
+        insertionRange = selection?.rangeCount && editor.contains(selection.anchorNode)
+            ? selection.getRangeAt(0).cloneRange()
+            : null;
+        void inserirImagensNoEditorApc(imagens);
+    });
+    toolbar.append(imageButton, imageInput);
+
+    const imageControls = document.createElement("span");
+    imageControls.className = "apc-rich-image-controls";
+    [25, 50, 75, 100].forEach((width) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.innerText = `${width}%`;
+        button.title = `Usar ${width}% da largura disponivel`;
+        button.addEventListener("click", () => {
+            const image = imagemSelecionadaEditorApc(editor);
+            if (!image) return;
+            image.dataset.width = String(width);
+            notificarMudancaEditorApc(editor);
+        });
+        imageControls.appendChild(button);
+    });
+    [["Esq.", "left"], ["Centro", "center"], ["Dir.", "right"]].forEach(([labelText, align]) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.innerText = labelText;
+        button.addEventListener("click", () => {
+            const image = imagemSelecionadaEditorApc(editor);
+            if (!image) return;
+            image.dataset.align = align;
+            notificarMudancaEditorApc(editor);
+        });
+        imageControls.appendChild(button);
+    });
+    const removeImage = document.createElement("button");
+    removeImage.type = "button";
+    removeImage.innerText = "Remover imagem";
+    removeImage.addEventListener("click", () => {
+        const image = imagemSelecionadaEditorApc(editor);
+        if (!image) return;
+        if (image.dataset.objectUrl) URL.revokeObjectURL(image.dataset.objectUrl);
+        image.remove();
+        notificarMudancaEditorApc(editor);
+    });
+    imageControls.appendChild(removeImage);
+    toolbar.appendChild(imageControls);
+    editor.addEventListener("click", (event) => {
+        const target = event.target instanceof Element ? event.target.closest("img") : null;
+        selecionarImagemEditorApc(editor, target);
+    });
     wrap.appendChild(toolbar);
     wrap.appendChild(editor);
+    const imageHint = document.createElement("small");
+    imageHint.className = "apc-rich-image-hint";
+    imageHint.innerText = "Insira varias imagens pelo botao ou cole diretamente com Ctrl+V.";
+    wrap.appendChild(imageHint);
     return { wrap, editor };
 }
 
@@ -1713,6 +1911,7 @@ async function carregarAtividadeExistenteApc(panel) {
         panel.querySelector("[data-apc-activity-skill]").value = skillParts.join(" - ");
         panel.querySelector("[data-apc-activity-content]").value = activity.conteudo_descricao_snapshot || "";
         panel.querySelector("[data-apc-activity-body]").innerHTML = [activity.introducao_html, activity.atividades_html].filter(Boolean).join("<p><br></p>");
+        hidratarImagensEditorApc(panel.querySelector("[data-apc-activity-body]"));
         const columns = panel.querySelector(`input[name='apcActivityColumns'][value='${Number(activity.activity_columns || 1)}']`);
         if (columns) columns.checked = true;
     } catch (err) {
@@ -1728,7 +1927,9 @@ function validarPayloadAtividadeApc(payload) {
     if (!String(payload.conteudo || "").trim()) return "Informe o conteudo relacionado.";
     const text = document.createElement("div");
     text.innerHTML = payload.corpo_html;
-    if (!String(text.textContent || "").trim()) return "Informe o texto da APC.";
+    if (!String(text.textContent || "").trim() && !text.querySelector("img")) {
+        return "Informe o texto da APC ou insira uma imagem.";
+    }
     return "";
 }
 

@@ -32,6 +32,11 @@ from models import ApcEnvioOut, ApcPeriodoIn, ApcPeriodoOut, ApcPeriodoUpdateIn
 from modules.apc_review.schemas import ApcReviewUpdateIn
 from modules.apc_review.service import update_submission_review
 from modules.apc_activity import repository as apc_activity_repository
+from modules.apc_activity.image_service import (
+    MAX_IMAGE_BYTES,
+    resolve_activity_image,
+    store_activity_image,
+)
 from modules.apc_activity.schemas import ApcActivityIn, ApcActivityOut, ApcActivityPreviewIn
 from modules.apc_activity.service import (
     prepare_activity_data,
@@ -963,6 +968,29 @@ def _resolver_entrega_professor_apc(
     if not item:
         raise HTTPException(403, "Nao ha entrega prevista para essa disciplina nesta data.")
     return periodo_norm, item
+
+
+@router.post("/apc/atividade/imagens")
+def enviar_imagem_atividade_apc_api(
+    arquivo: UploadFile = File(...),
+    usuario=Depends(get_usuario_logado),
+):
+    if not usuario_eh_professor(usuario):
+        raise HTTPException(403, "Somente professores podem inserir imagens na APC.")
+    content = arquivo.file.read(MAX_IMAGE_BYTES + 1)
+    try:
+        return store_activity_image(content)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@router.get("/apc/atividade/imagens/{token}")
+def obter_imagem_atividade_apc_api(token: str, usuario=Depends(get_usuario_logado)):
+    path = resolve_activity_image(token)
+    if path is None:
+        raise HTTPException(404, "Imagem nao encontrada.")
+    media_type = "image/png" if path.suffix.lower() == ".png" else "image/jpeg"
+    return FileResponse(path, media_type=media_type)
 
 
 @router.post("/apc/periodos/{periodo_id}/atividade/preview")
