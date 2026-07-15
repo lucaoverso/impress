@@ -135,6 +135,34 @@ class SchemaMigrationsTest(unittest.TestCase):
         finally:
             conn.close()
 
+    def test_migration_expande_laudos_existentes_sem_perder_dados(self):
+        migration = _load_migration_module("20260715_expand_estudante_laudos.py")
+        conn = sqlite3.connect(":memory:")
+        try:
+            conn.execute(
+                """
+                CREATE TABLE estudante_laudos (
+                    id INTEGER PRIMARY KEY, estudante_id INTEGER NOT NULL,
+                    cid TEXT, titulo TEXT NOT NULL, observacoes TEXT
+                )
+                """
+            )
+            conn.execute(
+                "INSERT INTO estudante_laudos VALUES (1, 7, 'F84.0', 'TEA', 'Restrito')"
+            )
+            migration.upgrade(conn)
+
+            registro = conn.execute(
+                """
+                SELECT condicao_necessidade, codigo_laudo, descricao_laudo,
+                       observacoes_restritas
+                FROM estudante_laudos WHERE id = 1
+                """
+            ).fetchone()
+            self.assertEqual(registro, ("TEA", "F84.0", "TEA", "Restrito"))
+        finally:
+            conn.close()
+
     def test_migration_20260613_remove_colisao_legada_antes_de_globalizar_horario(self):
         migration = _load_migration_module("20260613_create_global_schedule_config.py")
         conn = sqlite3.connect(":memory:")

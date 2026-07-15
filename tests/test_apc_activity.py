@@ -20,6 +20,7 @@ from modules.apc_activity.sanitizer import sanitize_activity_html, visible_text
 from modules.apc_activity.schemas import ApcActivityIn, ApcActivityPreviewIn
 from modules.apc_activity import service as activity_service
 from modules.apc_activity.image_service import store_activity_image
+from modules.apc_activity.rich_text import parse_html
 from modules.apc_activity.service import prepare_activity_data
 from routers import apc_router
 
@@ -92,6 +93,29 @@ class ApcActivityPdfTests(unittest.TestCase):
     def test_sanitizer_preserves_contenteditable_line_breaks(self):
         sanitized = sanitize_activity_html("Primeira linha<div>Segunda linha</div>")
         self.assertEqual(sanitized, "Primeira linha<p>Segunda linha</p>")
+
+    def test_text_alignment_survives_sanitizing_and_parsing(self):
+        sanitized = sanitize_activity_html(
+            '<div style="text-align: center">Titulo</div>'
+            '<p align="right">Assinatura</p>'
+            '<p data-align="justify">Paragrafo justificado com varias palavras.</p>'
+        )
+        self.assertEqual(
+            sanitized,
+            '<p data-align="center">Titulo</p>'
+            '<p data-align="right">Assinatura</p>'
+            '<p data-align="justify">Paragrafo justificado com varias palavras.</p>',
+        )
+        self.assertEqual(
+            [block.align for block in parse_html(sanitized)],
+            ["center", "right", "justify"],
+        )
+
+    def test_sanitizer_rejects_unsafe_text_alignment_style(self):
+        sanitized = sanitize_activity_html(
+            '<p style="color:red; text-align: expression(bad)">Texto</p>'
+        )
+        self.assertEqual(sanitized, "<p>Texto</p>")
 
     def test_sanitizer_accepts_only_internal_activity_images(self):
         token = "a" * 32 + ".jpg"

@@ -1173,15 +1173,27 @@ class EstudanteOut(BaseModel):
 
 
 class EstudanteLaudoCreateIn(BaseModel):
-    cid: str | None = None
-    titulo: str
-    observacoes: str | None = None
+    condicao_necessidade: str
+    classificacao: str | None = None
+    sistema_classificacao: str | None = None
+    codigo_laudo: str | None = None
+    descricao_laudo: str | None = None
+    possui_laudo: bool = False
+    data_laudo: str | None = None
+    observacoes_restritas: str | None = None
+    apoio_ids: list[int] = Field(default_factory=list)
 
 
 class EstudanteLaudoUpdateIn(BaseModel):
-    cid: str | None = None
-    titulo: str
-    observacoes: str | None = None
+    condicao_necessidade: str
+    classificacao: str | None = None
+    sistema_classificacao: str | None = None
+    codigo_laudo: str | None = None
+    descricao_laudo: str | None = None
+    possui_laudo: bool = False
+    data_laudo: str | None = None
+    observacoes_restritas: str | None = None
+    apoio_ids: list[int] = Field(default_factory=list)
     ativo: bool = True
 
 
@@ -1191,9 +1203,30 @@ class EstudanteLaudoOut(BaseModel):
     cid: str | None = None
     titulo: str
     observacoes: str | None = None
+    condicao_necessidade: str
+    classificacao: str | None = None
+    sistema_classificacao: str | None = None
+    codigo_laudo: str | None = None
+    descricao_laudo: str | None = None
+    possui_laudo: int | bool = False
+    data_laudo: str | None = None
+    observacoes_restritas: str | None = None
+    apoio_ids: list[int] = Field(default_factory=list)
     ativo: int | bool
     criado_em: str
     atualizado_em: str
+
+
+class EstudanteApoioCreateIn(BaseModel):
+    tipo: Literal["necessidade_pedagogica", "recurso_acessibilidade"]
+    nome: str
+
+
+class EstudanteApoioOut(BaseModel):
+    id: int
+    tipo: str
+    nome: str
+    ativo: int | bool
 
 
 class ImportacaoCsvOut(BaseModel):

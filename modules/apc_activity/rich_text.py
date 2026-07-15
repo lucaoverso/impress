@@ -15,6 +15,7 @@ class Block:
     runs: list[Run]
     marker: str = ""
     indent: int = 0
+    align: str = "left"
 
 
 @dataclass
@@ -36,18 +37,26 @@ class _RichParser(HTMLParser):
         self.lists: list[tuple[str, int]] = []
         self.list_counts: list[int] = []
         self.pending_marker = ""
+        self.alignment = "left"
 
     def _flush(self):
         if self.runs or self.pending_marker:
-            self.blocks.append(Block(self.runs, self.pending_marker, max(0, len(self.lists) - 1)))
+            self.blocks.append(
+                Block(
+                    self.runs,
+                    self.pending_marker,
+                    max(0, len(self.lists) - 1),
+                    self.alignment,
+                )
+            )
         self.runs = []
         self.pending_marker = ""
 
     def handle_starttag(self, tag: str, attrs):
         tag = tag.lower()
+        values = {str(key).lower(): str(value or "") for key, value in attrs}
         if tag == "img":
             self._flush()
-            values = {str(key).lower(): str(value or "") for key, value in attrs}
             token = values.get("data-apc-image", "")
             width = values.get("data-width", "50")
             self.blocks.append(
@@ -58,6 +67,9 @@ class _RichParser(HTMLParser):
                     alt=values.get("alt", ""),
                 )
             )
+        elif tag == "p":
+            self._flush()
+            self.alignment = values.get("data-align", "left")
         elif tag == "strong":
             self.bold = True
         elif tag == "em":
@@ -71,6 +83,7 @@ class _RichParser(HTMLParser):
             self.list_counts.append(0)
         elif tag == "li":
             self._flush()
+            self.alignment = values.get("data-align", "left")
             if self.lists:
                 list_type, _ = self.lists[-1]
                 self.list_counts[-1] += 1
@@ -90,6 +103,7 @@ class _RichParser(HTMLParser):
             self.underline = False
         elif tag in {"p", "li"}:
             self._flush()
+            self.alignment = "left"
         elif tag in {"ol", "ul"} and self.lists:
             self.lists.pop()
             self.list_counts.pop()

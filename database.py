@@ -608,10 +608,39 @@ def criar_tabelas():
             cid TEXT,
             titulo TEXT NOT NULL,
             observacoes TEXT,
+            condicao_necessidade TEXT NOT NULL DEFAULT '',
+            classificacao TEXT,
+            sistema_classificacao TEXT,
+            codigo_laudo TEXT,
+            descricao_laudo TEXT,
+            possui_laudo INTEGER NOT NULL DEFAULT 0 CHECK (possui_laudo IN (0, 1)),
+            data_laudo TEXT,
+            observacoes_restritas TEXT,
             ativo INTEGER NOT NULL DEFAULT 1 CHECK (ativo IN (0, 1)),
             criado_em TEXT NOT NULL DEFAULT (datetime('now')),
             atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
             FOREIGN KEY(estudante_id) REFERENCES estudantes(id) ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS estudante_apoios_catalogo (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            tipo TEXT NOT NULL CHECK (tipo IN ('necessidade_pedagogica', 'recurso_acessibilidade')),
+            nome TEXT NOT NULL,
+            ativo INTEGER NOT NULL DEFAULT 1 CHECK (ativo IN (0, 1)),
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            UNIQUE(tipo, nome COLLATE NOCASE)
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS estudante_laudo_apoios (
+            laudo_id INTEGER NOT NULL,
+            apoio_id INTEGER NOT NULL,
+            PRIMARY KEY (laudo_id, apoio_id),
+            FOREIGN KEY(laudo_id) REFERENCES estudante_laudos(id) ON DELETE CASCADE,
+            FOREIGN KEY(apoio_id) REFERENCES estudante_apoios_catalogo(id)
         )
     """)
 
@@ -5750,11 +5779,12 @@ def criar_estudante(
         cursor.execute(
             """
             INSERT INTO estudante_laudos (
-                estudante_id, cid, titulo, observacoes, ativo, criado_em, atualizado_em
-            ) VALUES (?, NULL, ?, 'Criado pelo cadastro compatível de estudantes.', 1,
+                estudante_id, cid, titulo, observacoes, condicao_necessidade,
+                descricao_laudo, possui_laudo, ativo, criado_em, atualizado_em
+            ) VALUES (?, NULL, ?, 'Criado pelo cadastro compatível de estudantes.', ?, ?, 0, 1,
                       datetime('now'), datetime('now'))
             """,
-            (int(estudante_id), necessidade_limpa),
+            (int(estudante_id), necessidade_limpa, necessidade_limpa, necessidade_limpa),
         )
     conn.commit()
     conn.close()
@@ -5835,7 +5865,9 @@ def listar_laudos_estudante(estudante_id: int, incluir_inativos: bool = True):
     conn = get_connection()
     cursor = conn.cursor()
     query = """
-        SELECT id, estudante_id, cid, titulo, observacoes, ativo, criado_em, atualizado_em
+        SELECT id, estudante_id, cid, titulo, observacoes, condicao_necessidade,
+               classificacao, sistema_classificacao, codigo_laudo, descricao_laudo,
+               possui_laudo, data_laudo, observacoes_restritas, ativo, criado_em, atualizado_em
         FROM estudante_laudos
         WHERE estudante_id = ?
     """
@@ -5845,8 +5877,12 @@ def listar_laudos_estudante(estudante_id: int, incluir_inativos: bool = True):
     query += " ORDER BY ativo DESC, titulo COLLATE NOCASE ASC, id ASC"
     cursor.execute(query, params)
     rows = cursor.fetchall()
+    resultados = [dict(row) for row in rows]
+    for item in resultados:
+        cursor.execute("SELECT apoio_id FROM estudante_laudo_apoios WHERE laudo_id = ?", (item["id"],))
+        item["apoio_ids"] = [int(row["apoio_id"]) for row in cursor.fetchall()]
     conn.close()
-    return [dict(row) for row in rows]
+    return resultados
 
 
 def buscar_laudo_estudante_por_id(laudo_id: int):
@@ -5854,15 +5890,21 @@ def buscar_laudo_estudante_por_id(laudo_id: int):
     cursor = conn.cursor()
     cursor.execute(
         """
-        SELECT id, estudante_id, cid, titulo, observacoes, ativo, criado_em, atualizado_em
+        SELECT id, estudante_id, cid, titulo, observacoes, condicao_necessidade,
+               classificacao, sistema_classificacao, codigo_laudo, descricao_laudo,
+               possui_laudo, data_laudo, observacoes_restritas, ativo, criado_em, atualizado_em
         FROM estudante_laudos
         WHERE id = ?
         """,
         (int(laudo_id),),
     )
     row = cursor.fetchone()
+    resultado = dict(row) if row else None
+    if resultado:
+        cursor.execute("SELECT apoio_id FROM estudante_laudo_apoios WHERE laudo_id = ?", (int(laudo_id),))
+        resultado["apoio_ids"] = [int(item["apoio_id"]) for item in cursor.fetchall()]
     conn.close()
-    return dict(row) if row else None
+    return resultado
 
 
 def _normalizar_texto_laudo(valor: str | None, *, obrigatorio: bool = False):
@@ -5887,47 +5929,67 @@ def _atualizar_indicador_necessidade_estudante(cursor, estudante_id: int):
     )
 
 
-def criar_laudo_estudante(estudante_id: int, titulo: str, cid: str | None = None,
-                          observacoes: str | None = None):
-    titulo_limpo = _normalizar_texto_laudo(titulo, obrigatorio=True)
-    cid_limpo = _normalizar_texto_laudo(cid)
-    observacoes_limpas = str(observacoes or "").strip() or None
+def _salvar_apoios_laudo(cursor, laudo_id: int, apoio_ids):
+    cursor.execute("DELETE FROM estudante_laudo_apoios WHERE laudo_id = ?", (int(laudo_id),))
+    for apoio_id in sorted({int(valor) for valor in (apoio_ids or []) if int(valor) > 0}):
+        cursor.execute(
+            "INSERT OR IGNORE INTO estudante_laudo_apoios (laudo_id, apoio_id) VALUES (?, ?)",
+            (int(laudo_id), apoio_id),
+        )
+
+
+def criar_laudo_estudante(estudante_id: int, condicao_necessidade: str,
+                          classificacao=None, sistema_classificacao=None,
+                          codigo_laudo=None, descricao_laudo=None, possui_laudo=False,
+                          data_laudo=None, observacoes_restritas=None, apoio_ids=None):
+    condicao = _normalizar_texto_laudo(condicao_necessidade, obrigatorio=True)
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
         """
         INSERT INTO estudante_laudos (
-            estudante_id, cid, titulo, observacoes, ativo, criado_em, atualizado_em
-        ) VALUES (?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+            estudante_id, cid, titulo, observacoes, condicao_necessidade, classificacao,
+            sistema_classificacao, codigo_laudo, descricao_laudo, possui_laudo,
+            data_laudo, observacoes_restritas, ativo, criado_em, atualizado_em
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
         """,
-        (int(estudante_id), cid_limpo, titulo_limpo, observacoes_limpas),
+        (int(estudante_id), codigo_laudo, condicao, observacoes_restritas, condicao,
+         classificacao, sistema_classificacao, codigo_laudo, descricao_laudo,
+         1 if possui_laudo else 0, data_laudo, observacoes_restritas),
     )
     laudo_id = int(cursor.lastrowid)
+    _salvar_apoios_laudo(cursor, laudo_id, apoio_ids)
     _atualizar_indicador_necessidade_estudante(cursor, estudante_id)
     conn.commit()
     conn.close()
     return laudo_id
 
 
-def atualizar_laudo_estudante(laudo_id: int, estudante_id: int, titulo: str,
-                              cid: str | None = None, observacoes: str | None = None,
-                              ativo: bool = True):
-    titulo_limpo = _normalizar_texto_laudo(titulo, obrigatorio=True)
-    cid_limpo = _normalizar_texto_laudo(cid)
-    observacoes_limpas = str(observacoes or "").strip() or None
+def atualizar_laudo_estudante(laudo_id: int, estudante_id: int, condicao_necessidade: str,
+                              classificacao=None, sistema_classificacao=None,
+                              codigo_laudo=None, descricao_laudo=None, possui_laudo=False,
+                              data_laudo=None, observacoes_restritas=None, apoio_ids=None,
+                              ativo=True):
+    condicao = _normalizar_texto_laudo(condicao_necessidade, obrigatorio=True)
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
         """
         UPDATE estudante_laudos
-        SET cid = ?, titulo = ?, observacoes = ?, ativo = ?, atualizado_em = datetime('now')
+        SET cid = ?, titulo = ?, observacoes = ?, condicao_necessidade = ?,
+            classificacao = ?, sistema_classificacao = ?, codigo_laudo = ?,
+            descricao_laudo = ?, possui_laudo = ?, data_laudo = ?,
+            observacoes_restritas = ?, ativo = ?, atualizado_em = datetime('now')
         WHERE id = ? AND estudante_id = ?
         """,
-        (cid_limpo, titulo_limpo, observacoes_limpas, 1 if ativo else 0,
+        (codigo_laudo, condicao, observacoes_restritas, condicao, classificacao,
+         sistema_classificacao, codigo_laudo, descricao_laudo, 1 if possui_laudo else 0,
+         data_laudo, observacoes_restritas, 1 if ativo else 0,
          int(laudo_id), int(estudante_id)),
     )
     alterado = cursor.rowcount > 0
     if alterado:
+        _salvar_apoios_laudo(cursor, laudo_id, apoio_ids)
         _atualizar_indicador_necessidade_estudante(cursor, estudante_id)
     conn.commit()
     conn.close()
@@ -5947,6 +6009,43 @@ def remover_laudo_estudante(laudo_id: int, estudante_id: int):
     conn.commit()
     conn.close()
     return removido
+
+
+def listar_apoios_estudante(tipo: str = None, incluir_inativos: bool = False):
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = "SELECT id, tipo, nome, ativo FROM estudante_apoios_catalogo WHERE 1 = 1"
+    params = []
+    if tipo:
+        query += " AND tipo = ?"
+        params.append(str(tipo))
+    if not incluir_inativos:
+        query += " AND ativo = 1"
+    query += " ORDER BY tipo, nome COLLATE NOCASE"
+    cursor.execute(query, params)
+    rows = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def criar_apoio_estudante(tipo: str, nome: str):
+    nome_limpo = _normalizar_texto_laudo(nome, obrigatorio=True)
+    if tipo not in ("necessidade_pedagogica", "recurso_acessibilidade"):
+        raise ValueError("Tipo de apoio inválido.")
+    conn = get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            "INSERT INTO estudante_apoios_catalogo (tipo, nome, ativo) VALUES (?, ?, 1)",
+            (tipo, nome_limpo),
+        )
+    except sqlite3.IntegrityError as exc:
+        conn.close()
+        raise ValueError("Esta opção já está cadastrada.") from exc
+    apoio_id = int(cursor.lastrowid)
+    conn.commit()
+    conn.close()
+    return apoio_id
 
 
 def atualizar_status_estudante(estudante_id: int, ativo: bool):

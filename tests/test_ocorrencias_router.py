@@ -105,19 +105,33 @@ class OcorrenciasRouterTest(unittest.TestCase):
             database.criar_tabelas()
             turma_id = int(database.criar_turma("8A", "MATUTINO", 30))
             estudante_id = int(database.criar_estudante("Ana", turma_id))
+            apoio = ocorrencias_router.criar_apoio_estudante_api(
+                ocorrencias_router.EstudanteApoioCreateIn(
+                    tipo="necessidade_pedagogica", nome="Rotina visual"
+                ),
+                usuario={"cargo": "ADMIN"},
+            )
 
             primeiro = ocorrencias_router.criar_laudo_estudante_api(
                 estudante_id,
                 ocorrencias_router.EstudanteLaudoCreateIn(
-                    cid="F90.0",
-                    titulo="TDAH",
-                    observacoes="Acompanhamento pedagógico.",
+                    condicao_necessidade="Transtorno do déficit de atenção",
+                    classificacao="TDAH",
+                    sistema_classificacao="CID-10",
+                    codigo_laudo="F90.0",
+                    descricao_laudo="TDAH",
+                    possui_laudo=True,
+                    data_laudo="2026-03-12",
+                    observacoes_restritas="Acompanhamento pedagógico.",
+                    apoio_ids=[int(apoio["id"])],
                 ),
                 usuario={"cargo": "ADMIN"},
             )
             segundo = ocorrencias_router.criar_laudo_estudante_api(
                 estudante_id,
-                ocorrencias_router.EstudanteLaudoCreateIn(titulo="Baixa visão"),
+                ocorrencias_router.EstudanteLaudoCreateIn(
+                    condicao_necessidade="Baixa visão"
+                ),
                 usuario={"cargo": "ADMIN"},
             )
 
@@ -130,11 +144,16 @@ class OcorrenciasRouterTest(unittest.TestCase):
                 estudante_id,
                 int(primeiro["id"]),
                 ocorrencias_router.EstudanteLaudoUpdateIn(
-                    cid="F90.1", titulo="TDAH atualizado", ativo=True
+                    condicao_necessidade="TDAH atualizado",
+                    codigo_laudo="F90.1",
+                    possui_laudo=True,
+                    apoio_ids=[int(apoio["id"])],
+                    ativo=True,
                 ),
                 usuario={"cargo": "ADMIN"},
             )
-            self.assertEqual(atualizado["cid"], "F90.1")
+            self.assertEqual(atualizado["codigo_laudo"], "F90.1")
+            self.assertEqual(atualizado["apoio_ids"], [int(apoio["id"])])
 
             ocorrencias_router.remover_laudo_estudante_api(
                 estudante_id, int(primeiro["id"]), usuario={"cargo": "ADMIN"}

@@ -1,4 +1,5 @@
 let laudoEstudanteEmEdicao = null;
+let apoiosEstudanteCatalogo = [];
 
 function limparFormularioEstudante() {
     estudanteEmEdicao = null;
@@ -495,12 +496,20 @@ function limparFormularioLaudoEstudante() {
 function iniciarEdicaoLaudoEstudante(laudo) {
     laudoEstudanteEmEdicao = laudo;
     el("estudanteLaudoId").value = String(laudo.id);
-    el("estudanteLaudoCid").value = String(laudo.cid || "");
-    el("estudanteLaudoTitulo").value = String(laudo.titulo || "");
-    el("estudanteLaudoObservacoes").value = String(laudo.observacoes || "");
+    el("estudanteLaudoCondicao").value = String(laudo.condicao_necessidade || "");
+    el("estudanteLaudoClassificacao").value = String(laudo.classificacao || "");
+    el("estudanteLaudoSistema").value = String(laudo.sistema_classificacao || "");
+    el("estudanteLaudoCodigo").value = String(laudo.codigo_laudo || "");
+    el("estudanteLaudoDescricao").value = String(laudo.descricao_laudo || "");
+    el("estudanteLaudoPossui").checked = Boolean(laudo.possui_laudo);
+    el("estudanteLaudoData").value = String(laudo.data_laudo || "");
+    el("estudanteLaudoObservacoesRestritas").value = String(laudo.observacoes_restritas || "");
+    document.querySelectorAll('[data-apoio-estudante-id]').forEach((input) => {
+        input.checked = (laudo.apoio_ids || []).includes(Number(input.value));
+    });
     el("btnSalvarLaudoEstudante").textContent = "Salvar alterações";
     el("btnCancelarEdicaoLaudoEstudante").hidden = false;
-    el("estudanteLaudoTitulo").focus();
+    el("estudanteLaudoCondicao").focus();
 }
 
 function renderizarLaudosEstudante(laudos) {
@@ -519,18 +528,20 @@ function renderizarLaudosEstudante(laudos) {
         item.className = "estudante-laudo-item";
         const conteudo = document.createElement("div");
         const titulo = document.createElement("h4");
-        titulo.textContent = laudo.titulo || "Laudo";
+        titulo.textContent = laudo.condicao_necessidade || "Condição não informada";
         conteudo.appendChild(titulo);
-        if (laudo.observacoes) {
+        if (laudo.descricao_laudo) {
             const observacoes = document.createElement("p");
-            observacoes.textContent = laudo.observacoes;
+            observacoes.textContent = laudo.descricao_laudo;
             conteudo.appendChild(observacoes);
         }
         const meta = document.createElement("div");
         meta.className = "estudante-laudo-meta";
         const cid = document.createElement("span");
         cid.className = "status-chip";
-        cid.textContent = laudo.cid ? `CID ${laudo.cid}` : "Sem CID";
+        cid.textContent = laudo.codigo_laudo
+            ? `${laudo.sistema_classificacao || "Código"} ${laudo.codigo_laudo}`
+            : (laudo.classificacao || "Sem classificação");
         const status = document.createElement("span");
         status.className = `status-chip ${classeStatusEstudante(Boolean(laudo.ativo))}`;
         status.textContent = laudo.ativo ? "Ativo" : "Inativo";
@@ -564,13 +575,59 @@ async function carregarLaudosEstudante() {
     }
 }
 
+function renderizarCatalogoApoios() {
+    const grupos = {
+        necessidade_pedagogica: el("opcoesNecessidadesPedagogicas"),
+        recurso_acessibilidade: el("opcoesRecursosAcessibilidade")
+    };
+    Object.values(grupos).forEach((grupo) => { grupo.innerHTML = ""; });
+    apoiosEstudanteCatalogo.forEach((apoio) => {
+        const label = document.createElement("label");
+        label.className = "estudante-apoio-check";
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.value = String(apoio.id);
+        input.dataset.apoioEstudanteId = String(apoio.id);
+        label.append(input, document.createTextNode(apoio.nome));
+        grupos[apoio.tipo]?.appendChild(label);
+    });
+}
+
+async function carregarCatalogoApoios() {
+    apoiosEstudanteCatalogo = await fetchJson("/estudante-apoios/catalogo", { headers });
+    renderizarCatalogoApoios();
+}
+
+async function adicionarOpcaoApoio(tipo, inputId) {
+    const input = el(inputId);
+    const nome = input.value.trim();
+    if (!nome) return;
+    try {
+        await fetchJson("/estudante-apoios/catalogo", {
+            method: "POST", headers: headersJson, body: JSON.stringify({ tipo, nome })
+        });
+        input.value = "";
+        await carregarCatalogoApoios();
+        setMensagemEstudantes("Opção adicionada com sucesso.");
+    } catch (err) {
+        setMensagemEstudantes(err.message, true);
+    }
+}
+
 async function salvarLaudoEstudante(event) {
     event.preventDefault();
     if (!estudanteEmEdicao) return;
     const payload = {
-        cid: el("estudanteLaudoCid").value.trim() || null,
-        titulo: el("estudanteLaudoTitulo").value.trim(),
-        observacoes: el("estudanteLaudoObservacoes").value.trim() || null
+        condicao_necessidade: el("estudanteLaudoCondicao").value.trim(),
+        classificacao: el("estudanteLaudoClassificacao").value.trim() || null,
+        sistema_classificacao: el("estudanteLaudoSistema").value || null,
+        codigo_laudo: el("estudanteLaudoCodigo").value.trim() || null,
+        descricao_laudo: el("estudanteLaudoDescricao").value.trim() || null,
+        possui_laudo: el("estudanteLaudoPossui").checked,
+        data_laudo: el("estudanteLaudoData").value || null,
+        observacoes_restritas: el("estudanteLaudoObservacoesRestritas").value.trim() || null,
+        apoio_ids: Array.from(document.querySelectorAll('[data-apoio-estudante-id]:checked'))
+            .map((input) => Number(input.value))
     };
     const editando = Boolean(laudoEstudanteEmEdicao);
     if (editando) payload.ativo = Boolean(laudoEstudanteEmEdicao.ativo);
@@ -593,7 +650,7 @@ async function salvarLaudoEstudante(event) {
 
 async function excluirLaudoEstudante(laudo) {
     if (!estudanteEmEdicao) return;
-    if (!window.confirm(`Excluir o laudo “${laudo.titulo}”?`)) return;
+    if (!window.confirm(`Excluir o registro “${laudo.condicao_necessidade}”?`)) return;
     try {
         await fetchJson(`/estudantes/${estudanteEmEdicao.id}/laudos/${laudo.id}`, {
             method: "DELETE",

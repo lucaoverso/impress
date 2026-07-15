@@ -2111,6 +2111,10 @@ body.apc-print-wizard-open {
     background: var(--apc-surface-muted);
 }
 
+.apc-rich-editor [data-align="center"] { text-align: center; }
+.apc-rich-editor [data-align="right"] { text-align: right; }
+.apc-rich-editor [data-align="justify"] { text-align: justify; }
+
 .apc-rich-image-hint {
     color: var(--text-muted);
     font-size: 0.82rem;

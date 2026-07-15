@@ -35,6 +35,7 @@ criar_alinea = proxy("criar_alinea")
 criar_artigo = proxy("criar_artigo")
 criar_estudante = proxy("criar_estudante")
 criar_laudo_estudante = proxy("criar_laudo_estudante")
+criar_apoio_estudante = proxy("criar_apoio_estudante")
 criar_inciso = proxy("criar_inciso")
 criar_lei = proxy("criar_lei")
 criar_ocorrencia = proxy("criar_ocorrencia")
@@ -45,6 +46,7 @@ listar_alineas = proxy("listar_alineas")
 listar_artigos = proxy("listar_artigos")
 listar_estudantes = proxy("listar_estudantes")
 listar_laudos_estudante = proxy("listar_laudos_estudante")
+listar_apoios_estudante = proxy("listar_apoios_estudante")
 listar_incisos = proxy("listar_incisos")
 listar_leis = proxy("listar_leis")
 listar_ocorrencias = proxy("listar_ocorrencias")
@@ -97,6 +99,7 @@ __all__ = [
     "criar_artigo",
     "criar_estudante",
     "criar_laudo_estudante",
+    "criar_apoio_estudante",
     "criar_inciso",
     "criar_lei",
     "criar_ocorrencia",
@@ -107,6 +110,7 @@ __all__ = [
     "listar_artigos",
     "listar_estudantes",
     "listar_laudos_estudante",
+    "listar_apoios_estudante",
     "listar_incisos",
     "listar_leis",
     "listar_ocorrencias",

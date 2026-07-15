@@ -1736,6 +1736,20 @@ function criarAreaRichTextApc(rotulo, placeholder) {
         button.addEventListener("click", () => executarComandoEditorApc(editor, comando));
         toolbar.appendChild(button);
     });
+    [
+        ["Esquerda", "justifyLeft"],
+        ["Centro", "justifyCenter"],
+        ["Direita", "justifyRight"],
+        ["Justificar", "justifyFull"],
+    ].forEach(([texto, comando]) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.innerText = texto;
+        button.title = `${texto} o paragrafo selecionado`;
+        button.addEventListener("mousedown", (event) => event.preventDefault());
+        button.addEventListener("click", () => executarComandoEditorApc(editor, comando));
+        toolbar.appendChild(button);
+    });
     const imageInput = document.createElement("input");
     imageInput.type = "file";
     imageInput.accept = "image/jpeg,image/png,image/webp";

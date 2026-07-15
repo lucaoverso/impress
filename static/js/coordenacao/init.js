@@ -165,6 +165,11 @@ function registrarEventosEstudantes() {
     el("filtroEstudanteStatus").addEventListener("change", renderTabelaEstudantes);
     el("formLaudoEstudante").addEventListener("submit", salvarLaudoEstudante);
     el("btnCancelarEdicaoLaudoEstudante").addEventListener("click", limparFormularioLaudoEstudante);
+    el("btnAdicionarNecessidadePedagogica").addEventListener("click", () =>
+        adicionarOpcaoApoio("necessidade_pedagogica", "novaNecessidadePedagogica"));
+    el("btnAdicionarRecursoAcessibilidade").addEventListener("click", () =>
+        adicionarOpcaoApoio("recurso_acessibilidade", "novoRecursoAcessibilidade"));
+    carregarCatalogoApoios().catch((err) => setMensagemEstudantes(err.message, true));
 }
 
 function registrarEventosRegimento() {

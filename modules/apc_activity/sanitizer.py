@@ -7,6 +7,19 @@ ALLOWED_TAGS = {"p", "br", "strong", "b", "em", "i", "u", "ol", "ul", "li", "img
 IMAGE_TOKEN_RE = re.compile(r"^[a-f0-9]{32}\.(?:jpg|png)$")
 IMAGE_WIDTHS = {"25", "50", "75", "100"}
 IMAGE_ALIGNS = {"left", "center", "right"}
+TEXT_ALIGNS = {"left", "center", "right", "justify"}
+
+
+def _text_alignment(attrs) -> str:
+    values = {str(key).lower(): str(value or "").lower() for key, value in attrs}
+    direct = values.get("data-align") or values.get("align") or ""
+    if direct in TEXT_ALIGNS:
+        return direct
+    match = re.search(
+        r"(?:^|;)\s*text-align\s*:\s*(left|center|right|justify)\s*(?:;|$)",
+        values.get("style", ""),
+    )
+    return match.group(1) if match else "left"
 
 
 class _ActivityHtmlSanitizer(HTMLParser):
@@ -43,7 +56,9 @@ class _ActivityHtmlSanitizer(HTMLParser):
             )
             return
         normalized = "strong" if tag == "b" else "em" if tag == "i" else tag
-        self.parts.append(f"<{normalized}>")
+        alignment = _text_alignment(attrs) if normalized in {"p", "li"} else "left"
+        attribute = f' data-align="{alignment}"' if alignment != "left" else ""
+        self.parts.append(f"<{normalized}{attribute}>")
         if normalized != "br":
             self.stack.append(normalized)
 

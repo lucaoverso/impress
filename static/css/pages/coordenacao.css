@@ -1727,6 +1727,37 @@ body.coordenacao-modal-open {
     margin-top: 8px;
 }
 
+.estudante-apoios-grupo {
+    display: grid;
+    gap: 12px;
+    margin: 0;
+    padding: 16px;
+    border: 1px solid var(--border-soft, #d8e1ec);
+    border-radius: 12px;
+}
+
+.estudante-apoios-grupo legend {
+    padding: 0 6px;
+    font-weight: 700;
+}
+
+.estudante-apoios-opcoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.estudante-apoio-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid var(--border-soft, #d8e1ec);
+    border-radius: 999px;
+    background: var(--surface, #fff);
+}
+
 .coordenacao-table {
     width: 100%;
     border-collapse: collapse;

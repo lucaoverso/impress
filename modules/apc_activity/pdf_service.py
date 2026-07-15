@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import io
-import re
 from pathlib import Path
 
 from reportlab.lib.pagesizes import A4
@@ -12,6 +11,7 @@ from reportlab.pdfgen import canvas
 
 from .image_service import resolve_activity_image
 from .rich_text import Block, ImageBlock, Run, parse_html
+from .text_layout import alignment_metrics, layout_block
 
 
 BASE_DIR = Path(__file__).resolve().parents[2]
@@ -183,44 +183,40 @@ class ActivityPdfRenderer:
         return "APCTimes"
 
     def _layout_block(self, block: Block, width: float) -> list[list[Run]]:
-        lines: list[list[Run]] = []
-        current: list[Run] = []
-        current_width = 0.0
-        for run in block.runs:
-            for token in re.findall(r"\s+|\S+", run.text):
-                if token.isspace() and not current:
-                    continue
-                token = " " if token.isspace() else token
-                token_run = Run(token, run.bold, run.italic, run.underline)
-                token_width = self._text_width(token, self._font_for(token_run))
-                if current and not token.isspace() and current_width + token_width > width:
-                    lines.append(current)
-                    current, current_width = [token_run], token_width
-                else:
-                    current.append(token_run)
-                    current_width += token_width
-        if current:
-            lines.append(current)
-        return lines or [[]]
+        return layout_block(
+            block,
+            width,
+            lambda run: self._text_width(run.text, self._font_for(run)),
+        )
 
     def _draw_block(self, block: Block, x: float, y: float, width: float) -> float:
         marker_width = 42 if block.marker else 0
         indent = block.indent * 34
+        content_width = width - marker_width - indent
         if block.marker:
             self._draw_text(x + indent, y, block.marker)
-        lines = self._layout_block(block, width - marker_width - indent)
+        lines = self._layout_block(block, content_width)
         for line_index, line in enumerate(lines):
-            cursor = x + indent + marker_width
+            offset, justify_spacing = alignment_metrics(
+                block,
+                line,
+                line_index,
+                len(lines),
+                content_width,
+                lambda run: self._text_width(run.text, self._font_for(run)),
+            )
+            cursor = x + indent + marker_width + offset
             line_y = y + line_index * LINE_HEIGHT
             for run in line:
                 font = self._font_for(run)
                 self._draw_text(cursor, line_y, run.text, font)
                 run_width = self._text_width(run.text, font)
+                display_width = run_width + (justify_spacing if run.text.isspace() else 0)
                 if run.underline:
                     underline_y = self.page_height - (line_y + 29) * SCALE
                     self.pdf.setLineWidth(0.5)
-                    self.pdf.line(cursor * SCALE, underline_y, (cursor + run_width) * SCALE, underline_y)
-                cursor += run_width
+                    self.pdf.line(cursor * SCALE, underline_y, (cursor + display_width) * SCALE, underline_y)
+                cursor += display_width
         return len(lines) * LINE_HEIGHT
 
     def _image_geometry(self, block: ImageBlock, width: float) -> tuple[Path | None, float, float]:

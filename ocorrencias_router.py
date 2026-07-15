@@ -46,6 +46,7 @@ from db.ocorrencias import (
     criar_artigo,
     criar_estudante,
     criar_laudo_estudante,
+    criar_apoio_estudante,
     criar_inciso,
     criar_lei,
     criar_ocorrencia,
@@ -54,6 +55,7 @@ from db.ocorrencias import (
     listar_artigos,
     listar_estudantes,
     listar_laudos_estudante,
+    listar_apoios_estudante,
     listar_incisos,
     listar_leis,
     listar_ocorrencias,
@@ -82,6 +84,8 @@ from models import (
     EstudanteLaudoCreateIn,
     EstudanteLaudoOut,
     EstudanteLaudoUpdateIn,
+    EstudanteApoioCreateIn,
+    EstudanteApoioOut,
     EstudanteOut,
     EstudanteStatusIn,
     EstudanteUpdateIn,
@@ -1471,6 +1475,28 @@ def listar_laudos_estudante_api(estudante_id: int, usuario=Depends(get_usuario_l
     return listar_laudos_estudante(estudante_id)
 
 
+@router.get("/estudante-apoios/catalogo", response_model=list[EstudanteApoioOut])
+def listar_apoios_estudante_api(usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    return listar_apoios_estudante()
+
+
+@router.post("/estudante-apoios/catalogo", response_model=EstudanteApoioOut)
+def criar_apoio_estudante_api(
+    payload: EstudanteApoioCreateIn,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    try:
+        apoio_id = criar_apoio_estudante(
+            payload.tipo,
+            _texto_obrigatorio(payload.nome, "Nome da opção", max_len=150),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return next(item for item in listar_apoios_estudante() if int(item["id"]) == apoio_id)
+
+
 @router.post(
     "/estudantes/{estudante_id}/laudos",
     response_model=EstudanteLaudoOut,
@@ -1486,9 +1512,17 @@ def criar_laudo_estudante_api(
     try:
         laudo_id = criar_laudo_estudante(
             estudante_id=estudante_id,
-            cid=_texto_opcional(payload.cid, max_len=20),
-            titulo=_texto_obrigatorio(payload.titulo, "Titulo do laudo", max_len=150),
-            observacoes=_texto_opcional(payload.observacoes, max_len=2000),
+            condicao_necessidade=_texto_obrigatorio(
+                payload.condicao_necessidade, "Condição ou necessidade", max_len=150
+            ),
+            classificacao=_texto_opcional(payload.classificacao, max_len=50),
+            sistema_classificacao=_texto_opcional(payload.sistema_classificacao, max_len=30),
+            codigo_laudo=_texto_opcional(payload.codigo_laudo, max_len=30),
+            descricao_laudo=_texto_opcional(payload.descricao_laudo, max_len=255),
+            possui_laudo=payload.possui_laudo,
+            data_laudo=_validar_data_opcional(payload.data_laudo, "Data do laudo"),
+            observacoes_restritas=_texto_opcional(payload.observacoes_restritas, max_len=2000),
+            apoio_ids=payload.apoio_ids,
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -1513,9 +1547,17 @@ def atualizar_laudo_estudante_api(
         atualizado = atualizar_laudo_estudante(
             laudo_id=laudo_id,
             estudante_id=estudante_id,
-            cid=_texto_opcional(payload.cid, max_len=20),
-            titulo=_texto_obrigatorio(payload.titulo, "Titulo do laudo", max_len=150),
-            observacoes=_texto_opcional(payload.observacoes, max_len=2000),
+            condicao_necessidade=_texto_obrigatorio(
+                payload.condicao_necessidade, "Condição ou necessidade", max_len=150
+            ),
+            classificacao=_texto_opcional(payload.classificacao, max_len=50),
+            sistema_classificacao=_texto_opcional(payload.sistema_classificacao, max_len=30),
+            codigo_laudo=_texto_opcional(payload.codigo_laudo, max_len=30),
+            descricao_laudo=_texto_opcional(payload.descricao_laudo, max_len=255),
+            possui_laudo=payload.possui_laudo,
+            data_laudo=_validar_data_opcional(payload.data_laudo, "Data do laudo"),
+            observacoes_restritas=_texto_opcional(payload.observacoes_restritas, max_len=2000),
+            apoio_ids=payload.apoio_ids,
             ativo=bool(payload.ativo),
         )
     except ValueError as exc:
