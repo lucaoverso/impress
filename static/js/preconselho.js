@@ -827,6 +827,17 @@ function renderizarSelectsConsolidacao() {
     );
 
     preencherSelect(
+        el("preconselhoProfessorReavaliacao"),
+        Array.isArray(contextoAtual?.professores) ? contextoAtual.professores : [],
+        (item) => item.id,
+        (item) => item.label || item.nome,
+        "Todos os professores",
+        {
+            valorSelecionado: el("preconselhoProfessorReavaliacao")?.value || ""
+        }
+    );
+
+    preencherSelect(
         el("preconselhoTurmaRav"),
         Array.isArray(contextoAtual?.turmas) ? contextoAtual.turmas : [],
         (item) => item.id,
@@ -1703,7 +1714,9 @@ async function carregarPainelReavaliacao() {
 
     const params = new URLSearchParams({ periodo_id: String(periodo.id) });
     const turmaId = String(el("preconselhoTurmaReavaliacao")?.value || "").trim();
+    const professorId = String(el("preconselhoProfessorReavaliacao")?.value || "").trim();
     if (turmaId) params.set("turma_id", turmaId);
+    if (professorId) params.set("professor_id", professorId);
     try {
         const resposta = await fetchComAuth(`/preconselho/registros?${params.toString()}`, { headers });
         if (!resposta.ok) throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível carregar as reavaliações."));
@@ -3344,6 +3357,14 @@ function registrarEventos() {
 
     el("preconselhoTurmaReavaliacao").addEventListener("change", async () => {
         estadoPainelReavaliacao.estudantesExpandidos.clear();
+        estadoPainelReavaliacao.registroEmEdicaoId = null;
+        estadoPainelReavaliacao.resultadoEmEdicao = "";
+        await carregarPainelReavaliacao();
+    });
+    el("preconselhoProfessorReavaliacao").addEventListener("change", async () => {
+        estadoPainelReavaliacao.estudantesExpandidos.clear();
+        estadoPainelReavaliacao.registroEmEdicaoId = null;
+        estadoPainelReavaliacao.resultadoEmEdicao = "";
         await carregarPainelReavaliacao();
     });
     el("listaPainelReavaliacao").addEventListener("click", (event) => {

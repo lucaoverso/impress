@@ -1055,7 +1055,7 @@ body.preconselho-modal-open {
 
 .preconselho-review-toolbar {
     display: grid;
-    grid-template-columns: minmax(220px, 1fr) minmax(240px, 360px);
+    grid-template-columns: minmax(220px, 1fr) repeat(2, minmax(220px, 320px));
     gap: 24px;
     align-items: end;
 }
