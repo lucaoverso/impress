@@ -345,6 +345,7 @@ class PreConselhoConsolidadoOut(BaseModel):
     total_pendentes: int = 0
     motivos_frequentes: list[str] = Field(default_factory=list)
     texto: str = ""
+    texto_estudantes_necessidades_especiais: str = ""
     itens_agrupados: list[PreConselhoConsolidadoEstudanteOut] = Field(default_factory=list)
     itens: list[PreConselhoRegistroOut] = Field(default_factory=list)
 

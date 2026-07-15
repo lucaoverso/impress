@@ -28,6 +28,65 @@ from services.preconselho_service import (
 )
 
 
+def _lista_natural(valores) -> str:
+    itens = []
+    for valor in valores or []:
+        texto = str(valor or "").strip()
+        if texto and texto.casefold() not in {item.casefold() for item in itens}:
+            itens.append(texto)
+    if len(itens) <= 1:
+        return itens[0] if itens else ""
+    return ", ".join(itens[:-1]) + " e " + itens[-1]
+
+
+def _texto_estudantes_necessidades_especiais(registros: list[dict]) -> str:
+    estudantes = {}
+    for registro in registros or []:
+        estudante_id = int(registro.get("estudante_id") or 0)
+        if estudante_id <= 0:
+            continue
+        item = estudantes.setdefault(estudante_id, {
+            "nome": str(registro.get("estudante_nome") or "").strip(),
+            "sexo": str(registro.get("sexo") or "").strip().upper(),
+            "condicoes": [], "necessidades": [], "recursos": [],
+        })
+        condicao = str(
+            registro.get("classificacao") or registro.get("condicao_necessidade") or ""
+        ).strip()
+        if condicao:
+            item["condicoes"].append(condicao)
+        apoio = str(registro.get("apoio_nome") or "").strip()
+        if apoio and registro.get("apoio_tipo") == "necessidade_pedagogica":
+            item["necessidades"].append(apoio)
+        elif apoio and registro.get("apoio_tipo") == "recurso_acessibilidade":
+            item["recursos"].append(apoio)
+
+    paragrafos = []
+    for item in estudantes.values():
+        artigo = "da estudante" if item["sexo"] == "F" else "do estudante"
+        condicoes = _lista_natural(item["condicoes"]) or "necessidade específica registrada"
+        apoios = []
+        necessidades = _lista_natural(item["necessidades"])
+        recursos = _lista_natural(item["recursos"])
+        if necessidades:
+            apoios.append(f"necessidades pedagógicas: {necessidades}")
+        if recursos:
+            apoios.append(f"recursos de acessibilidade: {recursos}")
+        trecho_apoios = (
+            " Para seu atendimento individualizado, estão registrados " + "; ".join(apoios) + "."
+            if apoios else
+            " Recomenda-se assegurar acompanhamento pedagógico individualizado conforme suas necessidades."
+        )
+        paragrafos.append(
+            f"Registra-se a presença {artigo} {item['nome'].upper()}, com {condicoes}."
+            f"{trecho_apoios} A convivência em sala deve ocorrer de forma respeitosa, "
+            "contribuindo para um ambiente inclusivo. Diante desse contexto, recomenda-se "
+            "intensificar o acompanhamento pedagógico, com estratégias que estimulem a "
+            "participação, a assiduidade e o engajamento no processo de aprendizagem."
+        )
+    return "\n\n".join(paragrafos)
+
+
 def build_preconselho_consolidated(
     *,
     periodo_id: int,
@@ -86,6 +145,16 @@ def build_preconselho_consolidated(
         professor_nome=str(professor["nome"]) if professor else "",
         versao=versao_normalizada,
     )
+    texto_necessidades = _texto_estudantes_necessidades_especiais(
+        repository.list_students_with_special_needs(
+            turma_id=int(turma["id"]) if turma else None
+        )
+    )
+    texto_consolidado = str(consolidado["texto"] or "").strip()
+    if texto_necessidades:
+        texto_consolidado = "\n\n".join(
+            trecho for trecho in (texto_consolidado, texto_necessidades) if trecho
+        )
     return {
         "periodo_id": int(periodo["id"]),
         "periodo_nome": periodo["nome"],
@@ -102,7 +171,8 @@ def build_preconselho_consolidated(
         "total_mantidos": total_mantidos,
         "total_pendentes": total_pendentes,
         "motivos_frequentes": consolidado["motivos_frequentes"],
-        "texto": consolidado["texto"],
+        "texto": texto_consolidado,
+        "texto_estudantes_necessidades_especiais": texto_necessidades,
         "itens_agrupados": consolidado["itens_agrupados"],
         "itens": itens,
     }

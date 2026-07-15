@@ -50,6 +50,7 @@ from db.usuarios import (
     listar_cargas_professores_por_usuario_ids,
     listar_professores_agendamento,
 )
+from database import get_connection
 
 
 def get_discipline(disciplina_id: int):
@@ -112,6 +113,32 @@ def get_student(estudante_id: int):
 
 def list_students(*, nome: str = "", incluir_inativos: bool = False, turma_id: int | None = None):
     return listar_estudantes(nome=nome, incluir_inativos=incluir_inativos, turma_id=turma_id)
+
+
+def list_students_with_special_needs(*, turma_id: int | None = None) -> list[dict]:
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = """
+        SELECT e.id AS estudante_id, e.nome AS estudante_nome, e.sexo,
+               e.turma_id, COALESCE(t.nome, '') AS turma_nome,
+               l.id AS laudo_id, l.condicao_necessidade, l.classificacao,
+               a.id AS apoio_id, a.tipo AS apoio_tipo, a.nome AS apoio_nome
+        FROM estudantes e
+        JOIN estudante_laudos l ON l.estudante_id = e.id AND l.ativo = 1
+        LEFT JOIN turmas t ON t.id = e.turma_id
+        LEFT JOIN estudante_laudo_apoios la ON la.laudo_id = l.id
+        LEFT JOIN estudante_apoios_catalogo a ON a.id = la.apoio_id AND a.ativo = 1
+        WHERE e.ativo = 1
+    """
+    params = []
+    if turma_id is not None:
+        query += " AND e.turma_id = ?"
+        params.append(int(turma_id))
+    query += " ORDER BY t.nome COLLATE NOCASE, e.nome COLLATE NOCASE, l.id, a.nome COLLATE NOCASE"
+    cursor.execute(query, params)
+    rows = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return rows
 
 
 def update_reason_data(*args, **kwargs):

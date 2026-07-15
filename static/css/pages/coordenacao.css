@@ -1691,6 +1691,102 @@ body.coordenacao-modal-open {
     border-top: 1px solid var(--border-soft, #d8e1ec);
 }
 
+.estudante-editor-dialog {
+    width: min(980px, calc(100vw - 32px));
+    max-width: none;
+    max-height: calc(100dvh - 32px);
+    margin: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 20px;
+    background: var(--surface-1, #fff);
+    color: var(--text-main, #1f2a37);
+    box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+    overflow: hidden;
+}
+
+.estudante-editor-dialog::backdrop {
+    background: rgba(15, 23, 42, 0.58);
+}
+
+.estudante-editor-shell {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    max-height: calc(100dvh - 32px);
+}
+
+.estudante-editor-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 22px 24px;
+    border-bottom: 1px solid var(--line-soft, #d8e1ec);
+    background: var(--surface-1, #fff);
+}
+
+.estudante-editor-header h2,
+.estudante-editor-header p {
+    margin: 0;
+}
+
+.estudante-editor-header p {
+    margin-top: 5px;
+    color: var(--text-muted, #4b5563);
+}
+
+.estudante-editor-close {
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border-radius: 12px;
+    font-size: 28px;
+    line-height: 1;
+}
+
+.estudante-editor-content {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 24px;
+}
+
+.estudante-editor-content > .coordenacao-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.estudante-editor-content .coordenacao-form-actions {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 700px) {
+    .estudante-editor-dialog {
+        width: 100vw;
+        max-height: 100dvh;
+        border-radius: 0;
+    }
+
+    .estudante-editor-shell {
+        max-height: 100dvh;
+    }
+
+    .estudante-editor-header,
+    .estudante-editor-content {
+        padding: 16px;
+    }
+
+    .estudante-editor-content > .coordenacao-form {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .estudante-editor-dialog {
+        scroll-behavior: auto;
+    }
+}
+
 .estudante-laudos[hidden] {
     display: none;
 }

@@ -1,13 +1,53 @@
 let laudoEstudanteEmEdicao = null;
 let apoiosEstudanteCatalogo = [];
+let focoAnteriorModalEstudante = null;
 
-function limparFormularioEstudante() {
+function restaurarFormularioEstudanteNaPagina() {
+    const ancora = el("ancoraFormularioEstudante");
+    const formulario = el("formEstudante");
+    const laudos = el("secaoLaudosEstudante");
+    if (!ancora || !formulario || !laudos) return;
+    ancora.insertAdjacentElement("afterend", formulario);
+    formulario.insertAdjacentElement("afterend", laudos);
+}
+
+function fecharModalEdicaoEstudante() {
+    const modal = el("modalEdicaoEstudante");
+    if (modal?.open) modal.close();
+}
+
+function aoFecharModalEdicaoEstudante() {
+    restaurarFormularioEstudanteNaPagina();
     estudanteEmEdicao = null;
     el("formEstudante").reset();
     el("tituloFormEstudante").innerText = "Cadastrar estudante";
     el("btnCancelarEdicaoEstudante").style.display = "none";
     el("secaoLaudosEstudante").hidden = true;
     limparFormularioLaudoEstudante();
+    focoAnteriorModalEstudante?.focus?.();
+    focoAnteriorModalEstudante = null;
+}
+
+function abrirModalEdicaoEstudante() {
+    const modal = el("modalEdicaoEstudante");
+    const conteudo = el("conteudoModalEdicaoEstudante");
+    focoAnteriorModalEstudante = document.activeElement;
+    conteudo.append(el("formEstudante"), el("secaoLaudosEstudante"));
+    modal.showModal();
+    window.requestAnimationFrame(() => el("estudanteNome").focus());
+}
+
+function limparFormularioEstudante() {
+    const estavaEditando = Boolean(estudanteEmEdicao);
+    estudanteEmEdicao = null;
+    el("formEstudante").reset();
+    el("tituloFormEstudante").innerText = "Cadastrar estudante";
+    el("btnCancelarEdicaoEstudante").style.display = "none";
+    el("secaoLaudosEstudante").hidden = true;
+    limparFormularioLaudoEstudante();
+    if (estavaEditando && el("modalEdicaoEstudante")?.open) {
+        fecharModalEdicaoEstudante();
+    }
 }
 
 function iniciarEdicaoEstudante(estudante) {
@@ -16,11 +56,13 @@ function iniciarEdicaoEstudante(estudante) {
     el("estudanteTurmaId").value = String(estudante.turma_id || "");
     el("estudanteSexo").value = String(estudante.sexo || "");
     el("tituloFormEstudante").innerText = "Editar estudante";
+    el("tituloModalEdicaoEstudante").textContent = `Editar ${estudante.nome || "estudante"}`;
     el("btnCancelarEdicaoEstudante").style.display = "inline-block";
     el("secaoLaudosEstudante").hidden = false;
     limparFormularioLaudoEstudante();
     carregarLaudosEstudante();
     ativarAbaCoordenacao("estudantes");
+    abrirModalEdicaoEstudante();
 }
 
 function aplicarSelecaoEstudantePorTexto() {

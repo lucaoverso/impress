@@ -738,6 +738,7 @@
                             </div>
                             <p id="msgEstudantes" role="status" aria-live="polite"></p>
                         </div>
+                        <div id="ancoraFormularioEstudante"></div>
                         <form id="formEstudante" class="coordenacao-form">
                             <label class="coordenacao-field" for="estudanteNome">
                                 <span>Nome completo do estudante</span>
@@ -910,6 +911,20 @@
                     </article>
                 </section>
             </section>
+
+            <dialog id="modalEdicaoEstudante" class="estudante-editor-dialog" aria-labelledby="tituloModalEdicaoEstudante">
+                <div class="estudante-editor-shell">
+                    <header class="estudante-editor-header">
+                        <div>
+                            <h2 id="tituloModalEdicaoEstudante">Editar estudante</h2>
+                            <p>Atualize os dados pessoais, condições, laudos e apoios pedagógicos.</p>
+                        </div>
+                        <button id="btnFecharModalEdicaoEstudante" class="estudante-editor-close" type="button"
+                            aria-label="Fechar edição">×</button>
+                    </header>
+                    <div id="conteudoModalEdicaoEstudante" class="estudante-editor-content"></div>
+                </div>
+            </dialog>
 
             <section id="coord-tab-acompanhamento-docente" class="coordenacao-tab-panel"
                 data-coord-tab-panel="acompanhamento-docente" hidden>

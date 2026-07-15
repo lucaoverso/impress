@@ -2,6 +2,7 @@ import unittest
 from unittest.mock import patch
 
 from modules.preconselho.report_helpers import map_teaching_staff_by_classrooms
+from modules.preconselho.reports import _texto_estudantes_necessidades_especiais
 from services.preconselho_service import (
     gerar_texto_consolidado_pre_conselho,
     gerar_texto_pre_conselho_individual,
@@ -9,6 +10,29 @@ from services.preconselho_service import (
 
 
 class PreConselhoServiceTest(unittest.TestCase):
+    def test_texto_necessidades_especiais_agrupa_condicoes_e_apoios_sem_dados_restritos(self):
+        registros = [
+            {
+                "estudante_id": 7, "estudante_nome": "Maryane", "sexo": "F",
+                "classificacao": "TEA", "condicao_necessidade": "Autismo",
+                "apoio_tipo": "necessidade_pedagogica", "apoio_nome": "Atividades adaptadas",
+                "observacoes_restritas": "Não deve aparecer",
+            },
+            {
+                "estudante_id": 7, "estudante_nome": "Maryane", "sexo": "F",
+                "classificacao": "TDAH", "condicao_necessidade": "Déficit de atenção",
+                "apoio_tipo": "recurso_acessibilidade", "apoio_nome": "Professora de apoio",
+            },
+        ]
+
+        texto = _texto_estudantes_necessidades_especiais(registros)
+
+        self.assertIn("da estudante MARYANE, com TEA e TDAH", texto)
+        self.assertIn("Atividades adaptadas", texto)
+        self.assertIn("Professora de apoio", texto)
+        self.assertIn("atendimento individualizado", texto)
+        self.assertNotIn("Não deve aparecer", texto)
+
     @patch("modules.preconselho.report_helpers.repository.list_teacher_workloads_by_user_ids")
     @patch("modules.preconselho.report_helpers.repository.list_available_teachers")
     @patch("modules.preconselho.report_helpers.repository.list_admin_classroom_disciplines")

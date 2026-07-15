@@ -159,6 +159,11 @@ function registrarEventosEstudantes() {
     el("formEstudante").addEventListener("submit", salvarEstudante);
     el("formImportarEstudantesCsv").addEventListener("submit", importarEstudantesArquivo);
     el("btnCancelarEdicaoEstudante").addEventListener("click", limparFormularioEstudante);
+    el("btnFecharModalEdicaoEstudante").addEventListener("click", fecharModalEdicaoEstudante);
+    el("modalEdicaoEstudante").addEventListener("close", aoFecharModalEdicaoEstudante);
+    el("modalEdicaoEstudante").addEventListener("click", (event) => {
+        if (event.target === el("modalEdicaoEstudante")) fecharModalEdicaoEstudante();
+    });
     el("btnBaixarModeloEstudantesCsv").addEventListener("click", baixarModeloEstudantesCsv);
     el("formFiltrosEstudantes").addEventListener("submit", filtrarEstudantes);
     el("btnLimparFiltrosEstudantes").addEventListener("click", limparFiltrosEstudantes);
