@@ -15,22 +15,40 @@ class PreConselhoServiceTest(unittest.TestCase):
             {
                 "estudante_id": 7, "estudante_nome": "Maryane", "sexo": "F",
                 "classificacao": "TEA", "condicao_necessidade": "Autismo",
+                "descricao_laudo": "Transtorno do Espectro Autista",
+                "sistema_classificacao": "CID-10", "codigo_laudo": "F84.0",
                 "apoio_tipo": "necessidade_pedagogica", "apoio_nome": "Atividades adaptadas",
+                "relato_professora_apoio": "realiza atividades adaptadas com participação",
+                "recomendacoes_pedagogicas": "manter a rotina visual e instruções objetivas",
                 "observacoes_restritas": "Não deve aparecer",
             },
             {
                 "estudante_id": 7, "estudante_nome": "Maryane", "sexo": "F",
-                "classificacao": "TDAH", "condicao_necessidade": "Déficit de atenção",
+                "classificacao": "D.I", "condicao_necessidade": "Deficiência Intelectual",
+                "descricao_laudo": "Deficiência Intelectual Moderada",
+                "sistema_classificacao": "CID-10", "codigo_laudo": "F71.1",
                 "apoio_tipo": "recurso_acessibilidade", "apoio_nome": "Professora de apoio",
             },
         ]
 
         texto = _texto_estudantes_necessidades_especiais(registros)
 
-        self.assertIn("da estudante MARYANE, com TEA e TDAH", texto)
+        self.assertIn(
+            "TEA (Transtorno do Espectro Autista CID-10: F84.0) e "
+            "D.I (Deficiência Intelectual Moderada CID-10: F71.1)",
+            texto,
+        )
         self.assertIn("Atividades adaptadas", texto)
         self.assertIn("Professora de apoio", texto)
         self.assertIn("atendimento individualizado", texto)
+        self.assertIn(
+            "A professora de apoio relata que realiza atividades adaptadas com participação.",
+            texto,
+        )
+        self.assertIn(
+            "Diante desse contexto, recomenda-se manter a rotina visual e instruções objetivas.",
+            texto,
+        )
         self.assertNotIn("Não deve aparecer", texto)
 
     @patch("modules.preconselho.report_helpers.repository.list_teacher_workloads_by_user_ids")

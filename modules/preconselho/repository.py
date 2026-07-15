@@ -122,13 +122,16 @@ def list_students_with_special_needs(*, turma_id: int | None = None) -> list[dic
         SELECT e.id AS estudante_id, e.nome AS estudante_nome, e.sexo,
                e.turma_id, COALESCE(t.nome, '') AS turma_nome,
                l.id AS laudo_id, l.condicao_necessidade, l.classificacao,
+               l.sistema_classificacao, l.codigo_laudo, l.descricao_laudo,
+               l.relato_professora_apoio, l.recomendacoes_pedagogicas,
                a.id AS apoio_id, a.tipo AS apoio_tipo, a.nome AS apoio_nome
         FROM estudantes e
-        JOIN estudante_laudos l ON l.estudante_id = e.id AND l.ativo = 1
+        LEFT JOIN estudante_laudos l ON l.estudante_id = e.id AND l.ativo = 1
         LEFT JOIN turmas t ON t.id = e.turma_id
         LEFT JOIN estudante_laudo_apoios la ON la.laudo_id = l.id
         LEFT JOIN estudante_apoios_catalogo a ON a.id = la.apoio_id AND a.ativo = 1
         WHERE e.ativo = 1
+          AND e.possui_professor_apoio = 1
     """
     params = []
     if turma_id is not None:

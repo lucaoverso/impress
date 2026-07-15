@@ -49,12 +49,29 @@ def _texto_estudantes_necessidades_especiais(registros: list[dict]) -> str:
             "nome": str(registro.get("estudante_nome") or "").strip(),
             "sexo": str(registro.get("sexo") or "").strip().upper(),
             "condicoes": [], "necessidades": [], "recursos": [],
+            "relatos": [], "recomendacoes": [],
         })
-        condicao = str(
-            registro.get("classificacao") or registro.get("condicao_necessidade") or ""
+        classificacao = str(registro.get("classificacao") or "").strip()
+        descricao = str(
+            registro.get("descricao_laudo") or registro.get("condicao_necessidade") or ""
         ).strip()
+        sistema = str(registro.get("sistema_classificacao") or "").strip()
+        codigo = str(registro.get("codigo_laudo") or "").strip()
+        detalhes = []
+        if descricao and descricao.casefold() != classificacao.casefold():
+            detalhes.append(descricao)
+        if codigo:
+            detalhes.append(f"{sistema + ': ' if sistema else ''}{codigo}")
+        base = classificacao or descricao
+        condicao = f"{base} ({' '.join(detalhes)})" if base and detalhes else base
         if condicao:
             item["condicoes"].append(condicao)
+        relato = str(registro.get("relato_professora_apoio") or "").strip().rstrip(".")
+        recomendacao = str(registro.get("recomendacoes_pedagogicas") or "").strip().rstrip(".")
+        if relato:
+            item["relatos"].append(relato)
+        if recomendacao:
+            item["recomendacoes"].append(recomendacao)
         apoio = str(registro.get("apoio_nome") or "").strip()
         if apoio and registro.get("apoio_tipo") == "necessidade_pedagogica":
             item["necessidades"].append(apoio)
@@ -77,12 +94,22 @@ def _texto_estudantes_necessidades_especiais(registros: list[dict]) -> str:
             if apoios else
             " Recomenda-se assegurar acompanhamento pedagógico individualizado conforme suas necessidades."
         )
+        trecho_relato = ""
+        relatos = _lista_natural(item["relatos"])
+        if relatos:
+            trecho_relato = f" A professora de apoio relata que {relatos}."
+        recomendacoes = _lista_natural(item["recomendacoes"])
+        fechamento = (
+            f"Diante desse contexto, recomenda-se {recomendacoes}."
+            if recomendacoes else
+            "Diante desse contexto, recomenda-se intensificar o acompanhamento pedagógico, "
+            "com estratégias que estimulem a participação, a assiduidade e o engajamento "
+            "no processo de aprendizagem."
+        )
         paragrafos.append(
             f"Registra-se a presença {artigo} {item['nome'].upper()}, com {condicoes}."
-            f"{trecho_apoios} A convivência em sala deve ocorrer de forma respeitosa, "
-            "contribuindo para um ambiente inclusivo. Diante desse contexto, recomenda-se "
-            "intensificar o acompanhamento pedagógico, com estratégias que estimulem a "
-            "participação, a assiduidade e o engajamento no processo de aprendizagem."
+            f"{trecho_apoios}{trecho_relato} A convivência em sala deve ocorrer de forma "
+            f"respeitosa, contribuindo para um ambiente inclusivo. {fechamento}"
         )
     return "\n\n".join(paragrafos)
 

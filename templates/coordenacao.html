@@ -756,6 +756,13 @@
                                     <option value="M">Masculino</option>
                                 </select>
                             </label>
+                            <label class="coordenacao-field" for="estudantePossuiProfessorApoio">
+                                <span>Atendimento individualizado</span>
+                                <span class="coordenacao-inline">
+                                    <input id="estudantePossuiProfessorApoio" type="checkbox">
+                                    Possui professora ou professor de apoio
+                                </span>
+                            </label>
                             <div class="coordenacao-inline coordenacao-form-actions">
                                 <button class="btn-destaque" type="submit">Salvar estudante</button>
                                 <button id="btnCancelarEdicaoEstudante" type="button" style="display: none;">Cancelar
@@ -818,6 +825,20 @@
                                         <div class="coordenacao-inline"><input id="novoRecursoAcessibilidade" type="text" maxlength="150" placeholder="Novo recurso">
                                             <button id="btnAdicionarRecursoAcessibilidade" type="button">Adicionar opção</button></div>
                                     </fieldset>
+                                    <label class="coordenacao-field coordenacao-field-wide"
+                                        for="estudanteLaudoRelatoApoio">
+                                        <span>Relato da professora de apoio</span>
+                                        <textarea id="estudanteLaudoRelatoApoio" maxlength="2000" rows="4"
+                                            placeholder="Ex.: realiza as atividades adaptadas com boa participação..."></textarea>
+                                        <small class="coordenacao-field-hint">Este texto poderá compor o trecho do conselho de classe.</small>
+                                    </label>
+                                    <label class="coordenacao-field coordenacao-field-wide"
+                                        for="estudanteLaudoRecomendacoes">
+                                        <span>Recomendações pedagógicas</span>
+                                        <textarea id="estudanteLaudoRecomendacoes" maxlength="2000" rows="4"
+                                            placeholder="Ex.: intensificar a rotina visual e as instruções objetivas..."></textarea>
+                                        <small class="coordenacao-field-hint">Usado para o fechamento do trecho do estudante.</small>
+                                    </label>
                                     <label class="coordenacao-field coordenacao-field-wide"
                                         for="estudanteLaudoObservacoesRestritas">
                                         <span>Observações restritas</span>

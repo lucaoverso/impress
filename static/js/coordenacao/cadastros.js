@@ -55,6 +55,7 @@ function iniciarEdicaoEstudante(estudante) {
     el("estudanteNome").value = estudante.nome || "";
     el("estudanteTurmaId").value = String(estudante.turma_id || "");
     el("estudanteSexo").value = String(estudante.sexo || "");
+    el("estudantePossuiProfessorApoio").checked = Boolean(estudante.possui_professor_apoio);
     el("tituloFormEstudante").innerText = "Editar estudante";
     el("tituloModalEdicaoEstudante").textContent = `Editar ${estudante.nome || "estudante"}`;
     el("btnCancelarEdicaoEstudante").style.display = "inline-block";
@@ -497,7 +498,8 @@ async function salvarEstudante(event) {
     const payload = {
         nome: el("estudanteNome").value.trim(),
         turma_id: Number(el("estudanteTurmaId").value),
-        sexo: el("estudanteSexo").value || null
+        sexo: el("estudanteSexo").value || null,
+        possui_professor_apoio: el("estudantePossuiProfessorApoio").checked
     };
 
     try {
@@ -546,6 +548,8 @@ function iniciarEdicaoLaudoEstudante(laudo) {
     el("estudanteLaudoPossui").checked = Boolean(laudo.possui_laudo);
     el("estudanteLaudoData").value = String(laudo.data_laudo || "");
     el("estudanteLaudoObservacoesRestritas").value = String(laudo.observacoes_restritas || "");
+    el("estudanteLaudoRelatoApoio").value = String(laudo.relato_professora_apoio || "");
+    el("estudanteLaudoRecomendacoes").value = String(laudo.recomendacoes_pedagogicas || "");
     document.querySelectorAll('[data-apoio-estudante-id]').forEach((input) => {
         input.checked = (laudo.apoio_ids || []).includes(Number(input.value));
     });
@@ -668,6 +672,8 @@ async function salvarLaudoEstudante(event) {
         possui_laudo: el("estudanteLaudoPossui").checked,
         data_laudo: el("estudanteLaudoData").value || null,
         observacoes_restritas: el("estudanteLaudoObservacoesRestritas").value.trim() || null,
+        relato_professora_apoio: el("estudanteLaudoRelatoApoio").value.trim() || null,
+        recomendacoes_pedagogicas: el("estudanteLaudoRecomendacoes").value.trim() || null,
         apoio_ids: Array.from(document.querySelectorAll('[data-apoio-estudante-id]:checked'))
             .map((input) => Number(input.value))
     };

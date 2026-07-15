@@ -1144,6 +1144,7 @@ class EstudanteCreateIn(BaseModel):
     sexo: Literal["M", "F"] | None = None
     possui_necessidade_especial: bool = False
     necessidade_especial: str | None = None
+    possui_professor_apoio: bool = False
 
 
 class EstudanteUpdateIn(BaseModel):
@@ -1152,6 +1153,7 @@ class EstudanteUpdateIn(BaseModel):
     sexo: Literal["M", "F"] | None = None
     possui_necessidade_especial: bool | None = None
     necessidade_especial: str | None = None
+    possui_professor_apoio: bool | None = None
     ativo: bool = True
 
 
@@ -1166,6 +1168,7 @@ class EstudanteOut(BaseModel):
     sexo: Literal["M", "F"] | None = None
     possui_necessidade_especial: int | bool = False
     necessidade_especial: str | None = None
+    possui_professor_apoio: int | bool = False
     turma_nome: str = ""
     ativo: int | bool
     criado_em: str
@@ -1181,6 +1184,8 @@ class EstudanteLaudoCreateIn(BaseModel):
     possui_laudo: bool = False
     data_laudo: str | None = None
     observacoes_restritas: str | None = None
+    relato_professora_apoio: str | None = None
+    recomendacoes_pedagogicas: str | None = None
     apoio_ids: list[int] = Field(default_factory=list)
 
 
@@ -1193,6 +1198,8 @@ class EstudanteLaudoUpdateIn(BaseModel):
     possui_laudo: bool = False
     data_laudo: str | None = None
     observacoes_restritas: str | None = None
+    relato_professora_apoio: str | None = None
+    recomendacoes_pedagogicas: str | None = None
     apoio_ids: list[int] = Field(default_factory=list)
     ativo: bool = True
 
@@ -1211,6 +1218,8 @@ class EstudanteLaudoOut(BaseModel):
     possui_laudo: int | bool = False
     data_laudo: str | None = None
     observacoes_restritas: str | None = None
+    relato_professora_apoio: str | None = None
+    recomendacoes_pedagogicas: str | None = None
     apoio_ids: list[int] = Field(default_factory=list)
     ativo: int | bool
     criado_em: str

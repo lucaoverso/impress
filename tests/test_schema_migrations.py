@@ -108,6 +108,22 @@ class SchemaMigrationsTest(unittest.TestCase):
         finally:
             conn.close()
 
+    def test_migration_adiciona_professor_apoio_ao_estudante(self):
+        migration = _load_migration_module("20260715_add_support_teacher_to_estudantes.py")
+        conn = sqlite3.connect(":memory:")
+        try:
+            conn.execute("CREATE TABLE estudantes (id INTEGER PRIMARY KEY, nome TEXT NOT NULL)")
+            conn.execute("INSERT INTO estudantes VALUES (1, 'Maryane')")
+            migration.upgrade(conn)
+            self.assertEqual(
+                conn.execute(
+                    "SELECT possui_professor_apoio FROM estudantes WHERE id = 1"
+                ).fetchone(),
+                (0,),
+            )
+        finally:
+            conn.close()
+
     def test_migration_cria_laudos_e_migra_descricao_existente(self):
         migration = _load_migration_module("20260715_create_estudante_laudos.py")
         conn = sqlite3.connect(":memory:")

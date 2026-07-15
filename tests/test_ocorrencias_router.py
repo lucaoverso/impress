@@ -45,12 +45,14 @@ class OcorrenciasRouterTest(unittest.TestCase):
                     sexo="F",
                     possui_necessidade_especial=True,
                     necessidade_especial="Baixa visão",
+                    possui_professor_apoio=True,
                 ),
                 usuario={"cargo": "ADMIN"},
             )
             self.assertEqual(criado["sexo"], "F")
             self.assertTrue(criado["possui_necessidade_especial"])
             self.assertEqual(criado["necessidade_especial"], "Baixa visão")
+            self.assertTrue(criado["possui_professor_apoio"])
 
             database.criar_ou_atualizar_estudante_por_nome_turma(
                 nome="Carina",
@@ -71,6 +73,7 @@ class OcorrenciasRouterTest(unittest.TestCase):
                     sexo="M",
                     possui_necessidade_especial=False,
                     necessidade_especial="Este texto deve ser removido",
+                    possui_professor_apoio=False,
                     ativo=True,
                 ),
                 usuario={"cargo": "ADMIN"},
@@ -78,6 +81,7 @@ class OcorrenciasRouterTest(unittest.TestCase):
             self.assertEqual(atualizado["sexo"], "M")
             self.assertFalse(atualizado["possui_necessidade_especial"])
             self.assertIsNone(atualizado["necessidade_especial"])
+            self.assertFalse(atualizado["possui_professor_apoio"])
 
     def test_cadastro_estudante_exige_descricao_da_necessidade_especial(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
@@ -123,6 +127,8 @@ class OcorrenciasRouterTest(unittest.TestCase):
                     possui_laudo=True,
                     data_laudo="2026-03-12",
                     observacoes_restritas="Acompanhamento pedagógico.",
+                    relato_professora_apoio="realiza atividades adaptadas",
+                    recomendacoes_pedagogicas="manter instruções objetivas",
                     apoio_ids=[int(apoio["id"])],
                 ),
                 usuario={"cargo": "ADMIN"},
@@ -138,6 +144,7 @@ class OcorrenciasRouterTest(unittest.TestCase):
             self.assertEqual(len(ocorrencias_router.listar_laudos_estudante_api(
                 estudante_id, usuario={"cargo": "ADMIN"}
             )), 2)
+            self.assertEqual(primeiro["relato_professora_apoio"], "realiza atividades adaptadas")
             self.assertTrue(database.buscar_estudante_por_id(estudante_id)["possui_necessidade_especial"])
 
             atualizado = ocorrencias_router.atualizar_laudo_estudante_api(

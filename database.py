@@ -594,6 +594,7 @@ def criar_tabelas():
             sexo TEXT CHECK (sexo IS NULL OR sexo IN ('M', 'F')),
             possui_necessidade_especial INTEGER NOT NULL DEFAULT 0 CHECK (possui_necessidade_especial IN (0, 1)),
             necessidade_especial TEXT,
+            possui_professor_apoio INTEGER NOT NULL DEFAULT 0 CHECK (possui_professor_apoio IN (0, 1)),
             ativo INTEGER NOT NULL DEFAULT 1,
             criado_em TEXT NOT NULL DEFAULT (datetime('now')),
             atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
@@ -616,6 +617,8 @@ def criar_tabelas():
             possui_laudo INTEGER NOT NULL DEFAULT 0 CHECK (possui_laudo IN (0, 1)),
             data_laudo TEXT,
             observacoes_restritas TEXT,
+            relato_professora_apoio TEXT,
+            recomendacoes_pedagogicas TEXT,
             ativo INTEGER NOT NULL DEFAULT 1 CHECK (ativo IN (0, 1)),
             criado_em TEXT NOT NULL DEFAULT (datetime('now')),
             atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
@@ -2205,6 +2208,11 @@ def _garantir_colunas_estudantes(cursor):
         )
     if "necessidade_especial" not in colunas:
         cursor.execute("ALTER TABLE estudantes ADD COLUMN necessidade_especial TEXT")
+    if "possui_professor_apoio" not in colunas:
+        cursor.execute(
+            "ALTER TABLE estudantes ADD COLUMN possui_professor_apoio "
+            "INTEGER NOT NULL DEFAULT 0 CHECK (possui_professor_apoio IN (0, 1))"
+        )
     if "criado_em" not in colunas:
         cursor.execute(
             "ALTER TABLE estudantes ADD COLUMN criado_em TEXT NOT NULL DEFAULT (datetime('now'))"
@@ -5626,6 +5634,7 @@ def listar_estudantes(
             e.sexo,
             e.possui_necessidade_especial,
             e.necessidade_especial,
+            e.possui_professor_apoio,
             COALESCE(t.nome, '') AS turma_nome,
             e.ativo,
             e.criado_em,
@@ -5676,6 +5685,7 @@ def buscar_estudante_por_id(estudante_id: int):
             e.sexo,
             e.possui_necessidade_especial,
             e.necessidade_especial,
+            e.possui_professor_apoio,
             COALESCE(t.nome, '') AS turma_nome,
             e.ativo,
             e.criado_em,
@@ -5710,6 +5720,7 @@ def buscar_estudante_por_nome_turma(nome: str, turma_id: int):
             e.sexo,
             e.possui_necessidade_especial,
             e.necessidade_especial,
+            e.possui_professor_apoio,
             COALESCE(t.nome, '') AS turma_nome,
             e.ativo,
             e.criado_em,
@@ -5745,6 +5756,7 @@ def criar_estudante(
     sexo: str | None = None,
     possui_necessidade_especial: bool = False,
     necessidade_especial: str | None = None,
+    possui_professor_apoio: bool = False,
 ):
     nome_limpo = _normalizar_nome_catalogo(nome)
     turma_id_valor = int(turma_id or 0)
@@ -5766,12 +5778,13 @@ def criar_estudante(
         """
         INSERT INTO estudantes (
             nome, turma_id, sexo, possui_necessidade_especial, necessidade_especial,
+            possui_professor_apoio,
             ativo, criado_em, atualizado_em
         )
-        VALUES (?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
+        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
     """,
         (nome_limpo, turma_id_valor, sexo_limpo, 1 if possui_necessidade else 0,
-         necessidade_limpa, 1 if ativo else 0),
+         necessidade_limpa, 1 if possui_professor_apoio else 0, 1 if ativo else 0),
     )
 
     estudante_id = cursor.lastrowid
@@ -5807,6 +5820,7 @@ def criar_ou_atualizar_estudante_por_nome_turma(
             sexo=sexo if sexo is not None else existente.get("sexo"),
             possui_necessidade_especial=bool(existente.get("possui_necessidade_especial")),
             necessidade_especial=existente.get("necessidade_especial"),
+            possui_professor_apoio=bool(existente.get("possui_professor_apoio")),
         )
         return int(existente["id"]), False
 
@@ -5827,6 +5841,7 @@ def atualizar_estudante(
     sexo: str | None = None,
     possui_necessidade_especial: bool = False,
     necessidade_especial: str | None = None,
+    possui_professor_apoio: bool = False,
 ):
     nome_limpo = _normalizar_nome_catalogo(nome)
     turma_id_valor = int(turma_id or 0)
@@ -5848,11 +5863,13 @@ def atualizar_estudante(
         """
         UPDATE estudantes
         SET nome = ?, turma_id = ?, sexo = ?, possui_necessidade_especial = ?,
-            necessidade_especial = ?, ativo = ?, atualizado_em = datetime('now')
+            necessidade_especial = ?, possui_professor_apoio = ?, ativo = ?,
+            atualizado_em = datetime('now')
         WHERE id = ?
     """,
         (nome_limpo, turma_id_valor, sexo_limpo, 1 if possui_necessidade else 0,
-         necessidade_limpa, 1 if ativo else 0, int(estudante_id)),
+         necessidade_limpa, 1 if possui_professor_apoio else 0,
+         1 if ativo else 0, int(estudante_id)),
     )
 
     alterado = cursor.rowcount > 0
@@ -5867,7 +5884,8 @@ def listar_laudos_estudante(estudante_id: int, incluir_inativos: bool = True):
     query = """
         SELECT id, estudante_id, cid, titulo, observacoes, condicao_necessidade,
                classificacao, sistema_classificacao, codigo_laudo, descricao_laudo,
-               possui_laudo, data_laudo, observacoes_restritas, ativo, criado_em, atualizado_em
+               possui_laudo, data_laudo, observacoes_restritas, relato_professora_apoio,
+               recomendacoes_pedagogicas, ativo, criado_em, atualizado_em
         FROM estudante_laudos
         WHERE estudante_id = ?
     """
@@ -5892,7 +5910,8 @@ def buscar_laudo_estudante_por_id(laudo_id: int):
         """
         SELECT id, estudante_id, cid, titulo, observacoes, condicao_necessidade,
                classificacao, sistema_classificacao, codigo_laudo, descricao_laudo,
-               possui_laudo, data_laudo, observacoes_restritas, ativo, criado_em, atualizado_em
+               possui_laudo, data_laudo, observacoes_restritas, relato_professora_apoio,
+               recomendacoes_pedagogicas, ativo, criado_em, atualizado_em
         FROM estudante_laudos
         WHERE id = ?
         """,
@@ -5941,7 +5960,9 @@ def _salvar_apoios_laudo(cursor, laudo_id: int, apoio_ids):
 def criar_laudo_estudante(estudante_id: int, condicao_necessidade: str,
                           classificacao=None, sistema_classificacao=None,
                           codigo_laudo=None, descricao_laudo=None, possui_laudo=False,
-                          data_laudo=None, observacoes_restritas=None, apoio_ids=None):
+                          data_laudo=None, observacoes_restritas=None,
+                          relato_professora_apoio=None, recomendacoes_pedagogicas=None,
+                          apoio_ids=None):
     condicao = _normalizar_texto_laudo(condicao_necessidade, obrigatorio=True)
     conn = get_connection()
     cursor = conn.cursor()
@@ -5950,12 +5971,14 @@ def criar_laudo_estudante(estudante_id: int, condicao_necessidade: str,
         INSERT INTO estudante_laudos (
             estudante_id, cid, titulo, observacoes, condicao_necessidade, classificacao,
             sistema_classificacao, codigo_laudo, descricao_laudo, possui_laudo,
-            data_laudo, observacoes_restritas, ativo, criado_em, atualizado_em
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+            data_laudo, observacoes_restritas, relato_professora_apoio,
+            recomendacoes_pedagogicas, ativo, criado_em, atualizado_em
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, datetime('now'), datetime('now'))
         """,
         (int(estudante_id), codigo_laudo, condicao, observacoes_restritas, condicao,
          classificacao, sistema_classificacao, codigo_laudo, descricao_laudo,
-         1 if possui_laudo else 0, data_laudo, observacoes_restritas),
+         1 if possui_laudo else 0, data_laudo, observacoes_restritas,
+         relato_professora_apoio, recomendacoes_pedagogicas),
     )
     laudo_id = int(cursor.lastrowid)
     _salvar_apoios_laudo(cursor, laudo_id, apoio_ids)
@@ -5969,6 +5992,7 @@ def atualizar_laudo_estudante(laudo_id: int, estudante_id: int, condicao_necessi
                               classificacao=None, sistema_classificacao=None,
                               codigo_laudo=None, descricao_laudo=None, possui_laudo=False,
                               data_laudo=None, observacoes_restritas=None, apoio_ids=None,
+                              relato_professora_apoio=None, recomendacoes_pedagogicas=None,
                               ativo=True):
     condicao = _normalizar_texto_laudo(condicao_necessidade, obrigatorio=True)
     conn = get_connection()
@@ -5979,12 +6003,14 @@ def atualizar_laudo_estudante(laudo_id: int, estudante_id: int, condicao_necessi
         SET cid = ?, titulo = ?, observacoes = ?, condicao_necessidade = ?,
             classificacao = ?, sistema_classificacao = ?, codigo_laudo = ?,
             descricao_laudo = ?, possui_laudo = ?, data_laudo = ?,
-            observacoes_restritas = ?, ativo = ?, atualizado_em = datetime('now')
+            observacoes_restritas = ?, relato_professora_apoio = ?,
+            recomendacoes_pedagogicas = ?, ativo = ?, atualizado_em = datetime('now')
         WHERE id = ? AND estudante_id = ?
         """,
         (codigo_laudo, condicao, observacoes_restritas, condicao, classificacao,
          sistema_classificacao, codigo_laudo, descricao_laudo, 1 if possui_laudo else 0,
-         data_laudo, observacoes_restritas, 1 if ativo else 0,
+         data_laudo, observacoes_restritas, relato_professora_apoio,
+         recomendacoes_pedagogicas, 1 if ativo else 0,
          int(laudo_id), int(estudante_id)),
     )
     alterado = cursor.rowcount > 0

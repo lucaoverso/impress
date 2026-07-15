@@ -1389,6 +1389,7 @@ def criar_estudante_api(payload: EstudanteCreateIn, usuario=Depends(get_usuario_
             sexo=payload.sexo,
             possui_necessidade_especial=payload.possui_necessidade_especial,
             necessidade_especial=_texto_opcional(payload.necessidade_especial, max_len=255),
+            possui_professor_apoio=payload.possui_professor_apoio,
         )
     except ValueError as exc:
         raise HTTPException(400, str(exc)) from exc
@@ -1441,6 +1442,11 @@ def atualizar_estudante_api(
                 estudante_atual.get("necessidade_especial")
                 if payload.possui_necessidade_especial is None
                 else _texto_opcional(payload.necessidade_especial, max_len=255)
+            ),
+            possui_professor_apoio=(
+                bool(estudante_atual.get("possui_professor_apoio"))
+                if payload.possui_professor_apoio is None
+                else payload.possui_professor_apoio
             ),
         )
     except ValueError as exc:
@@ -1522,6 +1528,8 @@ def criar_laudo_estudante_api(
             possui_laudo=payload.possui_laudo,
             data_laudo=_validar_data_opcional(payload.data_laudo, "Data do laudo"),
             observacoes_restritas=_texto_opcional(payload.observacoes_restritas, max_len=2000),
+            relato_professora_apoio=_texto_opcional(payload.relato_professora_apoio, max_len=2000),
+            recomendacoes_pedagogicas=_texto_opcional(payload.recomendacoes_pedagogicas, max_len=2000),
             apoio_ids=payload.apoio_ids,
         )
     except ValueError as exc:
@@ -1557,6 +1565,8 @@ def atualizar_laudo_estudante_api(
             possui_laudo=payload.possui_laudo,
             data_laudo=_validar_data_opcional(payload.data_laudo, "Data do laudo"),
             observacoes_restritas=_texto_opcional(payload.observacoes_restritas, max_len=2000),
+            relato_professora_apoio=_texto_opcional(payload.relato_professora_apoio, max_len=2000),
+            recomendacoes_pedagogicas=_texto_opcional(payload.recomendacoes_pedagogicas, max_len=2000),
             apoio_ids=payload.apoio_ids,
             ativo=bool(payload.ativo),
         )
