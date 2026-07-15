@@ -50,7 +50,7 @@ from db.usuarios import (
     listar_cargas_professores_por_usuario_ids,
     listar_professores_agendamento,
 )
-from database import get_connection
+from db._proxy import get_database_attr
 
 
 def get_discipline(disciplina_id: int):
@@ -116,7 +116,7 @@ def list_students(*, nome: str = "", incluir_inativos: bool = False, turma_id: i
 
 
 def list_students_with_special_needs(*, turma_id: int | None = None) -> list[dict]:
-    conn = get_connection()
+    conn = get_database_attr("get_connection")()
     cursor = conn.cursor()
     query = """
         SELECT e.id AS estudante_id, e.nome AS estudante_nome, e.sexo,
