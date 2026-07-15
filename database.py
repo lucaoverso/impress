@@ -5763,8 +5763,6 @@ def criar_estudante(
     sexo_limpo = _normalizar_sexo_estudante(sexo)
     necessidade_limpa = _normalizar_nome_catalogo(necessidade_especial) or None
     possui_necessidade = bool(possui_necessidade_especial)
-    if possui_necessidade and not necessidade_limpa:
-        raise ValueError("Informe qual necessidade especial o estudante possui.")
     if not possui_necessidade:
         necessidade_limpa = None
     if not nome_limpo:
@@ -5848,8 +5846,6 @@ def atualizar_estudante(
     sexo_limpo = _normalizar_sexo_estudante(sexo)
     necessidade_limpa = _normalizar_nome_catalogo(necessidade_especial) or None
     possui_necessidade = bool(possui_necessidade_especial)
-    if possui_necessidade and not necessidade_limpa:
-        raise ValueError("Informe qual necessidade especial o estudante possui.")
     if not possui_necessidade:
         necessidade_limpa = None
     if not nome_limpo:

@@ -83,24 +83,33 @@ class OcorrenciasRouterTest(unittest.TestCase):
             self.assertIsNone(atualizado["necessidade_especial"])
             self.assertFalse(atualizado["possui_professor_apoio"])
 
-    def test_cadastro_estudante_exige_descricao_da_necessidade_especial(self):
+    def test_edicao_permite_alterar_professor_apoio_sem_descricao_legada(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")
             database, ocorrencias_router = _reload_modulos(db_path)
             database.criar_tabelas()
             turma_id = int(database.criar_turma("7B", "MATUTINO", 30))
 
-            with self.assertRaises(ocorrencias_router.HTTPException) as contexto:
-                ocorrencias_router.criar_estudante_api(
-                    ocorrencias_router.EstudanteCreateIn(
-                        nome="João",
-                        turma_id=turma_id,
-                        possui_necessidade_especial=True,
-                    ),
-                    usuario={"cargo": "ADMIN"},
-                )
+            estudante_id = int(database.criar_estudante(
+                nome="João",
+                turma_id=turma_id,
+                possui_necessidade_especial=True,
+            ))
 
-            self.assertEqual(contexto.exception.status_code, 400)
+            atualizado = ocorrencias_router.atualizar_estudante_api(
+                estudante_id,
+                ocorrencias_router.EstudanteUpdateIn(
+                    nome="João",
+                    turma_id=turma_id,
+                    possui_professor_apoio=True,
+                    ativo=True,
+                ),
+                usuario={"cargo": "ADMIN"},
+            )
+
+            self.assertTrue(atualizado["possui_professor_apoio"])
+            self.assertTrue(atualizado["possui_necessidade_especial"])
+            self.assertIsNone(atualizado["necessidade_especial"])
 
     def test_gerencia_multiplos_laudos_do_estudante(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
