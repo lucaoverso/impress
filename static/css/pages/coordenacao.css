@@ -1683,6 +1683,50 @@ body.coordenacao-modal-open {
     background: var(--surface-1);
 }
 
+.estudante-laudos {
+    display: grid;
+    gap: 20px;
+    margin-top: 24px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border-soft, #d8e1ec);
+}
+
+.estudante-laudos[hidden] {
+    display: none;
+}
+
+.estudante-laudos-lista {
+    display: grid;
+    gap: 12px;
+}
+
+.estudante-laudo-item {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    background: var(--surface-muted, #eef3f8);
+}
+
+.estudante-laudo-item h4,
+.estudante-laudo-item p {
+    margin: 0;
+}
+
+.estudante-laudo-item p {
+    margin-top: 4px;
+    color: var(--text-muted, #4b5563);
+}
+
+.estudante-laudo-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
 .coordenacao-table {
     width: 100%;
     border-collapse: collapse;

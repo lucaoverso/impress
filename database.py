@@ -602,6 +602,25 @@ def criar_tabelas():
     """)
 
     cursor.execute("""
+        CREATE TABLE IF NOT EXISTS estudante_laudos (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            estudante_id INTEGER NOT NULL,
+            cid TEXT,
+            titulo TEXT NOT NULL,
+            observacoes TEXT,
+            ativo INTEGER NOT NULL DEFAULT 1 CHECK (ativo IN (0, 1)),
+            criado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            atualizado_em TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY(estudante_id) REFERENCES estudantes(id) ON DELETE CASCADE
+        )
+    """)
+
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_estudante_laudos_estudante_id
+        ON estudante_laudos(estudante_id)
+    """)
+
+    cursor.execute("""
         CREATE TABLE IF NOT EXISTS agendamentos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             recurso_id INTEGER NOT NULL,
@@ -5727,6 +5746,16 @@ def criar_estudante(
     )
 
     estudante_id = cursor.lastrowid
+    if possui_necessidade and necessidade_limpa:
+        cursor.execute(
+            """
+            INSERT INTO estudante_laudos (
+                estudante_id, cid, titulo, observacoes, ativo, criado_em, atualizado_em
+            ) VALUES (?, NULL, ?, 'Criado pelo cadastro compatível de estudantes.', 1,
+                      datetime('now'), datetime('now'))
+            """,
+            (int(estudante_id), necessidade_limpa),
+        )
     conn.commit()
     conn.close()
     return estudante_id
@@ -5800,6 +5829,124 @@ def atualizar_estudante(
     conn.commit()
     conn.close()
     return alterado
+
+
+def listar_laudos_estudante(estudante_id: int, incluir_inativos: bool = True):
+    conn = get_connection()
+    cursor = conn.cursor()
+    query = """
+        SELECT id, estudante_id, cid, titulo, observacoes, ativo, criado_em, atualizado_em
+        FROM estudante_laudos
+        WHERE estudante_id = ?
+    """
+    params = [int(estudante_id)]
+    if not incluir_inativos:
+        query += " AND ativo = 1"
+    query += " ORDER BY ativo DESC, titulo COLLATE NOCASE ASC, id ASC"
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+    conn.close()
+    return [dict(row) for row in rows]
+
+
+def buscar_laudo_estudante_por_id(laudo_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT id, estudante_id, cid, titulo, observacoes, ativo, criado_em, atualizado_em
+        FROM estudante_laudos
+        WHERE id = ?
+        """,
+        (int(laudo_id),),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def _normalizar_texto_laudo(valor: str | None, *, obrigatorio: bool = False):
+    texto = " ".join(str(valor or "").strip().split())
+    if obrigatorio and not texto:
+        raise ValueError("Título do laudo é obrigatório.")
+    return texto or None
+
+
+def _atualizar_indicador_necessidade_estudante(cursor, estudante_id: int):
+    cursor.execute(
+        """
+        UPDATE estudantes
+        SET possui_necessidade_especial = CASE WHEN EXISTS (
+                SELECT 1 FROM estudante_laudos
+                WHERE estudante_id = ? AND ativo = 1
+            ) THEN 1 ELSE 0 END,
+            atualizado_em = datetime('now')
+        WHERE id = ?
+        """,
+        (int(estudante_id), int(estudante_id)),
+    )
+
+
+def criar_laudo_estudante(estudante_id: int, titulo: str, cid: str | None = None,
+                          observacoes: str | None = None):
+    titulo_limpo = _normalizar_texto_laudo(titulo, obrigatorio=True)
+    cid_limpo = _normalizar_texto_laudo(cid)
+    observacoes_limpas = str(observacoes or "").strip() or None
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        INSERT INTO estudante_laudos (
+            estudante_id, cid, titulo, observacoes, ativo, criado_em, atualizado_em
+        ) VALUES (?, ?, ?, ?, 1, datetime('now'), datetime('now'))
+        """,
+        (int(estudante_id), cid_limpo, titulo_limpo, observacoes_limpas),
+    )
+    laudo_id = int(cursor.lastrowid)
+    _atualizar_indicador_necessidade_estudante(cursor, estudante_id)
+    conn.commit()
+    conn.close()
+    return laudo_id
+
+
+def atualizar_laudo_estudante(laudo_id: int, estudante_id: int, titulo: str,
+                              cid: str | None = None, observacoes: str | None = None,
+                              ativo: bool = True):
+    titulo_limpo = _normalizar_texto_laudo(titulo, obrigatorio=True)
+    cid_limpo = _normalizar_texto_laudo(cid)
+    observacoes_limpas = str(observacoes or "").strip() or None
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        UPDATE estudante_laudos
+        SET cid = ?, titulo = ?, observacoes = ?, ativo = ?, atualizado_em = datetime('now')
+        WHERE id = ? AND estudante_id = ?
+        """,
+        (cid_limpo, titulo_limpo, observacoes_limpas, 1 if ativo else 0,
+         int(laudo_id), int(estudante_id)),
+    )
+    alterado = cursor.rowcount > 0
+    if alterado:
+        _atualizar_indicador_necessidade_estudante(cursor, estudante_id)
+    conn.commit()
+    conn.close()
+    return alterado
+
+
+def remover_laudo_estudante(laudo_id: int, estudante_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "DELETE FROM estudante_laudos WHERE id = ? AND estudante_id = ?",
+        (int(laudo_id), int(estudante_id)),
+    )
+    removido = cursor.rowcount > 0
+    if removido:
+        _atualizar_indicador_necessidade_estudante(cursor, estudante_id)
+    conn.commit()
+    conn.close()
+    return removido
 
 
 def atualizar_status_estudante(estudante_id: int, ativo: bool):

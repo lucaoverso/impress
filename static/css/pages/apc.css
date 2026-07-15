@@ -2320,6 +2320,7 @@ body.apc-print-wizard-open {
 }
 
 .apc-activity-preview-viewport {
+    position: relative;
     min-height: 0;
     overflow: auto;
     padding: 14px;
@@ -2342,6 +2343,21 @@ body.apc-print-wizard-open {
 .apc-activity-preview-state.is-error,
 .apc-activity-modal-footer p.is-error {
     color: var(--error);
+}
+
+.apc-activity-preview-state.is-refreshing {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    width: fit-content;
+    margin: 0 0 -34px auto;
+    padding: 7px 11px;
+    border-color: rgba(15, 118, 110, 0.2);
+    background: var(--apc-accent-soft);
+    color: var(--apc-accent-strong);
+    font-size: 0.78rem;
+    font-weight: 700;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.06);
 }
 
 .apc-activity-preview-pages {

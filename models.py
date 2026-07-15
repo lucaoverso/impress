@@ -1172,6 +1172,30 @@ class EstudanteOut(BaseModel):
     atualizado_em: str
 
 
+class EstudanteLaudoCreateIn(BaseModel):
+    cid: str | None = None
+    titulo: str
+    observacoes: str | None = None
+
+
+class EstudanteLaudoUpdateIn(BaseModel):
+    cid: str | None = None
+    titulo: str
+    observacoes: str | None = None
+    ativo: bool = True
+
+
+class EstudanteLaudoOut(BaseModel):
+    id: int
+    estudante_id: int
+    cid: str | None = None
+    titulo: str
+    observacoes: str | None = None
+    ativo: int | bool
+    criado_em: str
+    atualizado_em: str
+
+
 class ImportacaoCsvOut(BaseModel):
     mensagem: str
     linhas_processadas: int

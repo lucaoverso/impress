@@ -755,25 +755,51 @@
                                     <option value="M">Masculino</option>
                                 </select>
                             </label>
-                            <label class="coordenacao-field" for="estudantePossuiNecessidadeEspecial">
-                                <span>Necessidades especiais</span>
-                                <span class="coordenacao-inline">
-                                    <input id="estudantePossuiNecessidadeEspecial" type="checkbox">
-                                    Possui necessidade especial
-                                </span>
-                            </label>
-                            <label id="campoEstudanteNecessidadeEspecial" class="coordenacao-field"
-                                for="estudanteNecessidadeEspecial" hidden>
-                                <span>Qual necessidade?</span>
-                                <input id="estudanteNecessidadeEspecial" type="text" maxlength="255"
-                                    placeholder="Descreva a necessidade especial">
-                            </label>
                             <div class="coordenacao-inline coordenacao-form-actions">
                                 <button class="btn-destaque" type="submit">Salvar estudante</button>
                                 <button id="btnCancelarEdicaoEstudante" type="button" style="display: none;">Cancelar
                                     edição</button>
                             </div>
                         </form>
+
+                        <section id="secaoLaudosEstudante" class="estudante-laudos" hidden>
+                            <div class="coordenacao-section-header">
+                                <div>
+                                    <h3>Diagnósticos e laudos</h3>
+                                    <p>Registre somente as informações necessárias ao acompanhamento escolar.</p>
+                                </div>
+                            </div>
+                            <div id="listaLaudosEstudante" class="estudante-laudos-lista"></div>
+                            <form id="formLaudoEstudante" class="coordenacao-form">
+                                <input id="estudanteLaudoId" type="hidden">
+                                <div class="coordenacao-form-grid">
+                                    <label class="coordenacao-field" for="estudanteLaudoCid">
+                                        <span>CID (opcional)</span>
+                                        <input id="estudanteLaudoCid" type="text" maxlength="20"
+                                            placeholder="Ex.: F90.0">
+                                    </label>
+                                    <label class="coordenacao-field" for="estudanteLaudoTitulo">
+                                        <span>Título</span>
+                                        <input id="estudanteLaudoTitulo" type="text" maxlength="150"
+                                            placeholder="Ex.: Transtorno do déficit de atenção" required>
+                                    </label>
+                                    <label class="coordenacao-field coordenacao-field-wide"
+                                        for="estudanteLaudoObservacoes">
+                                        <span>Observações (opcional)</span>
+                                        <textarea id="estudanteLaudoObservacoes" maxlength="2000" rows="3"
+                                            placeholder="Registre orientações relevantes para o acompanhamento."></textarea>
+                                    </label>
+                                </div>
+                                <div class="coordenacao-inline coordenacao-form-actions">
+                                    <button id="btnSalvarLaudoEstudante" class="btn-destaque" type="submit">
+                                        Adicionar laudo
+                                    </button>
+                                    <button id="btnCancelarEdicaoLaudoEstudante" type="button" hidden>
+                                        Cancelar edição
+                                    </button>
+                                </div>
+                            </form>
+                        </section>
 
                         <section class="coordenacao-import-box">
                             <div>
@@ -838,7 +864,7 @@
                                         <th>Nome</th>
                                         <th>Turma</th>
                                         <th>Sexo</th>
-                                        <th>Necessidade especial</th>
+                                        <th>Laudos</th>
                                         <th>Status</th>
                                         <th>Atualizado em</th>
                                         <th>Acoes</th>

@@ -53,6 +53,8 @@ let timerPreviewAtividadeApc = null;
 let tokenPreviewAtividadeApc = 0;
 let controllerPreviewAtividadeApc = null;
 let timerFechamentoAtividadeApc = null;
+const cachePreviewAtividadeApc = new Map();
+const LIMITE_CACHE_PREVIEW_APC = 6;
 let opcoesDestinatariosApc = [];
 let selecoesDestinatariosApc = new Set();
 
@@ -1933,12 +1935,13 @@ function validarPayloadAtividadeApc(payload) {
     return "";
 }
 
-function setEstadoPreviewAtividadeApc(texto = "", erro = false) {
+function setEstadoPreviewAtividadeApc(texto = "", erro = false, discreto = false) {
     const state = el("apcActivityPreviewState");
     if (!state) return;
     state.innerText = texto;
     state.hidden = !texto;
     state.classList.toggle("is-error", Boolean(texto) && erro);
+    state.classList.toggle("is-refreshing", Boolean(texto) && discreto && !erro);
 }
 
 function setMensagemActivityModalApc(texto = "", erro = false) {
@@ -1960,9 +1963,8 @@ async function renderizarPaginasAtividadeApc(pdfDocument, token) {
     const pages = el("apcActivityPreviewPages");
     const viewportElement = el("apcActivityPreviewViewport");
     if (!pages || !viewportElement || token !== tokenPreviewAtividadeApc) return;
-    pages.innerHTML = "";
+    const novasPaginas = document.createDocumentFragment();
     const total = Number(pdfDocument.numPages || 0);
-    el("apcActivityPageCount").innerText = total === 1 ? "1 página · A4" : `${total} páginas · A4`;
     const availableWidth = Math.max(300, Math.min(820, viewportElement.clientWidth - 34));
     const availableHeight = Math.max(420, viewportElement.clientHeight - 34);
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
@@ -1983,8 +1985,35 @@ async function renderizarPaginasAtividadeApc(pdfDocument, token) {
         const caption = document.createElement("figcaption");
         caption.innerText = `Página ${number} de ${total}`;
         figure.append(canvas, caption);
-        pages.appendChild(figure);
+        novasPaginas.appendChild(figure);
         await page.render({ canvasContext: canvas.getContext("2d"), viewport: renderViewport }).promise;
+    }
+    if (token === tokenPreviewAtividadeApc) {
+        pages.replaceChildren(novasPaginas);
+        el("apcActivityPageCount").innerText = total === 1 ? "1 página · A4" : `${total} páginas · A4`;
+    }
+}
+
+function chaveCachePreviewAtividadeApc(panel, payload) {
+    const body = document.createElement("div");
+    body.innerHTML = payload.corpo_html || "";
+    body.querySelectorAll("img[data-apc-image]").forEach((image) => {
+        image.removeAttribute("src");
+        image.removeAttribute("data-object-url");
+        image.classList.remove("is-selected", "is-unavailable");
+    });
+    return JSON.stringify({
+        periodo_id: Number(panel.dataset.periodoId || 0),
+        ...payload,
+        corpo_html: body.innerHTML,
+    });
+}
+
+function armazenarCachePreviewAtividadeApc(chave, buffer) {
+    cachePreviewAtividadeApc.delete(chave);
+    cachePreviewAtividadeApc.set(chave, buffer.slice(0));
+    while (cachePreviewAtividadeApc.size > LIMITE_CACHE_PREVIEW_APC) {
+        cachePreviewAtividadeApc.delete(cachePreviewAtividadeApc.keys().next().value);
     }
 }
 
@@ -1996,22 +2025,31 @@ async function atualizarPreviewAtividadeApc(panel) {
     }
     cancelarPreviewAtividadeApc();
     const token = tokenPreviewAtividadeApc;
-    controllerPreviewAtividadeApc = new AbortController();
-    setEstadoPreviewAtividadeApc("Atualizando o PDF...");
-    el("apcActivityPreviewPages").innerHTML = "";
+    const chaveCache = chaveCachePreviewAtividadeApc(panel, payload);
+    const paginasVisiveis = Boolean(el("apcActivityPreviewPages")?.children.length);
+    setEstadoPreviewAtividadeApc("Atualizando...", false, paginasVisiveis);
     try {
-        const response = await fetchResposta(`/apc/periodos/${panel.dataset.periodoId}/atividade/preview`, {
-            method: "POST",
-            headers: headersJsonApc,
-            body: JSON.stringify(payload),
-            signal: controllerPreviewAtividadeApc.signal,
-        });
-        const buffer = await (await response.blob()).arrayBuffer();
+        let buffer = cachePreviewAtividadeApc.get(chaveCache);
+        if (buffer) {
+            cachePreviewAtividadeApc.delete(chaveCache);
+            cachePreviewAtividadeApc.set(chaveCache, buffer);
+            buffer = buffer.slice(0);
+        } else {
+            controllerPreviewAtividadeApc = new AbortController();
+            const response = await fetchResposta(`/apc/periodos/${panel.dataset.periodoId}/atividade/preview`, {
+                method: "POST",
+                headers: headersJsonApc,
+                body: JSON.stringify(payload),
+                signal: controllerPreviewAtividadeApc.signal,
+            });
+            buffer = await (await response.blob()).arrayBuffer();
+            armazenarCachePreviewAtividadeApc(chaveCache, buffer);
+        }
         if (token !== tokenPreviewAtividadeApc) return;
-        const pdfDocument = await window.pdfjsLib.getDocument({ data: buffer }).promise;
+        const pdfDocument = await window.pdfjsLib.getDocument({ data: buffer.slice(0) }).promise;
         if (token !== tokenPreviewAtividadeApc) return;
-        setEstadoPreviewAtividadeApc("");
         await renderizarPaginasAtividadeApc(pdfDocument, token);
+        if (token === tokenPreviewAtividadeApc) setEstadoPreviewAtividadeApc("");
     } catch (err) {
         if (err?.name !== "AbortError" && token === tokenPreviewAtividadeApc) {
             setEstadoPreviewAtividadeApc(err.message || "Não foi possível atualizar a prévia.", true);
@@ -2021,8 +2059,8 @@ async function atualizarPreviewAtividadeApc(panel) {
     }
 }
 
-function agendarPreviewAtividadeApc(panel, delay = 550) {
-    window.clearTimeout(timerPreviewAtividadeApc);
+function agendarPreviewAtividadeApc(panel, delay = 850) {
+    cancelarPreviewAtividadeApc();
     timerPreviewAtividadeApc = window.setTimeout(() => void atualizarPreviewAtividadeApc(panel), delay);
 }
 

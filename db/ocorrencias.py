@@ -17,10 +17,12 @@ atualizar_lei = proxy("atualizar_lei")
 atualizar_ocorrencia = proxy("atualizar_ocorrencia")
 atualizar_regimento_item = proxy("atualizar_regimento_item")
 atualizar_status_estudante = proxy("atualizar_status_estudante")
+atualizar_laudo_estudante = proxy("atualizar_laudo_estudante")
 atualizar_status_regimento_item = proxy("atualizar_status_regimento_item")
 buscar_alinea_por_id = proxy("buscar_alinea_por_id")
 buscar_artigo_por_id = proxy("buscar_artigo_por_id")
 buscar_estudante_por_id = proxy("buscar_estudante_por_id")
+buscar_laudo_estudante_por_id = proxy("buscar_laudo_estudante_por_id")
 buscar_estudantes_ocorrencia = proxy("buscar_estudantes_ocorrencia")
 buscar_inciso_por_id = proxy("buscar_inciso_por_id")
 buscar_lei_por_id = proxy("buscar_lei_por_id")
@@ -32,6 +34,7 @@ buscar_regimento_itens_por_ids = proxy("buscar_regimento_itens_por_ids")
 criar_alinea = proxy("criar_alinea")
 criar_artigo = proxy("criar_artigo")
 criar_estudante = proxy("criar_estudante")
+criar_laudo_estudante = proxy("criar_laudo_estudante")
 criar_inciso = proxy("criar_inciso")
 criar_lei = proxy("criar_lei")
 criar_ocorrencia = proxy("criar_ocorrencia")
@@ -41,6 +44,7 @@ criar_regimento_item = proxy("criar_regimento_item")
 listar_alineas = proxy("listar_alineas")
 listar_artigos = proxy("listar_artigos")
 listar_estudantes = proxy("listar_estudantes")
+listar_laudos_estudante = proxy("listar_laudos_estudante")
 listar_incisos = proxy("listar_incisos")
 listar_leis = proxy("listar_leis")
 listar_ocorrencias = proxy("listar_ocorrencias")
@@ -48,6 +52,7 @@ listar_regimento_itens = proxy("listar_regimento_itens")
 remover_alinea = proxy("remover_alinea")
 remover_artigo = proxy("remover_artigo")
 remover_estudante = proxy("remover_estudante")
+remover_laudo_estudante = proxy("remover_laudo_estudante")
 remover_inciso = proxy("remover_inciso")
 remover_lei = proxy("remover_lei")
 remover_ocorrencia = proxy("remover_ocorrencia")
@@ -69,6 +74,7 @@ __all__ = [
     "atualizar_alinea",
     "atualizar_artigo",
     "atualizar_estudante",
+    "atualizar_laudo_estudante",
     "atualizar_inciso",
     "atualizar_lei",
     "atualizar_ocorrencia",
@@ -78,6 +84,7 @@ __all__ = [
     "buscar_alinea_por_id",
     "buscar_artigo_por_id",
     "buscar_estudante_por_id",
+    "buscar_laudo_estudante_por_id",
     "buscar_estudantes_ocorrencia",
     "buscar_inciso_por_id",
     "buscar_lei_por_id",
@@ -89,6 +96,7 @@ __all__ = [
     "criar_alinea",
     "criar_artigo",
     "criar_estudante",
+    "criar_laudo_estudante",
     "criar_inciso",
     "criar_lei",
     "criar_ocorrencia",
@@ -98,6 +106,7 @@ __all__ = [
     "listar_alineas",
     "listar_artigos",
     "listar_estudantes",
+    "listar_laudos_estudante",
     "listar_incisos",
     "listar_leis",
     "listar_ocorrencias",
@@ -105,6 +114,7 @@ __all__ = [
     "remover_alinea",
     "remover_artigo",
     "remover_estudante",
+    "remover_laudo_estudante",
     "remover_inciso",
     "remover_lei",
     "remover_ocorrencia",

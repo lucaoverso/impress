@@ -98,6 +98,52 @@ class OcorrenciasRouterTest(unittest.TestCase):
 
             self.assertEqual(contexto.exception.status_code, 400)
 
+    def test_gerencia_multiplos_laudos_do_estudante(self):
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            db_path = os.path.join(tmp_dir, "impressao.db")
+            database, ocorrencias_router = _reload_modulos(db_path)
+            database.criar_tabelas()
+            turma_id = int(database.criar_turma("8A", "MATUTINO", 30))
+            estudante_id = int(database.criar_estudante("Ana", turma_id))
+
+            primeiro = ocorrencias_router.criar_laudo_estudante_api(
+                estudante_id,
+                ocorrencias_router.EstudanteLaudoCreateIn(
+                    cid="F90.0",
+                    titulo="TDAH",
+                    observacoes="Acompanhamento pedagógico.",
+                ),
+                usuario={"cargo": "ADMIN"},
+            )
+            segundo = ocorrencias_router.criar_laudo_estudante_api(
+                estudante_id,
+                ocorrencias_router.EstudanteLaudoCreateIn(titulo="Baixa visão"),
+                usuario={"cargo": "ADMIN"},
+            )
+
+            self.assertEqual(len(ocorrencias_router.listar_laudos_estudante_api(
+                estudante_id, usuario={"cargo": "ADMIN"}
+            )), 2)
+            self.assertTrue(database.buscar_estudante_por_id(estudante_id)["possui_necessidade_especial"])
+
+            atualizado = ocorrencias_router.atualizar_laudo_estudante_api(
+                estudante_id,
+                int(primeiro["id"]),
+                ocorrencias_router.EstudanteLaudoUpdateIn(
+                    cid="F90.1", titulo="TDAH atualizado", ativo=True
+                ),
+                usuario={"cargo": "ADMIN"},
+            )
+            self.assertEqual(atualizado["cid"], "F90.1")
+
+            ocorrencias_router.remover_laudo_estudante_api(
+                estudante_id, int(primeiro["id"]), usuario={"cargo": "ADMIN"}
+            )
+            ocorrencias_router.remover_laudo_estudante_api(
+                estudante_id, int(segundo["id"]), usuario={"cargo": "ADMIN"}
+            )
+            self.assertFalse(database.buscar_estudante_por_id(estudante_id)["possui_necessidade_especial"])
+
     def test_criar_ocorrencia_persiste_base_legal(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")

@@ -26,12 +26,14 @@ from db.ocorrencias import (
     atualizar_lei,
     atualizar_ocorrencia,
     atualizar_estudante,
+    atualizar_laudo_estudante,
     atualizar_regimento_item,
     atualizar_status_regimento_item,
     atualizar_status_estudante,
     buscar_alinea_por_id,
     buscar_artigo_por_id,
     buscar_estudante_por_id,
+    buscar_laudo_estudante_por_id,
     buscar_inciso_por_id,
     buscar_lei_por_id,
     buscar_estudantes_ocorrencia,
@@ -43,6 +45,7 @@ from db.ocorrencias import (
     criar_alinea,
     criar_artigo,
     criar_estudante,
+    criar_laudo_estudante,
     criar_inciso,
     criar_lei,
     criar_ocorrencia,
@@ -50,6 +53,7 @@ from db.ocorrencias import (
     listar_alineas,
     listar_artigos,
     listar_estudantes,
+    listar_laudos_estudante,
     listar_incisos,
     listar_leis,
     listar_ocorrencias,
@@ -57,6 +61,7 @@ from db.ocorrencias import (
     remover_alinea,
     remover_artigo,
     remover_estudante,
+    remover_laudo_estudante,
     remover_inciso,
     remover_lei,
     remover_ocorrencia,
@@ -74,6 +79,9 @@ from models import (
     ArtigoOut,
     ArtigoUpdateIn,
     EstudanteCreateIn,
+    EstudanteLaudoCreateIn,
+    EstudanteLaudoOut,
+    EstudanteLaudoUpdateIn,
     EstudanteOut,
     EstudanteStatusIn,
     EstudanteUpdateIn,
@@ -1450,6 +1458,83 @@ def atualizar_status_estudante_api(
     if not alterado:
         raise HTTPException(404, "Estudante nao encontrado.")
     return {"mensagem": "Status do estudante atualizado com sucesso."}
+
+
+@router.get(
+    "/estudantes/{estudante_id}/laudos",
+    response_model=list[EstudanteLaudoOut],
+)
+def listar_laudos_estudante_api(estudante_id: int, usuario=Depends(get_usuario_logado)):
+    _exigir_gestor(usuario)
+    if not buscar_estudante_por_id(estudante_id):
+        raise HTTPException(404, "Estudante nao encontrado.")
+    return listar_laudos_estudante(estudante_id)
+
+
+@router.post(
+    "/estudantes/{estudante_id}/laudos",
+    response_model=EstudanteLaudoOut,
+)
+def criar_laudo_estudante_api(
+    estudante_id: int,
+    payload: EstudanteLaudoCreateIn,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    if not buscar_estudante_por_id(estudante_id):
+        raise HTTPException(404, "Estudante nao encontrado.")
+    try:
+        laudo_id = criar_laudo_estudante(
+            estudante_id=estudante_id,
+            cid=_texto_opcional(payload.cid, max_len=20),
+            titulo=_texto_obrigatorio(payload.titulo, "Titulo do laudo", max_len=150),
+            observacoes=_texto_opcional(payload.observacoes, max_len=2000),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return buscar_laudo_estudante_por_id(laudo_id)
+
+
+@router.put(
+    "/estudantes/{estudante_id}/laudos/{laudo_id}",
+    response_model=EstudanteLaudoOut,
+)
+def atualizar_laudo_estudante_api(
+    estudante_id: int,
+    laudo_id: int,
+    payload: EstudanteLaudoUpdateIn,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    laudo = buscar_laudo_estudante_por_id(laudo_id)
+    if not laudo or int(laudo["estudante_id"]) != int(estudante_id):
+        raise HTTPException(404, "Laudo nao encontrado.")
+    try:
+        atualizado = atualizar_laudo_estudante(
+            laudo_id=laudo_id,
+            estudante_id=estudante_id,
+            cid=_texto_opcional(payload.cid, max_len=20),
+            titulo=_texto_obrigatorio(payload.titulo, "Titulo do laudo", max_len=150),
+            observacoes=_texto_opcional(payload.observacoes, max_len=2000),
+            ativo=bool(payload.ativo),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    if not atualizado:
+        raise HTTPException(404, "Laudo nao encontrado.")
+    return buscar_laudo_estudante_por_id(laudo_id)
+
+
+@router.delete("/estudantes/{estudante_id}/laudos/{laudo_id}")
+def remover_laudo_estudante_api(
+    estudante_id: int,
+    laudo_id: int,
+    usuario=Depends(get_usuario_logado),
+):
+    _exigir_gestor(usuario)
+    if not remover_laudo_estudante(laudo_id, estudante_id):
+        raise HTTPException(404, "Laudo nao encontrado.")
+    return {"mensagem": "Laudo excluido com sucesso."}
 
 
 @router.delete("/estudantes/{estudante_id}")

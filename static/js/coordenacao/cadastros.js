@@ -1,19 +1,12 @@
+let laudoEstudanteEmEdicao = null;
+
 function limparFormularioEstudante() {
     estudanteEmEdicao = null;
     el("formEstudante").reset();
     el("tituloFormEstudante").innerText = "Cadastrar estudante";
     el("btnCancelarEdicaoEstudante").style.display = "none";
-    atualizarCampoNecessidadeEspecialEstudante();
-}
-
-function atualizarCampoNecessidadeEspecialEstudante() {
-    const marcado = el("estudantePossuiNecessidadeEspecial").checked;
-    const campo = el("campoEstudanteNecessidadeEspecial");
-    const input = el("estudanteNecessidadeEspecial");
-    campo.hidden = !marcado;
-    input.disabled = !marcado;
-    input.required = marcado;
-    if (!marcado) input.value = "";
+    el("secaoLaudosEstudante").hidden = true;
+    limparFormularioLaudoEstudante();
 }
 
 function iniciarEdicaoEstudante(estudante) {
@@ -21,11 +14,11 @@ function iniciarEdicaoEstudante(estudante) {
     el("estudanteNome").value = estudante.nome || "";
     el("estudanteTurmaId").value = String(estudante.turma_id || "");
     el("estudanteSexo").value = String(estudante.sexo || "");
-    el("estudantePossuiNecessidadeEspecial").checked = Boolean(estudante.possui_necessidade_especial);
-    el("estudanteNecessidadeEspecial").value = String(estudante.necessidade_especial || "");
-    atualizarCampoNecessidadeEspecialEstudante();
     el("tituloFormEstudante").innerText = "Editar estudante";
     el("btnCancelarEdicaoEstudante").style.display = "inline-block";
+    el("secaoLaudosEstudante").hidden = false;
+    limparFormularioLaudoEstudante();
+    carregarLaudosEstudante();
     ativarAbaCoordenacao("estudantes");
 }
 
@@ -461,9 +454,7 @@ async function salvarEstudante(event) {
     const payload = {
         nome: el("estudanteNome").value.trim(),
         turma_id: Number(el("estudanteTurmaId").value),
-        sexo: el("estudanteSexo").value || null,
-        possui_necessidade_especial: el("estudantePossuiNecessidadeEspecial").checked,
-        necessidade_especial: el("estudanteNecessidadeEspecial").value.trim() || null
+        sexo: el("estudanteSexo").value || null
     };
 
     try {
@@ -488,6 +479,129 @@ async function salvarEstudante(event) {
 
         limparFormularioEstudante();
         await Promise.all([carregarEstudantes(), atualizarSugestoesEstudantesBusca(true)]);
+    } catch (err) {
+        setMensagemEstudantes(err.message, true);
+    }
+}
+
+function limparFormularioLaudoEstudante() {
+    laudoEstudanteEmEdicao = null;
+    el("formLaudoEstudante")?.reset();
+    if (el("estudanteLaudoId")) el("estudanteLaudoId").value = "";
+    if (el("btnSalvarLaudoEstudante")) el("btnSalvarLaudoEstudante").textContent = "Adicionar laudo";
+    if (el("btnCancelarEdicaoLaudoEstudante")) el("btnCancelarEdicaoLaudoEstudante").hidden = true;
+}
+
+function iniciarEdicaoLaudoEstudante(laudo) {
+    laudoEstudanteEmEdicao = laudo;
+    el("estudanteLaudoId").value = String(laudo.id);
+    el("estudanteLaudoCid").value = String(laudo.cid || "");
+    el("estudanteLaudoTitulo").value = String(laudo.titulo || "");
+    el("estudanteLaudoObservacoes").value = String(laudo.observacoes || "");
+    el("btnSalvarLaudoEstudante").textContent = "Salvar alterações";
+    el("btnCancelarEdicaoLaudoEstudante").hidden = false;
+    el("estudanteLaudoTitulo").focus();
+}
+
+function renderizarLaudosEstudante(laudos) {
+    const lista = el("listaLaudosEstudante");
+    lista.innerHTML = "";
+    if (!Array.isArray(laudos) || laudos.length === 0) {
+        const vazio = document.createElement("p");
+        vazio.className = "coordenacao-field-hint";
+        vazio.textContent = "Nenhum diagnóstico ou laudo cadastrado para este estudante.";
+        lista.appendChild(vazio);
+        return;
+    }
+
+    laudos.forEach((laudo) => {
+        const item = document.createElement("article");
+        item.className = "estudante-laudo-item";
+        const conteudo = document.createElement("div");
+        const titulo = document.createElement("h4");
+        titulo.textContent = laudo.titulo || "Laudo";
+        conteudo.appendChild(titulo);
+        if (laudo.observacoes) {
+            const observacoes = document.createElement("p");
+            observacoes.textContent = laudo.observacoes;
+            conteudo.appendChild(observacoes);
+        }
+        const meta = document.createElement("div");
+        meta.className = "estudante-laudo-meta";
+        const cid = document.createElement("span");
+        cid.className = "status-chip";
+        cid.textContent = laudo.cid ? `CID ${laudo.cid}` : "Sem CID";
+        const status = document.createElement("span");
+        status.className = `status-chip ${classeStatusEstudante(Boolean(laudo.ativo))}`;
+        status.textContent = laudo.ativo ? "Ativo" : "Inativo";
+        meta.append(cid, status);
+        conteudo.appendChild(meta);
+
+        const acoes = document.createElement("div");
+        acoes.className = "coordenacao-inline";
+        const editar = document.createElement("button");
+        editar.type = "button";
+        editar.textContent = "Editar";
+        editar.addEventListener("click", () => iniciarEdicaoLaudoEstudante(laudo));
+        const excluir = document.createElement("button");
+        excluir.type = "button";
+        excluir.className = "coordenacao-btn-danger";
+        excluir.textContent = "Excluir";
+        excluir.addEventListener("click", () => excluirLaudoEstudante(laudo));
+        acoes.append(editar, excluir);
+        item.append(conteudo, acoes);
+        lista.appendChild(item);
+    });
+}
+
+async function carregarLaudosEstudante() {
+    if (!estudanteEmEdicao) return;
+    try {
+        const laudos = await fetchJson(`/estudantes/${estudanteEmEdicao.id}/laudos`, { headers });
+        renderizarLaudosEstudante(laudos);
+    } catch (err) {
+        setMensagemEstudantes(err.message, true);
+    }
+}
+
+async function salvarLaudoEstudante(event) {
+    event.preventDefault();
+    if (!estudanteEmEdicao) return;
+    const payload = {
+        cid: el("estudanteLaudoCid").value.trim() || null,
+        titulo: el("estudanteLaudoTitulo").value.trim(),
+        observacoes: el("estudanteLaudoObservacoes").value.trim() || null
+    };
+    const editando = Boolean(laudoEstudanteEmEdicao);
+    if (editando) payload.ativo = Boolean(laudoEstudanteEmEdicao.ativo);
+    const url = editando
+        ? `/estudantes/${estudanteEmEdicao.id}/laudos/${laudoEstudanteEmEdicao.id}`
+        : `/estudantes/${estudanteEmEdicao.id}/laudos`;
+    try {
+        await fetchJson(url, {
+            method: editando ? "PUT" : "POST",
+            headers: headersJson,
+            body: JSON.stringify(payload)
+        });
+        limparFormularioLaudoEstudante();
+        await Promise.all([carregarLaudosEstudante(), carregarEstudantes()]);
+        setMensagemEstudantes(editando ? "Laudo atualizado com sucesso." : "Laudo adicionado com sucesso.");
+    } catch (err) {
+        setMensagemEstudantes(err.message, true);
+    }
+}
+
+async function excluirLaudoEstudante(laudo) {
+    if (!estudanteEmEdicao) return;
+    if (!window.confirm(`Excluir o laudo “${laudo.titulo}”?`)) return;
+    try {
+        await fetchJson(`/estudantes/${estudanteEmEdicao.id}/laudos/${laudo.id}`, {
+            method: "DELETE",
+            headers
+        });
+        limparFormularioLaudoEstudante();
+        await Promise.all([carregarLaudosEstudante(), carregarEstudantes()]);
+        setMensagemEstudantes("Laudo excluído com sucesso.");
     } catch (err) {
         setMensagemEstudantes(err.message, true);
     }

@@ -552,10 +552,10 @@ function renderTabelaEstudantes() {
         tr.appendChild(criarCelulaTabela("Nome", estudante.nome || ""));
         tr.appendChild(criarCelulaTabela("Turma", estudante.turma_nome || ""));
         tr.appendChild(criarCelulaTabela("Sexo", criarSelectSexoEstudante(estudante)));
-        const necessidade = estudante.possui_necessidade_especial
-            ? (estudante.necessidade_especial || "Sim")
-            : "Não";
-        tr.appendChild(criarCelulaTabela("Necessidade especial", necessidade));
+        tr.appendChild(criarCelulaTabela(
+            "Laudos",
+            estudante.possui_necessidade_especial ? "Cadastrado" : "Nenhum"
+        ));
 
         const badge = document.createElement("span");
         badge.className = `status-chip ${classeStatusEstudante(Boolean(estudante.ativo))}`;
