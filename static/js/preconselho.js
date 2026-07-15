@@ -58,7 +58,9 @@ const estadoConsolidacao = {
 const estadoPainelReavaliacao = {
     periodo: null,
     registros: [],
-    estudantesExpandidos: new Set()
+    estudantesExpandidos: new Set(),
+    registroEmEdicaoId: null,
+    resultadoEmEdicao: ""
 };
 
 const estadoRelatorio = {
@@ -1583,6 +1585,42 @@ function statusDisciplinaReavaliacao(registro) {
     return { rotulo: "Em reavaliação", classe: "is-pendente" };
 }
 
+function resultadoRegistroReavaliacao(registro) {
+    if (registro?.pos_preconselho_recuperado === true) return "recuperado";
+    if (registro?.pos_preconselho_recuperado === false) return "nao_recuperado";
+    return "";
+}
+
+function renderizarEditorGestaoReavaliacao(registro) {
+    const resultado = estadoPainelReavaliacao.resultadoEmEdicao;
+    const motivos = Array.isArray(contextoAtual?.motivos_pos_preconselho?.[resultado])
+        ? contextoAtual.motivos_pos_preconselho[resultado]
+        : [];
+    const selecionados = new Set(registro.pos_preconselho_motivo_ids || []);
+    return `
+        <form class="preconselho-review-manager-form" data-form-reavaliacao-id="${Number(registro.id)}">
+            <fieldset>
+                <legend>Resultado da reavaliação</legend>
+                <label><input type="radio" name="resultadoGestaoReavaliacao" value="recuperado" ${resultado === "recuperado" ? "checked" : ""}> Recuperado</label>
+                <label><input type="radio" name="resultadoGestaoReavaliacao" value="nao_recuperado" ${resultado === "nao_recuperado" ? "checked" : ""}> Ficou para o conselho</label>
+            </fieldset>
+            <fieldset class="preconselho-review-manager-reasons" ${resultado ? "" : "hidden"}>
+                <legend>Motivos</legend>
+                ${motivos.map((motivo) => `<label><input type="checkbox" name="motivoGestaoReavaliacao" value="${escaparHtml(motivo.id || "")}" ${selecionados.has(String(motivo.id || "")) ? "checked" : ""}> ${escaparHtml(motivo.descricao || "")}</label>`).join("") || "<p>Nenhum motivo disponível para este resultado.</p>"}
+            </fieldset>
+            <label class="pcpi-field">
+                <span>Observação (opcional)</span>
+                <textarea name="observacaoGestaoReavaliacao" rows="3" maxlength="1000">${escaparHtml(registro.pos_preconselho_observacao || "")}</textarea>
+            </label>
+            <p class="pcpi-hint">Registro originalmente atribuído a ${escaparHtml(registro.professor_nome || "professor não informado")}.</p>
+            <div class="pcpi-inline-actions">
+                <button class="btn-destaque" type="submit">Salvar reavaliação</button>
+                <button type="button" data-action="cancelar-reavaliacao-gestao">Cancelar</button>
+            </div>
+            <p class="pcpi-status-copy" data-msg-reavaliacao-id="${Number(registro.id)}"></p>
+        </form>`;
+}
+
 function agruparRegistrosPainelReavaliacao(registros) {
     const grupos = new Map();
     registros.forEach((registro) => {
@@ -1635,8 +1673,17 @@ function renderizarPainelReavaliacao() {
                     ${disciplinas.map((disciplina) => {
                         const status = statusDisciplinaReavaliacao(disciplina);
                         return `<div class="preconselho-review-discipline">
-                            <span>${escaparHtml(disciplina.disciplina_nome || "Disciplina não informada")}</span>
-                            <strong class="preconselho-review-status ${status.classe}">${status.rotulo}</strong>
+                            <div class="preconselho-review-discipline-main">
+                                <span>${escaparHtml(disciplina.disciplina_nome || "Disciplina não informada")}</span>
+                                <small>${escaparHtml(disciplina.professor_nome || "Professor não informado")}</small>
+                            </div>
+                            <div class="preconselho-review-discipline-actions">
+                                <strong class="preconselho-review-status ${status.classe}">${status.rotulo}</strong>
+                                <button type="button" data-action="editar-reavaliacao-gestao" data-registro-id="${Number(disciplina.id)}">
+                                    ${disciplina.pos_preconselho_recuperado === null ? "Registrar reavaliação" : "Alterar resultado"}
+                                </button>
+                            </div>
+                            ${Number(estadoPainelReavaliacao.registroEmEdicaoId) === Number(disciplina.id) ? renderizarEditorGestaoReavaliacao(disciplina) : ""}
                         </div>`;
                     }).join("")}
                 </div>
@@ -1666,6 +1713,39 @@ async function carregarPainelReavaliacao() {
     } catch (erro) {
         renderizarPainelReavaliacao();
         definirMensagem("msgPreconselhoReavaliacao", erro.message || "Não foi possível carregar as reavaliações.", true);
+    }
+}
+
+async function salvarReavaliacaoGestao(form) {
+    const registroId = Number(form.dataset.formReavaliacaoId || 0);
+    const resultado = form.querySelector('[name="resultadoGestaoReavaliacao"]:checked')?.value || "";
+    const motivoIds = Array.from(form.querySelectorAll('[name="motivoGestaoReavaliacao"]:checked')).map((item) => item.value);
+    const observacao = String(form.querySelector('[name="observacaoGestaoReavaliacao"]')?.value || "").trim();
+    const mensagem = form.querySelector("[data-msg-reavaliacao-id]");
+    if (!resultado || motivoIds.length === 0) {
+        mensagem.textContent = "Selecione o resultado e ao menos um motivo.";
+        mensagem.dataset.state = "erro";
+        return;
+    }
+    const botao = form.querySelector('button[type="submit"]');
+    botao.disabled = true;
+    botao.textContent = "Salvando...";
+    try {
+        const resposta = await fetchComAuth(`/preconselho/registros/${registroId}/reavaliacao`, {
+            method: "PUT",
+            headers: headersJson,
+            body: JSON.stringify({ recuperado: resultado === "recuperado", motivo_ids: motivoIds, observacao })
+        });
+        if (!resposta.ok) throw new Error(await obterMensagemErroResposta(resposta, "Não foi possível salvar a reavaliação."));
+        estadoPainelReavaliacao.registroEmEdicaoId = null;
+        estadoPainelReavaliacao.resultadoEmEdicao = "";
+        await carregarPainelReavaliacao();
+        definirMensagem("msgPreconselhoReavaliacao", "Reavaliação registrada pela gestão com sucesso.");
+    } catch (erro) {
+        mensagem.textContent = erro.message || "Não foi possível salvar a reavaliação.";
+        mensagem.dataset.state = "erro";
+        botao.disabled = false;
+        botao.textContent = "Salvar reavaliação";
     }
 }
 
@@ -3267,6 +3347,23 @@ function registrarEventos() {
         await carregarPainelReavaliacao();
     });
     el("listaPainelReavaliacao").addEventListener("click", (event) => {
+        const editar = event.target.closest('button[data-action="editar-reavaliacao-gestao"]');
+        if (editar) {
+            event.stopPropagation();
+            const registro = estadoPainelReavaliacao.registros.find((item) => Number(item.id) === Number(editar.dataset.registroId));
+            if (!registro) return;
+            estadoPainelReavaliacao.registroEmEdicaoId = Number(registro.id);
+            estadoPainelReavaliacao.resultadoEmEdicao = resultadoRegistroReavaliacao(registro);
+            renderizarPainelReavaliacao();
+            el("listaPainelReavaliacao")?.querySelector(`[data-form-reavaliacao-id="${Number(registro.id)}"] input`)?.focus();
+            return;
+        }
+        if (event.target.closest('button[data-action="cancelar-reavaliacao-gestao"]')) {
+            estadoPainelReavaliacao.registroEmEdicaoId = null;
+            estadoPainelReavaliacao.resultadoEmEdicao = "";
+            renderizarPainelReavaliacao();
+            return;
+        }
         const botao = event.target.closest("button[data-estudante-reavaliacao]");
         if (!botao) return;
         const chave = String(botao.dataset.estudanteReavaliacao || "");
@@ -3277,6 +3374,19 @@ function registrarEventos() {
         }
         renderizarPainelReavaliacao();
         el("listaPainelReavaliacao")?.querySelector(`[data-estudante-reavaliacao="${CSS.escape(chave)}"]`)?.focus();
+    });
+    el("listaPainelReavaliacao").addEventListener("change", (event) => {
+        if (event.target.name !== "resultadoGestaoReavaliacao") return;
+        estadoPainelReavaliacao.resultadoEmEdicao = event.target.value;
+        renderizarPainelReavaliacao();
+        const registroId = Number(estadoPainelReavaliacao.registroEmEdicaoId);
+        el("listaPainelReavaliacao")?.querySelector(`[data-form-reavaliacao-id="${registroId}"] [name="motivoGestaoReavaliacao"]`)?.focus();
+    });
+    el("listaPainelReavaliacao").addEventListener("submit", async (event) => {
+        const form = event.target.closest("form[data-form-reavaliacao-id]");
+        if (!form) return;
+        event.preventDefault();
+        await salvarReavaliacaoGestao(form);
     });
 
     el("btnCopiarTextoConsolidado").addEventListener("click", async () => {

@@ -376,6 +376,17 @@ class PreConselhoRouterTest(unittest.TestCase):
                 )
             self.assertEqual(ctx_reavaliacao.exception.status_code, 403)
 
+            with self.assertRaises(preconselho_router.HTTPException) as ctx_coord_fora_reavaliacao:
+                preconselho_router.reavaliar_registro_preconselho_api(
+                    registro_id=int(salvo["id"]),
+                    payload=models.PreConselhoReavaliacaoIn(
+                        recuperado=True,
+                        motivo_ids=["recuperou_nota"],
+                    ),
+                    usuario=self._usuario_coord(coordenador_id, "Coordenadora"),
+                )
+            self.assertEqual(ctx_coord_fora_reavaliacao.exception.status_code, 403)
+
             preconselho_router.atualizar_status_periodo_preconselho_api(
                 periodo_id=periodo_id,
                 payload=models.PreConselhoPeriodoStatusIn(status="EM_REAVALIACAO"),
@@ -409,6 +420,21 @@ class PreConselhoRouterTest(unittest.TestCase):
             self.assertTrue(reavaliado["pos_preconselho_recuperado"])
             self.assertIn("projeto personalizado", reavaliado["pos_preconselho_motivos"][0])
             self.assertEqual(reavaliado["texto_gerado"], texto_inicial)
+
+            reavaliado_pela_gestao = preconselho_router.reavaliar_registro_preconselho_api(
+                registro_id=int(salvo["id"]),
+                payload=models.PreConselhoReavaliacaoIn(
+                    recuperado=True,
+                    motivo_ids=[motivo_personalizado["codigo"]],
+                    observacao="Reavaliação registrada pela coordenação.",
+                ),
+                usuario=self._usuario_coord(coordenador_id, "Coordenadora"),
+            )
+            self.assertTrue(reavaliado_pela_gestao["pos_preconselho_recuperado"])
+            self.assertEqual(
+                reavaliado_pela_gestao["pos_preconselho_observacao"],
+                "Reavaliação registrada pela coordenação.",
+            )
 
             motivo_inativo = preconselho_router.atualizar_status_motivo_reavaliacao_api(
                 motivo_id=int(motivo_personalizado["id"]),

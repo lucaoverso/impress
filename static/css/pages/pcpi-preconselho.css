@@ -1142,7 +1142,56 @@ body.preconselho-modal-open {
     justify-content: space-between;
     gap: 16px;
     border-bottom: 1px solid var(--line-soft, #d8dee8);
+    flex-wrap: wrap;
 }
+
+.preconselho-review-discipline-main,
+.preconselho-review-discipline-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.preconselho-review-discipline-main {
+    min-width: 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+}
+
+.preconselho-review-discipline-main small { color: var(--text-muted, #4b5563); }
+.preconselho-review-discipline-actions button { min-height: 40px; }
+
+.preconselho-review-manager-form {
+    display: grid;
+    width: 100%;
+    gap: 16px;
+    padding: 16px 0 6px;
+    border-top: 1px solid var(--line-soft, #d8dee8);
+}
+
+.preconselho-review-manager-form fieldset {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px 20px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.preconselho-review-manager-form legend {
+    width: 100%;
+    margin-bottom: 6px;
+    font-weight: 700;
+}
+
+.preconselho-review-manager-form label:not(.pcpi-field) {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.preconselho-review-manager-reasons { flex-direction: column; }
 
 .preconselho-review-discipline:last-child {
     border-bottom: 0;
@@ -1230,6 +1279,10 @@ body.preconselho-modal-open {
         align-items: flex-start;
         flex-direction: column;
         gap: 6px;
+    }
+    .preconselho-review-discipline-actions {
+        width: 100%;
+        flex-wrap: wrap;
     }
     .pcpi-page {
         padding: 18px max(12px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));

@@ -6,6 +6,7 @@ from . import repository
 from .service import (
     enrich_editable_records,
     get_user_id,
+    has_manager_access,
     is_admin_user,
     is_record_editable_for_user,
     is_teacher_user,
@@ -176,8 +177,10 @@ def review_preconselho_record(registro_id: int, payload, usuario: dict) -> dict:
     if not registro:
         raise HTTPException(404, "Registro não encontrado.")
     if not is_admin_user(usuario):
-        if not is_teacher_user(usuario) or int(registro.get("professor_id") or 0) != get_user_id(usuario):
+        if is_teacher_user(usuario) and int(registro.get("professor_id") or 0) != get_user_id(usuario):
             raise HTTPException(403, "Apenas o professor responsável pode reavaliar este registro.")
+        if not is_teacher_user(usuario) and not has_manager_access(usuario):
+            raise HTTPException(403, "Apenas o professor responsável ou a gestão podem reavaliar este registro.")
         if not periodo_em_reavaliacao(registro.get("periodo_status")):
             raise HTTPException(403, "O período não está aberto para reavaliação.")
 
