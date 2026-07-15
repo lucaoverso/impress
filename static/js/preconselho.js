@@ -1651,7 +1651,14 @@ function agruparRegistrosPainelReavaliacao(registros) {
 function renderizarPainelReavaliacao() {
     const container = el("listaPainelReavaliacao");
     const periodo = estadoPainelReavaliacao.periodo;
+    const registros = estadoPainelReavaliacao.registros;
     const estudantes = agruparRegistrosPainelReavaliacao(estadoPainelReavaliacao.registros);
+    const totalPendentes = registros.filter((item) => item.pos_preconselho_recuperado === null).length;
+    const totalRecuperados = registros.filter((item) => item.pos_preconselho_recuperado === true).length;
+    const totalParaConselho = registros.filter((item) => item.pos_preconselho_recuperado === false).length;
+    el("preconselhoTotalEmReavaliacao").textContent = String(totalPendentes);
+    el("preconselhoTotalRecuperados").textContent = String(totalRecuperados);
+    el("preconselhoTotalParaConselho").textContent = String(totalParaConselho);
     el("preconselhoReavaliacaoPeriodoNome").textContent = periodo ? rotuloPeriodo(periodo) : "Nenhum período ativo";
 
     if (!periodo) {
@@ -1665,8 +1672,8 @@ function renderizarPainelReavaliacao() {
         return;
     }
 
-    const totalDisciplinas = estudantes.reduce((total, estudante) => total + estudante.disciplinas.length, 0);
-    el("preconselhoResumoPainelReavaliacao").textContent = `${estudantes.length} estudante(s) • ${totalDisciplinas} disciplina(s) sinalizada(s).`;
+    const totalRegistros = registros.length;
+    el("preconselhoResumoPainelReavaliacao").textContent = `${estudantes.length} estudante(s) único(s) • ${totalRegistros} registro(s) disciplinar(es). Os indicadores acima contabilizam os registros.`;
     container.innerHTML = estudantes.map((estudante) => {
         const chave = String(estudante.id || estudante.nome);
         const expandido = estadoPainelReavaliacao.estudantesExpandidos.has(chave);

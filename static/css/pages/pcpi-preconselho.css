@@ -1072,6 +1072,32 @@ body.preconselho-modal-open {
     color: var(--text-muted, #4b5563);
 }
 
+.preconselho-review-summary {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    margin-top: 20px;
+    border: 1px solid var(--line-soft, #d8dee8);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.preconselho-review-summary-item {
+    display: grid;
+    gap: 3px;
+    min-width: 0;
+    padding: 14px 16px;
+    border-right: 1px solid var(--line-soft, #d8dee8);
+    background: var(--surface-subtle, #f8fbff);
+}
+
+.preconselho-review-summary-item:last-child { border-right: 0; }
+.preconselho-review-summary-item > span { font-weight: 700; }
+.preconselho-review-summary-item > strong { font-size: 24px; line-height: 1.1; }
+.preconselho-review-summary-item > small { color: var(--text-muted, #4b5563); }
+.preconselho-review-summary-item.is-pendente > strong { color: #92400e; }
+.preconselho-review-summary-item.is-recuperado > strong { color: #166534; }
+.preconselho-review-summary-item.is-conselho > strong { color: #991b1b; }
+
 .preconselho-review-student-list {
     display: grid;
     gap: 10px;
@@ -1275,6 +1301,16 @@ body.preconselho-modal-open {
 }
 
 @media (max-width: 760px) {
+    .preconselho-review-summary {
+        grid-template-columns: 1fr;
+    }
+
+    .preconselho-review-summary-item {
+        border-right: 0;
+        border-bottom: 1px solid var(--line-soft, #d8dee8);
+    }
+
+    .preconselho-review-summary-item:last-child { border-bottom: 0; }
     .preconselho-review-discipline {
         align-items: flex-start;
         flex-direction: column;
