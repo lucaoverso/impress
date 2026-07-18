@@ -84,3 +84,64 @@ def create_quota(usuario_id: int, mes: str, limite: int):
 
 def consume_quota(cota_id: int, paginas: int):
     return consumir_cota(cota_id, paginas)
+
+
+def list_printers(*, include_inactive: bool = False):
+    conn = get_connection()
+    try:
+        query = "SELECT id, name, active, created_at FROM printing_printers"
+        if not include_inactive:
+            query += " WHERE active = 1"
+        rows = conn.execute(query + " ORDER BY name COLLATE NOCASE").fetchall()
+        return [dict(row) for row in rows]
+    finally:
+        conn.close()
+
+
+def get_printer_by_name(name: str):
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            "SELECT id, name, active, created_at FROM printing_printers WHERE name = ? COLLATE NOCASE",
+            (name,),
+        ).fetchone()
+        return dict(row) if row else None
+    finally:
+        conn.close()
+
+
+def create_printer(name: str):
+    conn = get_connection()
+    try:
+        cursor = conn.execute("INSERT INTO printing_printers (name) VALUES (?)", (name,))
+        conn.commit()
+        row = conn.execute(
+            "SELECT id, name, active, created_at FROM printing_printers WHERE id = ?",
+            (cursor.lastrowid,),
+        ).fetchone()
+        return dict(row)
+    finally:
+        conn.close()
+
+
+def update_printer_status(printer_id: int, active: bool):
+    conn = get_connection()
+    try:
+        cursor = conn.execute(
+            "UPDATE printing_printers SET active = ? WHERE id = ?",
+            (int(active), printer_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()
+
+
+def delete_printer(printer_id: int):
+    conn = get_connection()
+    try:
+        cursor = conn.execute("DELETE FROM printing_printers WHERE id = ?", (printer_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+    finally:
+        conn.close()

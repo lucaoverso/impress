@@ -26,3 +26,11 @@ class PrintQuotaOut(BaseModel):
     usadas: int
     restante: int | None
     ilimitada: bool
+
+
+class PrintingPrinterCreate(BaseModel):
+    name: str
+
+
+class PrintingPrinterStatusUpdate(BaseModel):
+    active: bool

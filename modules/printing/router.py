@@ -7,7 +7,6 @@ from fastapi.responses import Response
 from auth import get_usuario_logado
 from modules.printing import repository
 from modules.printing.config import (
-    DEFAULT_PRINTER_NAME,
     FORMATOS_UPLOAD_DESCRICAO,
     get_default_printer_name,
     get_spool_dir,
@@ -27,12 +26,14 @@ from modules.printing.service import (
     get_formatted_print_status,
     get_print_quota_response,
     list_formatted_print_classes,
+    list_available_printers,
     list_print_tags,
     list_serialized_jobs_for_user,
     prepare_uploaded_file_for_preview,
     prepare_uploaded_file_for_print,
     read_reusable_job_pdf_content,
     reprint_job_from_history,
+    resolve_active_printer,
     validate_print_parameters,
 )
 from services.cota_service import obter_cota_atual, validar_e_consumir_cota
@@ -68,6 +69,11 @@ def tags_impressao(_usuario=Depends(get_usuario_logado)):
     return list_print_tags()
 
 
+@router.get("/impressao/impressoras")
+def impressoras_impressao(_usuario=Depends(get_usuario_logado)):
+    return list_available_printers(get_default_printer_name())
+
+
 @router.get("/impressao/status")
 def status_impressao(_usuario=Depends(get_usuario_logado)):
     return get_formatted_print_status()
@@ -83,6 +89,7 @@ def imprimir(
     intervalo_paginas: str = Form(""),
     tags: list[str] = Form(default=[]),
     professor_id: int | None = Form(None),
+    printer_name: str = Form(""),
     usuario=Depends(get_usuario_logado),
 ):
     ensure_print_is_available(get_formatted_print_status())
@@ -100,6 +107,7 @@ def imprimir(
         contexto="solicitante da impressão",
         permitir_professor_com_acesso_coordenacao=True,
     )
+    impressora = resolve_active_printer(printer_name, get_default_printer_name())
 
     conteudo_arquivo = arquivo.file.read()
     resultado_preparo = prepare_uploaded_file_for_print(
@@ -125,7 +133,7 @@ def imprimir(
         contar_paginas_pdf=contar_paginas_pdf,
         validar_e_consumir_cota=validar_e_consumir_cota,
         usuario_tem_cota_ilimitada=user_has_unlimited_quota,
-        default_printer_name=DEFAULT_PRINTER_NAME,
+        default_printer_name=impressora,
         logger=logger,
         remover_arquivo_se_existir=_remove_file_if_exists,
     )
@@ -190,6 +198,7 @@ def reimprimir_job_historico(
     intervalo_paginas: str = Form(""),
     tags: list[str] = Form(default=[]),
     professor_id: int | None = Form(None),
+    printer_name: str = Form(""),
     usuario=Depends(get_usuario_logado),
 ):
     ensure_print_is_available(get_formatted_print_status())
@@ -201,6 +210,7 @@ def reimprimir_job_historico(
         contexto="solicitante da reimpressão",
         permitir_professor_com_acesso_coordenacao=True,
     )
+    impressora = resolve_active_printer(printer_name, get_default_printer_name())
 
     return reprint_job_from_history(
         job_id=job_id,
@@ -217,7 +227,7 @@ def reimprimir_job_historico(
         validar_e_consumir_cota=validar_e_consumir_cota,
         usuario_pode_gerir_impressoes=user_can_manage_prints,
         usuario_tem_cota_ilimitada=user_has_unlimited_quota,
-        default_printer_name=DEFAULT_PRINTER_NAME,
+        default_printer_name=impressora,
         logger=logger,
         remover_arquivo_se_existir=_remove_file_if_exists,
     )
