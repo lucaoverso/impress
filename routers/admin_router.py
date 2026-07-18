@@ -1,25 +1,15 @@
 import sqlite3
 from datetime import UTC, datetime
-from pathlib import Path
-import re
-from uuid import uuid4
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from auth import get_usuario_logado
 from db.catalogos import (
     atualizar_disciplina_dados,
-    atualizar_recurso_dados,
     atualizar_status_disciplina,
-    atualizar_status_recurso,
-    atualizar_status_turma,
-    atualizar_turma_dados,
     criar_disciplina,
-    criar_recurso,
-    criar_turma,
     listar_disciplinas,
     listar_disciplinas_ativas,
-    listar_recursos,
     listar_turmas,
     listar_turmas_ativas,
 )
@@ -67,12 +57,19 @@ from db.usuarios import (
     revogar_tokens_usuario,
 )
 from modules.scheduling.lesson_config import (
-    lesson_window_from_turn,
     normalize_schedule_entries,
-    validate_class_lesson_window,
     validate_schedule_entry,
 )
 from modules.scheduling.schemas import SchedulingLessonConfigIn, SchedulingLessonConfigOut
+from modules.printing.schemas import PrintingPrinterCreate, PrintingPrinterStatusUpdate
+from modules.printing.service import (
+    PrinterConflictError,
+    PrinterNotFoundError,
+    create_registered_printer,
+    delete_registered_printer,
+    list_registered_printers,
+    update_registered_printer_status,
+)
 from models import (
     CoordenadorCreateIn,
     DisciplinaCreateIn,
@@ -85,15 +82,11 @@ from models import (
     ProfessorTurmaDisciplinaOut,
     ProfessorUpdateIn,
     ImpressaoStatusIn,
-    RecursoCreateIn,
     RecursoStatusIn,
-    RecursoUpdateIn,
     RegrasCotaIn,
-    TurmaCreateIn,
     TurmaDisciplinaCreateIn,
     TurmaDisciplinaOut,
     TurmaDisciplinaUpdateIn,
-    TurmaUpdateIn,
 )
 from security.nt_hash import generate_nt_hash
 from services.atribuicoes_docentes_import_service import importar_atribuicoes_docentes_arquivo
@@ -114,7 +107,6 @@ from .common import (
     validar_numero_nao_negativo,
     validar_turno,
 )
-from . import config as router_config
 from .professores_common import (
     validar_payload_atualizacao_professor,
     validar_payload_cadastro_coordenador,
@@ -122,16 +114,6 @@ from .professores_common import (
 )
 
 router = APIRouter()
-STATIC_DIR = getattr(router_config, "STATIC_DIR", Path(__file__).resolve().parent.parent / "static")
-RESOURCE_IMAGE_DIR = STATIC_DIR / "img" / "resources"
-RESOURCE_IMAGE_EXTENSIONS = {
-    ".jpg": ".jpg",
-    ".jpeg": ".jpg",
-    ".png": ".png",
-    ".webp": ".webp",
-}
-RESOURCE_IMAGE_MIME_TYPES = {"image/jpeg", "image/png", "image/webp"}
-RESOURCE_IMAGE_MAX_BYTES = 5 * 1024 * 1024
 
 
 def _formatar_data_hora_local(valor: str | None) -> str:
@@ -144,17 +126,6 @@ def _formatar_data_hora_local(valor: str | None) -> str:
     except ValueError:
         return texto
     return data_utc.astimezone().strftime("%d/%m/%Y %H:%M:%S")
-
-
-def _normalizar_nome_arquivo_recurso(nome_arquivo: str) -> tuple[str, str]:
-    nome_limpo = Path(str(nome_arquivo or "").strip()).name
-    extensao = Path(nome_limpo).suffix.lower()
-    extensao_normalizada = RESOURCE_IMAGE_EXTENSIONS.get(extensao)
-    if not extensao_normalizada:
-        raise HTTPException(400, "Use uma imagem JPG, PNG ou WEBP.")
-
-    stem = re.sub(r"[^a-z0-9]+", "-", Path(nome_limpo).stem.lower()).strip("-")
-    return (stem or "recurso", extensao_normalizada)
 
 
 def validar_payload_atribuicao_docente(payload: ProfessorTurmaDisciplinaCreateIn):
@@ -250,21 +221,6 @@ def _buscar_turma_admin_por_id(turma_id: int):
         (item for item in listar_turmas(incluir_inativas=True) if int(item["id"]) == int(turma_id)),
         None,
     )
-
-
-def _dados_janela_aulas_turma(turno: str, aula_inicial, aula_final) -> tuple[int, int]:
-    configuracoes_aulas = listar_configuracoes_aulas(incluir_inativas=False)
-    inicio_padrao, fim_padrao = lesson_window_from_turn(turno)
-    inicio_informado = aula_inicial if aula_inicial is not None else inicio_padrao
-    fim_informado = aula_final if aula_final is not None else fim_padrao
-    try:
-        return validate_class_lesson_window(
-            inicio_informado,
-            fim_informado,
-            configuracoes_aulas,
-        )
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
 
 
 def _dados_configuracao_aula_payload(
@@ -456,6 +412,48 @@ def atualizar_status_impressao_admin(
     )
 
 
+@router.get("/admin/impressao/impressoras")
+def listar_impressoras_admin(usuario=Depends(get_usuario_logado)):
+    exigir_gestor(usuario)
+    return list_registered_printers(include_inactive=True)
+
+
+@router.post("/admin/impressao/impressoras")
+def criar_impressora_admin(
+    payload: PrintingPrinterCreate,
+    usuario=Depends(get_usuario_logado),
+):
+    exigir_admin(usuario)
+    try:
+        return create_registered_printer(payload.name)
+    except PrinterConflictError as exc:
+        raise HTTPException(409, str(exc)) from exc
+
+
+@router.put("/admin/impressao/impressoras/{printer_id}/status")
+def atualizar_impressora_admin(
+    printer_id: int,
+    payload: PrintingPrinterStatusUpdate,
+    usuario=Depends(get_usuario_logado),
+):
+    exigir_admin(usuario)
+    try:
+        update_registered_printer_status(printer_id, payload.active)
+    except PrinterNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    return {"mensagem": "Status da impressora atualizado."}
+
+
+@router.delete("/admin/impressao/impressoras/{printer_id}")
+def excluir_impressora_admin(printer_id: int, usuario=Depends(get_usuario_logado)):
+    exigir_admin(usuario)
+    try:
+        delete_registered_printer(printer_id)
+    except PrinterNotFoundError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    return {"mensagem": "Impressora excluída."}
+
+
 @router.get("/admin/historico")
 def historico_admin(
     data_inicio: str = None,
@@ -510,93 +508,6 @@ def relatorio_recursos_admin(
             data_inicio_norm, data_fim_norm
         ),
     }
-
-
-@router.get("/admin/turmas")
-def listar_turmas_admin_api(
-    incluir_inativas: bool = True,
-    usuario=Depends(get_usuario_logado),
-):
-    exigir_gestor(usuario)
-    return listar_turmas(incluir_inativas=incluir_inativas)
-
-
-@router.post("/admin/turmas")
-def criar_turma_admin(
-    payload: TurmaCreateIn,
-    usuario=Depends(get_usuario_logado),
-):
-    exigir_gestor(usuario)
-    nome = payload.nome.strip()
-    turno = validar_turno(payload.turno)
-    aula_inicial, aula_final = _dados_janela_aulas_turma(
-        turno,
-        payload.aula_inicial,
-        payload.aula_final,
-    )
-    quantidade_estudantes = validar_numero_nao_negativo(
-        payload.quantidade_estudantes,
-        "Quantidade de estudantes",
-    )
-
-    if not nome:
-        raise HTTPException(400, "Nome da turma é obrigatório.")
-
-    try:
-        turma_id = criar_turma(
-            nome=nome,
-            turno=turno,
-            aula_inicial=aula_inicial,
-            aula_final=aula_final,
-            quantidade_estudantes=quantidade_estudantes,
-        )
-    except sqlite3.IntegrityError as exc:
-        raise HTTPException(409, "Já existe uma turma com este nome.") from exc
-
-    return {"mensagem": "Turma cadastrada com sucesso.", "turma_id": turma_id}
-
-
-@router.put("/admin/turmas/{turma_id}")
-def atualizar_turma_admin(
-    turma_id: int,
-    payload: TurmaUpdateIn,
-    usuario=Depends(get_usuario_logado),
-):
-    exigir_gestor(usuario)
-    turno = validar_turno(payload.turno)
-    aula_inicial, aula_final = _dados_janela_aulas_turma(
-        turno,
-        payload.aula_inicial,
-        payload.aula_final,
-    )
-    quantidade_estudantes = validar_numero_nao_negativo(
-        payload.quantidade_estudantes,
-        "Quantidade de estudantes",
-    )
-
-    alterado = atualizar_turma_dados(
-        turma_id=turma_id,
-        turno=turno,
-        aula_inicial=aula_inicial,
-        aula_final=aula_final,
-        quantidade_estudantes=quantidade_estudantes,
-    )
-    if not alterado:
-        raise HTTPException(404, "Turma não encontrada.")
-    return {"mensagem": "Dados da turma atualizados com sucesso."}
-
-
-@router.put("/admin/turmas/{turma_id}/status")
-def atualizar_status_turma_admin(
-    turma_id: int,
-    payload: RecursoStatusIn,
-    usuario=Depends(get_usuario_logado),
-):
-    exigir_gestor(usuario)
-    alterado = atualizar_status_turma(turma_id, payload.ativo)
-    if not alterado:
-        raise HTTPException(404, "Turma não encontrada.")
-    return {"mensagem": "Status da turma atualizado com sucesso."}
 
 
 @router.get("/admin/configuracao-aulas", response_model=list[SchedulingLessonConfigOut])
@@ -1153,122 +1064,3 @@ def recalcular_cotas_admin(
     mes_referencia = validar_mes_referencia(mes) if mes else mes_atual_referencia()
     recalcular_cotas_mes(mes_referencia)
     return {"mensagem": "Cotas recalculadas com sucesso.", "mes_referencia": mes_referencia}
-
-
-@router.get("/admin/recursos")
-def listar_recursos_admin_api(
-    incluir_inativos: bool = True,
-    usuario=Depends(get_usuario_logado),
-):
-    exigir_gestor(usuario)
-    return listar_recursos(incluir_inativos=incluir_inativos)
-
-
-@router.post("/admin/recursos/upload-imagem")
-def upload_imagem_recurso_admin(
-    arquivo: UploadFile = File(...),
-    usuario=Depends(get_usuario_logado),
-):
-    exigir_gestor(usuario)
-    if not arquivo or not arquivo.filename:
-        raise HTTPException(400, "Imagem nao enviada.")
-
-    if getattr(arquivo, "content_type", "") not in RESOURCE_IMAGE_MIME_TYPES:
-        raise HTTPException(400, "Use uma imagem JPG, PNG ou WEBP.")
-
-    stem, extensao = _normalizar_nome_arquivo_recurso(arquivo.filename)
-    conteudo = arquivo.file.read()
-    if not conteudo:
-        raise HTTPException(400, "A imagem enviada esta vazia.")
-    if len(conteudo) > RESOURCE_IMAGE_MAX_BYTES:
-        raise HTTPException(400, "A imagem deve ter no maximo 5 MB.")
-
-    RESOURCE_IMAGE_DIR.mkdir(parents=True, exist_ok=True)
-    nome_arquivo = f"{stem}-{uuid4().hex[:10]}{extensao}"
-    destino = RESOURCE_IMAGE_DIR / nome_arquivo
-    destino.write_bytes(conteudo)
-    caminho_publico = f"/static/img/resources/{nome_arquivo}"
-
-    return {"mensagem": "Imagem enviada com sucesso.", "imagem_capa": caminho_publico}
-
-
-@router.post("/admin/recursos")
-def criar_recurso_admin(
-    payload: RecursoCreateIn,
-    usuario=Depends(get_usuario_logado),
-):
-    exigir_gestor(usuario)
-    nome = payload.nome.strip()
-    tipo = payload.tipo.strip()
-    descricao = (payload.descricao or "").strip()
-    quantidade_itens = validar_numero_nao_negativo(payload.quantidade_itens, "Quantidade de itens")
-    imagem_capa = str(payload.imagem_capa or "").strip()
-
-    if not nome:
-        raise HTTPException(400, "Nome do recurso é obrigatório.")
-    if not tipo:
-        raise HTTPException(400, "Tipo do recurso é obrigatório.")
-    if quantidade_itens < 1:
-        raise HTTPException(400, "Quantidade de itens deve ser no mínimo 1.")
-
-    try:
-        recurso_id = criar_recurso(
-            nome=nome,
-            tipo=tipo,
-            descricao=descricao,
-            quantidade_itens=quantidade_itens,
-            imagem_capa=imagem_capa,
-        )
-    except sqlite3.IntegrityError as exc:
-        raise HTTPException(409, "Já existe um recurso com este nome.") from exc
-
-    return {"mensagem": "Recurso criado com sucesso.", "recurso_id": recurso_id}
-
-
-@router.put("/admin/recursos/{recurso_id}")
-def atualizar_recurso_admin(
-    recurso_id: int,
-    payload: RecursoUpdateIn,
-    usuario=Depends(get_usuario_logado),
-):
-    exigir_gestor(usuario)
-    nome = payload.nome.strip()
-    tipo = payload.tipo.strip()
-    descricao = (payload.descricao or "").strip()
-    quantidade_itens = validar_numero_nao_negativo(payload.quantidade_itens, "Quantidade de itens")
-    imagem_capa = str(payload.imagem_capa or "").strip()
-    if not nome:
-        raise HTTPException(400, "Nome do recurso é obrigatório.")
-    if not tipo:
-        raise HTTPException(400, "Tipo do recurso é obrigatório.")
-    if quantidade_itens < 1:
-        raise HTTPException(400, "Quantidade de itens deve ser no mínimo 1.")
-
-    try:
-        alterado = atualizar_recurso_dados(
-            recurso_id=recurso_id,
-            nome=nome,
-            tipo=tipo,
-            descricao=descricao,
-            quantidade_itens=quantidade_itens,
-            imagem_capa=imagem_capa,
-        )
-    except sqlite3.IntegrityError as exc:
-        raise HTTPException(409, "Já existe um recurso com este nome.") from exc
-
-    if not alterado:
-        raise HTTPException(404, "Recurso não encontrado.")
-    return {"mensagem": "Recurso atualizado com sucesso."}
-
-
-@router.put("/admin/recursos/{recurso_id}/status")
-def atualizar_status_recurso_admin(
-    recurso_id: int,
-    payload: RecursoStatusIn,
-    usuario=Depends(get_usuario_logado),
-):
-    exigir_gestor(usuario)
-    alterado = atualizar_status_recurso(recurso_id, payload.ativo)
-    if not alterado:
-        raise HTTPException(404, "Recurso não encontrado.")
-    return {"mensagem": "Status do recurso atualizado com sucesso."}

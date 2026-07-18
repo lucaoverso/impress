@@ -17,6 +17,8 @@ import modules.occurrences.router as occurrences_router_module
 import modules.audit.router as audit_router_module
 import modules.teacher_followup.router as teacher_followup_router_module
 import modules.users.router as users_router_module
+import modules.admin.resources.router as admin_resources_router_module
+import modules.admin.classes.router as admin_classes_router_module
 import routers.admin_router as admin_router_module
 import modules.scheduling.router as scheduling_router_module
 import routers.common as common_module
@@ -52,6 +54,8 @@ common_module = _reload_or_import(common_module)
 professores_common_module = _reload_or_import(professores_common_module)
 system_router_module = _reload_or_import(system_router_module)
 pages_router_module = _reload_or_import(pages_router_module)
+admin_resources_router_module = _reload_or_import(admin_resources_router_module)
+admin_classes_router_module = _reload_or_import(admin_classes_router_module)
 impressao_router_module = _reload_or_import(impressao_router_module)
 relatorios_router_module = _reload_or_import(relatorios_router_module)
 download_router_module = _reload_or_import(download_router_module)
@@ -70,6 +74,8 @@ STATIC_DIR = config_module.STATIC_DIR
 
 system_router = system_router_module.router
 pages_router = pages_router_module.router
+admin_resources_router = admin_resources_router_module.router
+admin_classes_router = admin_classes_router_module.router
 impressao_router = impressao_router_module.router
 relatorios_router = relatorios_router_module.router
 download_router = download_router_module.router
@@ -195,6 +201,8 @@ app = FastAPI(title="Suite de Servicos Escolares", lifespan=lifespan)
 app.include_router(auth_router)
 app.include_router(system_router)
 app.include_router(pages_router)
+app.include_router(admin_resources_router)
+app.include_router(admin_classes_router)
 app.include_router(impressao_router)
 app.include_router(relatorios_router)
 app.include_router(download_router)

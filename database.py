@@ -6231,17 +6231,6 @@ def _buscar_horario_escolar_conflito_professor_cursor(
     return int(row["id"]) if row else None
 
 
-def _recalcular_faixa_global_horarios_turma(cursor, turma_id: int, turno: str) -> None:
-    cursor.execute(
-        """
-        UPDATE horarios_escolares
-        SET faixa_global = CAST(COALESCE(aula_numero, 0) AS INTEGER)
-        WHERE turma_id = ?
-        """,
-        (int(turma_id),),
-    )
-
-
 def _mapear_horario_escolar(row) -> dict:
     item = dict(row)
     return {
@@ -7426,71 +7415,27 @@ def falhar_apc_preview_job(job_id: int, erro_mensagem: str):
 
 
 def listar_turmas(incluir_inativas: bool = False):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.classes.repository import listar_turmas as listar
 
-    query = """
-        SELECT id, nome, turno, aula_inicial, aula_final, quantidade_estudantes, ativo, criado_em
-        FROM turmas
-    """
-    params = []
-
-    if not incluir_inativas:
-        query += " WHERE ativo = 1"
-
-    query += " ORDER BY nome COLLATE NOCASE ASC"
-
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
-    conn.close()
-
-    return [dict(row) for row in rows]
+    return listar(incluir_inativas=incluir_inativas)
 
 
 def listar_turmas_ativas():
-    return listar_turmas(incluir_inativas=False)
+    from modules.admin.classes.repository import listar_turmas_ativas as listar
+
+    return listar()
 
 
 def buscar_turma_por_id(turma_id: int):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.classes.repository import buscar_turma_por_id as buscar
 
-    cursor.execute(
-        """
-        SELECT id, nome, turno, aula_inicial, aula_final, quantidade_estudantes, ativo, criado_em
-        FROM turmas
-        WHERE id = ?
-    """,
-        (int(turma_id),),
-    )
-
-    row = cursor.fetchone()
-    conn.close()
-    return dict(row) if row else None
+    return buscar(turma_id)
 
 
 def buscar_turma_por_nome(nome: str, incluir_inativas: bool = True):
-    nome_limpo = _normalizar_nome_catalogo(nome)
-    if not nome_limpo:
-        return None
+    from modules.admin.classes.repository import buscar_turma_por_nome as buscar
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    query = """
-        SELECT id, nome, turno, aula_inicial, aula_final, quantidade_estudantes, ativo, criado_em
-        FROM turmas
-        WHERE nome = ? COLLATE NOCASE
-    """
-    params = [nome_limpo]
-    if not incluir_inativas:
-        query += " AND ativo = 1"
-    query += " ORDER BY id ASC LIMIT 1"
-
-    cursor.execute(query, params)
-    row = cursor.fetchone()
-    conn.close()
-    return dict(row) if row else None
+    return buscar(nome, incluir_inativas=incluir_inativas)
 
 
 def criar_turma(
@@ -7500,48 +7445,9 @@ def criar_turma(
     aula_inicial: int | None = None,
     aula_final: int | None = None,
 ):
-    nome_limpo = _normalizar_nome_catalogo(nome)
-    if not nome_limpo:
-        raise ValueError("Nome da turma é obrigatório.")
-    turno_limpo = str(turno or "").strip().upper()
-    inicio_padrao, fim_padrao = _janela_aulas_padrao_por_turno(turno_limpo)
-    aula_inicial_valor = int(aula_inicial or 0) if aula_inicial is not None else inicio_padrao
-    aula_final_valor = int(aula_final or 0) if aula_final is not None else fim_padrao
-    if aula_inicial_valor <= 0 or aula_final_valor < aula_inicial_valor:
-        raise ValueError("Janela de aulas da turma é inválida.")
-    quantidade_estudantes_valor = int(quantidade_estudantes or 0)
-    if quantidade_estudantes_valor < 0:
-        raise ValueError("Quantidade de estudantes não pode ser negativa.")
+    from modules.admin.classes.repository import criar_turma as criar
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute(
-        """
-        INSERT INTO turmas (
-            nome,
-            turno,
-            aula_inicial,
-            aula_final,
-            quantidade_estudantes,
-            ativo,
-            criado_em
-        )
-        VALUES (?, ?, ?, ?, ?, 1, datetime('now'))
-    """,
-        (
-            nome_limpo,
-            turno_limpo,
-            aula_inicial_valor,
-            aula_final_valor,
-            quantidade_estudantes_valor,
-        ),
-    )
-
-    turma_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
-    return turma_id
+    return criar(nome, turno, quantidade_estudantes, aula_inicial, aula_final)
 
 
 def atualizar_turma_dados(
@@ -7551,59 +7457,15 @@ def atualizar_turma_dados(
     aula_inicial: int | None = None,
     aula_final: int | None = None,
 ):
-    turno_limpo = str(turno or "").strip().upper()
-    inicio_padrao, fim_padrao = _janela_aulas_padrao_por_turno(turno_limpo)
-    aula_inicial_valor = int(aula_inicial or 0) if aula_inicial is not None else inicio_padrao
-    aula_final_valor = int(aula_final or 0) if aula_final is not None else fim_padrao
-    if aula_inicial_valor <= 0 or aula_final_valor < aula_inicial_valor:
-        raise ValueError("Janela de aulas da turma é inválida.")
-    quantidade_estudantes_valor = int(quantidade_estudantes or 0)
-    if quantidade_estudantes_valor < 0:
-        raise ValueError("Quantidade de estudantes não pode ser negativa.")
+    from modules.admin.classes.repository import atualizar_turma_dados as atualizar
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute(
-        """
-        UPDATE turmas
-        SET turno = ?, aula_inicial = ?, aula_final = ?, quantidade_estudantes = ?
-        WHERE id = ?
-    """,
-        (
-            turno_limpo,
-            aula_inicial_valor,
-            aula_final_valor,
-            quantidade_estudantes_valor,
-            turma_id,
-        ),
-    )
-
-    alterado = cursor.rowcount > 0
-    if alterado:
-        _recalcular_faixa_global_horarios_turma(cursor, int(turma_id), turno_limpo)
-    conn.commit()
-    conn.close()
-    return alterado
+    return atualizar(turma_id, turno, quantidade_estudantes, aula_inicial, aula_final)
 
 
 def atualizar_status_turma(turma_id: int, ativo: bool):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.classes.repository import atualizar_status_turma as atualizar
 
-    cursor.execute(
-        """
-        UPDATE turmas
-        SET ativo = ?
-        WHERE id = ?
-    """,
-        (1 if ativo else 0, turma_id),
-    )
-
-    alterado = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
-    return alterado
+    return atualizar(turma_id, ativo)
 
 
 def _mapear_configuracao_aula(row) -> dict:
@@ -9332,34 +9194,15 @@ def gerar_relatorio_uso_recursos_por_professor(data_inicio: str = None, data_fim
 
 
 def listar_recursos_ativos():
-    return listar_recursos(incluir_inativos=False)
+    from modules.admin.resources.repository import listar_recursos_ativos as listar
+
+    return listar()
 
 
 def listar_recursos(incluir_inativos: bool = False):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.resources.repository import listar_recursos as listar
 
-    query = """
-        SELECT
-            id,
-            nome,
-            tipo,
-            COALESCE(descricao, '') AS descricao,
-            CASE WHEN COALESCE(quantidade_itens, 1) < 1 THEN 1 ELSE quantidade_itens END AS quantidade_itens,
-            COALESCE(imagem_capa, '') AS imagem_capa,
-            ativo
-        FROM recursos
-    """
-    params = []
-    if not incluir_inativos:
-        query += " WHERE ativo = 1"
-    query += " ORDER BY nome ASC"
-
-    cursor.execute(query, params)
-
-    rows = cursor.fetchall()
-    conn.close()
-    return [dict(row) for row in rows]
+    return listar(incluir_inativos=incluir_inativos)
 
 
 def criar_recurso(
@@ -9369,22 +9212,9 @@ def criar_recurso(
     quantidade_itens: int = 1,
     imagem_capa: str = "",
 ):
-    quantidade_itens_valor = max(int(quantidade_itens or 0), 1)
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.resources.repository import criar_recurso as criar
 
-    cursor.execute(
-        """
-        INSERT INTO recursos (nome, tipo, descricao, quantidade_itens, imagem_capa, ativo)
-        VALUES (?, ?, ?, ?, ?, 1)
-    """,
-        (nome, tipo, descricao, quantidade_itens_valor, imagem_capa),
-    )
-
-    recurso_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
-    return recurso_id
+    return criar(nome, tipo, descricao, quantidade_itens, imagem_capa)
 
 
 def atualizar_recurso_dados(
@@ -9395,87 +9225,27 @@ def atualizar_recurso_dados(
     quantidade_itens: int = 1,
     imagem_capa: str = "",
 ):
-    quantidade_itens_valor = max(int(quantidade_itens or 0), 1)
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.resources.repository import atualizar_recurso_dados as atualizar
 
-    cursor.execute(
-        """
-        UPDATE recursos
-        SET nome = ?, tipo = ?, descricao = ?, quantidade_itens = ?, imagem_capa = ?
-        WHERE id = ?
-    """,
-        (nome, tipo, descricao, quantidade_itens_valor, imagem_capa, recurso_id),
-    )
-
-    alterados = cursor.rowcount
-    conn.commit()
-    conn.close()
-    return alterados > 0
+    return atualizar(recurso_id, nome, tipo, descricao, quantidade_itens, imagem_capa)
 
 
 def atualizar_recurso_quantidade_itens(recurso_id: int, quantidade_itens: int):
-    quantidade_itens_valor = max(int(quantidade_itens or 0), 1)
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.resources.repository import atualizar_recurso_quantidade_itens as atualizar
 
-    cursor.execute(
-        """
-        UPDATE recursos
-        SET quantidade_itens = ?
-        WHERE id = ?
-    """,
-        (quantidade_itens_valor, recurso_id),
-    )
-
-    alterados = cursor.rowcount
-    conn.commit()
-    conn.close()
-    return alterados > 0
+    return atualizar(recurso_id, quantidade_itens)
 
 
 def atualizar_status_recurso(recurso_id: int, ativo: bool):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.resources.repository import atualizar_status_recurso as atualizar
 
-    cursor.execute(
-        """
-        UPDATE recursos
-        SET ativo = ?
-        WHERE id = ?
-    """,
-        (1 if ativo else 0, recurso_id),
-    )
-
-    alterados = cursor.rowcount
-    conn.commit()
-    conn.close()
-    return alterados > 0
+    return atualizar(recurso_id, ativo)
 
 
 def buscar_recurso_por_id(recurso_id: int):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.resources.repository import buscar_recurso_por_id as buscar
 
-    cursor.execute(
-        """
-        SELECT
-            id,
-            nome,
-            tipo,
-            COALESCE(descricao, '') AS descricao,
-            CASE WHEN COALESCE(quantidade_itens, 1) < 1 THEN 1 ELSE quantidade_itens END AS quantidade_itens,
-            COALESCE(imagem_capa, '') AS imagem_capa,
-            ativo
-        FROM recursos
-        WHERE id = ?
-    """,
-        (recurso_id,),
-    )
-
-    row = cursor.fetchone()
-    conn.close()
-    return dict(row) if row else None
+    return buscar(recurso_id)
 
 
 def listar_regimento_itens(incluir_inativos: bool = True):
