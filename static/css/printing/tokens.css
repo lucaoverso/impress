@@ -1,1 +1,22 @@
-/* Design tokens da nova UI do modulo printing. */
+/* Semantic printing tokens. Brand changes should happen in the global tokens. */
+.professor-page {
+    --print-color-primary: var(--brand);
+    --print-color-primary-hover: var(--brand-strong);
+    --print-color-primary-light: var(--brand-soft);
+    --print-color-background: var(--surface-2);
+    --print-color-surface: var(--surface-0);
+    --print-color-surface-muted: var(--surface-1);
+    --print-color-border: var(--line);
+    --print-color-border-strong: var(--line-strong);
+    --print-color-text: var(--text-main);
+    --print-color-text-muted: var(--text-muted);
+    --print-color-success: var(--success);
+    --print-color-warning: var(--warning);
+    --print-color-danger: var(--error);
+    --print-radius-control: var(--radius-md);
+    --print-radius-surface: var(--radius-lg);
+    --print-space-section: var(--space-6);
+    --print-focus-ring: var(--focus-ring);
+    --print-transition: var(--motion-fast);
+    --print-preview-height: clamp(340px, 44svh, 460px);
+}

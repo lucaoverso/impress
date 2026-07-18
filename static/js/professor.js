@@ -597,6 +597,45 @@ async function carregarTagsImpressao() {
     renderTagsImpressao();
 }
 
+async function carregarImpressorasImpressao() {
+    const input = el("printerName");
+    const container = el("printerOptions");
+    if (!input || !container) return;
+    const res = await fetchComAuth("/impressao/impressoras", { headers });
+    const printers = await lerJsonResposta(res, "Não foi possível carregar as impressoras.");
+    if (!res.ok) {
+        container.innerHTML = '<p class="print-file-hint">Não foi possível carregar as impressoras. Reinicie o servidor para aplicar a nova rota e a migração.</p>';
+        throw new Error(printers.detail || "Não foi possível carregar as impressoras.");
+    }
+    const available = Array.isArray(printers) ? printers : [];
+    container.innerHTML = "";
+    available.forEach((printer, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "print-printer-option";
+        button.dataset.printerName = printer.name;
+        button.setAttribute("role", "radio");
+        button.setAttribute("aria-checked", "false");
+        button.innerHTML = '<span class="print-printer-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 14h10v7H7z"/><path d="M17 11h1"/></svg></span><span></span>';
+        button.lastElementChild.textContent = printer.name;
+        button.addEventListener("click", () => {
+            input.value = printer.name;
+            container.querySelectorAll(".print-printer-option").forEach((item) => {
+                const selected = item === button;
+                item.classList.toggle("is-selected", selected);
+                item.setAttribute("aria-checked", String(selected));
+            });
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+        container.appendChild(button);
+        if (available.length === 1 && index === 0) button.click();
+    });
+    if (available.length === 0) {
+        container.innerHTML = '<p class="print-file-hint">Nenhuma impressora disponível.</p>';
+    }
+    window.PrintingUI?.ui?.syncFromLegacyDom?.();
+}
+
 function obterExtensaoArquivo(nomeArquivo) {
     if (!nomeArquivo || typeof nomeArquivo !== "string") {
         return "";
@@ -1557,6 +1596,7 @@ async function enviarImpressao(confirmadoAlertaConsumo = false) {
     const orientacao = obterOrientacaoPreview();
     const intervaloPaginas = el("intervaloPaginas").value.trim();
     const tagsSelecionadas = obterTagsImpressaoSelecionadas();
+    const printerName = String(el("printerName")?.value || "").trim();
     const professorSolicitanteId = obterProfessorSolicitanteSelecionadoId();
     const usaHistorico = jobHistoricoId > 0;
 
@@ -1577,6 +1617,11 @@ async function enviarImpressao(confirmadoAlertaConsumo = false) {
 
     if (tagsSelecionadas.length === 0) {
         el("msg").innerText = "Selecione ao menos uma tag antes de imprimir.";
+        return;
+    }
+
+    if (!printerName) {
+        el("msg").innerText = "Selecione a impressora de destino.";
         return;
     }
 
@@ -1630,6 +1675,7 @@ async function enviarImpressao(confirmadoAlertaConsumo = false) {
         formData.append("paginas_por_folha", paginasPorFolha);
         formData.append("duplex", duplex);
         formData.append("orientacao", orientacao);
+        formData.append("printer_name", printerName);
         if (!usaHistorico) {
             formData.append("arquivo", arquivo);
         }
@@ -2661,6 +2707,7 @@ function registrarEventos() {
         calcularConsumo();
     });
     el("turmaImpressao").addEventListener("change", aplicarTurmaImpressaoSelecionada);
+    el("printerName")?.addEventListener("change", atualizarEstadoFluxoImpressao);
     el("duplex").addEventListener("change", atualizarPreview);
     el("paginasPorFolha").addEventListener("change", () => {
         folhaAtual = 1;
@@ -2804,6 +2851,7 @@ function definirTextoResumoPadrao() {
     definirTexto("resumoOrientacao", "Retrato");
     definirTexto("resumoDuplex", "Nao");
     definirTexto("resumoTags", "Nenhum tipo selecionado");
+    definirTexto("resumoImpressora", "Não selecionada");
     definirTexto("resumoArquivoBarra", "Arquivo: -");
 }
 
@@ -2863,6 +2911,7 @@ function obterEstadoValidacaoImpressao() {
     const usaHistorico = Number(jobHistoricoSelecionadoAtual?.id || 0) > 0;
     const copias = Number(el("copias")?.value || 0);
     const tagsSelecionadas = obterTagsImpressaoSelecionadas();
+    const printerName = String(el("printerName")?.value || "").trim();
 
     if (professorSolicitantePendente()) {
         return { valido: false, mensagem: "Selecione o professor solicitante para liberar as proximas etapas." };
@@ -2886,6 +2935,10 @@ function obterEstadoValidacaoImpressao() {
 
     if (tagsSelecionadas.length === 0) {
         return { valido: false, mensagem: "Selecione ao menos uma tag para liberar o envio." };
+    }
+
+    if (!printerName) {
+        return { valido: false, mensagem: "Selecione a impressora de destino." };
     }
 
     if (pdfDoc) {
@@ -2932,6 +2985,7 @@ function atualizarResumoImpressaoPainel(resumoImpressao = calcularResumoImpressa
         (el("orientacao")?.value || "retrato") === "paisagem" ? "Paisagem" : "Retrato"
     );
     definirTexto("resumoDuplex", el("duplex")?.checked ? "Sim" : "Não");
+    definirTexto("resumoImpressora", el("printerName")?.value || "Não selecionada");
     const tagsSelecionadas = obterTagsImpressaoSelecionadas();
     definirTexto(
         "resumoTags",
@@ -3206,6 +3260,8 @@ carregarCota = async function carregarCotaRefatorado() {
 
 atualizarEstadoEnvio = function atualizarEstadoEnvioRefatorado(ativo, mensagem = "") {
     envioEmAndamento = Boolean(ativo);
+    const loadingScreen = el("printLoadingScreen");
+    if (loadingScreen) loadingScreen.hidden = !envioEmAndamento;
     sincronizarEstadoAcaoEnvio(mensagem);
 };
 
@@ -3269,6 +3325,7 @@ async function inicializarPagina() {
         atualizarTopbarUsuario();
         await carregarProfessoresImpressaoAdmin();
         await carregarTurmasImpressao();
+        await carregarImpressorasImpressao();
         await carregarTagsImpressao();
         await carregarCota();
         await carregarFila();

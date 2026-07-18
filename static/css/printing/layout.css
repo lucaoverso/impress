@@ -1,1 +1,27 @@
-/* Estrutura de layout progressivo da nova UI do modulo printing. */
+/* Continuous-surface layout for the printing workflow. */
+.professor-page { background: var(--print-color-background); }
+.professor-page .print-wizard-shell { width: min(1200px, 100%); padding: var(--space-6) var(--space-6) 48px; }
+.professor-page .print-workspace { overflow: clip; border: 1px solid var(--print-color-border); border-radius: var(--print-radius-surface); background: var(--print-color-surface); box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08); }
+.professor-page .print-page-header { padding: var(--space-6) var(--space-8) var(--space-4); border-bottom: 0; }
+.professor-page .print-page-header-copy { max-width: 70ch; gap: var(--space-1); }
+.professor-page .print-page-header h1 { font-size: 24px; line-height: 1.15; letter-spacing: -0.01em; }
+.professor-page .print-page-header p { max-width: 65ch; color: var(--print-color-text-muted); font-size: 16px; }
+.professor-page .print-wizard-stage { grid-template-columns: minmax(0, 1fr) minmax(320px, 400px); }
+.professor-page .print-wizard-left { padding: var(--space-6) var(--space-8) var(--space-8); }
+.professor-page .print-wizard-right { min-height: var(--print-preview-height); padding: var(--space-4) var(--space-6) var(--space-6) 0; }
+.professor-page .print-selection-context { gap: var(--space-6); padding: var(--space-3) var(--space-8); border-block: 1px solid color-mix(in srgb, var(--brand) 16%, transparent); background: color-mix(in srgb, var(--brand-soft) 62%, var(--surface-0)); }
+.professor-page .print-context-divider { width: 1px; background: color-mix(in srgb, var(--brand) 22%, transparent); }
+
+@media (max-width: 980px) {
+    .professor-page .print-wizard-shell { padding: var(--space-3) var(--space-2) var(--space-8); }
+    .professor-page .print-workspace { border-radius: var(--radius-md); box-shadow: var(--shadow-low); }
+    .professor-page .print-page-header { padding: var(--space-4); }
+    .professor-page .print-page-header p { display: block; font-size: 14px; }
+    .professor-page .print-selection-context { padding: var(--space-3) var(--space-4); }
+    .professor-page .print-wizard-left { padding: var(--space-6) var(--space-4); }
+}
+
+@media (max-width: 640px) {
+    .professor-page .print-page-header h1 { font-size: 22px; }
+    .professor-page .print-page-header { gap: var(--space-4); }
+}

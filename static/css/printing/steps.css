@@ -1,1 +1,55 @@
-/* Estilos das etapas progressivas da nova UI do modulo printing. */
+/* Step navigation, forms and review content. */
+.professor-page .print-flow-stepper { padding: var(--space-3) var(--space-8) var(--space-4); border-bottom: 1px solid var(--print-color-border); }
+.professor-page .print-flow-stepper li { min-height: 40px; color: var(--print-color-text-muted); }
+.professor-page .print-flow-stepper li span { width: 28px; height: 28px; flex-basis: 28px; border-color: var(--print-color-border-strong); background: var(--print-color-surface); font-weight: 700; }
+.professor-page .print-flow-stepper li strong { background: var(--print-color-surface); font-size: 13px; }
+.professor-page .print-flow-stepper li.is-current span { border-color: var(--print-color-primary); background: var(--print-color-primary); color: #fff; box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent); }
+.professor-page .print-flow-stepper li.is-ready span { border-color: var(--print-color-success); background: color-mix(in srgb, var(--print-color-success) 10%, white); color: var(--print-color-success); }
+.professor-page .print-wizard-left .print-step-card { gap: var(--print-space-section); }
+.professor-page .print-step-header > div { gap: var(--space-1); }
+.professor-page .print-step-header h2 { font-size: 24px; line-height: 1.15; }
+.professor-page .print-step-header p, .professor-page .print-file-hint, .professor-page .print-jobs-hint { max-width: 70ch; color: var(--print-color-text-muted); }
+.professor-page .print-upload-dropzone { min-height: 168px; padding: var(--space-6); border: 1px dashed color-mix(in srgb, var(--brand) 48%, var(--line)); border-radius: var(--print-radius-control); background: var(--print-color-surface-muted); color: var(--print-color-text); }
+.professor-page .print-upload-dropzone:hover { border-color: var(--print-color-primary); background: color-mix(in srgb, var(--brand-soft) 38%, var(--surface-1)); }
+.professor-page .print-upload-title { color: var(--print-color-text); font-size: 16px; }
+.professor-page .print-upload-subtitle, .professor-page .print-upload-file { color: var(--print-color-text-muted); }
+.professor-page .print-config-section { gap: var(--space-4); }
+.professor-page .print-config-title { color: var(--print-color-text); font-size: 1.05rem; font-weight: 700; }
+.professor-page .print-config-section + .print-config-section, .professor-page .print-material-section { padding-top: var(--space-6); border-top: 1px solid var(--print-color-border); }
+.professor-page .print-options { gap: var(--space-6); }
+.professor-page .print-choice-chip, .professor-page .print-tag-chip, .professor-page .print-choice-block { min-height: 44px; border: 1px solid var(--print-color-border-strong); border-radius: var(--radius-md); background: var(--print-color-surface); box-shadow: none; }
+.professor-page .print-choice-chip:has(input:checked), .professor-page .print-tag-chip:has(input:checked), .professor-page .print-choice-block.is-selected { border-color: var(--print-color-primary); background: var(--print-color-primary-light); color: var(--print-color-primary-hover); box-shadow: inset 0 0 0 1px var(--print-color-primary); }
+.professor-page .print-toggle-row { min-height: 56px; padding: var(--space-3) var(--space-4); border: 0; border-radius: var(--radius-md); background: var(--print-color-surface-muted); }
+.professor-page .print-step-actions { justify-content: space-between; gap: var(--space-3); padding-top: var(--space-6); border-top: 1px solid var(--print-color-border); }
+.professor-page .print-step-actions button { min-width: 180px; }
+.professor-page .print-summary-list > div { padding: var(--space-3) 0; border-bottom: 1px solid var(--print-color-border); }
+.professor-page .print-summary-list dt { color: var(--print-color-text-muted); font-weight: 700; }
+.professor-page .print-summary-list dd { color: var(--print-color-text); }
+.professor-page .print-copy-counter { display: grid; grid-template-columns: 48px minmax(80px, 120px) 48px; gap: var(--space-2); align-items: center; }
+.professor-page .print-copy-counter button { min-width: 48px; min-height: 48px; padding: 0; border-color: var(--print-color-border-strong); background: var(--print-color-surface); color: var(--print-color-primary); font-size: 24px; }
+.professor-page .print-copy-counter input { width: 100%; text-align: center; font-weight: 700; }
+.professor-page .print-checkbox-row { display: flex; align-items: center; gap: var(--space-3); min-height: 56px; padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); background: var(--print-color-surface-muted); }
+.professor-page .print-checkbox-row input { width: 22px; height: 22px; flex: 0 0 22px; }
+.professor-page .print-checkbox-row span { display: grid; gap: 2px; }
+.professor-page .print-checkbox-row small { color: var(--print-color-text-muted); }
+.professor-page .print-orientation-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
+.professor-page .print-orientation-options .print-choice-block { display: flex; align-items: center; justify-content: center; gap: var(--space-3); min-width: 0; min-height: 72px; }
+.professor-page .print-sheet-icon { width: 14px; height: 18px; flex: 0 0 auto; fill: var(--print-color-surface); stroke: currentColor; stroke-width: 2; stroke-linejoin: round; }
+.professor-page .print-sheet-icon--landscape { width: 18px; height: 14px; }
+.professor-page .print-printer-options { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--space-3); }
+.professor-page .print-printer-option { display: flex; align-items: center; gap: var(--space-3); min-height: 68px; padding: var(--space-3) var(--space-4); border: 1px solid var(--print-color-border-strong); border-radius: var(--radius-md); background: var(--print-color-surface); color: var(--print-color-text); text-align: left; }
+.professor-page .print-printer-option.is-selected { border-color: var(--print-color-primary); background: var(--print-color-primary-light); color: var(--print-color-primary-hover); box-shadow: inset 0 0 0 1px var(--print-color-primary); }
+.professor-page .print-printer-icon { display: grid; width: 28px; height: 28px; flex: 0 0 28px; place-items: center; border-radius: var(--radius-sm); background: var(--print-color-surface-muted); color: var(--print-color-primary); }
+.professor-page .print-printer-icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+@media (max-width: 980px) {
+    .professor-page .print-flow-stepper { padding: var(--space-3) var(--space-4); }
+    .professor-page .print-step-header h2 { font-size: 20px; }
+}
+
+@media (max-width: 640px) {
+    .professor-page .print-choice-group, .professor-page .print-layout-choice-grid { width: 100%; }
+    .professor-page .print-choice-block { width: 100%; min-width: 0; }
+    .professor-page .print-copy-counter { grid-template-columns: 48px minmax(0, 1fr) 48px; }
+    .professor-page .print-printer-options { grid-template-columns: 1fr; }
+}

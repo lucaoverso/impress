@@ -133,6 +133,7 @@
         const paginasPorFolhaInput = document.getElementById("paginasPorFolha");
         const orientacaoInput = document.getElementById("orientacao");
         const duplexInput = document.getElementById("duplex");
+        const printerInput = document.getElementById("printerName");
         const selectedTags = Array.from(document.querySelectorAll("#tagsImpressao input[type='checkbox']:checked"))
             .map((input) => String(input.value || "").trim())
             .filter(Boolean);
@@ -177,6 +178,10 @@
             tags: {
                 selected: selectedTags,
                 valid: selectedTags.length > 0,
+            },
+            destination: {
+                printerName: printerInput?.value || "",
+                valid: Boolean(printerInput?.value),
             },
             preview: {
                 loading: Boolean(overrides?.preview?.loading ?? isPreviewLoadingFromDom()),
@@ -427,12 +432,22 @@
             "paginasPorFolha",
             "orientacao",
             "duplex",
+            "printerName",
         ].forEach((id) => {
             document.getElementById(id)?.addEventListener("change", () => syncFromLegacyDom());
             document.getElementById(id)?.addEventListener("input", () => syncFromLegacyDom());
         });
 
         document.getElementById("tagsImpressao")?.addEventListener("change", () => syncFromLegacyDom());
+
+        document.querySelectorAll("[data-copy-change]").forEach((button) => {
+            button.addEventListener("click", () => {
+                const input = document.getElementById("copias");
+                if (!input) return;
+                input.value = String(Math.max(1, Number(input.value || 1) + Number(button.dataset.copyChange || 0)));
+                input.dispatchEvent(new Event("input", { bubbles: true }));
+            });
+        });
 
         document.getElementById("btnContinuarArquivo")?.addEventListener("click", () => goToStep(2));
         document.getElementById("btnVoltarSolicitacao")?.addEventListener("click", () => goToStep(1));

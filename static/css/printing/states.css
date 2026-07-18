@@ -1,1 +1,23 @@
-/* Estados visuais compartilhados da nova UI do modulo printing. */
+/* Interaction, feedback and overlay states. */
+.professor-page :is(button, input, select, [tabindex]):focus-visible { outline: none; box-shadow: var(--print-focus-ring); }
+.professor-page button:disabled, .professor-page [aria-disabled="true"] { opacity: 0.58; cursor: not-allowed; }
+.professor-page .btn-destaque, .professor-page .print-send-btn { min-height: 44px; border: 1px solid var(--print-color-primary); border-radius: var(--print-radius-control); background: var(--print-color-primary); color: #fff; box-shadow: none; }
+.professor-page .btn-destaque:hover, .professor-page .print-send-btn:hover { border-color: var(--print-color-primary-hover); background: var(--print-color-primary-hover); }
+.professor-page .print-secondary-btn { min-height: 44px; border-color: var(--print-color-border-strong); border-radius: var(--print-radius-control); background: var(--print-color-surface); color: var(--print-color-text); }
+.professor-page .print-visible-feedback p:not(:empty), .professor-page .print-submit-state.is-active { padding: var(--space-3) var(--space-4); border: 1px solid var(--print-color-border); border-radius: var(--print-radius-control); background: var(--print-color-surface-muted); color: var(--print-color-text); }
+.professor-page .print-visible-feedback p[data-variant="error"]:not(:empty) { border-color: color-mix(in srgb, var(--print-color-danger) 38%, white); background: color-mix(in srgb, var(--print-color-danger) 7%, white); color: #991b1b; }
+.professor-page .print-visible-feedback p[data-variant="success"]:not(:empty) { border-color: color-mix(in srgb, var(--print-color-success) 38%, white); background: color-mix(in srgb, var(--print-color-success) 8%, white); color: #166534; }
+.professor-page .print-history-panel { border: 0; border-radius: var(--radius-lg) 0 0 var(--radius-lg); background: var(--print-color-surface); box-shadow: -8px 0 24px rgba(15, 23, 42, 0.12); }
+.professor-page .print-meta-card { border: 1px solid var(--print-color-border); border-radius: var(--print-radius-control); background: var(--print-color-surface-muted); box-shadow: none; }
+.professor-page .print-alert-modal-card { border-radius: 20px; background: var(--print-color-surface); box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14); }
+.print-loading-screen { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: var(--space-6); background: rgba(31, 42, 55, 0.58); }
+.print-loading-screen[hidden] { display: none; }
+.print-loading-content { width: min(420px, 100%); padding: var(--space-8); border-radius: 20px; background: var(--surface-0); text-align: center; box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14); }
+.print-loading-content h2 { margin: var(--space-4) 0 var(--space-2); font-size: 24px; }
+.print-loading-content p { color: var(--text-muted); }
+.print-loading-spinner { display: inline-block; width: 48px; height: 48px; border: 4px solid var(--brand-soft); border-top-color: var(--brand); border-radius: 50%; animation: print-loading-spin 800ms linear infinite; }
+@keyframes print-loading-spin { to { transform: rotate(360deg); } }
+
+@media (prefers-reduced-motion: reduce) {
+    .professor-page *, .professor-page *::before, .professor-page *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

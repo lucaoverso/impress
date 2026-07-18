@@ -4,13 +4,14 @@
         const ownerValid = Boolean(state?.request?.ownerValid ?? true);
         const requestValid = Boolean(state?.request?.valid);
         const settingsValid = Boolean(state?.settings?.valid);
+        const destinationValid = Boolean(state?.destination?.valid);
         const submitted = Boolean(state?.submit?.submitted);
 
         return {
             step1: true,
             step2: uploadValid && ownerValid,
-            step3: uploadValid && requestValid,
-            step4: uploadValid && requestValid && settingsValid && Boolean(state?.tags?.valid),
+            step3: uploadValid && requestValid && settingsValid,
+            step4: uploadValid && requestValid && settingsValid && destinationValid && Boolean(state?.tags?.valid),
             step5: submitted,
         };
     }
@@ -22,6 +23,7 @@
             && state?.upload?.valid
             && state?.request?.valid
             && state?.settings?.valid
+            && state?.destination?.valid
             && state?.tags?.valid
             && !state?.upload?.loading
             && !state?.preview?.loading
