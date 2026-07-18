@@ -1,103 +1,100 @@
-{% set navbar_brand = navbar_brand | default("Suite Escolar") %}
 {% set navbar_context = navbar_context | default("") %}
 {% set navbar_context_id = navbar_context_id | default("") %}
 {% set navbar_current = navbar_current | default("") %}
 {% set navbar_classes = navbar_classes | default("") %}
-{% set navbar_extra_actions = navbar_extra_actions | default([]) %}
 {% set navbar_home_href = navbar_home_href | default("/servicos") %}
 {% set navbar_logo_src = navbar_logo_src | default(request.url_for('static', path='img/logo_escola.PNG')) %}
 {% set navbar_logo_alt = navbar_logo_alt | default("Voltar para a tela de serviços") %}
 
-<header class="app-topbar{% if navbar_classes %} {{ navbar_classes }}{% endif %}" data-app-navbar
-    data-navbar-current="{{ navbar_current }}">
-    <div class="app-topbar-main">
-        <div class="app-topbar-brand">
-            <a href="{{ navbar_home_href }}" class="app-topbar-home-link" aria-label="{{ navbar_logo_alt }}">
-                <img src="{{ navbar_logo_src }}" alt="{{ navbar_logo_alt }}" class="app-topbar-school-logo">
-            </a>
-            <div class="app-topbar-brand-copy">
-            
-                {% if navbar_context %}
-                <span class="app-topbar-context"{% if navbar_context_id %} id="{{ navbar_context_id }}"{% endif %}>
-                    {{ navbar_context }}
-                </span>
-                {% endif %}
-            </div>
-        </div>
+<header class="app-topbar app-navbar{% if navbar_classes %} {{ navbar_classes }}{% endif %}"
+    data-app-navbar data-navbar-current="{{ navbar_current }}">
+    <div class="app-navbar-brand">
+        <a id="btnVoltarServicos" href="{{ navbar_home_href }}" class="app-topbar-home-link" aria-label="{{ navbar_logo_alt }}">
+            <img src="{{ navbar_logo_src }}" alt="" class="app-topbar-school-logo">
+            <span class="sr-only">Serviços</span>
+        </a>
+        {% if navbar_context %}
+        <span class="app-topbar-context"{% if navbar_context_id %} id="{{ navbar_context_id }}"{% endif %}>
+            {{ navbar_context }}
+        </span>
+        {% endif %}
     </div>
-    <div class="app-topbar-actions app-navbar-actions">
-        <button id="appNavbarToggle" class="app-navbar-toggle" type="button" aria-expanded="false"
-            aria-controls="appNavbarDrawer" aria-label="Abrir menu principal">
-            <span class="app-navbar-toggle-box" aria-hidden="true">
-                <span class="app-navbar-toggle-line"></span>
-            </span>
-            <span>Menu</span>
+
+    <div class="app-navbar-search" role="search">
+        <i class="bi bi-search" aria-hidden="true"></i>
+        <input id="appNavbarSearch" type="search" placeholder="Buscar no sistema" autocomplete="off"
+            aria-label="Buscar funcionalidades"
+            aria-controls="appNavbarSearchResults" aria-expanded="false">
+        <div id="appNavbarSearchResults" class="app-navbar-search-results" role="listbox" hidden></div>
+    </div>
+
+    <div class="app-navbar-account">
+        {% if navbar_extra_actions | default([]) %}
+        <div class="app-navbar-extra-actions" aria-label="Ações desta tela">
+            {% for action in navbar_extra_actions %}
+            <button id="{{ action.id }}" class="app-navbar-extra-action" type="button"
+                data-navbar-extra-action="true"{% if action.hidden %} hidden{% endif %}>
+                {{ action.label }}
+            </button>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <button id="appNavbarProfileToggle" class="app-navbar-avatar" type="button" aria-expanded="false"
+            aria-controls="appNavbarProfileMenu" aria-label="Abrir menu do perfil">
+            <span id="appNavbarAvatarInitials" aria-hidden="true">...</span>
         </button>
+
+        <section id="appNavbarProfileMenu" class="app-navbar-profile-menu" aria-label="Perfil do usuário" hidden>
+            <header class="app-navbar-profile-header">
+                <span id="appNavbarProfileInitials" class="app-navbar-profile-initials" aria-hidden="true">...</span>
+                <div>
+                    <strong id="appNavbarUserName">Carregando usuário...</strong>
+                    <span id="appNavbarUserMeta">Verificando sua sessão.</span>
+                </div>
+            </header>
+
+            <div class="app-navbar-usage" aria-live="polite">
+                <span>Uso do sistema</span>
+                <strong id="appNavbarUsageValue">Carregando...</strong>
+                <small id="appNavbarUsageDetail">Consultando sua cota de impressão.</small>
+            </div>
+
+            <button id="appNavbarEditProfile" class="app-navbar-profile-action" type="button">
+                <i class="bi bi-person-gear" aria-hidden="true"></i>
+                Alterar dados do perfil
+            </button>
+            <button id="btnSair" class="app-navbar-profile-action is-danger" type="button">
+                <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
+                Sair
+            </button>
+        </section>
     </div>
 </header>
 
-<div id="appNavbarDrawer" class="app-navbar-drawer" hidden>
-    <div class="app-navbar-backdrop" data-app-navbar-close="true"></div>
-    <aside class="app-navbar-panel" role="dialog" aria-modal="true" aria-labelledby="appNavbarTitle" tabindex="-1">
-        <header class="app-navbar-panel-header">
+<dialog id="appNavbarProfileDialog" class="app-profile-dialog" aria-labelledby="appProfileDialogTitle">
+    <form id="appNavbarProfileForm" method="dialog">
+        <header>
             <div>
-                <p class="app-navbar-panel-kicker">Navegação rápida</p>
-                <h2 id="appNavbarTitle">Acessos do sistema</h2>
+                <h2 id="appProfileDialogTitle">Alterar perfil</h2>
+                <p>Atualize seus dados de acesso ao sistema.</p>
             </div>
-            <button id="appNavbarClose" class="app-navbar-close-btn" type="button" data-app-navbar-close="true"
-                aria-label="Fechar menu">
-                Fechar
-            </button>
+            <button class="app-profile-dialog-close" type="button" data-profile-dialog-close
+                aria-label="Fechar edição do perfil"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
         </header>
-
-        <section class="app-navbar-user-card" aria-live="polite">
-            <strong id="appNavbarUserName">Carregando usuário...</strong>
-            <span id="appNavbarUserMeta">Verificando permissões disponíveis.</span>
-        </section>
-
-        <section class="app-navbar-section">
-            <div class="app-navbar-section-head">
-                <span class="app-navbar-section-title">Módulos liberados</span>
-                <span class="app-navbar-section-note">Acesso conforme o seu perfil.</span>
-            </div>
-            <nav id="appNavbarModuleList" class="app-navbar-links" aria-label="Módulos liberados"></nav>
-            <p id="appNavbarModuleEmpty" class="app-navbar-empty-state" hidden>
-                Nenhum módulo adicional foi liberado para este usuário.
-            </p>
-        </section>
-
-        {% if navbar_extra_actions %}
-        <section class="app-navbar-section" data-app-navbar-section="page-actions" hidden>
-            <div class="app-navbar-section-head">
-                <span class="app-navbar-section-title">Ações desta tela</span>
-                <span class="app-navbar-section-note">Atalhos do módulo atual.</span>
-            </div>
-            <div class="app-navbar-quick-actions">
-                {% for action in navbar_extra_actions %}
-                <button id="{{ action.id }}" class="app-navbar-quick-btn" type="button" data-navbar-extra-action="true"
-                    {% if action.hidden %}hidden{% endif %}>
-                    {{ action.label }}
-                </button>
-                {% endfor %}
-            </div>
-        </section>
-        {% endif %}
-
-        <section class="app-navbar-section">
-            <div class="app-navbar-section-head">
-                <span class="app-navbar-section-title">Conta</span>
-                <span class="app-navbar-section-note">Ações globais da sua sessão.</span>
-            </div>
-            <div class="app-navbar-quick-actions">
-                {% if navbar_current != "servicos" %}
-                <button id="btnVoltarServicos" class="app-navbar-quick-btn" type="button">
-                    Serviços
-                </button>
-                {% endif %}
-                <button id="btnSair" class="app-navbar-quick-btn is-danger" type="button">
-                    Sair
-                </button>
-            </div>
-        </section>
-    </aside>
-</div>
+        <div class="app-profile-dialog-fields">
+            <label for="appProfileName">Nome</label>
+            <input id="appProfileName" name="nome" maxlength="120" required autocomplete="name">
+            <label for="appProfileEmail">E-mail</label>
+            <input id="appProfileEmail" name="email" type="email" maxlength="254" required autocomplete="email">
+            <label for="appProfilePassword">Nova senha <span>(opcional)</span></label>
+            <input id="appProfilePassword" name="nova_senha" type="password" minlength="8"
+                autocomplete="new-password" aria-describedby="appProfilePasswordHint">
+            <small id="appProfilePasswordHint">Use maiúscula, minúscula, número e caractere especial.</small>
+        </div>
+        <p id="appProfileFeedback" class="app-profile-feedback" role="status" hidden></p>
+        <footer>
+            <button class="app-profile-dialog-cancel" type="button" data-profile-dialog-close>Cancelar</button>
+            <button id="appProfileSubmit" class="app-profile-dialog-submit" type="submit">Salvar alterações</button>
+        </footer>
+    </form>
+</dialog>

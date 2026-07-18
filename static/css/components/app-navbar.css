@@ -22,6 +22,7 @@
 
 .app-navbar-brand,
 .app-navbar-account,
+.app-navbar-extra-actions,
 .app-navbar-profile-header,
 .app-navbar-profile-action {
     display: flex;
@@ -29,7 +30,16 @@
 }
 
 .app-navbar-brand { gap: 12px; min-width: 0; }
-.app-navbar-account { justify-content: flex-end; position: relative; }
+.app-navbar-account { justify-content: flex-end; gap: 8px; position: relative; }
+.app-navbar-extra-actions { gap: 8px; }
+.app-navbar-extra-action {
+    min-height: 40px;
+    padding: 0 14px;
+    border-color: var(--line, #d8dee8);
+    border-radius: 999px;
+    white-space: nowrap;
+}
+.app-navbar-extra-action:hover { background: var(--brand-soft, #d6f2ef); }
 
 .app-navbar-search { position: relative; }
 .app-navbar-search > .bi-search {
@@ -170,6 +180,7 @@
     .app-navbar-search input { padding-right: 12px; }
     .app-navbar-search input::placeholder { color: transparent; }
     .app-navbar-search-results { position: fixed; top: 72px; left: 12px; right: 12px; }
+    .app-navbar-extra-actions { display: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

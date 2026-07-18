@@ -12,6 +12,7 @@
     {% set navbar_context = "Gestão escolar" %}
     {% set navbar_current = "coordenacao" %}
     {% include "includes/app_navbar.html" %}
+    {% include "includes/app_sidebar_config.html" %}
     <main class="coordenacao-page">
         <section class="coordenacao-workspace">
             <header class="admin-header admin-header-shell coordenacao-page-header">
@@ -74,7 +75,7 @@
             </section>
 
             <div class="coordenacao-tabs-shell">
-                <nav class="admin-tabs coordenacao-tabs" aria-label="Abas do módulo de coordenação">
+                <nav class="admin-tabs coordenacao-tabs app-sidebar-replaced" aria-label="Abas do módulo de coordenação">
                     <button class="admin-tab-btn is-active" data-coord-tab-trigger="ocorrencias"
                         aria-controls="coord-tab-ocorrencias" aria-selected="true" type="button">
                         Ocorrências

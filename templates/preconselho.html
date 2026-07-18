@@ -14,6 +14,7 @@
         {"id": "btnIrAdmin", "label": "Painel de gestao", "hidden": true}
     ] %}
     {% include "includes/app_navbar.html" %}
+    {% include "includes/app_sidebar_config.html" %}
     
     <main class="pcpi-page preconselho-page page-shell page-shell--wide">
         <header class="admin-header admin-header-shell page-header">
@@ -26,7 +27,7 @@
             </div>
         </header>
 
-        <nav id="preconselhoTabs" class="admin-tabs" role="tablist" aria-label="Abas do módulo de pré-conselho">
+        <nav id="preconselhoTabs" class="admin-tabs app-sidebar-replaced" role="tablist" aria-label="Abas do módulo de pré-conselho">
             <button id="tabBtnDocente" class="admin-tab-btn" data-preconselho-tab-trigger="docente"
                 role="tab" aria-controls="preconselho-tab-docente" aria-selected="false" tabindex="-1" type="button" hidden>
                 Meu preenchimento

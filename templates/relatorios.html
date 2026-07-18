@@ -12,6 +12,7 @@
     {% set navbar_context = "Gestao escolar" %}
     {% set navbar_current = "relatorios" %}
     {% include "includes/app_navbar.html" %}
+    {% include "includes/app_sidebar_config.html" %}
 
     <main class="page-shell page-shell--wide reports-page">
         <section class="page-header">
@@ -59,7 +60,7 @@
             </div>
         </section>
 
-        <nav class="admin-tabs" aria-label="Abas do modulo de relatorios">
+        <nav class="admin-tabs app-sidebar-replaced" aria-label="Abas do modulo de relatorios">
             <button class="admin-tab-btn is-active" data-relatorios-tab-trigger="dashboard" aria-selected="true"
                 type="button">
                 Painel geral

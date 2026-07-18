@@ -3901,6 +3901,11 @@ function registrarEventos() {
     el("btnAbrirMeusAgendamentosNavbar")?.addEventListener("click", () => {
         abrirPainelLateralAgendamento("painelMinhasReservasAgendamento");
     });
+    document.addEventListener("app-sidebar:action", (event) => {
+        if (event.detail?.action === "open-my-schedules") {
+            abrirPainelLateralAgendamento("painelMinhasReservasAgendamento");
+        }
+    });
     el("btnFecharCalendarioGeral")?.addEventListener("click", () => {
         fecharPainelLateralAgendamento("painelCalendarioAgendamento");
     });
