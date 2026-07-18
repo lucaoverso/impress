@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException, Header
+from fastapi import APIRouter, HTTPException, Header, Request
 from models import LoginIn
 from modules.audit.models import AuditCategory, AuditOutcome
 from modules.audit.service import record_event
+from security.rate_limit import enforce_rate_limit
 from services.auth_service import autenticar_usuario, validar_token, obter_ttl_token_dias
 
 router = APIRouter()
@@ -21,8 +22,9 @@ def normalizar_cargo(usuario: dict) -> str:
 
 
 @router.post("/login")
-def login(dados: LoginIn):
+def login(dados: LoginIn, request: Request):
     email = str(dados.email or "").strip().lower()
+    enforce_rate_limit(request, "login", email)
     resultado = autenticar_usuario(email, dados.senha)
 
     if not resultado:

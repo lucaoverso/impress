@@ -1,6 +1,6 @@
 import sqlite3
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 
 from db.usuarios import (
     atualizar_senha_usuario,
@@ -12,6 +12,7 @@ from models import ProfessorCreateIn, ProfessorRecuperarSenhaIn
 from modules.audit.models import AuditCategory, AuditOutcome
 from modules.audit.service import record_event
 from security.nt_hash import generate_nt_hash
+from security.rate_limit import enforce_rate_limit
 from services.auth_service import hash_senha
 
 from .common import (
@@ -32,7 +33,8 @@ def opcoes_professores_publico():
 
 
 @router.post("/professores/cadastro")
-def criar_professor_publico(payload: ProfessorCreateIn):
+def criar_professor_publico(payload: ProfessorCreateIn, request: Request):
+    enforce_rate_limit(request, "register")
     dados = validar_payload_cadastro_professor(payload)
 
     try:
@@ -54,8 +56,9 @@ def criar_professor_publico(payload: ProfessorCreateIn):
 
 
 @router.post("/professores/recuperar-senha")
-def recuperar_senha_professor(payload: ProfessorRecuperarSenhaIn):
+def recuperar_senha_professor(payload: ProfessorRecuperarSenhaIn, request: Request):
     email = str(payload.email or "").strip().lower()
+    enforce_rate_limit(request, "password_reset", email)
     try:
         return _recuperar_senha_professor(payload, email)
     except HTTPException as exc:
