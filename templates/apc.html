@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Central de Anexos</title>
+    {% set page_styles = ["css/pages/services-scheduler.css", "css/pages/apc.css"] %}
     {% include "includes/style_bundle.html" %}
 </head>
 
@@ -77,7 +78,7 @@
                 <section class="apc-detail-card">
                     <div id="apcGestaoActions" class="apc-gestao-actions" hidden>
                         <div class="apc-gestao-actions-copy">
-                            <h3>Demandas de entrega</h3>
+                            <h2>Demandas de entrega</h2>
                             <p>Acompanhe as solicitacoes e abra uma demanda para analisar os professores.</p>
                         </div>
                         <div class="apc-inline-actions">
@@ -248,7 +249,7 @@
                     </div>
 
                     <div class="apc-field">
-                        <label for="apcObservacao">Observacao</label>
+                        <label for="apcObservacao">Observação</label>
                         <textarea id="apcObservacao" rows="3"
                             placeholder="Ex.: atividade pedagogica, prova bimestral, roteiro, plano ou outro material."></textarea>
                     </div>
@@ -317,7 +318,7 @@
                 <section id="apcReviewPanel" class="apc-review-panel" hidden>
                     <div id="apcReviewSummary" class="apc-review-summary"></div>
                     <form id="formApcReview" class="apc-review-form" hidden>
-                        <label for="apcReviewStatus">Situacao da revisao</label>
+                        <label for="apcReviewStatus">Situação da revisão</label>
                         <select id="apcReviewStatus" required>
                             <option value="PENDENTE">Aguardando analise</option>
                             <option value="APROVADO">Aprovado</option>
@@ -358,16 +359,16 @@
             aria-labelledby="apcPrintWizardTitle" tabindex="-1">
             <header class="apc-print-wizard-header">
                 <div>
-                    <p class="apc-section-eyebrow">Impressao do anexo</p>
-                    <h2 id="apcPrintWizardTitle">Configurar impressao</h2>
+                    <p class="apc-section-eyebrow">Impressão do anexo</p>
+                    <h2 id="apcPrintWizardTitle">Configurar impressão</h2>
                     <p id="apcPrintWizardArquivo">Arquivo selecionado</p>
                 </div>
                 <button id="btnFecharPrintWizardApc" type="button">Fechar</button>
             </header>
 
-            <ol class="apc-print-stepper" aria-label="Etapas da impressao">
+            <ol class="apc-print-stepper" aria-label="Etapas da impressão">
                 <li data-apc-print-stepper="1" class="is-current">1. Dados</li>
-                <li data-apc-print-stepper="2">2. Impressao</li>
+                <li data-apc-print-stepper="2">2. Impressão</li>
                 <li data-apc-print-stepper="3">3. Conferir</li>
             </ol>
 
@@ -392,28 +393,28 @@
                                 <div class="apc-field">
                                     <label for="apcPrintCopias">Copias</label>
                                     <input id="apcPrintCopias" type="number" min="1" max="999" value="1" required>
-                                    <p class="apc-inline-hint">Voce pode ajustar manualmente se necessario.</p>
+                                    <p class="apc-inline-hint">Você pode ajustar manualmente se necessário.</p>
                                 </div>
                             </div>
                         </section>
 
                         <section data-apc-print-step="2" class="apc-print-step" hidden>
                             <header>
-                                <h3>Configuracoes de impressao</h3>
-                                <p>Escolha paginas, layout, orientacao e tipo de material.</p>
+                                <h3>Configurações de impressão</h3>
+                                <p>Escolha páginas, layout, orientação e tipo de material.</p>
                             </header>
 
-                            <label for="apcPrintIntervalo">Paginas</label>
+                            <label for="apcPrintIntervalo">Páginas</label>
                             <input id="apcPrintIntervalo" type="text" placeholder="Todas ou ex.: 1-5, 8">
-                            <p id="apcPrintIntervaloInfo" class="apc-inline-hint">Deixe vazio para imprimir todas as paginas.</p>
+                            <p id="apcPrintIntervaloInfo" class="apc-inline-hint">Deixe vazio para imprimir todas as páginas.</p>
 
                             <div class="apc-print-config-grid">
                                 <div class="apc-field">
                                     <label for="apcPrintPaginasFolha">Layout</label>
                                     <select id="apcPrintPaginasFolha">
-                                        <option value="1">1 pagina por folha</option>
-                                        <option value="2">2 paginas por folha</option>
-                                        <option value="4">4 paginas por folha</option>
+                                        <option value="1">1 página por folha</option>
+                                        <option value="2">2 páginas por folha</option>
+                                        <option value="4">4 páginas por folha</option>
                                     </select>
                                 </div>
                                 <div class="apc-field">
@@ -438,23 +439,23 @@
 
                         <section data-apc-print-step="3" class="apc-print-step" hidden>
                             <header>
-                                <h3>Conferir impressao</h3>
+                                <h3>Conferir impressão</h3>
                                 <p>Revise as configuracoes antes de enviar para a fila.</p>
                             </header>
                             <dl id="apcPrintResumo" class="apc-print-summary"></dl>
                         </section>
                     </div>
 
-                    <aside class="apc-print-preview-side" aria-label="Preview da impressao">
+                    <aside class="apc-print-preview-side" aria-label="Prévia da impressão">
                         <header class="apc-print-preview-header">
                             <div>
                                 <h3>Preview</h3>
-                                <p>Confira como as paginas serao agrupadas.</p>
+                                <p>Confira como as páginas serão agrupadas.</p>
                             </div>
                             <div class="apc-print-preview-nav" role="group" aria-label="Navegacao do preview">
                                 <button id="btnApcPrintPreviewAnterior" type="button" aria-label="Folha anterior">&#9664;</button>
                                 <span id="apcPrintPreviewContador"></span>
-                                <button id="btnApcPrintPreviewProxima" type="button" aria-label="Proxima folha">&#9654;</button>
+                                <button id="btnApcPrintPreviewProxima" type="button" aria-label="Próxima folha">&#9654;</button>
                             </div>
                         </header>
                         <div id="apcPrintPreviewState" class="apc-print-preview-state">
@@ -470,7 +471,7 @@
                     <button id="btnApcPrintVoltar" type="button" hidden>Voltar</button>
                     <button id="btnApcPrintContinuar" class="btn-destaque" type="button">Continuar</button>
                     <button id="btnApcPrintConfirmar" class="btn-destaque" type="submit" hidden>
-                        Confirmar impressao
+                        Confirmar impressão
                     </button>
                 </footer>
             </form>
@@ -483,11 +484,11 @@
     <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="{{ request.url_for('static', path='vendor/pdfjs/pdf.min.js') }}?v=3.11.174"></script>
     <script>
         if (window.pdfjsLib) {
             pdfjsLib.GlobalWorkerOptions.workerSrc =
-                "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+                "{{ request.url_for('static', path='vendor/pdfjs/pdf.worker.min.js') }}?v=3.11.174";
         }
     </script>
     <script src="{{ request.url_for('static', path='js/apc.js') }}?v={{ asset_version | default('1') }}"></script>

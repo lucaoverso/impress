@@ -9,11 +9,11 @@
     --scheduler-text: var(--text-main);
     --scheduler-muted: var(--text-muted);
     --scheduler-border: var(--line);
-    --scheduler-focus-ring: rgba(15, 118, 110, 0.28);
+    --scheduler-focus-ring: var(--brand-outline);
     --scheduler-transition: var(--motion-fast);
     display: block;
     max-width: 1080px;
-    padding: 28px 24px 48px;
+    padding: 24px 24px 40px;
     color: var(--scheduler-text);
 }
 
@@ -38,7 +38,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     align-items: flex-start;
     justify-content: space-between;
     gap: 24px;
-    padding: 28px 32px 20px;
+    padding: 22px 24px 16px;
     border: 0;
     border-bottom: 1px solid var(--scheduler-border);
     border-radius: 0;
@@ -52,7 +52,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-flow-page .scheduler-page-header h1 {
     margin: 0;
-    font-size: 26px;
+    font-size: 24px;
     line-height: 1.15;
     letter-spacing: -0.025em;
     color: var(--scheduler-text);
@@ -67,6 +67,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 .scheduler-header-calendar-btn {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 8px;
     width: auto;
     min-height: 44px;
@@ -74,6 +75,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     border-color: var(--scheduler-primary);
     border-radius: 8px;
     color: var(--scheduler-primary-strong);
+    text-decoration: none;
     transition:
         border-color var(--scheduler-transition),
         background-color var(--scheduler-transition),
@@ -114,7 +116,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-flow-stepper {
     overflow-x: auto;
-    padding: 18px 32px;
+    padding: 14px 24px;
     border-bottom: 1px solid var(--scheduler-border);
     scrollbar-width: none;
 }
@@ -206,7 +208,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     grid-template-columns: minmax(0, 1fr) 1px minmax(280px, 0.9fr);
     gap: 28px;
     align-items: center;
-    padding: 16px 32px;
+    padding: 14px 24px;
     border-left: 0;
     background: var(--scheduler-primary-soft);
 }
@@ -305,7 +307,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-flow-surface {
     position: relative;
-    padding: 28px 32px 32px;
+    padding: 24px;
     border: 0;
     border-radius: 0;
     background: var(--scheduler-surface);
@@ -318,7 +320,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 .scheduler-flow-step,
 .scheduler-resource-stage-card,
 .scheduler-lesson-stage {
-    gap: 22px;
+    gap: 18px;
 }
 
 #schedulerLessonStage > .scheduler-flow-heading {
@@ -344,10 +346,10 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-flow-page .scheduler-resource-stage-grid {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 3px 2px 10px;
+    padding: 2px 1px 7px;
     scrollbar-width: none;
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
@@ -361,13 +363,13 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-flow-page .scheduler-resource-stage-button {
     display: grid;
-    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-columns: 36px minmax(0, 1fr);
     align-items: center;
     gap: 10px;
-    flex: 0 0 196px;
-    width: 196px;
-    min-height: 84px;
-    padding: 11px;
+    flex: 0 0 176px;
+    width: 176px;
+    min-height: 68px;
+    padding: 9px 10px;
     border: 1px solid var(--scheduler-border);
     border-radius: var(--radius-md);
     background: var(--scheduler-surface);
@@ -391,10 +393,10 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-flow-page .scheduler-resource-stage-icon {
     display: grid;
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     place-items: center;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background-color: var(--scheduler-primary-soft);
     color: var(--scheduler-primary-strong);
     transition:
@@ -403,7 +405,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 }
 
 .scheduler-flow-page .scheduler-resource-stage-icon .bi {
-    font-size: 23px;
+    font-size: 19px;
     line-height: 1;
 }
 
@@ -426,7 +428,6 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     white-space: nowrap;
 }
 
-.scheduler-flow-page .scheduler-resource-stage-kicker,
 .scheduler-flow-page .scheduler-resource-stage-capacity {
     font-size: 11px;
     line-height: 1.25;
@@ -434,9 +435,9 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-day-overview {
     display: grid;
-    gap: 14px;
-    margin-top: 10px;
-    padding-top: 24px;
+    gap: 12px;
+    margin-top: 6px;
+    padding-top: 20px;
     border-top: 1px solid var(--scheduler-border);
 }
 
@@ -602,8 +603,8 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-day-overview-row {
     display: block;
-    min-height: 58px;
-    padding: 10px 14px;
+    min-height: 52px;
+    padding: 8px 12px;
 }
 
 .scheduler-day-overview-row + .scheduler-day-overview-row {
@@ -1081,7 +1082,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     .scheduler-flow-stepper ol {
         min-width: 0;
         width: 100%;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 6px;
     }
 
@@ -1133,32 +1134,32 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     }
 
     .scheduler-flow-page .scheduler-resource-stage-grid {
-        gap: 12px;
+        gap: 8px;
         scroll-snap-type: x mandatory;
         padding-bottom: 8px;
     }
 
     .scheduler-flow-page .scheduler-resource-stage-grid .scheduler-resource-stage-button {
-        flex-basis: min(210px, calc(100vw - 64px));
-        width: min(210px, calc(100vw - 64px));
-        min-width: min(210px, calc(100vw - 64px));
-        min-height: 88px;
+        flex-basis: min(184px, calc(100vw - 64px));
+        width: min(184px, calc(100vw - 64px));
+        min-width: min(184px, calc(100vw - 64px));
+        min-height: 72px;
         scroll-snap-align: start;
     }
 
     .scheduler-flow-page .scheduler-resource-stage-icon {
-        width: 44px;
-        height: 44px;
+        width: 36px;
+        height: 36px;
     }
 
     .scheduler-flow-page .scheduler-resource-stage-icon .bi {
-        font-size: 23px;
+        font-size: 19px;
     }
 
     .scheduler-day-overview {
-        gap: 16px;
+        gap: 12px;
         margin-top: 4px;
-        padding-top: 20px;
+        padding-top: 16px;
     }
 
     .scheduler-day-overview-header h3 {

@@ -65,8 +65,10 @@ from .service import (
     update_review_reason,
     update_review_reason_status,
 )
+from .pages import router as pages_router
 
 router = APIRouter()
+router.include_router(pages_router)
 
 
 @router.get("/preconselho/contexto", response_model=PreConselhoContextoOut)

@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatórios administrativos</title>
+    {% set page_styles = ["css/pages/admin.css"] %}
+    {% include "includes/style_bundle.html" %}
+</head>
+<body data-admin-active-tab="relatorios">
+    {% set navbar_context = "Painel de gestão" %}
+    {% set navbar_current = "gestao" %}
+    {% include "includes/app_navbar.html" %}
+    {% set admin_active_tab = "relatorios" %}
+    {% include "includes/app_sidebar_config.html" %}
+    <main class="admin-page">
+        <header class="admin-header admin-header-shell">
+            <div class="admin-header-main">
+                <h1>Relatórios administrativos</h1>
+                <p>Acompanhe impressão e uso dos recursos por período.</p>
+            </div>
+        </header>
+        <div class="admin-section-layout">
+            <section class="admin-section-content">
+                <article class="admin-card admin-card-wide">
+                    <h2>Período analisado</h2>
+                    <div class="admin-inline">
+                        <input id="relDataInicio" type="date" aria-label="Data inicial">
+                        <input id="relDataFim" type="date" aria-label="Data final">
+                        <button id="btnGerarRelatorios" class="btn-destaque" type="button">Gerar relatórios</button>
+                    </div>
+                    <p id="msgRelatorios" role="status"></p>
+                    <h3>Impressão por professor</h3>
+                    <ul id="relatorioImpressaoAdmin" class="admin-list"></ul>
+                    <h3>Uso por equipamento</h3>
+                    <ul id="relatorioRecursosAdmin" class="admin-list"></ul>
+                    <h3>Uso por professor</h3>
+                    <ul id="relatorioRecursosProfessorAdmin" class="admin-list"></ul>
+                </article>
+            </section>
+        </div>
+    </main>
+    {% include "admin/_base_scripts.html" %}
+    <script src="{{ request.url_for('static', path='js/admin/relatorios.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/relatorios-page.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+</html>

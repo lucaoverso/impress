@@ -86,7 +86,8 @@ class PagesRouterAssetsTest(unittest.TestCase):
 
         self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
         self.assertIn("css/base.css?v=build-cadastro-456", html)
-        self.assertIn("css/pages/professor.css?v=build-cadastro-456", html)
+        self.assertIn("css/pages/auth.css?v=build-cadastro-456", html)
+        self.assertNotIn("css/pages/professor.css?v=build-cadastro-456", html)
         self.assertIn("js/cadastro-professor.js?v=build-cadastro-456", html)
 
     def test_impressao_renderiza_fluxo_guiado_e_revisao_completa(self):
@@ -107,6 +108,81 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn('id="printFeedbackVisible"', html)
         self.assertIn('role="dialog"', html)
         self.assertLess(html.index('id="tagsConferencia"'), html.index('id="etapaConferencia"'))
+
+    def test_historico_impressao_tem_pagina_e_assets_proprios(self):
+        config, _pages_router = _reload_modulos("build-print-history-321")
+        printing_router = importlib.import_module("modules.printing.router")
+        app = FastAPI()
+        app.mount("/static", StaticFiles(directory=str(config.STATIC_DIR)), name="static")
+
+        with patch.object(printing_router, "render_template_response", config.render_template_response):
+            resposta = printing_router.print_history_page(_criar_request(app, "/impressao/historico"))
+        html = resposta.body.decode("utf-8")
+
+        self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
+        self.assertIn("Meu histórico", html)
+        self.assertIn('href="/impressao/historico"', html)
+        self.assertIn('aria-current="page"', html)
+        self.assertIn("css/printing/history.css?v=build-print-history-321", html)
+        self.assertIn("js/printing/history.js?v=build-print-history-321", html)
+        self.assertNotIn('id="printStepperCard"', html)
+
+    def test_paginas_de_consulta_agendamento_tem_rotas_e_assets_proprios(self):
+        config, _pages_router = _reload_modulos("build-scheduling-pages-456")
+        scheduling_router = importlib.import_module("modules.scheduling.router")
+        app = FastAPI()
+        app.mount("/static", StaticFiles(directory=str(config.STATIC_DIR)), name="static")
+
+        with patch.object(scheduling_router, "render_template_response", config.render_template_response):
+            minhas = scheduling_router.my_scheduling_page(
+                _criar_request(app, "/agendamento/meus-agendamentos")
+            )
+            calendario = scheduling_router.scheduling_calendar_page(
+                _criar_request(app, "/agendamento/calendario")
+            )
+
+        html_minhas = minhas.body.decode("utf-8")
+        html_calendario = calendario.body.decode("utf-8")
+        self.assertEqual(minhas.headers.get("Cache-Control"), "no-store")
+        self.assertEqual(calendario.headers.get("Cache-Control"), "no-store")
+        self.assertIn('id="listaMinhasReservas"', html_minhas)
+        self.assertIn('href="/agendamento/meus-agendamentos"', html_minhas)
+        self.assertIn('id="calendarioGrid"', html_calendario)
+        self.assertIn('id="listaReservasDia"', html_calendario)
+        self.assertIn("css/pages/scheduling-pages.css?v=build-scheduling-pages-456", html_minhas)
+        self.assertIn("js/scheduling/bookings_pages.js?v=build-scheduling-pages-456", html_calendario)
+        self.assertNotIn('class="scheduler-flow-stepper"', html_minhas)
+        self.assertNotIn('class="scheduler-flow-stepper"', html_calendario)
+
+    def test_paginas_preconselho_definem_contexto_e_navegacao_proprios(self):
+        config, _pages_router = _reload_modulos("build-preconselho-pages-654")
+        sys.modules.pop("modules.preconselho.pages", None)
+        preconselho_pages = importlib.import_module("modules.preconselho.pages")
+        app = FastAPI()
+        app.mount("/static", StaticFiles(directory=str(config.STATIC_DIR)), name="static")
+
+        paginas = {
+            "consolidacao": preconselho_pages.preconselho_consolidation_page,
+            "reavaliacao": preconselho_pages.preconselho_review_page,
+            "relatorios": preconselho_pages.preconselho_report_page,
+            "rav": preconselho_pages.preconselho_rav_page,
+            "configuracoes": preconselho_pages.preconselho_settings_page,
+        }
+
+        for slug, pagina in paginas.items():
+            resposta = pagina(_criar_request(app, f"/preconselho/{slug}"))
+            html = resposta.body.decode("utf-8")
+            self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
+            contexto = "relatorio" if slug == "relatorios" else slug
+            self.assertIn(f'data-preconselho-page="{contexto}"', html)
+            self.assertIn(f'href="/preconselho/{slug}"', html)
+            self.assertIn('aria-current="page"', html)
+            self.assertIn("js/preconselho/shared.js?v=build-preconselho-pages-654", html)
+            self.assertIn("js/preconselho/init.js?v=build-preconselho-pages-654", html)
+            self.assertLess(
+                html.index("js/preconselho/shared.js"),
+                html.index("js/preconselho/init.js"),
+            )
 
     def test_horario_escolar_injeta_asset_version_e_no_store(self):
         config, pages_router = _reload_modulos("build-horario-789")
@@ -176,10 +252,11 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn("css/base.css?v=build-relatorios-654", html)
         self.assertIn("css/pages/relatorios.css?v=build-relatorios-654", html)
         self.assertIn("js/relatorios.js?v=build-relatorios-654", html)
-        self.assertIn("cdn.jsdelivr.net/npm/chart.js", html)
+        self.assertIn("static/vendor/chartjs/chart.umd.min.js?v=4.4.3", html)
+        self.assertNotIn("cdn.jsdelivr.net/npm/chart.js", html)
         self.assertIn('id="relatoriosCards"', html)
         self.assertIn('id="anexosResumo"', html)
-        self.assertIn("Insights da Gestao", html)
+        self.assertIn("Insights da gestão", html)
 
     def test_login_page_gera_asset_version_dinamico_quando_configurado(self):
         config, pages_router = _reload_modulos("dynamic")

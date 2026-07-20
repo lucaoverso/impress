@@ -164,15 +164,15 @@
 }
 
 .apc-toolbar-message.is-success {
-    border-color: #bbf7d0;
-    background: #dcfce7;
-    color: #166534;
+    border-color: var(--state-success-border);
+    background: var(--state-success-bg-strong);
+    color: var(--state-success-text);
 }
 
 .apc-toolbar-message.is-error {
-    border-color: #fecaca;
-    background: #fee2e2;
-    color: #991b1b;
+    border-color: var(--state-danger-border);
+    background: var(--state-danger-bg-strong);
+    color: var(--state-danger-text);
 }
 
 .apc-calendar-toggle {
@@ -257,7 +257,7 @@ body.apc-calendar-drawer-open {
 .apc-page.is-docente-mode .apc-calendar-drawer {
     position: fixed;
     inset: 0;
-    z-index: 1250;
+    z-index: var(--z-modal-dropdown);
     display: grid;
     justify-items: end;
     opacity: 0;
@@ -497,7 +497,7 @@ body.apc-calendar-drawer-open {
 }
 
 .apc-destinatario-item:has(input:checked) {
-    border-color: rgba(15, 118, 110, 0.28);
+    border-color: var(--brand-outline);
     background: rgba(214, 242, 239, 0.68);
     color: var(--brand-strong);
 }
@@ -547,12 +547,12 @@ body.apc-calendar-drawer-open {
     gap: 4px;
 }
 
-.apc-gestao-actions-copy h3,
+.apc-gestao-actions-copy h2,
 .apc-gestao-actions-copy p {
     margin: 0;
 }
 
-.apc-gestao-actions-copy h3 {
+.apc-gestao-actions-copy h2 {
     font-size: 20px;
     letter-spacing: -0.015em;
 }
@@ -702,7 +702,7 @@ body.apc-calendar-drawer-open {
 }
 
 .apc-pendencia-card.is-selected {
-    border-color: rgba(15, 118, 110, 0.28);
+    border-color: var(--brand-outline);
     background: rgba(214, 242, 239, 0.44);
     box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.08);
 }
@@ -761,7 +761,7 @@ body.apc-modal-open {
 .apc-modal-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 1200;
+    z-index: var(--z-modal);
     background: rgba(15, 23, 42, 0.46);
     backdrop-filter: blur(5px);
     display: grid;
@@ -833,7 +833,7 @@ body.apc-modal-open {
     margin: 0 -28px;
     padding: 18px 28px 24px;
     border-top: 1px solid var(--apc-border-soft);
-    background: rgba(255, 255, 255, 0.96);
+    background: var(--surface-overlay);
     backdrop-filter: blur(10px);
 }
 
@@ -1162,7 +1162,7 @@ body.apc-modal-open {
 }
 
 .apc-arquivo-item-btn.is-active {
-    border-color: rgba(15, 118, 110, 0.28);
+    border-color: var(--brand-outline);
     box-shadow: inset 0 0 0 1px rgba(15, 118, 110, 0.08);
     background: rgba(214, 242, 239, 0.36);
 }
@@ -1203,7 +1203,7 @@ body.apc-print-wizard-open {
 .apc-file-preview-modal {
     position: fixed;
     inset: 0;
-    z-index: 1300;
+    z-index: var(--z-modal-preview);
     padding: 20px;
     display: grid;
     place-items: center;
@@ -1229,7 +1229,7 @@ body.apc-print-wizard-open {
     position: absolute;
     inset: 0;
     z-index: 1;
-    background: rgba(15, 23, 42, 0.52);
+    background: var(--overlay-scrim);
     backdrop-filter: blur(6px);
 }
 
@@ -1422,7 +1422,7 @@ body.apc-print-wizard-open {
 .apc-print-wizard-modal {
     position: fixed;
     inset: 0;
-    z-index: 1350;
+    z-index: var(--z-modal-wizard);
     padding: 20px;
     display: grid;
     place-items: center;
@@ -1445,7 +1445,7 @@ body.apc-print-wizard-open {
     position: absolute;
     inset: 0;
     z-index: 1;
-    background: rgba(15, 23, 42, 0.52);
+    background: var(--overlay-scrim);
     backdrop-filter: blur(6px);
 }
 
@@ -1518,13 +1518,13 @@ body.apc-print-wizard-open {
 }
 
 .apc-print-stepper li.is-current {
-    border-color: rgba(15, 118, 110, 0.28);
+    border-color: var(--brand-outline);
     color: var(--apc-accent-strong);
     background: rgba(214, 242, 239, 0.48);
 }
 
 .apc-print-stepper li.is-complete {
-    border-color: rgba(15, 118, 110, 0.28);
+    border-color: var(--brand-outline);
     color: #0f766e;
     background: rgba(15, 118, 110, 0.08);
 }
@@ -1791,7 +1791,7 @@ body.apc-print-wizard-open {
 
 .apc-print-checkbox:has(input:checked),
 .apc-print-tag:has(input:checked) {
-    border-color: rgba(15, 118, 110, 0.28);
+    border-color: var(--brand-outline);
     color: var(--apc-accent-strong);
     background: rgba(214, 242, 239, 0.46);
 }
@@ -2181,7 +2181,7 @@ body.apc-print-wizard-open {
 .apc-activity-modal {
     position: fixed;
     inset: 0;
-    z-index: 1360;
+    z-index: var(--z-modal-top);
     display: grid;
     place-items: center;
     padding: 20px;

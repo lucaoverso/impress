@@ -4,58 +4,67 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Recursos - Administração</title>
+    {% set page_styles = ["css/pages/admin.css"] %}
     {% include "includes/style_bundle.html" %}
 </head>
 <body data-admin-active-tab="recursos">
-    {% set navbar_context = "Painel de gestao" %}
+    {% set navbar_context = "Painel de gestão" %}
     {% set navbar_current = "gestao" %}
     {% include "includes/app_navbar.html" %}
     {% set admin_active_tab = "recursos" %}
     {% include "includes/app_sidebar_config.html" %}
 
-    <main class="admin-page">
-        <header class="admin-header admin-header-shell">
-            <div class="admin-header-main">
-                <h1>Recursos</h1>
-                <p>Cadastre e mantenha os equipamentos disponíveis para agendamento.</p>
+    <main class="admin-page page-shell page-shell--wide">
+        <header class="admin-header admin-header-shell page-header">
+            <div class="admin-header-main page-header-main">
+                <h1 class="page-title">Recursos</h1>
+                <p class="page-lead">Cadastre e mantenha os equipamentos disponíveis para agendamento.</p>
             </div>
         </header>
 
         <div class="admin-section-layout">
-            <section class="admin-section-content admin-grid">
-                <article class="admin-card">
-                    <h2 id="tituloFormRecurso">Cadastrar recurso</h2>
-                    <form id="formRecurso" class="admin-form">
-                        <label for="recursoNome">Nome</label>
-                        <input id="recursoNome" type="text" placeholder="Ex.: Projetor da biblioteca" required>
-                        <label for="recursoTipo">Tipo</label>
-                        <input id="recursoTipo" type="text" placeholder="Ex.: Projetor" required>
-                        <label for="recursoDescricao">Descrição</label>
-                        <input id="recursoDescricao" type="text" placeholder="Informação opcional">
-                        <label for="recursoQuantidadeItens">Quantidade disponível</label>
-                        <input id="recursoQuantidadeItens" type="number" min="1" value="1" required>
+            <section class="admin-section-content admin-grid page-grid page-grid--two">
+                <article class="admin-card page-section">
+                    <h2 id="tituloFormRecurso" class="section-title">Cadastrar recurso</h2>
+                    <form id="formRecurso" class="admin-form form-grid">
+                        <label class="field" for="recursoNome">
+                            <span class="field-label">Nome</span>
+                            <input id="recursoNome" type="text" placeholder="Ex.: Projetor da biblioteca" required>
+                        </label>
+                        <label class="field" for="recursoTipo">
+                            <span class="field-label">Tipo</span>
+                            <input id="recursoTipo" type="text" placeholder="Ex.: Projetor" required>
+                        </label>
+                        <label class="field" for="recursoDescricao">
+                            <span class="field-label">Descrição</span>
+                            <input id="recursoDescricao" type="text" placeholder="Informação opcional">
+                        </label>
+                        <label class="field" for="recursoQuantidadeItens">
+                            <span class="field-label">Quantidade disponível</span>
+                            <input id="recursoQuantidadeItens" type="number" min="1" value="1" required>
+                        </label>
                         <input id="recursoImagemCapa" type="hidden">
-                        <div class="admin-upload-field admin-resource-image-field">
-                            <span>Imagem de capa</span>
-                            <small>Use JPG, PNG ou WEBP para o card do agendamento.</small>
+                        <div class="admin-upload-field admin-resource-image-field field field--upload">
+                            <span class="field-label">Imagem de capa</span>
+                            <small class="field-hint">Use JPG, PNG ou WEBP para o recurso do agendamento.</small>
                             <div id="recursoImagemPreview" class="admin-resource-image-preview" hidden></div>
                             <input id="recursoImagemArquivo" type="file" accept="image/png,image/jpeg,image/webp">
-                            <div class="admin-inline">
-                                <button id="btnUploadImagemRecurso" type="button">Enviar imagem</button>
-                                <button id="btnRemoverImagemRecurso" type="button">Remover imagem</button>
+                            <div class="admin-inline action-group action-group--compact">
+                                <button id="btnUploadImagemRecurso" class="button" type="button">Enviar imagem</button>
+                                <button id="btnRemoverImagemRecurso" class="button button--danger" type="button">Remover imagem</button>
                             </div>
                         </div>
-                        <div class="admin-inline">
-                            <button id="btnSalvarRecurso" class="btn-destaque" type="submit">Cadastrar recurso</button>
-                            <button id="btnCancelarEdicaoRecurso" type="button" style="display: none;">Cancelar edição</button>
+                        <div class="admin-inline action-group">
+                            <button id="btnSalvarRecurso" class="btn-destaque button button--primary" type="submit">Cadastrar recurso</button>
+                            <button id="btnCancelarEdicaoRecurso" class="button" type="button" hidden>Cancelar edição</button>
                         </div>
                     </form>
-                    <p id="msgRecurso" role="status"></p>
+                    <p id="msgRecurso" class="feedback" role="status" aria-live="polite"></p>
                 </article>
 
-                <article class="admin-card">
-                    <h2>Recursos cadastrados</h2>
-                    <ul id="listaRecursosAdmin" class="admin-list"></ul>
+                <article class="admin-card page-section">
+                    <h2 class="section-title">Recursos cadastrados</h2>
+                    <ul id="listaRecursosAdmin" class="admin-list item-list"></ul>
                 </article>
             </section>
         </div>

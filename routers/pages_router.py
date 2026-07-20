@@ -30,7 +30,7 @@ def servicos_page(request: Request):
 def impressao_page(request: Request):
     return render_template_response(
         request,
-        "professor.html",
+        "printing/index.html",
         {
             "cancel_window_seconds": PRINT_CANCEL_WINDOW_SECONDS,
             "asset_version": ASSET_VERSION,
@@ -48,7 +48,7 @@ def professor_redirect():
 def agendamento_page(request: Request):
     return render_template_response(
         request,
-        "agendamento.html",
+        "scheduling/index.html",
         {"asset_version": ASSET_VERSION},
         cache_control="no-store",
     )
@@ -94,16 +94,6 @@ def pcpi_page(request: Request):
     )
 
 
-@router.get("/preconselho")
-def preconselho_page(request: Request):
-    return render_template_response(
-        request,
-        "preconselho.html",
-        {"asset_version": ASSET_VERSION},
-        cache_control="no-store",
-    )
-
-
 @router.get("/cadastro-professor")
 def cadastro_professor_page(request: Request):
     return render_template_response(
@@ -115,13 +105,8 @@ def cadastro_professor_page(request: Request):
 
 
 @router.get("/admin")
-def admin_page(request: Request):
-    return render_template_response(
-        request,
-        "admin.html",
-        {"asset_version": ASSET_VERSION},
-        cache_control="no-store",
-    )
+def admin_page():
+    return RedirectResponse(url="/admin/professores", status_code=302)
 
 
 @router.get("/coordenacao")

@@ -17,7 +17,6 @@ def _raise_http_error(exc: Exception):
     raise HTTPException(400, str(exc)) from exc
 
 
-@router.get("/admin/turmas")
 @router.get("/admin/turmas/dados")
 def listar_turmas_admin_api(
     incluir_inativas: bool = True,

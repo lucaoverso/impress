@@ -27,19 +27,6 @@
     object-fit:cover;
 }
 
-.auth-badge {
-    width: fit-content;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: var(--brand-strong);
-    background: var(--brand-soft);
-    padding: 4px 10px;
-    border-radius: 999px;
-    margin-bottom: 10px;
-}
-
 .auth-header h1 {
     font-size: 30px;
     line-height: 1.1;
@@ -64,27 +51,6 @@
     margin-bottom: 4px;
 }
 
-.btn-destaque {
-    padding: 8px 16px;
-    height: 48px;
-    border: none;
-    border-radius: 12px;
-    background: linear-gradient(135deg, var(--brand), #148c83);
-    color: #ffffff;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: transform 0.1s ease, filter 0.2s ease;
-}
-
-.btn-destaque:hover {
-    filter: brightness(0.96);
-}
-
-.btn-destaque:active {
-    transform: translateY(1px);
-}
-
 #erro {
     min-height: 20px;
     font-size: 14px;
@@ -107,11 +73,11 @@
 .auth-modal {
     position: fixed;
     inset: 0;
-    z-index: 1200;
+    z-index: var(--z-modal);
     display: grid;
     place-items: center;
     padding: 20px 16px;
-    background: rgba(15, 23, 42, 0.52);
+    background: var(--overlay-scrim);
     backdrop-filter: blur(4px);
 }
 

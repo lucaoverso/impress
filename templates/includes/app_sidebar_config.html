@@ -1,16 +1,16 @@
 {% if navbar_current == "agendamento" %}
     {% set sidebar_title = "Agendamento" %}
     {% set sidebar_items = [
-        {"label": "Novo agendamento", "icon": "bi-calendar-plus", "href": "/agendamento", "active": true},
-        {"label": "Meus agendamentos", "icon": "bi-calendar-check", "action": "open-my-schedules"},
-        {"label": "Calendário geral", "icon": "bi-calendar3", "target_id": "btnAbrirCalendarioGeralPagina"},
+        {"label": "Novo agendamento", "icon": "bi-calendar-plus", "href": "/agendamento", "active": scheduling_page | default("new") == "new"},
+        {"label": "Meus agendamentos", "icon": "bi-calendar-check", "href": "/agendamento/meus-agendamentos", "active": scheduling_page | default("new") == "mine"},
+        {"label": "Calendário geral", "icon": "bi-calendar3", "href": "/agendamento/calendario", "active": scheduling_page | default("new") == "calendar"},
         {"label": "Catálogo de recursos", "icon": "bi-projector", "disabled": true}
     ] %}
 {% elif navbar_current == "impressao" %}
     {% set sidebar_title = "Impressão" %}
     {% set sidebar_items = [
-        {"label": "Nova impressão", "icon": "bi-printer", "href": "/impressao", "active": true},
-        {"label": "Meu histórico", "icon": "bi-clock-history", "target_id": "btnAbrirHistorico"},
+        {"label": "Nova impressão", "icon": "bi-printer", "href": "/impressao", "active": printing_page | default("new") == "new"},
+        {"label": "Meu histórico", "icon": "bi-clock-history", "href": "/impressao/historico", "active": printing_page | default("new") == "history"},
         {"label": "Impressão adaptada", "icon": "bi-universal-access", "disabled": true}
     ] %}
 {% elif navbar_current == "download" %}
@@ -60,11 +60,12 @@
 {% elif navbar_current == "preconselho" %}
     {% set sidebar_title = "Pré-conselho" %}
     {% set sidebar_items = [
-        {"label": "Meu preenchimento", "icon": "bi-pencil-square", "tab_group": "preconselho", "tab_value": "docente"},
-        {"label": "Consolidação", "icon": "bi-collection", "tab_group": "preconselho", "tab_value": "consolidacao"},
-        {"label": "Relatório", "icon": "bi-file-earmark-text", "tab_group": "preconselho", "tab_value": "relatorio"},
-        {"label": "RAV", "icon": "bi-ui-checks", "tab_group": "preconselho", "tab_value": "rav"},
-        {"label": "Configurações", "icon": "bi-gear", "tab_group": "preconselho", "tab_value": "configuracoes"}
+        {"label": "Meu preenchimento", "icon": "bi-pencil-square", "href": "/preconselho", "active": preconselho_page | default("docente") == "docente"},
+        {"label": "Consolidação", "icon": "bi-collection", "href": "/preconselho/consolidacao", "active": preconselho_page | default("docente") == "consolidacao"},
+        {"label": "Reavaliação", "icon": "bi-arrow-repeat", "href": "/preconselho/reavaliacao", "active": preconselho_page | default("docente") == "reavaliacao"},
+        {"label": "Relatórios", "icon": "bi-file-earmark-text", "href": "/preconselho/relatorios", "active": preconselho_page | default("docente") == "relatorio"},
+        {"label": "RAV", "icon": "bi-ui-checks", "href": "/preconselho/rav", "active": preconselho_page | default("docente") == "rav"},
+        {"label": "Configurações", "icon": "bi-gear", "href": "/preconselho/configuracoes", "active": preconselho_page | default("docente") == "configuracoes"}
     ] %}
 {% elif navbar_current == "gestao" %}
     {% set sidebar_title = "Gestão" %}

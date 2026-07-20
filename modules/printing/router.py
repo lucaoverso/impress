@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import Response
 
 from auth import get_usuario_logado
@@ -39,9 +39,18 @@ from modules.printing.service import (
 from services.cota_service import obter_cota_atual, validar_e_consumir_cota
 from services.file_service import arquivo_suportado, converter_para_pdf, obter_extensao_arquivo
 from services.pdf_service import contar_paginas_pdf
+from routers.config import render_template_response
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+@router.get("/impressao/historico")
+def print_history_page(request: Request):
+    return render_template_response(
+        request,
+        "printing/history.html",
+        cache_control="no-store",
+    )
 
 
 def _ensure_spool_dir() -> Path:

@@ -3,21 +3,10 @@
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/base.css') }}?v={{ css_version }}">
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/components.css') }}?v={{ css_version }}">
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/components/app-navbar.css') }}?v={{ css_version }}">
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/printing/tokens.css') }}?v={{ css_version }}">
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/printing/layout.css') }}?v={{ css_version }}">
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/printing/steps.css') }}?v={{ css_version }}">
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/printing/states.css') }}?v={{ css_version }}">
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/printing/preview.css') }}?v={{ css_version }}">
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/auth.css') }}?v={{ css_version }}">
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/professor.css') }}?v={{ css_version }}">
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/services-scheduler.css') }}?v={{ css_version }}">
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/scheduling-flow.css') }}?v={{ css_version }}-8">
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/scheduling-repeat.css') }}?v={{ css_version }}">
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/pcpi-preconselho.css') }}?v={{ css_version }}">
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/admin.css') }}?v={{ css_version }}">
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/admin-audit.css') }}?v={{ css_version }}">
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/coordenacao.css') }}?v={{ css_version }}">
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/horario-escolar.css') }}?v={{ css_version }}">
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/apc.css') }}?v={{ css_version }}">
-<link rel="stylesheet" href="{{ request.url_for('static', path='css/pages/relatorios.css') }}?v={{ css_version }}">
+{% for page_style in page_styles | default([]) %}
+<link rel="stylesheet" href="{{ request.url_for('static', path=page_style) }}?v={{ css_version }}">
+{% endfor %}
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/design-system.css') }}?v={{ css_version }}">
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/components/continuous-surfaces.css') }}?v={{ css_version }}">
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/components/app-sidebar.css') }}?v={{ css_version }}">
+<script defer src="{{ request.url_for('static', path='js/core/dialog_accessibility.js') }}?v={{ css_version }}"></script>

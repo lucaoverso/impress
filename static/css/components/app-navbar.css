@@ -10,14 +10,23 @@
     border: 0 !important;
 }
 
-.app-navbar {
+.app-topbar.app-navbar {
     display: grid;
     grid-template-columns: minmax(180px, 1fr) minmax(260px, 560px) minmax(180px, 1fr);
     align-items: center;
     gap: 24px;
-    position: sticky;
+    position: fixed;
     top: 0;
-    z-index: 20;
+    right: 0;
+    left: 0;
+    z-index: var(--z-navbar);
+    width: 100%;
+    min-height: var(--app-navbar-height);
+    margin: 0;
+}
+
+body:has(> .app-navbar) {
+    padding-top: var(--app-navbar-height);
 }
 
 .app-navbar-brand,
@@ -47,7 +56,7 @@
     top: 50%;
     left: 15px;
     z-index: 1;
-    color: var(--text-soft, #4b5563);
+    color: var(--text-muted);
     transform: translateY(-50%);
     pointer-events: none;
 }
@@ -77,7 +86,7 @@
 .app-navbar-profile-menu {
     position: absolute;
     top: calc(100% + 10px);
-    z-index: 30;
+    z-index: var(--z-dropdown);
     border: 1px solid var(--line, #d8dee8);
     border-radius: 16px;
     background: var(--surface-0, #fff);
@@ -100,8 +109,8 @@
 .app-navbar-search-result.is-active { background: var(--brand-soft, #d6f2ef); }
 .app-navbar-search-result strong,
 .app-navbar-search-result small { display: block; }
-.app-navbar-search-result small { margin-top: 2px; color: var(--text-soft, #4b5563); }
-.app-navbar-search-empty { margin: 0; padding: 12px; color: var(--text-soft, #4b5563); }
+.app-navbar-search-result small { margin-top: 2px; color: var(--text-muted); }
+.app-navbar-search-empty { margin: 0; padding: 12px; color: var(--text-muted); }
 
 .app-navbar-avatar,
 .app-navbar-profile-initials {
@@ -125,12 +134,12 @@
 .app-navbar-profile-header div { min-width: 0; }
 .app-navbar-profile-header strong,
 .app-navbar-profile-header span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.app-navbar-profile-header span { margin-top: 3px; color: var(--text-soft, #4b5563); font-size: 13px; }
+.app-navbar-profile-header span { margin-top: 3px; color: var(--text-muted); font-size: 13px; }
 .app-navbar-usage { padding: 14px 0; border-bottom: 1px solid var(--line, #d8dee8); }
 .app-navbar-usage > * { display: block; }
-.app-navbar-usage span { color: var(--text-soft, #4b5563); font-size: 13px; }
+.app-navbar-usage span { color: var(--text-muted); font-size: 13px; }
 .app-navbar-usage strong { margin-top: 4px; font-size: 18px; }
-.app-navbar-usage small { margin-top: 3px; color: var(--text-soft, #4b5563); }
+.app-navbar-usage small { margin-top: 3px; color: var(--text-muted); }
 
 .app-navbar-profile-action {
     width: 100%;
@@ -145,8 +154,8 @@
     color: var(--text-main, #1f2a37);
     cursor: pointer;
 }
-.app-navbar-profile-action:hover { background: var(--surface-muted, #eef3f8); }
-.app-navbar-profile-action.is-danger { color: var(--danger, #dc2626); }
+.app-navbar-profile-action:hover { background: var(--surface-2); }
+.app-navbar-profile-action.is-danger { color: var(--error); }
 
 .app-profile-dialog {
     width: min(520px, calc(100vw - 32px));
@@ -161,14 +170,14 @@
 .app-profile-dialog header,
 .app-profile-dialog footer { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .app-profile-dialog h2 { margin: 0; font-size: 24px; }
-.app-profile-dialog header p { margin: 4px 0 0; color: var(--text-soft, #4b5563); }
+.app-profile-dialog header p { margin: 4px 0 0; color: var(--text-muted); }
 .app-profile-dialog-close { width: 44px; height: 44px; padding: 0; border-radius: 12px; }
 .app-profile-dialog-fields { display: grid; gap: 8px; margin: 24px 0; }
 .app-profile-dialog-fields label { margin-top: 8px; font-weight: 700; }
 .app-profile-dialog-fields label span,
-.app-profile-dialog-fields small { color: var(--text-soft, #4b5563); font-weight: 400; }
+.app-profile-dialog-fields small { color: var(--text-muted); font-weight: 400; }
 .app-profile-dialog-fields input { height: 48px; padding: 0 14px; border: 1px solid var(--line, #d8dee8); border-radius: 12px; font: inherit; }
-.app-profile-feedback { margin: -8px 0 16px; color: var(--danger, #dc2626); }
+.app-profile-feedback { margin: -8px 0 16px; color: var(--error); }
 .app-profile-feedback.is-success { color: var(--success, #15803d); }
 .app-profile-dialog footer { justify-content: flex-end; }
 .app-profile-dialog footer button { min-height: 44px; padding: 0 16px; border-radius: 12px; }
@@ -179,7 +188,7 @@
     .app-navbar .app-topbar-context { display: none; }
     .app-navbar-search input { padding-right: 12px; }
     .app-navbar-search input::placeholder { color: transparent; }
-    .app-navbar-search-results { position: fixed; top: 72px; left: 12px; right: 12px; }
+    .app-navbar-search-results { position: fixed; top: var(--app-navbar-height); left: 12px; right: 12px; }
     .app-navbar-extra-actions { display: none; }
 }
 

@@ -144,8 +144,9 @@ function criarCampoTextoRepeticao({
     onInput
 }) {
     const grupo = document.createElement("article");
-    grupo.className = "print-field-group";
+    grupo.className = "print-field-group field";
     const rotulo = document.createElement("label");
+    rotulo.className = "field-label";
     rotulo.setAttribute("for", id);
     rotulo.innerText = label;
     const campo = document.createElement(textarea ? "textarea" : "input");
@@ -193,7 +194,7 @@ function renderEtapaRepeticaoAgendamento() {
 
     if (candidatas.length === 0) {
         const vazio = document.createElement("p");
-        vazio.className = "scheduler-repeat-empty";
+        vazio.className = "scheduler-repeat-empty empty-state";
         vazio.innerText = "Não há outra aula com todos os recursos escolhidos disponíveis nesta data.";
         lista.appendChild(vazio);
     }

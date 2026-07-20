@@ -4,10 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cadastro de aulas - Administração</title>
+    {% set page_styles = ["css/pages/admin.css"] %}
     {% include "includes/style_bundle.html" %}
 </head>
 <body data-admin-active-tab="aulas">
-    {% set navbar_context = "Painel de gestao" %}
+    {% set navbar_context = "Painel de gestão" %}
     {% set navbar_current = "gestao" %}
     {% include "includes/app_navbar.html" %}
     {% set admin_active_tab = "aulas" %}

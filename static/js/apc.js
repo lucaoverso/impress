@@ -27,6 +27,7 @@ let calendarioApc = { periodos: [] };
 let periodoSelecionadoApcId = null;
 let periodoEmEdicaoApcId = null;
 let perfilApc = "docente";
+let focoAntesModalApc = null;
 let calendarioVisivelApc = false;
 let calendarioDrawerTimerApc = null;
 let focoAntesCalendarioApc = null;
@@ -1020,6 +1021,7 @@ function atualizarCabecalhoModalApc(periodo = null) {
 }
 
 function abrirModalFormularioApc(periodo = null) {
+    focoAntesModalApc = document.activeElement;
     periodoEmEdicaoApcId = Number(periodo?.id || 0) || null;
     preencherFormularioPeriodo(periodo);
     atualizarCabecalhoModalApc(periodo);
@@ -1038,6 +1040,10 @@ function fecharModalFormularioApc({ limpar = false } = {}) {
         backdrop.hidden = true;
     }
     document.body.classList.remove("apc-modal-open");
+    if (focoAntesModalApc instanceof HTMLElement) {
+        focarSemRolagemApc(focoAntesModalApc);
+    }
+    focoAntesModalApc = null;
     if (limpar) {
         periodoEmEdicaoApcId = null;
         preencherFormularioPeriodo(null);

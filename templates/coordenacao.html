@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coordenação - Central de Registros</title>
+    {% set page_styles = ["css/pages/coordenacao.css"] %}
     {% include "includes/style_bundle.html" %}
 </head>
 
@@ -522,8 +523,8 @@
                                                     <p class="coordenacao-preview-subtitle">COORDENAÇÃO PEDAGÓGICA</p>
 
                                                     <img class="coordenacao-preview-logo"
-                                                        src="{{ request.url_for('static', path='img/logo_escola.PNG') }}"
-                                                        alt="Logo da escola">
+                                                        src="{{ request.url_for('static', path='img/logo_escola-256.webp') }}"
+                                                        alt="Logo da escola" width="72" height="72">
                                                     <p id="previewTituloDocumento" class="coordenacao-preview-title">
                                                         REGISTRO DE OCORRÊNCIAS DISCIPLINARES
                                                     </p>

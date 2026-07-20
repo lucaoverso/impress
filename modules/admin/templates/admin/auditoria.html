@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atividades do sistema - Administração</title>
+    {% set page_styles = ["css/pages/admin.css", "css/pages/admin-audit.css"] %}
+    {% include "includes/style_bundle.html" %}
+</head>
+<body data-admin-active-tab="auditoria">
+    {% set navbar_context = "Painel de gestão" %}
+    {% set navbar_current = "gestao" %}
+    {% include "includes/app_navbar.html" %}
+    {% set admin_active_tab = "auditoria" %}
+    {% include "includes/app_sidebar_config.html" %}
+    <main class="admin-page admin-only" data-admin-only="true">
+        <header class="admin-header admin-header-shell">
+            <div class="admin-header-main">
+                <h1>Atividades do sistema</h1>
+                <p>Consulte acessos e operações importantes registradas pela plataforma.</p>
+            </div>
+        </header>
+        <div class="admin-section-layout">
+            <section class="admin-section-content">
+                {% include "includes/admin_audit_panel.html" %}
+            </section>
+        </div>
+    </main>
+    {% include "admin/_base_scripts.html" %}
+    <script src="{{ request.url_for('static', path='js/admin/audit.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/auditoria-page.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+</html>

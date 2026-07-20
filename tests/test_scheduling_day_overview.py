@@ -22,7 +22,7 @@ class SchedulingDayOverviewTest(unittest.TestCase):
         self.assertIn("nomePeriodoAgendamento(periodo)", script)
 
     def test_template_carrega_renderer_antes_do_script_principal(self):
-        template = (BASE_DIR / "templates" / "agendamento.html").read_text(encoding="utf-8")
+        template = (BASE_DIR / "templates" / "scheduling" / "index.html").read_text(encoding="utf-8")
 
         overview_index = template.index("js/scheduling/day_overview.js")
         main_index = template.index("js/agendamento.js")

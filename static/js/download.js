@@ -212,6 +212,7 @@ function preencherDetalhes(info) {
     infoAtual = info;
     elementos.previewMiniatura.src = info.miniatura_url || "";
     elementos.previewMiniatura.alt = `Miniatura de ${info.titulo}`;
+    elementos.previewMiniatura.hidden = !info.miniatura_url;
     elementos.previewTitulo.textContent = info.titulo || "Vídeo sem título";
     elementos.previewDuracao.textContent = info.duracao_texto || "--:--";
     elementos.previewAutor.textContent = info.autor || "Canal não informado";

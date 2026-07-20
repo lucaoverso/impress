@@ -10,24 +10,24 @@ Este documento descreve os principais fluxos do modulo de agendamento no estado 
 sequenceDiagram
     participant U as Usuario
     participant P as routers/pages_router.py
-    participant T as templates/agendamento.html
+    participant T as templates/scheduling/index.html
     participant JS as static/js
 
     U->>P: GET /agendamento
-    P->>T: render_template_response("agendamento.html")
+    P->>T: render_template_response("scheduling/index.html")
     T->>JS: carrega core/auth, core/api, day_overview, repeat_step e agendamento.js
 ```
 
 Passos:
 
 1. O usuario acessa `/agendamento`.
-2. `routers/pages_router.py` renderiza `templates/agendamento.html`.
+2. `routers/pages_router.py` renderiza `templates/scheduling/index.html`.
 3. O template carrega scripts compartilhados e scripts especificos do agendamento.
 
 Base:
 
 - `routers/pages_router.py`: `agendamento_page`
-- `templates/agendamento.html`
+- `templates/scheduling/index.html`
 - `static/js/agendamento.js`
 - `static/js/scheduling/day_overview.js`
 - `static/js/scheduling/repeat_step.js`
@@ -38,7 +38,7 @@ Classificacao: Confirmada pelo codigo.
 
 ```mermaid
 flowchart TD
-    Tela[agendamento.html] --> JS[static/js/agendamento.js]
+    Tela[scheduling/index.html] --> JS[static/js/agendamento.js]
     JS --> Recursos[GET /agendamento/recursos]
     JS --> Opcoes[GET /agendamento/opcoes]
     JS --> Reservas[GET /agendamento/reservas]
@@ -226,7 +226,7 @@ flowchart TD
 
 Base:
 
-- `templates/agendamento.html`: include de `includes/scheduling_repeat_step.html`
+- `templates/scheduling/index.html`: include de `includes/scheduling_repeat_step.html`
 - `templates/includes/scheduling_repeat_step.html`
 - `static/js/scheduling/repeat_step.js`
 - `static/js/agendamento.js`: `obterRecursosSelecionadosAgendamento`
@@ -274,4 +274,3 @@ Classificacao: Confirmada pelo codigo.
 | Visao dos proximos dias | `tests/test_scheduling_day_overview.py` | Confirmada pelo codigo |
 | Etapa de repeticao | `tests/test_scheduling_repeat_step.py` | Confirmada pelo codigo |
 | Migrations de grade/faixa | `tests/test_schedule_repair_migration.py`; `tests/test_schema_migrations.py` | Confirmada pelo codigo |
-

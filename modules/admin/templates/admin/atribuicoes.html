@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Atribuições docentes - Administração</title>
+    {% set page_styles = ["css/pages/admin.css"] %}
+    {% include "includes/style_bundle.html" %}
+</head>
+<body data-admin-active-tab="atribuicoes">
+    {% set navbar_context = "Painel de gestão" %}
+    {% set navbar_current = "gestao" %}
+    {% include "includes/app_navbar.html" %}
+    {% set admin_active_tab = "atribuicoes" %}
+    {% include "includes/app_sidebar_config.html" %}
+    <main class="admin-page admin-only" data-admin-only="true">
+        <header class="admin-header admin-header-shell">
+            <div class="admin-header-main">
+                <h1>Atribuições docentes</h1>
+                <p>Vincule professores e disciplinas às turmas em um único fluxo.</p>
+            </div>
+        </header>
+        <div class="admin-section-layout">
+            <section class="admin-section-content admin-grid">
+                <article class="admin-card">
+                    <h2>Professor por disciplina</h2>
+                    <p class="booking-detail">Escolha professor e disciplina, marque as turmas e salve o conjunto.</p>
+                    <form id="formAtribuicaoDocente" class="admin-form">
+                        <label for="atribuicaoProfessor">Professor</label>
+                        <select id="atribuicaoProfessor" required></select>
+                        <label for="atribuicaoDisciplina">Disciplina</label>
+                        <select id="atribuicaoDisciplina" required></select>
+                        <div class="admin-fieldset">
+                            <p>Turmas atribuídas</p>
+                            <div class="admin-inline">
+                                <button id="btnSelecionarTodasTurmasAtribuicao" type="button">Selecionar todas</button>
+                                <button id="btnLimparTurmasAtribuicao" type="button">Limpar seleção</button>
+                            </div>
+                            <div id="atribuicaoTurmasLista" class="admin-checkbox-grid"></div>
+                            <p id="atribuicaoTurmasResumo" class="booking-detail">Selecione professor e disciplina para carregar as turmas.</p>
+                        </div>
+                        <button class="btn-destaque" type="submit">Salvar turmas da disciplina</button>
+                    </form>
+                    <p id="msgAtribuicoesDocentes" role="status"></p>
+                </article>
+                <article class="admin-card">
+                    <h2>Importação JSON</h2>
+                    <p class="booking-detail">Atualize atribuições em lote a partir de um arquivo estruturado.</p>
+                    <form id="formImportarAtribuicoesDocentes" class="admin-form">
+                        <label class="admin-upload-field" for="arquivoJsonAtribuicoesDocentes">
+                            <span>Arquivo JSON</span>
+                            <input id="arquivoJsonAtribuicoesDocentes" type="file" accept=".json,application/json" required>
+                        </label>
+                        <div class="admin-inline">
+                            <button class="btn-destaque" type="submit">Importar JSON</button>
+                            <button id="btnBaixarModeloAtribuicoesJson" type="button">Baixar modelo</button>
+                        </div>
+                    </form>
+                </article>
+                <article class="admin-card">
+                    <h2>Filtros</h2>
+                    <div class="admin-form">
+                        <select id="filtroAtribuicaoProfessor" aria-label="Filtrar por professor"></select>
+                        <select id="filtroAtribuicaoTurma" aria-label="Filtrar por turma"></select>
+                        <select id="filtroAtribuicaoDisciplina" aria-label="Filtrar por disciplina"></select>
+                        <button id="btnLimparFiltrosAtribuicoes" type="button">Limpar filtros</button>
+                    </div>
+                </article>
+                <article class="admin-card admin-card-wide">
+                    <h2>Atribuições cadastradas</h2>
+                    <ul id="listaAtribuicoesDocentesAdmin" class="admin-list"></ul>
+                </article>
+            </section>
+        </div>
+    </main>
+    {% include "admin/_base_scripts.html" %}
+    <script src="{{ request.url_for('static', path='js/admin/atribuicoes-form.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/atribuicoes.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/atribuicoes-page.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+</html>

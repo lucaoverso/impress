@@ -5,12 +5,12 @@
 .professor-page .btn-destaque:hover, .professor-page .print-send-btn:hover { border-color: var(--print-color-primary-hover); background: var(--print-color-primary-hover); }
 .professor-page .print-secondary-btn { min-height: 44px; border-color: var(--print-color-border-strong); border-radius: var(--print-radius-control); background: var(--print-color-surface); color: var(--print-color-text); }
 .professor-page .print-visible-feedback p:not(:empty), .professor-page .print-submit-state.is-active { padding: var(--space-3) var(--space-4); border: 1px solid var(--print-color-border); border-radius: var(--print-radius-control); background: var(--print-color-surface-muted); color: var(--print-color-text); }
-.professor-page .print-visible-feedback p[data-variant="error"]:not(:empty) { border-color: color-mix(in srgb, var(--print-color-danger) 38%, white); background: color-mix(in srgb, var(--print-color-danger) 7%, white); color: #991b1b; }
-.professor-page .print-visible-feedback p[data-variant="success"]:not(:empty) { border-color: color-mix(in srgb, var(--print-color-success) 38%, white); background: color-mix(in srgb, var(--print-color-success) 8%, white); color: #166534; }
+.professor-page .print-visible-feedback p[data-variant="error"]:not(:empty) { border-color: color-mix(in srgb, var(--print-color-danger) 38%, white); background: color-mix(in srgb, var(--print-color-danger) 7%, white); color: var(--state-danger-text); }
+.professor-page .print-visible-feedback p[data-variant="success"]:not(:empty) { border-color: color-mix(in srgb, var(--print-color-success) 38%, white); background: color-mix(in srgb, var(--print-color-success) 8%, white); color: var(--state-success-text); }
 .professor-page .print-history-panel { border: 0; border-radius: var(--radius-lg) 0 0 var(--radius-lg); background: var(--print-color-surface); box-shadow: -8px 0 24px rgba(15, 23, 42, 0.12); }
 .professor-page .print-meta-card { border: 1px solid var(--print-color-border); border-radius: var(--print-radius-control); background: var(--print-color-surface-muted); box-shadow: none; }
 .professor-page .print-alert-modal-card { border-radius: 20px; background: var(--print-color-surface); box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14); }
-.print-loading-screen { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: var(--space-6); background: rgba(31, 42, 55, 0.58); }
+.print-loading-screen { position: fixed; inset: 0; z-index: var(--z-loading); display: grid; place-items: center; padding: var(--space-6); background: rgba(31, 42, 55, 0.58); }
 .print-loading-screen[hidden] { display: none; }
 .print-loading-content { width: min(420px, 100%); padding: var(--space-8); border-radius: 20px; background: var(--surface-0); text-align: center; box-shadow: 0 16px 40px rgba(15, 23, 42, 0.14); }
 .print-loading-content h2 { margin: var(--space-4) 0 var(--space-2); font-size: 24px; }

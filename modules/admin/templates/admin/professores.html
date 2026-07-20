@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professores - Administração</title>
+    {% set page_styles = ["css/pages/admin.css"] %}
+    {% include "includes/style_bundle.html" %}
+</head>
+<body data-admin-active-tab="professores">
+    {% set navbar_context = "Painel de gestão" %}
+    {% set navbar_current = "gestao" %}
+    {% include "includes/app_navbar.html" %}
+    {% set admin_active_tab = "professores" %}
+    {% include "includes/app_sidebar_config.html" %}
+    <main class="admin-page admin-only" data-admin-only="true">
+        <header class="admin-header admin-header-shell">
+            <div class="admin-header-main">
+                <h1>Professores</h1>
+                <p>Gerencie usuários docentes, acesso à coordenação e cotas mensais.</p>
+            </div>
+        </header>
+        <div class="admin-section-layout">
+            <section class="admin-section-content admin-grid">
+                <article class="admin-card">
+                    <h2 id="tituloFormProfessor">Cadastrar usuário</h2>
+                    <form id="formProfessor" class="admin-form">
+                        <label for="profNome">Nome</label>
+                        <input id="profNome" type="text" required>
+                        <label for="profEmail">E-mail</label>
+                        <input id="profEmail" type="email" required>
+                        <label for="profCargo">Cargo</label>
+                        <select id="profCargo" required>
+                            <option value="PROFESSOR">Professor</option>
+                            <option value="COORDENADOR">Coordenador</option>
+                        </select>
+                        <label for="profSenha">Senha inicial</label>
+                        <input id="profSenha" type="password" required>
+                        <p id="profSenhaHint" class="booking-detail">Mínimo 8 caracteres com maiúscula, minúscula, número e caractere especial.</p>
+                        <label for="profDataNascimento">Data de nascimento</label>
+                        <input id="profDataNascimento" type="date" required>
+                        <label for="profAulas">Aulas semanais</label>
+                        <input id="profAulas" type="number" min="0" required>
+                        <p id="profCargoHint" class="booking-detail" style="display: none;">Para coordenador, os campos de docência são ignorados.</p>
+                        <label id="profAcessoCoordenacaoWrapper" class="admin-checkbox-item admin-checkbox-item-stack">
+                            <input id="profAcessoCoordenacao" type="checkbox">
+                            <span class="admin-checkbox-content">
+                                <strong>Acesso aos módulos de coordenação</strong>
+                                <small class="admin-checkbox-detail">Mantém o perfil de professor e libera as áreas de gestão.</small>
+                            </span>
+                        </label>
+                        <div class="admin-fieldset">
+                            <p>Turmas atendidas</p>
+                            <div id="profTurmasLista" class="admin-checkbox-grid"></div>
+                        </div>
+                        <div class="admin-fieldset">
+                            <p>Disciplinas</p>
+                            <div id="profDisciplinasLista" class="admin-checkbox-grid"></div>
+                        </div>
+                        <div class="admin-inline">
+                            <button id="btnSalvarProfessor" class="btn-destaque" type="submit">Cadastrar</button>
+                            <button id="btnCancelarEdicaoProfessor" type="button" style="display: none;">Cancelar edição</button>
+                        </div>
+                    </form>
+                    <p id="msgProfessor" role="status"></p>
+                    <h3>Coordenadores cadastrados</h3>
+                    <ul id="listaCoordenadoresAdmin" class="admin-list"></ul>
+                </article>
+                <article class="admin-card">
+                    <h2>Regras de cota proporcional</h2>
+                    <form id="formCotaRegras" class="admin-form">
+                        <label for="cotaMensalEscola">Cota mensal da escola</label>
+                        <input id="cotaMensalEscola" type="number" min="0" required>
+                        <label for="cotaBase">Cota base</label>
+                        <input id="cotaBase" type="number" min="0" required>
+                        <label for="cotaPorAula">Páginas por aula</label>
+                        <input id="cotaPorAula" type="number" min="0" required>
+                        <label for="cotaPorTurma">Páginas por turma</label>
+                        <input id="cotaPorTurma" type="number" min="0" required>
+                        <button class="btn-destaque" type="submit">Salvar regras</button>
+                    </form>
+                    <div class="admin-inline">
+                        <input id="mesReferenciaCota" type="month" aria-label="Mês de referência da cota">
+                        <button id="btnRecalcularCotas" type="button">Recalcular cotas</button>
+                    </div>
+                    <p id="msgCotas" role="status"></p>
+                </article>
+                <article class="admin-card admin-card-wide">
+                    <h2>Professores e cotas</h2>
+                    <ul id="listaProfessoresAdmin" class="admin-list"></ul>
+                </article>
+            </section>
+        </div>
+    </main>
+    {% include "admin/_base_scripts.html" %}
+    <script src="{{ request.url_for('static', path='js/admin/professores-form.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/professores-lista.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/professores.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/professores-page.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+</html>

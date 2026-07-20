@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Suíte Escolar - Download YouTube</title>
+    {% set page_styles = ["css/pages/services-scheduler.css"] %}
     {% include "includes/style_bundle.html" %}
 </head>
 
@@ -43,7 +44,8 @@
         <section id="secaoDetalhes" class="download-details" hidden>
             <article class="download-details-card">
                 <div class="download-details-summary">
-                    <img id="previewMiniatura" class="download-thumb" alt="Miniatura do vídeo">
+                    <img id="previewMiniatura" class="download-thumb" src="/static/img/download-videos.webp"
+                        alt="Miniatura do vídeo" width="320" height="180" loading="lazy" decoding="async" hidden>
                     <div class="download-preview-copy">
                         <p class="download-eyebrow">Prévia do download</p>
                         <h3 id="previewTitulo">Carregando...</h3>

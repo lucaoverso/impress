@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from auth import get_usuario_logado
 from modules.audit.models import AuditCategory, AuditOutcome
@@ -36,8 +36,27 @@ from modules.scheduling.service import (
     create_scheduling_reservation,
     validate_scheduling_period,
 )
+from routers.config import render_template_response
 
 router = APIRouter()
+
+
+@router.get("/agendamento/meus-agendamentos")
+def my_scheduling_page(request: Request):
+    return render_template_response(
+        request,
+        "scheduling/my_bookings.html",
+        cache_control="no-store",
+    )
+
+
+@router.get("/agendamento/calendario")
+def scheduling_calendar_page(request: Request):
+    return render_template_response(
+        request,
+        "scheduling/calendar.html",
+        cache_control="no-store",
+    )
 
 
 @router.get("/agendamento/recursos", response_model=list[SchedulingResourceOption])

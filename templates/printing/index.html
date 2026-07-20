@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-printing-current-step="1" data-printing-mobile-preview="false">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Professor - Impressão</title>
+    {% set page_styles = [
+        "css/printing/tokens.css",
+        "css/printing/layout.css",
+        "css/printing/steps.css",
+        "css/printing/states.css",
+        "css/printing/preview.css",
+        "css/pages/professor.css"
+    ] %}
+    {% include "includes/style_bundle.html" %}
+</head>
+
+<body class="professor-page">
+    {% set navbar_context = "Area docente" %}
+    {% set navbar_current = "impressao" %}
+    {% set navbar_classes = "print-app-topbar print-shell-header" %}
+    {% set printing_page = "new" %}
+    {% include "includes/app_navbar.html" %}
+    {% include "includes/app_sidebar_config.html" %}
+
+    <section id="bannerSemPapelImpressao" class="print-unavailable-banner" hidden>
+        <div class="print-unavailable-banner-content">
+            <p class="auth-badge">Status da impressora</p>
+            <strong>Impressora sem papel</strong>
+            <p id="textoBannerSemPapelImpressao"></p>
+        </div>
+    </section>
+
+    <section class="print-legacy-support" aria-label="Suporte interno de impressao">
+        <p id="msg" aria-live="polite"></p>
+        <p id="intervaloInfo" aria-live="polite"></p>
+        <p id="consumo"></p>
+        <p id="cota"></p>
+        <p id="resumoArquivoBarra"></p>
+    </section>
+
+    <main class="print-wizard-shell">
+        <section class="print-workspace">
+            <header class="print-page-header">
+                <div class="print-page-header-copy">
+                    <h1>Solicitar impressão</h1>
+                    <p>Envie o arquivo, ajuste a impressão e confira tudo antes de confirmar.</p>
+                </div>
+                <a class="print-secondary-btn" href="/impressao/historico">
+                    Meus pedidos
+                </a>
+            </header>
+
+            <nav id="printStepperCard" class="print-flow-stepper" aria-label="Progresso da solicitação de impressão">
+                <ol>
+                    <li id="stepperArquivo" class="is-current" aria-current="step">
+                        <span>1</span><strong>Arquivo</strong>
+                    </li>
+                    <li id="stepperSolicitacao">
+                        <span>2</span><strong>Configuração</strong>
+                    </li>
+                    <li id="stepperConfiguracoes">
+                        <span>3</span><strong>Destino</strong>
+                    </li>
+                    <li id="stepperResumo">
+                        <span>4</span><strong>Conferência</strong>
+                    </li>
+                    <li id="stepperAcompanhamento">
+                        <span>5</span><strong>Acompanhamento</strong>
+                    </li>
+                </ol>
+            </nav>
+
+            <section id="printSelectionContext" class="print-selection-context" hidden aria-live="polite">
+                <div class="print-context-group">
+                    <span>Arquivo</span>
+                    <strong id="printContextFile">Aguardando arquivo</strong>
+                </div>
+                <div class="print-context-divider" aria-hidden="true"></div>
+                <div class="print-context-group">
+                    <span>Solicitação</span>
+                    <strong id="printContextRequest">Aguardando turma e cópias</strong>
+                </div>
+                <div class="print-context-divider print-context-preview-divider" aria-hidden="true"></div>
+                <div class="print-context-group print-context-actions">
+                    <span>Pré-visualização</span>
+                    <button id="btnAbrirPreviewMobile" class="print-context-preview-btn" type="button" disabled>
+                        Ver prévia
+                    </button>
+                </div>
+            </section>
+
+            <section class="print-wizard-stage">
+            <section class="print-wizard-left">
+                <div id="printWizardStartAnchor" class="print-scroll-anchor" aria-hidden="true"></div>
+                <article id="etapaArquivo" class="print-step-card print-step-card-active">
+                    <header class="print-step-header">
+                        <div>
+                            <h2>Escolha a turma e o arquivo</h2>
+                            <p>Informe primeiro a turma e depois selecione o material.</p>
+                        </div>
+                    </header>
+
+                    <article class="print-field-group">
+                        <label for="turmaImpressao">Turma</label>
+                        <select id="turmaImpressao">
+                            <option value="">Selecione uma turma</option>
+                        </select>
+                        <p id="resumoTurmaImpressao" class="print-file-hint">
+                            A turma define automaticamente a quantidade inicial de cópias.
+                        </p>
+                    </article>
+
+                    <input class="print-file-input-hidden" type="file" id="arquivo"
+                        accept=".pdf,.doc,.docx,.png,.jpg,.jpeg">
+                    <button id="arquivoDropzone" class="print-upload-dropzone" type="button" aria-controls="arquivo">
+                        <span class="print-upload-icon" aria-hidden="true">
+                            <svg viewBox="0 0 24 24" role="presentation" focusable="false">
+                                <path d="M12 16V5"></path>
+                                <path d="M8 9l4-4 4 4"></path>
+                                <path d="M5 19h14"></path>
+                            </svg>
+                        </span>
+                        <span class="print-upload-title">Selecione ou arraste o arquivo aqui</span>
+                        <span class="print-upload-subtitle">Também funciona com Ctrl + V.</span>
+                        <span id="arquivoSelecionadoNome" class="print-upload-file">Nenhum arquivo selecionado.</span>
+                    </button>
+                    <p class="print-file-hint">Formatos aceitos: PDF, DOCX, DOC, PNG, JPG e JPEG.</p>
+
+                    <div class="print-step-actions">
+                        <button id="btnContinuarArquivo" class="btn-destaque" type="button">
+                            Continuar para solicitação
+                        </button>
+                    </div>
+                    <section id="painelProfessorEtapaArquivo" class="print-config-section print-step-history-grid" hidden>
+                        <article id="grupoProfessorSolicitante" class="print-field-group" style="display: none;">
+                            <label for="professorSolicitante">Professor solicitante</label>
+                            <select id="professorSolicitante">
+                                <option value="">Selecione um professor</option>
+                            </select>
+                            <p id="contextoProfessorImpressao" class="print-file-hint"></p>
+                        </article>
+
+                        <div class="print-step-history-panel">
+                            <article class="print-meta-card">
+                                <h3 id="tituloCotaEtapaArquivo">Sua cota</h3>
+                                <p class="print-history-quota" id="cotaPainelEtapaArquivo">Carregando...</p>
+                            </article>
+
+                        </div>
+                    </section>
+                </article>
+
+                <article id="etapaSolicitacao" class="print-step-card" hidden>
+                    <header class="print-step-header">
+                        <div>
+                            <h2>Configure a impressão</h2>
+                            <p>Ajuste cópias, páginas, orientação e aproveitamento da folha.</p>
+                        </div>
+                    </header>
+
+                    <section class="print-config-section">
+                        <article class="print-field-group">
+                            <label for="copias">Cópias</label>
+                            <div class="print-copy-counter" role="group" aria-label="Quantidade de cópias">
+                                <button type="button" data-copy-change="-1" aria-label="Diminuir uma cópia">−</button>
+                                <input type="number" id="copias" min="1" step="1" value="1" inputmode="numeric">
+                                <button type="button" data-copy-change="1" aria-label="Aumentar uma cópia">+</button>
+                            </div>
+                            <p class="print-file-hint">Ao escolher uma turma, o sistema pode preencher a quantidade
+                                automaticamente.</p>
+                        </article>
+                    </section>
+
+                    <section class="print-config-section">
+                        <h3>Páginas</h3>
+                        <div class="print-choice-group" role="radiogroup" aria-label="Páginas a imprimir">
+                            <label class="print-choice-chip"><input type="radio" name="modoPaginas" value="all" checked><span>Todas as páginas</span></label>
+                            <label class="print-choice-chip"><input type="radio" name="modoPaginas" value="custom"><span>Intervalo personalizado</span></label>
+                        </div>
+                        <article id="grupoIntervaloPaginas" class="print-field-group" hidden>
+                            <label for="intervaloPaginas">Intervalo de páginas</label>
+                            <input type="text" id="intervaloPaginas" placeholder="Ex.: 1-5, 8, 10-14">
+                        </article>
+                    </section>
+
+                    <section class="print-config-section print-options">
+                        <section class="print-config-section">
+                            <label class="print-config-title" for="paginasPorFolha">Páginas por folha</label>
+                            <select id="paginasPorFolha">
+                                <option value="1" selected>1 página por folha</option>
+                                <option value="2">2 páginas por folha</option>
+                                <option value="4">4 páginas por folha</option>
+                            </select>
+                        </section>
+                        <section class="print-config-section">
+                            <h3>Orientação</h3>
+                            <div class="print-layout-choice-grid print-layout-choice-grid-2 print-orientation-options"
+                                role="group" aria-label="Orientação da impressão">
+                                <button class="print-choice-block is-selected" type="button" data-orientation-choice="retrato">
+                                    <svg class="print-sheet-icon" viewBox="0 0 32 40" aria-hidden="true"><path d="M5 2h15l7 7v29H5z"/><path d="M20 2v8h7"/></svg>
+                                    <span>Retrato</span>
+                                </button>
+                                <button class="print-choice-block" type="button" data-orientation-choice="paisagem">
+                                    <svg class="print-sheet-icon print-sheet-icon--landscape" viewBox="0 0 40 32" aria-hidden="true"><path d="M2 5h29l7 7v15H2z"/><path d="M31 5v8h7"/></svg>
+                                    <span>Paisagem</span>
+                                </button>
+                            </div>
+                            <select id="orientacao" class="print-hidden-select" aria-hidden="true" tabindex="-1"><option value="retrato" selected>Retrato</option><option value="paisagem">Paisagem</option></select>
+                            <label class="print-checkbox-row" for="duplex"><input class="print-check-input" type="checkbox" id="duplex"><span><strong>Frente e verso</strong><small>Imprimir nos dois lados da folha</small></span></label>
+                        </section>
+                    </section>
+
+                    <div class="print-step-actions">
+                        <button id="btnVoltarSolicitacao" class="print-secondary-btn" type="button">
+                            Voltar
+                        </button>
+                        <button id="btnContinuarSolicitacao" class="btn-destaque" type="button">
+                            Continuar
+                        </button>
+                    </div>
+                </article>
+
+                <article id="etapaConfiguracoes" class="print-step-card" hidden>
+                    <header class="print-step-header">
+                        <div>
+                            <h2>Escolha o destino</h2>
+                            <p>Selecione a impressora e identifique o tipo de atividade.</p>
+                        </div>
+                    </header>
+
+                    <section class="print-config-section">
+                        <h3>Impressora</h3>
+                        <input id="printerName" type="hidden" value="">
+                        <div id="printerOptions" class="print-printer-options" role="radiogroup" aria-label="Impressora de destino">
+                            <p class="print-file-hint">Carregando impressoras...</p>
+                        </div>
+                        <p class="print-file-hint">O pedido será enviado para esta fila do CUPS.</p>
+                    </section>
+
+                    <section id="tagsConferencia" class="print-config-section print-material-section">
+                        <header>
+                            <h3>Tipo de material</h3>
+                            <p>Selecione pelo menos uma opção para identificar o pedido.</p>
+                        </header>
+                        <div id="tagsImpressao" class="print-tags-grid" aria-label="Tipos de material"></div>
+                    </section>
+
+                    <div class="print-step-actions">
+                        <button id="btnVoltarConfiguracoes" class="print-secondary-btn" type="button">
+                            Voltar
+                        </button>
+                        <button id="btnContinuarConfiguracoes" class="btn-destaque" type="button">
+                            Continuar
+                        </button>
+                    </div>
+                </article>
+
+                <article id="etapaConferencia" class="print-step-card" hidden>
+                    <header class="print-step-header">
+                        <div>
+                            <h2>Confira a solicitação</h2>
+                            <p>Revise os dados abaixo antes de enviar o pedido para a fila.</p>
+                        </div>
+                    </header>
+
+                    <div class="print-options print-review-layout">
+                        <section id="resumoConferencia" class="print-config-section print-review-summary">
+                            <h3>Resumo da impressão</h3>
+
+                            <dl class="print-summary-list print-summary-list-single">
+                                <div>
+                                    <dt>Arquivo</dt>
+                                    <dd id="resumoArquivo">Aguardando arquivo</dd>
+                                </div>
+                                <div>
+                                    <dt>Professor</dt>
+                                    <dd id="resumoProfessor">Será preenchido automaticamente</dd>
+                                </div>
+                                <div>
+                                    <dt>Turma</dt>
+                                    <dd id="resumoTurma">Não selecionada</dd>
+                                </div>
+                                <div>
+                                    <dt>Cópias</dt>
+                                    <dd id="resumoCopias">1</dd>
+                                </div>
+                                <div>
+                                    <dt>Páginas</dt>
+                                    <dd id="resumoPaginas">Todas</dd>
+                                </div>
+                                <div>
+                                    <dt>Layout</dt>
+                                    <dd id="resumoLayout">1 página por folha</dd>
+                                </div>
+                                <div>
+                                    <dt>Orientação</dt>
+                                    <dd id="resumoOrientacao">Retrato</dd>
+                                </div>
+                                <div>
+                                    <dt>Frente e verso</dt>
+                                    <dd id="resumoDuplex">Não</dd>
+                                </div>
+                                <div>
+                                    <dt>Tipo de material</dt>
+                                    <dd id="resumoTags">Nenhum tipo selecionado</dd>
+                                </div>
+                                <div>
+                                    <dt>Impressora</dt>
+                                    <dd id="resumoImpressora">Não selecionada</dd>
+                                </div>
+                                <div>
+                                    <dt>Total estimado</dt>
+                                    <dd id="resumoPaginasEstimadas">Aguardando preview</dd>
+                                </div>
+                            </dl>
+                        </section>
+                    </div>
+
+                    <div class="print-step-actions">
+                        <button id="btnVoltarConferencia" class="print-secondary-btn" type="button">
+                            Voltar
+                        </button>
+                        <button id="btnEnviar" class="btn-destaque print-send-btn" type="button">Confirmar
+                        </button>
+                    </div>
+                    <p id="estadoEnvio" class="print-submit-state" aria-live="polite"></p>
+                </article>
+
+                <article id="etapaAcompanhamento" class="print-step-card" hidden>
+                    <header class="print-step-header">
+                        <div>
+                            <h2 id="painelJobRecenteTitulo">Acompanhar pedido</h2>
+                            <p>Acompanhe o envio e cancele dentro do prazo, se necessário.</p>
+                        </div>
+                        <p id="painelJobRecenteBadge" class="auth-badge">Pedido enviado</p>
+                    </header>
+
+                    <p id="painelJobRecenteHint" class="print-jobs-hint">
+                        Você tem 15 segundos para cancelar a impressão, caso contrário ela será processada.
+                    </p>
+
+                    <ul id="lista-job-recente" hidden></ul>
+
+                    <div class="print-step-actions print-step-actions-end">
+                        <button id="btnImprimirOutroArquivo" class="btn-destaque" type="button" hidden>
+                            Imprimir outro arquivo
+                        </button>
+                    </div>
+                </article>
+            </section>
+
+            <aside class="print-wizard-right">
+                <section id="painelPreview" class="print-preview-stage" tabindex="-1">
+                    <header class="print-preview-header">
+                        <div class="print-preview-title">
+                            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"/><circle cx="12" cy="12" r="2.75"/></svg>
+                            <div>
+                                <h2>Prévia do documento</h2>
+                                <p>Confira antes de confirmar.</p>
+                            </div>
+                        </div>
+                        <div class="print-preview-header-actions">
+                            <button id="btnFecharPreviewMobile" class="print-secondary-btn print-preview-close-btn"
+                                type="button">
+                                Fechar prévia
+                            </button>
+                        </div>
+                    </header>
+
+                    <section class="print-preview-pane">
+                        <div id="previewContainer"></div>
+                    </section>
+                    <footer class="print-preview-footer">
+                        <div class="print-pagination" role="group" aria-label="Navegação da pré-visualização">
+                            <button id="btnAnterior" type="button" aria-label="Folha anterior">&#8249;</button>
+                            <span id="contadorFolha"></span>
+                            <button id="btnProxima" type="button" aria-label="Próxima folha">&#8250;</button>
+                        </div>
+                    </footer>
+                </section>
+            </aside>
+            </section>
+
+            <section class="print-visible-feedback" aria-live="polite" aria-atomic="true">
+                <p id="printFeedbackVisible"></p>
+            </section>
+        </section>
+    </main>
+
+    <section id="printLoadingScreen" class="print-loading-screen" hidden aria-live="assertive" aria-busy="true">
+        <div class="print-loading-content">
+            <span class="print-loading-spinner" aria-hidden="true"></span>
+            <h2>Enviando para impressão</h2>
+            <p>Validando a solicitação e colocando o arquivo na fila escolhida.</p>
+        </div>
+    </section>
+
+    <section id="modalAlertaConsumoImpressao" class="print-alert-modal" hidden>
+        <article id="painelAlertaConsumoImpressao" class="print-alert-modal-card" role="dialog" aria-modal="true"
+            aria-labelledby="tituloAlertaConsumoImpressao" tabindex="-1">
+            <header class="print-alert-modal-header">
+                <div>
+                    <p class="auth-badge">Alerta de consumo</p>
+                    <h2 id="tituloAlertaConsumoImpressao">Impressao com alto consumo</h2>
+                </div>
+            </header>
+            <div class="print-alert-modal-body">
+                <p id="textoAlertaConsumoImpressao"></p>
+                <p id="sugestaoAlertaConsumoImpressao" class="print-alert-suggestion"></p>
+            </div>
+            <div class="print-alert-modal-actions">
+                <button id="btnConfirmarAlertaConsumoImpressao" class="btn-destaque" type="button">
+                    Imprimir mesmo assim
+                </button>
+                <button id="btnVoltarAjustarAlertaConsumoImpressao" type="button">
+                    Voltar e ajustar
+                </button>
+            </div>
+        </article>
+    </section>
+
+    <section id="modalSemPapelImpressao" class="print-alert-modal" hidden>
+        <article id="painelSemPapelImpressao" class="print-alert-modal-card print-alert-modal-card-warning"
+            role="dialog" aria-modal="true" aria-labelledby="tituloSemPapelImpressao" tabindex="-1">
+            <header class="print-alert-modal-header">
+                <div>
+                    <p class="auth-badge">Impressao indisponivel</p>
+                    <h2 id="tituloSemPapelImpressao">Estamos sem papel no momento</h2>
+                </div>
+            </header>
+            <div class="print-alert-modal-body">
+                <p id="textoSemPapelImpressao"></p>
+                <p class="print-alert-suggestion">Assim que o papel for reposto, a impressao sera liberada novamente
+                    pelo painel administrativo.</p>
+            </div>
+            <div class="print-alert-modal-actions">
+                <button id="btnFecharModalSemPapelImpressao" class="btn-destaque" type="button">
+                    Entendi
+                </button>
+            </div>
+        </article>
+    </section>
+
+    <script src="{{ request.url_for('static', path='vendor/pdfjs/pdf.min.js') }}?v=3.11.174"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc =
+            "{{ request.url_for('static', path='vendor/pdfjs/pdf.worker.min.js') }}?v=3.11.174";
+    </script>
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script
+        src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script
+        src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script
+        src="{{ request.url_for('static', path='js/printing/state.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script
+        src="{{ request.url_for('static', path='js/printing/workflow.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script
+        src="{{ request.url_for('static', path='js/printing/index.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/professor.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+
+</html>

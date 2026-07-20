@@ -3,14 +3,14 @@
 {% set navbar_current = navbar_current | default("") %}
 {% set navbar_classes = navbar_classes | default("") %}
 {% set navbar_home_href = navbar_home_href | default("/servicos") %}
-{% set navbar_logo_src = navbar_logo_src | default(request.url_for('static', path='img/logo_escola.PNG')) %}
+{% set navbar_logo_src = navbar_logo_src | default(request.url_for('static', path='img/logo_escola-256.webp')) %}
 {% set navbar_logo_alt = navbar_logo_alt | default("Voltar para a tela de serviços") %}
 
 <header class="app-topbar app-navbar{% if navbar_classes %} {{ navbar_classes }}{% endif %}"
     data-app-navbar data-navbar-current="{{ navbar_current }}">
     <div class="app-navbar-brand">
         <a id="btnVoltarServicos" href="{{ navbar_home_href }}" class="app-topbar-home-link" aria-label="{{ navbar_logo_alt }}">
-            <img src="{{ navbar_logo_src }}" alt="" class="app-topbar-school-logo">
+            <img src="{{ navbar_logo_src }}" alt="" class="app-topbar-school-logo" width="60" height="60">
             <span class="sr-only">Serviços</span>
         </a>
         {% if navbar_context %}

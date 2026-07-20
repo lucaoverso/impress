@@ -1,0 +1,231 @@
+.scheduling-bookings-page {
+    min-height: 100vh;
+    background: var(--bg-main);
+    color: var(--text-main);
+}
+
+.scheduling-page-shell {
+    display: grid;
+    gap: 24px;
+    max-width: 1180px;
+    padding: 32px 28px 48px;
+}
+
+.scheduling-page-header {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 24px;
+}
+
+.scheduling-page-header h1,
+.scheduling-page-header p,
+.scheduling-list-header h2,
+.scheduling-list-header p {
+    margin: 0;
+}
+
+.scheduling-page-header h1 {
+    margin-bottom: 6px;
+    font-size: 34px;
+    line-height: 1.1;
+}
+
+.scheduling-page-header p,
+.scheduling-list-header p {
+    color: var(--text-muted);
+}
+
+.scheduling-page-header .btn-destaque {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    flex: 0 0 auto;
+    text-decoration: none;
+}
+
+.scheduling-page-surface {
+    min-width: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--surface-0);
+}
+
+.scheduling-calendar-layout {
+    display: grid;
+    grid-template-columns: minmax(420px, 1.1fr) minmax(360px, .9fr);
+    gap: 20px;
+    align-items: start;
+}
+
+.scheduling-calendar-surface,
+.scheduling-day-surface {
+    padding: 24px;
+}
+
+.scheduling-calendar-surface .calendar-header {
+    display: grid;
+    grid-template-columns: 44px minmax(0, 1fr) 44px auto;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.scheduling-calendar-surface .calendar-header h2 {
+    margin: 0;
+    text-align: center;
+    font-size: 20px;
+}
+
+.scheduling-calendar-surface .calendar-header button,
+.booking-sort-controls button {
+    min-height: 44px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface-0);
+    color: var(--text-main);
+    font: inherit;
+    font-weight: 700;
+}
+
+.scheduling-calendar-surface .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 6px;
+}
+
+.scheduling-calendar-surface .calendar-weekday {
+    padding: 6px 2px;
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 700;
+    text-align: center;
+}
+
+.scheduling-calendar-surface .calendar-day,
+.scheduling-calendar-surface .calendar-empty {
+    min-height: 68px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+}
+
+.scheduling-calendar-surface .calendar-day {
+    display: grid;
+    align-content: space-between;
+    justify-items: start;
+    padding: 9px;
+    background: var(--surface-1);
+    color: var(--text-main);
+    font: inherit;
+}
+
+.scheduling-calendar-surface .calendar-day:hover { border-color: var(--brand); }
+.scheduling-calendar-surface .calendar-day.is-selected { border-color: var(--brand); background: var(--brand-soft); }
+.scheduling-calendar-surface .calendar-day.is-today .calendar-number { color: var(--brand-strong); }
+.scheduling-calendar-surface .calendar-count { color: var(--text-muted); font-size: 11px; }
+.scheduling-calendar-surface .calendar-day.has-bookings .calendar-count { color: var(--brand-strong); font-weight: 800; }
+
+.scheduling-list-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 24px;
+    border-bottom: 1px solid var(--line);
+}
+
+.scheduling-day-surface .scheduling-list-header { padding: 0 0 18px; }
+.scheduling-list-header h2 { margin-bottom: 4px; font-size: 20px; }
+
+.booking-sort-controls {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 6px;
+}
+
+.booking-sort-controls button {
+    min-height: 44px;
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+.booking-sort-controls button:hover,
+.booking-sort-controls button.is-active {
+    border-color: var(--brand);
+    background: var(--brand-soft);
+    color: var(--brand-strong);
+}
+
+.scheduler-feedback-message:not(:empty) {
+    margin: 16px 24px 0;
+    padding: 11px 13px;
+    border-radius: 10px;
+    background: var(--surface-2);
+}
+
+.scheduler-feedback-message[data-variant="erro"] { background: var(--state-danger-bg-strong); color: var(--state-danger-text); }
+.scheduling-day-surface .scheduler-feedback-message:not(:empty) { margin-inline: 0; }
+
+.scheduling-booking-list {
+    display: grid;
+    gap: 0;
+    margin: 0;
+    padding: 0 24px 24px;
+    list-style: none;
+}
+
+.scheduling-day-surface .scheduling-booking-list { padding-inline: 0; }
+
+.scheduling-booking-list .booking-item {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 14px;
+    padding: 18px 0;
+    border-top: 1px solid var(--line);
+}
+
+.scheduling-booking-list .booking-item:first-child { border-top: 0; }
+.booking-item-copy { min-width: 0; }
+.booking-item-copy > strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.booking-item-copy p { margin: 5px 0 0; color: var(--text-muted); font-size: 13px; }
+.booking-item-actions { display: flex; align-items: center; }
+.booking-item-actions .print-secondary-btn { min-height: 44px; }
+.booking-group-heading { padding: 16px 0 8px; color: var(--brand-strong); font-weight: 800; }
+.booking-empty { padding: 44px 12px; color: var(--text-muted); text-align: center; }
+
+.booking-empty button {
+    margin-top: 12px;
+}
+
+.scheduling-bookings-page :focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--brand) 28%, transparent);
+    outline-offset: 2px;
+}
+
+@media (max-width: 980px) {
+    .scheduling-calendar-layout { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 700px) {
+    .scheduling-page-shell { padding: 24px 14px 40px; }
+    .scheduling-page-header,
+    .scheduling-list-header { flex-direction: column; align-items: stretch; }
+    .scheduling-page-header h1 { font-size: 26px; }
+    .scheduling-page-header .btn-destaque { width: 100%; }
+    .booking-sort-controls { justify-content: flex-start; }
+    .scheduling-calendar-surface,
+    .scheduling-day-surface { padding: 16px; }
+    .scheduling-calendar-surface .calendar-header { grid-template-columns: 40px minmax(0, 1fr) 40px; }
+    .scheduling-calendar-surface #btnMesHoje { grid-column: 1 / -1; }
+    .scheduling-calendar-surface .calendar-day,
+    .scheduling-calendar-surface .calendar-empty { min-height: 54px; padding: 6px; }
+    .scheduling-booking-list .booking-item { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .scheduling-bookings-page * { transition: none !important; }
+}

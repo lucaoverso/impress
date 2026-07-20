@@ -7,7 +7,7 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 
 class SchedulingRepeatStepTest(unittest.TestCase):
     def test_template_declara_quinta_etapa_e_assets(self):
-        template = (BASE_DIR / "templates" / "agendamento.html").read_text(encoding="utf-8")
+        template = (BASE_DIR / "templates" / "scheduling" / "index.html").read_text(encoding="utf-8")
         repeat_template = (
             BASE_DIR / "templates" / "includes" / "scheduling_repeat_step.html"
         ).read_text(encoding="utf-8")

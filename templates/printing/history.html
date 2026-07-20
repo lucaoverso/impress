@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meu histórico de impressão</title>
+    {% set page_styles = ["css/printing/tokens.css"] %}
+    {% include "includes/style_bundle.html" %}
+    <link rel="stylesheet" href="{{ request.url_for('static', path='css/printing/history.css') }}?v={{ asset_version | default('1') }}">
+</head>
+
+<body class="professor-page print-history-page">
+    {% set navbar_context = "Área docente" %}
+    {% set navbar_current = "impressao" %}
+    {% set navbar_classes = "print-app-topbar print-shell-header" %}
+    {% set printing_page = "history" %}
+    {% include "includes/app_navbar.html" %}
+    {% include "includes/app_sidebar_config.html" %}
+
+    <main class="print-history-shell">
+        <header class="print-history-page-header">
+            <div>
+                <h1>Meu histórico</h1>
+                <p>Acompanhe seus pedidos, cancele os que ainda estão pendentes ou reutilize um arquivo concluído.</p>
+            </div>
+            <a class="btn-destaque" href="/impressao">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                Nova impressão
+            </a>
+        </header>
+
+        <section class="print-history-surface" aria-labelledby="printHistoryListTitle">
+            <div class="print-history-summary">
+                <div>
+                    <span>Sua cota de impressão</span>
+                    <strong id="printHistoryQuota">Carregando...</strong>
+                </div>
+                <p>
+                    Pedidos pendentes podem ser cancelados antes do início da impressão.
+                    Arquivos concluídos e ainda disponíveis podem ser usados novamente.
+                </p>
+            </div>
+
+            <p id="printHistoryFeedback" class="print-history-feedback" role="status" aria-live="polite" aria-atomic="true" hidden></p>
+
+            <div class="print-history-list-heading">
+                <div>
+                    <h2 id="printHistoryListTitle">Pedidos recentes</h2>
+                    <p>Os status são atualizados automaticamente.</p>
+                </div>
+                <button id="printHistoryRefresh" class="print-secondary-btn" type="button">
+                    <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                    Atualizar
+                </button>
+            </div>
+
+            <ul id="printHistoryList" class="print-history-list" aria-busy="true" aria-live="polite">
+                <li class="print-history-empty">Carregando seu histórico...</li>
+            </ul>
+        </section>
+    </main>
+
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/printing/history.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+
+</html>

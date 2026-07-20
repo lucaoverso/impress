@@ -1,7 +1,7 @@
 const AUDIT_CATEGORY_LABELS = {
     auth: "Login",
     password: "Senha",
-    printing: "Impressao",
+    printing: "Impressão",
     scheduling: "Agendamento",
     attachments: "Anexos"
 };
@@ -10,7 +10,7 @@ const AUDIT_ACTION_LABELS = {
     "login.success": "Login realizado",
     "password.reset": "Redefinicao de senha",
     "password.reset.admin": "Senha redefinida pelo admin",
-    "print.submitted": "Impressao enviada",
+    "print.submitted": "Impressão enviada",
     "reservation.create": "Agendamento",
     "attachment.submitted": "Anexo enviado"
 };
@@ -18,7 +18,7 @@ let auditCurrentPage = 1;
 let auditTotalPages = 0;
 
 function auditFormatDateTime(value) {
-    if (!value) return "Data nao informada";
+    if (!value) return "Data não informada";
     const parsed = new Date(`${String(value).replace(" ", "T")}Z`);
     if (Number.isNaN(parsed.getTime())) return String(value);
     return parsed.toLocaleString("pt-BR", {
@@ -40,7 +40,7 @@ function auditMetadataSummary(metadata) {
     if (metadata.date) parts.push(`Data: ${metadata.date}`);
     if (metadata.class) parts.push(`Turma: ${metadata.class}`);
     if (metadata.pages_consumed != null) {
-        parts.push(`${metadata.pages_consumed} pagina(s)`);
+        parts.push(`${metadata.pages_consumed} página(s)`);
     }
     if (metadata.file_size != null) {
         const sizeKb = Math.max(1, Math.round(Number(metadata.file_size) / 1024));
@@ -72,7 +72,7 @@ function renderAuditEvent(event) {
         "audit-event-description",
         event.description
     );
-    const identity = event.actor_name || event.actor_email || "Usuario nao identificado";
+    const identity = event.actor_name || event.actor_email || "Usuário não identificado";
     const meta = auditCreateText(
         "small",
         "audit-event-meta",
@@ -110,8 +110,8 @@ function renderAuditEvents(payload) {
     auditTotalPages = Number(payload?.pages || 0);
     el("auditTotal").innerText = `${total} evento${total === 1 ? "" : "s"}`;
     el("auditPageInfo").innerText = auditTotalPages
-        ? `Pagina ${auditCurrentPage} de ${auditTotalPages}`
-        : "Sem paginas";
+        ? `Página ${auditCurrentPage} de ${auditTotalPages}`
+        : "Sem páginas";
     el("btnAuditPrevious").disabled = auditCurrentPage <= 1;
     el("btnAuditNext").disabled = auditTotalPages === 0 || auditCurrentPage >= auditTotalPages;
 }

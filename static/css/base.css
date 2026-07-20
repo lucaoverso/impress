@@ -6,10 +6,10 @@
 
 :root {
     --font-sans: "Nunito", "Avenir Next", "Segoe UI", sans-serif;
-    --bg-main: #f2efe9;
+    --bg-main: #ffffff;
     --bg-accent: #d7e9ff;
-    --card-bg: #ffffff;
-    --surface-0: #ffffff;
+    --card-bg: var(--bg-main);
+    --surface-0: var(--bg-main);
     --surface-1: #f8fbff;
     --surface-2: #eef3f8;
     --text-main: #1f2a37;
@@ -20,10 +20,23 @@
     --brand: #0f766e;
     --brand-strong: #0b5b55;
     --brand-soft: #d6f2ef;
+    --brand-outline: rgba(15, 118, 110, 0.28);
     --error: #dc2626;
     --success: #16845b;
     --warning: #b66a12;
     --info: #326fa8;
+    --state-danger-bg: #fff5f5;
+    --state-danger-bg-strong: #fee2e2;
+    --state-danger-border: #fecaca;
+    --state-danger-border-strong: #fca5a5;
+    --state-danger-text: #991b1b;
+    --state-success-bg: #f0fdf4;
+    --state-success-bg-strong: #dcfce7;
+    --state-success-border: #bbf7d0;
+    --state-success-border-strong: #86efac;
+    --state-success-text: #166534;
+    --surface-overlay: rgba(255, 255, 255, 0.96);
+    --overlay-scrim: rgba(15, 23, 42, 0.52);
     --radius-sm: 8px;
     --radius-md: 12px;
     --radius-lg: 16px;
@@ -33,15 +46,33 @@
     --space-4: 16px;
     --space-6: 24px;
     --space-8: 32px;
+    --page-width: 1400px;
+    --page-width-wide: 1480px;
+    --page-width-compact: 1100px;
+    --control-height: 44px;
     --shadow-low: 0 2px 6px rgba(15, 23, 42, 0.06);
     --shadow-card: var(--shadow-low);
     --focus-ring: 0 0 0 3px rgba(15, 118, 110, 0.24);
     --motion-fast: 180ms cubic-bezier(0.22, 1, 0.36, 1);
+    --z-shell: 8;
+    --z-sidebar: 12;
+    --z-sidebar-mobile: 13;
+    --z-navbar: 20;
+    --z-dropdown: 30;
+    --z-sticky: 55;
+    --z-popover: 70;
+    --z-mobile-overlay: 80;
+    --z-loading: 90;
+    --z-modal: 1200;
+    --z-modal-dropdown: 1250;
+    --z-modal-preview: 1300;
+    --z-modal-wizard: 1350;
+    --z-modal-top: 1400;
 }
 
 body {
     font-family: var(--font-sans);
-    background: var(--surface-2);
+    background: var(--bg-main);
     color: var(--text-main);
     font-size: 16px;
     line-height: 1.5;

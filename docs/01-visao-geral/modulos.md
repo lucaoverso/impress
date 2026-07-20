@@ -69,7 +69,7 @@ Status: inventario inicial consolidado a partir do codigo atual.
 | Atores | Professor; admin/coordenador; professor com `acesso_coordenacao`; worker. |
 | Endpoints | `GET /impressao/turmas`; `GET /impressao/tags`; `GET /impressao/status`; `POST /imprimir`; `POST /impressao/preview`; `GET /fila`; `GET /jobs/{id}/preview`; `POST /jobs/{id}/reimprimir`; `POST /jobs/{id}/cancelar`; `POST /jobs/{id}/prioridade`; `GET /meus-jobs`; `GET /minha-cota`; admin: `/admin/fila`, `/admin/impressao/status`, `/admin/historico`, `/admin/relatorio/impressao`, `/admin/cotas/*`. |
 | Paginas | `GET /impressao`; `GET /professor` redireciona para `/impressao`; `GET /admin`. |
-| Arquivos principais | `modules/printing/*`; `routers/impressao_router.py`; `services/worker.py`; `services/printer.py`; `services/file_service.py`; `services/cota_service.py`; `worker_main.py`; `static/js/professor.js`; `static/js/printing/*`; `templates/professor.html`. |
+| Arquivos principais | `modules/printing/*`; `routers/impressao_router.py`; `services/worker.py`; `services/printer.py`; `services/file_service.py`; `services/cota_service.py`; `worker_main.py`; `static/js/professor.js`; `static/js/printing/*`; `templates/printing/index.html`. |
 | Tabelas utilizadas | `jobs`, `cotas`, `cota_regras`, `impressao_status`, `usuarios`, `turmas`, `estudantes`. |
 | Dependencias | CUPS/lp, LibreOffice, PDF service, spool, worker, autenticacao, cota, auditoria indireta. |
 | Regras de negocio | RN-IMP-001 a RN-IMP-008; RF-IMP-001 a RF-IMP-015. |
@@ -85,8 +85,8 @@ Status: inventario inicial consolidado a partir do codigo atual.
 | Objetivo | Reservar recursos escolares por data, aula/faixa, turma, professor, tema e observacao. |
 | Atores | Usuario autenticado; professor; admin; gestor/professor com acesso de coordenacao para selecao de professor. |
 | Endpoints | `GET /agendamento/recursos`; `GET /agendamento/opcoes`; `GET /agendamento/professores`; `GET /agendamento/reservas`; `POST /agendamento/reservas`; `POST /agendamento/reservas/{id}/cancelar`; admin: `/admin/configuracao-aulas*`. |
-| Paginas | `GET /agendamento`. |
-| Arquivos principais | `modules/scheduling/*`; `db/agendamento.py`; `db/catalogos.py`; `db/horario_escolar.py`; `templates/agendamento.html`; `static/js/agendamento.js`; `static/js/scheduling/*`. |
+| Paginas | `GET /agendamento`; `GET /agendamento/meus-agendamentos`; `GET /agendamento/calendario`. |
+| Arquivos principais | `modules/scheduling/*`; `db/agendamento.py`; `db/catalogos.py`; `db/horario_escolar.py`; `templates/scheduling/*`; `static/js/agendamento.js`; `static/js/scheduling/*`. |
 | Tabelas utilizadas | `agendamentos`, `recursos`, `turmas`, `configuracao_aulas`, `configuracao_turnos_segmentos`, `usuarios`. |
 | Dependencias | Autenticacao, permissoes compartilhadas, auditoria, catalogos, grade global, frontend de repeticao/visao do dia. |
 | Regras de negocio | RN-AGE-001 a RN-AGE-010; RF-AGE-001 a RF-AGE-014. |
@@ -154,7 +154,7 @@ Status: inventario inicial consolidado a partir do codigo atual.
 | Atores | Professor; coordenador/gestor; admin. |
 | Endpoints | `GET /preconselho/contexto`; `GET /preconselho/turmas-disciplinas`; `GET /preconselho/estudantes`; `POST /preconselho/texto/preview`; `POST /preconselho/registros`; `DELETE /preconselho/registros/{id}`; `GET /preconselho/registros`; `GET /preconselho/consolidado`; `GET /preconselho/relatorio`; `GET/POST/PUT /preconselho/periodos*`; `GET/POST/PUT /preconselho/motivos*`; `GET /preconselho/niveis-atencao`. |
 | Paginas | `GET /preconselho`. |
-| Arquivos principais | `modules/preconselho/*`; `services/preconselho_service.py`; `db/preconselho.py`; `templates/preconselho.html`; `static/js/preconselho.js`. |
+| Arquivos principais | `modules/preconselho/*`; `services/preconselho_service.py`; `db/preconselho.py`; `templates/preconselho/index.html`; `static/js/preconselho/*`. |
 | Tabelas utilizadas | `pre_conselho_periodos`, `pre_conselho_motivos`, `pre_conselho_registros`, `pre_conselho_registro_motivos`, `usuarios`, `turmas`, `disciplinas`, `estudantes`, `turmas_disciplinas`. |
 | Dependencias | Autenticacao, permissoes, usuarios/docencia, catalogos, relatorios/texto. |
 | Regras de negocio | Periodo aberto/fechado; escopo docente por atribuicoes; motivos e niveis de atencao. Catalogo RN especifico ainda pendente. |
@@ -255,7 +255,7 @@ Status: inventario inicial consolidado a partir do codigo atual.
 | Objetivo | Servir paginas, assets, healthcheck, boot, worker, static cache e deploy. |
 | Atores | Usuario autenticado no frontend; operador/TI; systemd/Nginx. |
 | Endpoints | `GET /`; `GET /health`; paginas em `routers/pages_router.py`; static assets via configuracao da app. |
-| Paginas | `/login-page`, `/servicos`, `/impressao`, `/agendamento`, `/relatorios`, `/download`, `/pcpi`, `/preconselho`, `/cadastro-professor`, `/admin`, `/coordenacao`, `/horario-escolar`, `/apc`. |
+| Paginas | `/login-page`, `/servicos`, `/impressao`, `/agendamento`, `/agendamento/meus-agendamentos`, `/agendamento/calendario`, `/relatorios`, `/download`, `/pcpi`, `/preconselho`, `/cadastro-professor`, `/admin`, `/coordenacao`, `/horario-escolar`, `/apc`. |
 | Arquivos principais | `main.py`; `routers/pages_router.py`; `routers/system_router.py`; `static_files.py`; `app_logging.py`; `worker_main.py`; `deploy/systemd/*`; `deploy/nginx/*`; `templates/includes/*`. |
 | Tabelas utilizadas | Healthcheck consulta banco/migrations; demais paginas dependem das APIs. |
 | Dependencias | FastAPI, Jinja2, static files, SQLite, migrations, worker, systemd, Nginx. |

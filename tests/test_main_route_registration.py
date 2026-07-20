@@ -18,6 +18,14 @@ class MainRouteRegistrationTest(unittest.TestCase):
         self.assertIn(("GET", "/admin/recursos"), registered)
         self.assertIn(("PATCH", "/me/profile"), registered)
         self.assertIn(("GET", "/impressao/impressoras"), registered)
+        self.assertIn(("GET", "/impressao/historico"), registered)
+        self.assertIn(("GET", "/agendamento/meus-agendamentos"), registered)
+        self.assertIn(("GET", "/agendamento/calendario"), registered)
+        self.assertIn(("GET", "/preconselho/consolidacao"), registered)
+        self.assertIn(("GET", "/preconselho/reavaliacao"), registered)
+        self.assertIn(("GET", "/preconselho/relatorios"), registered)
+        self.assertIn(("GET", "/preconselho/rav"), registered)
+        self.assertIn(("GET", "/preconselho/configuracoes"), registered)
         self.assertFalse([route for route, count in Counter(routes).items() if count > 1])
 
 

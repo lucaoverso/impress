@@ -1,0 +1,58 @@
+/* Keep page content visually continuous; use separation only when it has meaning. */
+:where(
+    .page-shell,
+    .admin-page,
+    .apc-page,
+    .coordenacao-page,
+    .download-page,
+    .horario-page,
+    .pcpi-page,
+    .preconselho-page,
+    .professor-page,
+    .reports-page,
+    .scheduler-flow-page,
+    .scheduling-bookings-page,
+    .services-page
+) {
+    background: var(--bg-main);
+}
+
+main :where([class*="card"], [class*="panel"], [class*="surface"]):not(
+    [class*="modal"]
+):not(
+    [class*="dialog"]
+):not(
+    [class*="drawer"]
+):not(
+    [class*="overlay"]
+):not(
+    [class*="preview"]
+) {
+    background-color: transparent;
+    background-image: none;
+    box-shadow: none;
+}
+
+:where(
+    .panel-card,
+    .admin-card,
+    .coordenacao-card,
+    .download-card,
+    .download-details-card,
+    .horario-board-card,
+    .horario-config-card,
+    .horario-filter-card,
+    .horario-matrix-card,
+    .pcpi-card,
+    .reports-chart-card,
+    .reports-filter-card,
+    .reports-insights-card,
+    .reports-placeholder-card,
+    .reports-table-card,
+    .scheduler-flow-surface,
+    .scheduler-workspace,
+    .scheduling-page-surface
+) {
+    border-color: transparent;
+    border-radius: 0;
+}

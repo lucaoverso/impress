@@ -89,7 +89,7 @@ Classificacao:
 
 | ID | Descricao | Evidencia | Teste relacionado | Classificacao |
 | --- | --- | --- | --- | --- |
-| RNF-UX-001 | Telas devem usar atributos ARIA em fluxos interativos principais. | `templates/agendamento.html`, `templates/professor.html`, `templates/apc.html`, `templates/admin.html` contem `aria-*`, `role`, `aria-live` | `tests/test_scheduling_day_overview.py` cobre presenca de partes do template | Confirmada pelo codigo |
+| RNF-UX-001 | Telas devem usar atributos ARIA em fluxos interativos principais. | `templates/scheduling/*`, `templates/printing/index.html`, `templates/apc.html`, `templates/admin.html` contem `aria-*`, `role`, `aria-live` | `tests/test_scheduling_day_overview.py` cobre presenca de partes do template | Confirmada pelo codigo |
 | RNF-UX-002 | Responsividade visual deve ser garantida por CSS responsivo. | Existem CSS por pagina em `static/css/pages/`; revisao completa nao realizada. | Pendente | Pendente de validacao |
 | RNF-UX-003 | Acessibilidade deve ser validada por teste automatizado/auditoria dedicada. | Nao localizado teste axe/lighthouse ou equivalente. | Pendente | Pendente de validacao |
 
@@ -134,4 +134,3 @@ Classificacao:
 | RNF-OPS-002 | Aplicacao deve ter configuracao Nginx versionada. | `deploy/nginx/sistema-impress.conf` | Pendente | Confirmada pelo codigo |
 | RNF-OPS-003 | Variaveis operacionais devem estar documentadas em `.env.example`. | `.env.example`: `SPOOL_DIR`, `DB_PATH`, `KEEP_SPOOL_FILES`, `SPOOL_RETENTION_DAYS`, `LIBREOFFICE_COMMAND` | Pendente | Confirmada pelo codigo |
 | RNF-OPS-004 | Procedimento de restore/backup em producao deve estar documentado. | Nao localizado documento especifico de restore/backup. | Pendente | Pendente de validacao |
-

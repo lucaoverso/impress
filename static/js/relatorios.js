@@ -115,7 +115,7 @@ function atualizarResumoPeriodo(periodo = {}) {
     const descricaoCapacidade = String(periodo.descricao_capacidade || "").trim();
 
     el("relatoriosPeriodoInfo").innerText = dataInicio && dataFim
-        ? `Periodo: ${dataInicio} ate ${dataFim} | ${diasPeriodo} dia(s), ${diasUteis} dia(s) uteis | ${descricaoCapacidade || "Base estimada configurada para o periodo."}`
+        ? `Período: ${dataInicio} até ${dataFim} | ${diasPeriodo} dia(s), ${diasUteis} dia(s) úteis | ${descricaoCapacidade || "Base estimada configurada para o período."}`
         : "";
 }
 
@@ -132,24 +132,24 @@ function renderCards(cards = []) {
     container.innerHTML = "";
 
     if (!Array.isArray(cards) || cards.length === 0) {
-        container.innerHTML = '<article class="reports-metric-card"><p class="booking-empty">Nenhum indicador disponivel no periodo.</p></article>';
+        container.innerHTML = '<article class="reports-metric-card metric-item"><p class="booking-empty empty-state">Nenhum indicador disponível no período.</p></article>';
         return;
     }
 
     cards.forEach((card) => {
         const article = document.createElement("article");
-        article.className = "reports-metric-card";
+        article.className = "reports-metric-card metric-item";
 
         const titulo = document.createElement("p");
-        titulo.className = "reports-metric-label";
+        titulo.className = "reports-metric-label metric-label";
         titulo.innerText = card.titulo || "Indicador";
 
         const valor = document.createElement("strong");
-        valor.className = "reports-metric-value";
+        valor.className = "reports-metric-value metric-value";
         valor.innerText = formatarValorCard(card.valor);
 
         const descricao = document.createElement("p");
-        descricao.className = "reports-metric-description";
+        descricao.className = "reports-metric-description metric-description";
         descricao.innerText = card.descricao || "";
 
         article.appendChild(titulo);
@@ -165,14 +165,14 @@ function renderResumoSimples(containerId, itens = []) {
 
     itens.forEach((item) => {
         const article = document.createElement("article");
-        article.className = "reports-summary-card";
+        article.className = "reports-summary-card metric-item";
 
         const titulo = document.createElement("p");
-        titulo.className = "reports-summary-label";
+        titulo.className = "reports-summary-label metric-label";
         titulo.innerText = item.titulo || "Resumo";
 
         const valor = document.createElement("strong");
-        valor.className = "reports-summary-value";
+        valor.className = "reports-summary-value metric-value";
         valor.innerText = item.valor;
 
         article.appendChild(titulo);
@@ -206,7 +206,7 @@ function renderInsights(insights = []) {
 
     listaInsights.forEach((insight) => {
         const article = document.createElement("article");
-        article.className = "reports-insight-item";
+        article.className = "reports-insight-item list-item";
         article.dataset.tipo = insight.tipo || "informativo";
 
         const titulo = document.createElement("strong");
@@ -267,7 +267,7 @@ function criarGrafico(idGrafico, canvasId, vazioId, configuracao, mensagemVazio)
         mostrarEstadoGrafico(
             canvasId,
             vazioId,
-            "Chart.js nao ficou disponivel. Os dados seguem visiveis em cards e tabelas."
+            "Chart.js não ficou disponível. Os dados seguem visíveis em cards e tabelas."
         );
         return;
     }
@@ -275,7 +275,7 @@ function criarGrafico(idGrafico, canvasId, vazioId, configuracao, mensagemVazio)
     const labels = configuracao?.data?.labels || [];
     const datasets = configuracao?.data?.datasets || [];
     if (labels.length === 0 || !temValoresNoGrafico(datasets)) {
-        mostrarEstadoGrafico(canvasId, vazioId, mensagemVazio || "Sem dados no periodo.");
+        mostrarEstadoGrafico(canvasId, vazioId, mensagemVazio || "Sem dados no período.");
         return;
     }
 
@@ -308,12 +308,12 @@ function aspectRatioGrafico(tipo = "padrao") {
 
 function gerarPdfPainel() {
     if (!dashboardAtual) {
-        setMensagem("Aguarde o carregamento dos relatorios antes de gerar o PDF.", "erro");
+        setMensagem("Aguarde o carregamento dos relatórios antes de gerar o PDF.", "erro");
         return;
     }
 
     Object.values(graficos).forEach((grafico) => grafico.resize());
-    setMensagem("Na proxima tela, escolha 'Salvar como PDF'.");
+    setMensagem("Na próxima tela, escolha 'Salvar como PDF'.");
     window.requestAnimationFrame(() => window.print());
 }
 
@@ -356,14 +356,14 @@ function opcoesBaseGrafico(extra = {}) {
     );
 }
 
-function renderTabelaVazia(tbodyId, colspan, mensagem = "Sem dados no periodo selecionado.") {
+function renderTabelaVazia(tbodyId, colspan, mensagem = "Sem dados no período selecionado.") {
     const tbody = el(tbodyId);
     tbody.innerHTML = "";
 
     const tr = document.createElement("tr");
     const td = document.createElement("td");
     td.colSpan = colspan;
-    td.className = "booking-empty reports-empty-cell";
+    td.className = "booking-empty reports-empty-cell empty-state";
     td.innerText = mensagem;
     tr.appendChild(td);
     tbody.appendChild(tr);
@@ -395,7 +395,7 @@ function renderTabelaComLinhas(tbodyId, itens, colspan, criarColunas) {
 
 function renderTabelaImpressoes(itens = []) {
     renderTabelaComLinhas("tabelaImpressoesBody", itens, 3, (item) => [
-        item.nome || "Professor nao informado",
+        item.nome || "Professor não informado",
         formatarNumero(item.total_jobs || 0),
         formatarNumero(item.total_paginas || 0),
     ]);
@@ -403,7 +403,7 @@ function renderTabelaImpressoes(itens = []) {
 
 function renderTabelaTagsImpressao(itens = []) {
     renderTabelaComLinhas("tabelaTagsImpressaoBody", itens, 3, (item) => [
-        item.tag || "Sem classificacao",
+        item.tag || "Sem classificação",
         formatarNumero(item.total_jobs || 0),
         formatarNumero(item.total_paginas || 0),
     ]);
@@ -411,7 +411,7 @@ function renderTabelaTagsImpressao(itens = []) {
 
 function renderTabelaRecursos(itens = []) {
     renderTabelaComLinhas("tabelaRecursosBody", itens, 6, (item) => [
-        item.recurso_nome || "Recurso nao informado",
+        item.recurso_nome || "Recurso não informado",
         item.recurso_tipo || "-",
         formatarNumero(item.total_reservas || 0),
         formatarNumero(item.professores_distintos || 0),
@@ -422,15 +422,15 @@ function renderTabelaRecursos(itens = []) {
 
 function renderTabelaRecursosProfessor(itens = []) {
     renderTabelaComLinhas("tabelaRecursosProfessorBody", itens, 2, (item) => [
-        item.nome || "Professor nao informado",
+        item.nome || "Professor não informado",
         formatarNumero(item.total_reservas || 0),
     ]);
 }
 
 function renderTabelaPendenciasAnexos(itens = []) {
     renderTabelaComLinhas("tabelaAnexosPendenciasBody", itens, 4, (item) => [
-        item.professor || "Professor nao informado",
-        item.documento || "Documento nao informado",
+        item.professor || "Professor não informado",
+        item.documento || "Documento não informado",
         formatarDataHoraRelatorios(item.prazo),
         item.situacao || "Pendente",
     ]);
@@ -438,8 +438,8 @@ function renderTabelaPendenciasAnexos(itens = []) {
 
 function renderTabelaRecentesAnexos(itens = []) {
     renderTabelaComLinhas("tabelaAnexosRecentesBody", itens, 5, (item) => [
-        item.professor || "Professor nao informado",
-        item.documento || "Documento nao informado",
+        item.professor || "Professor não informado",
+        item.documento || "Documento não informado",
         formatarDataHoraRelatorios(item.data_envio),
         formatarDataHoraRelatorios(item.prazo),
         item.situacao || "Pendente",
@@ -470,7 +470,7 @@ function renderDashboard(payload = {}) {
                 labels: dashboardGraficos.movimento_periodo?.labels || [],
                 datasets: [
                     {
-                        label: "Paginas impressas",
+                        label: "Páginas impressas",
                         data: dashboardGraficos.movimento_periodo?.paginas || [],
                         borderColor: "#0f766e",
                         backgroundColor: "rgba(15, 118, 110, 0.18)",
@@ -491,7 +491,7 @@ function renderDashboard(payload = {}) {
                 aspectRatio: aspectRatioGrafico("linha-amplo"),
             }),
         },
-        "Sem movimento registrado no periodo."
+        "Sem movimento registrado no período."
     );
 
     criarGrafico(
@@ -504,7 +504,7 @@ function renderDashboard(payload = {}) {
                 labels: dashboardGraficos.impressoes_por_professor?.labels || [],
                 datasets: [
                     {
-                        label: "Paginas",
+                        label: "Páginas",
                         data: dashboardGraficos.impressoes_por_professor?.valores || [],
                         backgroundColor: "#0f766e",
                         borderRadius: 10,
@@ -516,7 +516,7 @@ function renderDashboard(payload = {}) {
                 plugins: { legend: { display: false } },
             }),
         },
-        "Nenhuma impressao registrada no periodo."
+        "Nenhuma impressão registrada no período."
     );
 
     criarGrafico(
@@ -566,7 +566,7 @@ function renderDashboard(payload = {}) {
                 },
             },
         },
-        "Nenhuma reserva registrada no periodo."
+        "Nenhuma reserva registrada no período."
     );
 
     criarGrafico(
@@ -600,10 +600,10 @@ function renderDashboard(payload = {}) {
 function renderImpressoes(payload = {}) {
     const resumo = payload.impressoes?.resumo || {};
     renderResumoSimples("impressoesResumo", [
-        { titulo: "Paginas impressas", valor: formatarNumero(resumo.total_paginas || 0) },
-        { titulo: "Jobs concluidos", valor: formatarNumero(resumo.total_jobs || 0) },
-        { titulo: "Media por job", valor: formatarDecimal(resumo.media_paginas_por_job || 0) },
-        { titulo: "Professores com impressoes", valor: formatarNumero(resumo.professores_com_impressoes || 0) },
+        { titulo: "Páginas impressas", valor: formatarNumero(resumo.total_paginas || 0) },
+        { titulo: "Pedidos concluídos", valor: formatarNumero(resumo.total_jobs || 0) },
+        { titulo: "Média por pedido", valor: formatarDecimal(resumo.media_paginas_por_job || 0) },
+        { titulo: "Professores com impressões", valor: formatarNumero(resumo.professores_com_impressoes || 0) },
         { titulo: "Tags usadas", valor: formatarNumero(resumo.tags_utilizadas || 0) },
         { titulo: "Tag mais frequente", valor: resumo.tag_mais_frequente || "Sem dados" },
     ]);
@@ -619,13 +619,13 @@ function renderImpressoes(payload = {}) {
                 labels: serie.labels || [],
                 datasets: [
                     {
-                        label: "Jobs",
+                        label: "Pedidos",
                         data: serie.jobs || [],
                         backgroundColor: "rgba(29, 78, 216, 0.74)",
                         borderRadius: 8,
                     },
                     {
-                        label: "Paginas",
+                        label: "Páginas",
                         data: serie.paginas || [],
                         backgroundColor: "rgba(15, 118, 110, 0.84)",
                         borderRadius: 8,
@@ -636,7 +636,7 @@ function renderImpressoes(payload = {}) {
                 aspectRatio: aspectRatioGrafico("barra-amplo"),
             }),
         },
-        "Nenhuma impressao registrada no periodo."
+        "Nenhuma impressão registrada no período."
     );
 
     const tags = payload.impressoes?.ranking_tags || [];
@@ -647,10 +647,10 @@ function renderImpressoes(payload = {}) {
         {
             type: "bar",
             data: {
-                labels: tags.map((item) => item.tag || "Sem classificacao"),
+                labels: tags.map((item) => item.tag || "Sem classificação"),
                 datasets: [
                     {
-                        label: "Jobs classificados",
+                        label: "Pedidos classificados",
                         data: tags.map((item) => item.total_jobs || 0),
                         backgroundColor: "#f59e0b",
                         borderRadius: 10,
@@ -662,7 +662,7 @@ function renderImpressoes(payload = {}) {
                 plugins: { legend: { display: false } },
             }),
         },
-        "Nenhuma classificacao registrada no periodo."
+        "Nenhuma classificação registrada no período."
     );
 
     renderTabelaImpressoes(payload.impressoes?.ranking_professores || []);
@@ -675,7 +675,7 @@ function renderRecursos(payload = {}) {
         { titulo: "Reservas", valor: formatarNumero(resumo.total_reservas || 0) },
         { titulo: "Professores usando recursos", valor: formatarNumero(resumo.professores_com_reservas || 0) },
         { titulo: "Recursos utilizados", valor: formatarNumero(resumo.recursos_utilizados || 0) },
-        { titulo: "Uso medio da capacidade", valor: `${formatarDecimal(resumo.taxa_uso_geral || 0)}%` },
+        { titulo: "Uso médio da capacidade", valor: `${formatarDecimal(resumo.taxa_uso_geral || 0)}%` },
     ]);
 
     const serie = payload.recursos?.serie_diaria || {};
@@ -703,7 +703,7 @@ function renderRecursos(payload = {}) {
                 plugins: { legend: { display: false } },
             }),
         },
-        "Nenhuma reserva registrada no periodo."
+        "Nenhuma reserva registrada no período."
     );
 
     renderTabelaRecursos(payload.recursos?.ranking_recursos || []);
@@ -757,7 +757,7 @@ function renderAnexos(payload = {}) {
                 },
             },
         },
-        "Nenhum documento esperado no periodo."
+        "Nenhum documento esperado no período."
     );
 
     criarGrafico(
@@ -782,7 +782,7 @@ function renderAnexos(payload = {}) {
                 plugins: { legend: { display: false } },
             }),
         },
-        "Nenhum tipo de documento encontrado no periodo."
+        "Nenhum tipo de documento encontrado no período."
     );
 
     renderTabelaPendenciasAnexos(payload.tabelas?.professores_pendencias || []);
@@ -798,7 +798,7 @@ function preencherSelectProfessores(itens = []) {
     placeholder.value = "";
     placeholder.innerText = Array.isArray(itens) && itens.length > 0
         ? "Selecione um professor"
-        : "Nenhum professor disponivel";
+        : "Nenhum professor disponível";
     select.appendChild(placeholder);
 
     itens.forEach((professor) => {
@@ -831,10 +831,11 @@ function renderListaAlertasProfessor(alertas = []) {
     lista.innerHTML = "";
     const itens = Array.isArray(alertas) && alertas.length > 0
         ? alertas
-        : ["Sem alertas relevantes para o periodo."];
+        : ["Sem alertas relevantes para o período."];
 
     itens.forEach((texto) => {
         const li = document.createElement("li");
+        li.className = "list-item";
         li.innerText = texto;
         lista.appendChild(li);
     });
@@ -842,7 +843,7 @@ function renderListaAlertasProfessor(alertas = []) {
 
 function renderTabelaProfessorPendencias(itens = []) {
     renderTabelaComLinhas("tabelaProfessorPendenciasBody", itens, 3, (item) => [
-        item.documento || "Documento nao informado",
+        item.documento || "Documento não informado",
         formatarDataHoraRelatorios(item.prazo),
         item.situacao || "Pendente",
     ]);
@@ -850,7 +851,7 @@ function renderTabelaProfessorPendencias(itens = []) {
 
 function renderTabelaProfessorImpressoes(itens = []) {
     renderTabelaComLinhas("tabelaProfessorImpressoesBody", itens, 4, (item) => [
-        item.arquivo || "Arquivo nao informado",
+        item.arquivo || "Arquivo não informado",
         formatarDataHoraRelatorios(item.criado_em),
         formatarNumero(item.paginas_totais || 0),
         formatarNumero(item.copias || 1),
@@ -860,7 +861,7 @@ function renderTabelaProfessorImpressoes(itens = []) {
 function renderTabelaProfessorRecursos(itens = []) {
     renderTabelaComLinhas("tabelaProfessorRecursosBody", itens, 4, (item) => [
         paraDataBr(item.data || ""),
-        item.recurso_nome || "Recurso nao informado",
+        item.recurso_nome || "Recurso não informado",
         item.turma || "-",
         item.tema_aula || "-",
     ]);
@@ -869,10 +870,10 @@ function renderTabelaProfessorRecursos(itens = []) {
 function renderRelatorioProfessor(payload = {}) {
     const resumo = payload.resumo || {};
     renderResumoSimples("professorResumo", [
-        { titulo: "Paginas impressas", valor: formatarNumero(resumo.total_paginas || 0) },
-        { titulo: "Jobs de impressao", valor: formatarNumero(resumo.total_jobs || 0) },
+        { titulo: "Páginas impressas", valor: formatarNumero(resumo.total_paginas || 0) },
+        { titulo: "Pedidos de impressão", valor: formatarNumero(resumo.total_jobs || 0) },
         { titulo: "Reservas de recursos", valor: formatarNumero(resumo.total_reservas || 0) },
-        { titulo: "Pendencias de anexos", valor: formatarNumero(resumo.total_pendencias || 0) },
+        { titulo: "Pendências de anexos", valor: formatarNumero(resumo.total_pendencias || 0) },
         { titulo: "Entregas registradas", valor: formatarNumero(resumo.total_entregas || 0) },
     ]);
     renderListaAlertasProfessor(payload.alertas || []);
@@ -911,11 +912,11 @@ function baixarRelatorioProfessorPdf() {
 async function enviarRelatorioProfessorEmail() {
     const professorId = obterProfessorRelatorioSelecionadoId();
     if (!professorId) {
-        setMensagemProfessor("Selecione um professor antes de enviar o relatorio.", "erro");
+        setMensagemProfessor("Selecione um professor antes de enviar o relatório.", "erro");
         return;
     }
 
-    setMensagemProfessor("Enviando relatorio por email...");
+    setMensagemProfessor("Enviando relatório por e-mail...");
     const resposta = await fetchJson(
         `/api/relatorios/professores/${professorId}/email${queryPeriodo()}`,
         {
@@ -924,7 +925,7 @@ async function enviarRelatorioProfessorEmail() {
             body: JSON.stringify({}),
         }
     );
-    setMensagemProfessor(resposta?.mensagem || "Relatorio enviado com sucesso.");
+    setMensagemProfessor(resposta?.mensagem || "Relatório enviado com sucesso.");
 }
 
 function ativarTab(tabId) {
@@ -954,7 +955,7 @@ async function carregarUsuario() {
 }
 
 async function carregarRelatorios() {
-    setMensagem("Atualizando relatorios...");
+    setMensagem("Atualizando relatórios...");
     const [payloadDashboard, payloadAnexos] = await Promise.all([
         fetchJson(`/api/relatorios/dashboard${queryPeriodo()}`, { headers }),
         fetchJson(`/api/relatorios/anexos${queryPeriodo()}`, { headers }),
@@ -971,7 +972,7 @@ async function carregarRelatorios() {
     if (obterProfessorRelatorioSelecionadoId()) {
         await carregarRelatorioProfessor();
     }
-    setMensagem("Relatorios atualizados.");
+    setMensagem("Relatórios atualizados.");
 }
 
 function registrarResizeGraficos() {
@@ -1008,7 +1009,7 @@ function registrarEventos() {
         try {
             await carregarRelatorios();
         } catch (err) {
-            setMensagem(err.message || "Nao foi possivel carregar os relatorios.", "erro");
+            setMensagem(err.message || "Não foi possível carregar os relatórios.", "erro");
         }
     });
 
@@ -1017,7 +1018,7 @@ function registrarEventos() {
         try {
             await carregarRelatorios();
         } catch (err) {
-            setMensagem(err.message || "Nao foi possivel carregar os relatorios.", "erro");
+            setMensagem(err.message || "Não foi possível carregar os relatórios.", "erro");
         }
     });
 
@@ -1035,7 +1036,7 @@ function registrarEventos() {
         try {
             await carregarRelatorioProfessor();
         } catch (err) {
-            setMensagemProfessor(err.message || "Nao foi possivel carregar o relatorio do professor.", "erro");
+            setMensagemProfessor(err.message || "Não foi possível carregar o relatório do professor.", "erro");
         }
     });
 
@@ -1047,7 +1048,7 @@ function registrarEventos() {
         try {
             await enviarRelatorioProfessorEmail();
         } catch (err) {
-            setMensagemProfessor(err.message || "Nao foi possivel enviar o relatorio.", "erro");
+            setMensagemProfessor(err.message || "Não foi possível enviar o relatório.", "erro");
         }
     });
 
@@ -1070,7 +1071,7 @@ async function init() {
         await carregarProfessoresRelatorio();
         await carregarRelatorios();
     } catch (err) {
-        setMensagem(err.message || "Erro ao carregar o modulo de relatorios.", "erro");
+        setMensagem(err.message || "Erro ao carregar o módulo de relatórios.", "erro");
     }
 }
 

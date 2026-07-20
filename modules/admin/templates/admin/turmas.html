@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turmas e disciplinas - Administração</title>
+    {% set page_styles = ["css/pages/admin.css"] %}
+    {% include "includes/style_bundle.html" %}
+</head>
+<body data-admin-active-tab="turmas">
+    {% set navbar_context = "Painel de gestão" %}
+    {% set navbar_current = "gestao" %}
+    {% include "includes/app_navbar.html" %}
+    {% set admin_active_tab = "turmas" %}
+    {% include "includes/app_sidebar_config.html" %}
+    <main class="admin-page">
+        <header class="admin-header admin-header-shell">
+            <div class="admin-header-main">
+                <h1>Turmas e disciplinas</h1>
+                <p>Mantenha a estrutura escolar e a oferta de disciplinas de cada turma.</p>
+            </div>
+        </header>
+        <div class="admin-section-layout">
+            <section class="admin-section-content admin-grid">
+                <article class="admin-card admin-card-wide admin-only" data-admin-only="true">
+                    <h2>Disciplinas por turma</h2>
+                    <p class="booking-detail">Abra uma turma para ajustar carga horária e professor responsável.</p>
+                    <p id="msgTurmaDisciplina" role="status"></p>
+                    <div id="listaTurmasDisciplinasAdmin" class="admin-accordion-list"></div>
+                </article>
+                <article class="admin-card">
+                    <h2>Cadastrar turma</h2>
+                    <form id="formTurma" class="admin-form">
+                        <label for="turmaNome">Nome</label>
+                        <input id="turmaNome" type="text" placeholder="Ex.: 6º ano A" required>
+                        <label for="turmaTurno">Turno</label>
+                        <select id="turmaTurno" required>
+                            <option value="MATUTINO">Matutino</option>
+                            <option value="VESPERTINO">Vespertino</option>
+                            <option value="VESPERTINO_EM">Vespertino E.M.</option>
+                            <option value="INTEGRAL">Período integral</option>
+                        </select>
+                        <label for="turmaAulaInicial">Primeira aula</label>
+                        <select id="turmaAulaInicial" required></select>
+                        <label for="turmaAulaFinal">Última aula</label>
+                        <select id="turmaAulaFinal" required></select>
+                        <label for="turmaQuantidadeEstudantes">Quantidade de estudantes</label>
+                        <input id="turmaQuantidadeEstudantes" type="number" min="0" value="0" required>
+                        <button class="btn-destaque" type="submit">Cadastrar turma</button>
+                    </form>
+                    <p id="msgTurma" role="status"></p>
+                </article>
+                <article class="admin-card">
+                    <h2>Turmas cadastradas</h2>
+                    <ul id="listaTurmasAdmin" class="admin-list"></ul>
+                </article>
+                <article class="admin-card">
+                    <h2>Cadastrar disciplina</h2>
+                    <form id="formDisciplina" class="admin-form">
+                        <label for="disciplinaNome">Nome</label>
+                        <input id="disciplinaNome" type="text" required>
+                        <label for="disciplinaAulasSemanais">Carga horária base</label>
+                        <input id="disciplinaAulasSemanais" type="number" min="0" required>
+                        <label class="admin-checkbox-item"><input id="disciplinaTemApc" type="checkbox"><span>Tem entrega de APC</span></label>
+                        <label class="admin-checkbox-item"><input id="disciplinaTemProvaBimestral" type="checkbox"><span>Tem prova bimestral</span></label>
+                        <button class="btn-destaque" type="submit">Cadastrar disciplina</button>
+                    </form>
+                    <p id="msgDisciplina" role="status"></p>
+                </article>
+                <article class="admin-card">
+                    <h2>Catálogo de disciplinas</h2>
+                    <ul id="listaDisciplinasAdmin" class="admin-list"></ul>
+                </article>
+            </section>
+        </div>
+    </main>
+    {% include "admin/_base_scripts.html" %}
+    <script src="{{ request.url_for('static', path='js/admin/grade-aulas.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/turmas-disciplinas-base.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/turmas-disciplinas.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/turmas-cadastro.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/disciplinas.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/turmas-page.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meus agendamentos</title>
+    {% set page_styles = ["css/pages/services-scheduler.css", "css/pages/scheduling-pages.css"] %}
+    {% include "includes/style_bundle.html" %}
+</head>
+<body class="scheduling-bookings-page" data-scheduling-page="mine">
+    {% set navbar_context = "Área docente" %}
+    {% set navbar_current = "agendamento" %}
+    {% set scheduling_page = "mine" %}
+    {% include "includes/app_navbar.html" %}
+    {% include "includes/app_sidebar_config.html" %}
+
+    <main class="scheduling-page-shell page-shell page-shell--medium">
+        <header class="scheduling-page-header page-header page-header--flush">
+            <div class="page-header-main"><h1 class="page-title">Meus agendamentos</h1><p class="page-lead">Acompanhe suas próximas reservas e cancele quando necessário.</p></div>
+            <a class="btn-destaque button button--primary" href="/agendamento"><i class="bi bi-plus-lg" aria-hidden="true"></i>Novo agendamento</a>
+        </header>
+        <section class="scheduling-page-surface" aria-labelledby="myBookingsTitle">
+            <header class="scheduling-list-header section-header">
+                <div><h2 id="myBookingsTitle" class="section-title">Próximas reservas</h2><p class="section-copy">Exibindo os agendamentos ativos deste mês.</p></div>
+                <div class="booking-sort-controls action-group action-group--compact" data-sort-target="minhas">
+                    <button type="button" class="booking-sort-field button is-active" data-sort-field="data">Data</button>
+                    <button type="button" class="booking-sort-field button" data-sort-field="aula">Aula</button>
+                    <button type="button" class="booking-sort-field button" data-sort-field="turno">Turno</button>
+                    <button type="button" class="booking-sort-field button" data-sort-field="recurso">Recurso</button>
+                    <button type="button" class="booking-sort-order button">1º → último</button>
+                    <button type="button" class="booking-sort-group button">Agrupar por recurso</button>
+                </div>
+            </header>
+            <p id="msgAgendamento" class="scheduler-feedback-message feedback" role="status" aria-live="polite" aria-atomic="true"></p>
+            <ul id="listaMinhasReservas" class="scheduling-booking-list item-list" aria-busy="true" aria-live="polite"><li class="booking-empty empty-state">Carregando seus agendamentos...</li></ul>
+        </section>
+    </main>
+    {% include "scheduling/_booking_details.html" %}
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/scheduling/bookings_pages.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+</html>

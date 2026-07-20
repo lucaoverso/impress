@@ -44,10 +44,10 @@ const FILA_POLLING_MS = 6000;
 const LIMITE_ALERTA_IMPRESSAO_PAGINAS = 30;
 const LIMIAR_RE_RENDER_PREVIEW_MOBILE_PX = 24;
 const EXTENSOES_SUPORTADAS = new Set(["pdf", "doc", "docx", "png", "jpg", "jpeg"]);
-const IDS_LISTAS_JOBS_IMPRESSAO = ["lista-jobs", "lista-jobs-etapa-arquivo"];
-const IDS_ESPELHOS_COTA_IMPRESSAO = ["cotaPainelEspelho", "cotaPainelEtapaArquivo"];
-const IDS_TITULOS_COTA_IMPRESSAO = ["tituloCota", "tituloCotaEtapaArquivo"];
-const IDS_TITULOS_JOBS_IMPRESSAO = ["tituloJobs", "tituloJobsEtapaArquivo"];
+const IDS_LISTAS_JOBS_IMPRESSAO = [];
+const IDS_ESPELHOS_COTA_IMPRESSAO = ["cotaPainelEtapaArquivo"];
+const IDS_TITULOS_COTA_IMPRESSAO = ["tituloCotaEtapaArquivo"];
+const IDS_TITULOS_JOBS_IMPRESSAO = [];
 const STATUS_JOB_LABEL = {
     PENDENTE: "Na fila",
     IMPRIMINDO: "Imprimindo",
@@ -2063,6 +2063,24 @@ function renderizarJobsHistorico(jobs = []) {
     });
 }
 
+async function carregarJobHistoricoDaUrl(jobs = []) {
+    const jobId = Number(new URLSearchParams(window.location.search).get("reutilizar") || 0);
+    if (jobId <= 0) return;
+
+    const job = jobs.find((item) => Number(item?.id || 0) === jobId);
+    if (!job) {
+        el("msg").innerText = "Este pedido não foi encontrado no seu histórico.";
+        return;
+    }
+    if (!jobPodeSerReutilizado(job)) {
+        el("msg").innerText = job?.motivo_reuso_indisponivel || "Este pedido não pode ser reutilizado.";
+        return;
+    }
+
+    window.history.replaceState({}, "", window.location.pathname);
+    await carregarJobHistoricoNoPreview(job);
+}
+
 async function carregarFila() {
     atualizarTitulosContextoImpressao();
 
@@ -3269,17 +3287,6 @@ const registrarEventosOriginal = registrarEventos;
 registrarEventos = function registrarEventosRefatorado() {
     registrarEventosOriginal();
 
-    [
-        "btnAbrirHistorico",
-        "btnAbrirHistoricoTopbar",
-        "btnAbrirHistoricoMobile",
-        "btnAbrirHistoricoResumo",
-    ].forEach((id) => {
-        el(id)?.addEventListener("click", abrirPainelHistorico);
-    });
-
-    el("btnFecharHistorico")?.addEventListener("click", fecharPainelHistorico);
-    document.querySelector("[data-close-history='true']")?.addEventListener("click", fecharPainelHistorico);
     el("btnAbrirPreviewMobile")?.addEventListener("click", abrirPreviewMobile);
     el("btnFecharPreviewMobile")?.addEventListener("click", fecharPreviewMobile);
     el("btnImprimirOutroArquivo")?.addEventListener("click", () => {
@@ -3328,7 +3335,8 @@ async function inicializarPagina() {
         await carregarImpressorasImpressao();
         await carregarTagsImpressao();
         await carregarCota();
-        await carregarFila();
+        const jobs = await carregarFila();
+        await carregarJobHistoricoDaUrl(jobs || []);
     } catch (err) {
         el("msg").innerText = err?.message || "Falha ao carregar os dados da impressao.";
     }

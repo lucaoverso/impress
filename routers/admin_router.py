@@ -823,7 +823,7 @@ def excluir_atribuicao_docente_admin_api(
     return {"mensagem": "Atribuicao docente removida com sucesso."}
 
 
-@router.get("/admin/professores")
+@router.get("/admin/professores/dados")
 def listar_professores_painel(
     mes: str = None,
     usuario=Depends(get_usuario_logado),

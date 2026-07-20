@@ -6,6 +6,7 @@ from datetime import datetime, UTC
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from starlette.middleware.gzip import GZipMiddleware
 
 from app_logging import setup_logging
 from auth import router as auth_router
@@ -19,6 +20,7 @@ import modules.teacher_followup.router as teacher_followup_router_module
 import modules.users.router as users_router_module
 import modules.admin.resources.router as admin_resources_router_module
 import modules.admin.classes.router as admin_classes_router_module
+import modules.admin.router as admin_pages_router_module
 import routers.admin_router as admin_router_module
 import modules.scheduling.router as scheduling_router_module
 import routers.common as common_module
@@ -56,6 +58,7 @@ system_router_module = _reload_or_import(system_router_module)
 pages_router_module = _reload_or_import(pages_router_module)
 admin_resources_router_module = _reload_or_import(admin_resources_router_module)
 admin_classes_router_module = _reload_or_import(admin_classes_router_module)
+admin_pages_router_module = _reload_or_import(admin_pages_router_module)
 impressao_router_module = _reload_or_import(impressao_router_module)
 relatorios_router_module = _reload_or_import(relatorios_router_module)
 download_router_module = _reload_or_import(download_router_module)
@@ -76,6 +79,7 @@ system_router = system_router_module.router
 pages_router = pages_router_module.router
 admin_resources_router = admin_resources_router_module.router
 admin_classes_router = admin_classes_router_module.router
+admin_pages_router = admin_pages_router_module.router
 impressao_router = impressao_router_module.router
 relatorios_router = relatorios_router_module.router
 download_router = download_router_module.router
@@ -104,7 +108,6 @@ relatorios_page = pages_router_module.relatorios_page
 download_page = pages_router_module.download_page
 download_details_page = pages_router_module.download_details_page
 pcpi_page = pages_router_module.pcpi_page
-preconselho_page = pages_router_module.preconselho_page
 cadastro_professor_page = pages_router_module.cadastro_professor_page
 admin_page = pages_router_module.admin_page
 coordenacao_page = pages_router_module.coordenacao_page
@@ -197,10 +200,12 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Suite de Servicos Escolares", lifespan=lifespan)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 app.include_router(auth_router)
 app.include_router(system_router)
 app.include_router(pages_router)
+app.include_router(admin_pages_router)
 app.include_router(admin_resources_router)
 app.include_router(admin_classes_router)
 app.include_router(impressao_router)

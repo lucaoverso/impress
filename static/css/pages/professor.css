@@ -13,11 +13,11 @@
     --print-color-text-muted: var(--text-muted);
     --print-color-text-soft: #667384;
     --print-color-success: var(--success);
-    --print-color-success-light: #dcfce7;
+    --print-color-success-light: var(--state-success-bg-strong);
     --print-color-warning: var(--warning);
     --print-color-warning-light: #fef3c7;
     --print-color-danger: var(--error);
-    --print-color-danger-light: #fee2e2;
+    --print-color-danger-light: var(--state-danger-bg-strong);
     --print-color-info: var(--info);
     --print-color-info-light: #dbeafe;
     --print-radius-sm: 8px;
@@ -105,26 +105,26 @@
 }
 
 .print-progress-steps::after {
-    right: auto;
-    width: 0;
     background: linear-gradient(90deg, var(--print-color-primary), #139488);
-    transition: width 0.2s ease;
+    transform: scaleX(0);
+    transform-origin: left center;
+    transition: transform var(--motion-fast);
 }
 
 html[data-printing-current-step="1"] .print-progress-steps::after {
-    width: 0;
+    transform: scaleX(0);
 }
 
 html[data-printing-current-step="2"] .print-progress-steps::after {
-    width: calc(33.333% - 5px);
+    transform: scaleX(0.3333);
 }
 
 html[data-printing-current-step="3"] .print-progress-steps::after {
-    width: calc(66.666% - 10px);
+    transform: scaleX(0.6666);
 }
 
 html[data-printing-current-step="4"] .print-progress-steps::after {
-    width: calc(100% - 16px);
+    transform: scaleX(1);
 }
 
 .print-progress-step {
@@ -316,7 +316,7 @@ html[data-printing-current-step="1"] #etapaArquivo .print-step-actions {
 .print-wizard-right .print-preview-stage {
     border-radius: var(--print-radius-xl);
     border: 1px solid var(--print-color-border);
-    background: rgba(255, 255, 255, 0.96);
+    background: var(--surface-overlay);
     box-shadow: var(--print-shadow-md);
 }
 
@@ -441,7 +441,7 @@ html[data-printing-current-step="1"] #etapaArquivo .print-step-actions {
 .print-inline-queue-card {
     border-radius: var(--print-radius-xl);
     border: 1px solid var(--print-color-border);
-    background: rgba(255, 255, 255, 0.96);
+    background: var(--surface-overlay);
     box-shadow: var(--print-shadow-md);
     padding: var(--print-space-4) var(--print-space-5);
     display: grid;
@@ -544,7 +544,7 @@ html[data-printing-current-step="1"] #etapaArquivo .print-step-actions {
 .print-history-panel {
     border-radius: var(--print-radius-xl);
     border: 1px solid var(--print-color-border);
-    background: rgba(255, 255, 255, 0.96);
+    background: var(--surface-overlay);
     box-shadow: var(--print-shadow-md);
 }
 
@@ -573,22 +573,6 @@ html[data-printing-current-step="1"] #etapaArquivo .print-step-actions {
 .print-flow-lead {
     max-width: 58ch;
     color: var(--print-color-text-muted);
-}
-
-.print-secondary-btn {
-    min-height: 44px;
-    border-radius: var(--print-radius-pill);
-    border: 1px solid var(--print-color-border-strong);
-    background: var(--print-color-surface);
-    color: var(--print-color-text);
-    font-size: 14px;
-    font-weight: 400;
-    padding: 0 16px;
-    box-shadow: var(--print-shadow-sm);
-}
-
-.print-secondary-btn:hover {
-    background: var(--print-color-surface-muted);
 }
 
 .print-wizard-shell .btn-destaque,
@@ -751,7 +735,7 @@ html[data-printing-current-step="1"] #etapaArquivo .print-step-actions {
     min-height: 130px;
     border-radius: var(--print-radius-lg);
     border: 1px dashed rgba(13, 122, 111, 0.35);
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(246, 250, 249, 0.98));
+    background: linear-gradient(180deg, var(--surface-overlay), rgba(246, 250, 249, 0.98));
     padding: var(--print-space-5);
     display: flex;
     flex-direction: column;
@@ -1328,7 +1312,7 @@ html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
     z-index: 2;
     border-radius: var(--print-radius-pill);
     border: 1px solid var(--print-color-border-strong);
-    background: rgba(255, 255, 255, 0.96);
+    background: var(--surface-overlay);
     color: var(--print-color-text-muted);
     font-size: 10px;
     font-weight: 700;
@@ -1417,7 +1401,10 @@ html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
     color: transparent;
     display: flex;
     align-items: center;
-    transition: all 0.2s ease;
+    transition:
+        border-color var(--motion-fast),
+        background-color var(--motion-fast),
+        color var(--motion-fast);
 }
 
 .print-submit-state.is-active {
@@ -1472,7 +1459,7 @@ html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
 .print-history-drawer {
     position: fixed;
     inset: 0;
-    z-index: 55;
+    z-index: var(--z-sticky);
     pointer-events: none;
 }
 
@@ -1715,7 +1702,7 @@ html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
 
 .print-job-status.status-concluido {
     background: var(--print-color-success-light);
-    color: #166534;
+    color: var(--state-success-text);
     border-color: #86efac;
 }
 
@@ -1727,7 +1714,7 @@ html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
 
 .print-job-status.status-erro {
     background: var(--print-color-danger-light);
-    color: #991b1b;
+    color: var(--state-danger-text);
     border-color: #fca5a5;
 }
 
@@ -1760,8 +1747,8 @@ html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
 }
 
 .print-job-cancel-btn {
-    border: 1px solid #fecaca;
-    background: #fff5f5;
+    border: 1px solid var(--state-danger-border);
+    background: var(--state-danger-bg);
     color: #b42318;
 }
 
@@ -1773,8 +1760,8 @@ html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
 .print-job-error {
     font-size: 12px;
     color: #b42318;
-    background: #fff5f5;
-    border: 1px solid #fecaca;
+    background: var(--state-danger-bg);
+    border: 1px solid var(--state-danger-border);
     border-radius: var(--print-radius-sm);
     padding: 6px 8px;
     margin: 0;
@@ -1788,7 +1775,7 @@ html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
 .print-alert-modal {
     position: fixed;
     inset: 0;
-    z-index: 70;
+    z-index: var(--z-popover);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -2263,7 +2250,11 @@ body.print-preview-modal-open {
 }
 
 .print-page-header .print-secondary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     flex: 0 0 auto;
+    text-decoration: none;
 }
 
 .print-flow-stepper {
@@ -2573,12 +2564,6 @@ html[data-printing-current-step="1"] .print-wizard-left {
     min-width: 170px;
 }
 
-.print-secondary-btn {
-    border-radius: var(--radius-sm);
-    box-shadow: none;
-    font-weight: 600;
-}
-
 .print-wizard-shell .btn-destaque,
 .print-send-btn {
     border-radius: var(--radius-sm);
@@ -2672,15 +2657,15 @@ html[data-printing-current-step="1"] .print-wizard-left {
 }
 
 .print-visible-feedback p[data-variant="error"]:not(:empty) {
-    border-color: #fecaca;
-    background: #fff5f5;
-    color: #991b1b;
+    border-color: var(--state-danger-border);
+    background: var(--state-danger-bg);
+    color: var(--state-danger-text);
 }
 
 .print-visible-feedback p[data-variant="success"]:not(:empty) {
-    border-color: #bbf7d0;
-    background: #f0fdf4;
-    color: #166534;
+    border-color: var(--state-success-border);
+    background: var(--state-success-bg);
+    color: var(--state-success-text);
 }
 
 .print-history-panel {
@@ -2794,12 +2779,12 @@ html[data-printing-current-step="1"] .print-wizard-left {
 
     body.print-preview-modal-open .print-wizard-right {
         position: fixed;
-        z-index: 80;
+        z-index: var(--z-mobile-overlay);
         inset: 0;
         display: block;
         overflow-y: auto;
         padding: clamp(12px, 3vw, 24px);
-        background: rgba(15, 23, 42, 0.52);
+        background: var(--overlay-scrim);
     }
 
     body.print-preview-modal-open #painelPreview,

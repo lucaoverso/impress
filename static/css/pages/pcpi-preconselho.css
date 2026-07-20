@@ -1,10 +1,10 @@
 /* PCPI and pre-conselho flows */
 
 .pcpi-page {
-    --preconselho-success-bg: #f0fdf4;
-    --preconselho-success-bg-strong: #dcfce7;
-    --preconselho-success-border: #86efac;
-    --preconselho-success-text: #166534;
+    --preconselho-success-bg: var(--state-success-bg);
+    --preconselho-success-bg-strong: var(--state-success-bg-strong);
+    --preconselho-success-border: var(--state-success-border-strong);
+    --preconselho-success-text: var(--state-success-text);
     --preconselho-warning-bg: #fffbeb;
     --preconselho-warning-bg-strong: #fef3c7;
     --preconselho-warning-border: #fcd34d;
@@ -632,7 +632,7 @@
 .preconselho-modal {
     position: fixed;
     inset: 0;
-    z-index: 1200;
+    z-index: var(--z-modal);
     display: grid;
     place-items: center;
     padding: 20px;
@@ -782,7 +782,7 @@
     position: absolute;
     inset-inline: 0;
     top: calc(100% + 4px);
-    z-index: 1250;
+    z-index: var(--z-modal-dropdown);
     display: grid;
     max-height: 220px;
     overflow: auto;
@@ -1087,7 +1087,7 @@ body.preconselho-modal-open {
     min-width: 0;
     padding: 14px 16px;
     border-right: 1px solid var(--line-soft, #d8dee8);
-    background: var(--surface-subtle, #f8fbff);
+    background: var(--surface-1);
 }
 
 .preconselho-review-summary-item:last-child { border-right: 0; }
@@ -1095,8 +1095,8 @@ body.preconselho-modal-open {
 .preconselho-review-summary-item > strong { font-size: 24px; line-height: 1.1; }
 .preconselho-review-summary-item > small { color: var(--text-muted, #4b5563); }
 .preconselho-review-summary-item.is-pendente > strong { color: #92400e; }
-.preconselho-review-summary-item.is-recuperado > strong { color: #166534; }
-.preconselho-review-summary-item.is-conselho > strong { color: #991b1b; }
+.preconselho-review-summary-item.is-recuperado > strong { color: var(--state-success-text); }
+.preconselho-review-summary-item.is-conselho > strong { color: var(--state-danger-text); }
 
 .preconselho-review-student-list {
     display: grid;
@@ -1126,7 +1126,7 @@ body.preconselho-modal-open {
 }
 
 .preconselho-review-student-toggle:hover {
-    background: var(--surface-muted, #eef3f8);
+    background: var(--surface-2);
 }
 
 .preconselho-review-student-toggle:focus-visible {
@@ -1157,7 +1157,7 @@ body.preconselho-modal-open {
 
 .preconselho-review-disciplines {
     border-top: 1px solid var(--line-soft, #d8dee8);
-    background: var(--surface-subtle, #f8fbff);
+    background: var(--surface-1);
 }
 
 .preconselho-review-discipline {
@@ -1230,8 +1230,8 @@ body.preconselho-modal-open {
     white-space: nowrap;
 }
 
-.preconselho-review-status.is-recuperado { background: #dcfce7; color: #166534; }
-.preconselho-review-status.is-conselho { background: #fee2e2; color: #991b1b; }
+.preconselho-review-status.is-recuperado { background: var(--state-success-bg-strong); color: var(--state-success-text); }
+.preconselho-review-status.is-conselho { background: var(--state-danger-bg-strong); color: var(--state-danger-text); }
 .preconselho-review-status.is-pendente { background: #fef3c7; color: #92400e; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1239,15 +1239,15 @@ body.preconselho-modal-open {
 }
 
 .status-aberto {
-    background: #dcfce7;
-    border-color: #bbf7d0;
-    color: #166534;
+    background: var(--state-success-bg-strong);
+    border-color: var(--state-success-border);
+    color: var(--state-success-text);
 }
 
 .status-fechado {
-    background: #fee2e2;
-    border-color: #fecaca;
-    color: #991b1b;
+    background: var(--state-danger-bg-strong);
+    border-color: var(--state-danger-border);
+    color: var(--state-danger-text);
 }
 
 @media (max-width: 980px) {

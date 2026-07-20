@@ -5,7 +5,7 @@ colors:
   primary: "#0f766e"
   primary-strong: "#0b5b55"
   primary-soft: "#d6f2ef"
-  background: "#f2efe9"
+  background: "#ffffff"
   background-accent: "#d7e9ff"
   surface: "#ffffff"
   surface-subtle: "#f8fbff"
@@ -94,9 +94,9 @@ components:
     padding: "0 14px"
     height: "44px"
   surface-primary:
-    backgroundColor: "{colors.surface}"
+    backgroundColor: "{colors.background}"
     textColor: "{colors.text}"
-    rounded: "{rounded.lg}"
+    rounded: "0"
     padding: "24px"
 ---
 
@@ -155,8 +155,8 @@ azulados. A cor primaria indica acao, selecao e foco; nao e decoracao.
 
 ### Neutral
 
-- **Branco de Trabalho:** superficie principal de formularios e conteudo.
-- **Nevoa Azulada:** fundo secundario para separar regioes sem criar outro card.
+- **Branco de Trabalho:** fundo continuo do corpo, formularios e conteudo.
+- **Nevoa Azulada:** fundo da barra lateral e de regioes auxiliares funcionais.
 - **Tinta Escolar:** texto principal de alto contraste.
 - **Texto de Apoio:** descricoes, metadados e instrucoes.
 - **Linhas Estruturais:** bordas e divisores discretos.
@@ -244,9 +244,9 @@ estrutura principal. Nao combine borda decorativa com sombra ampla.
 - **Uso:** opcoes mutuamente exclusivas, filtros e status compactos. Nao usar
   chips como substitutos de secoes ou botoes longos.
 
-### Cards / Containers
+### Secoes / Containers
 
-- **Superficie principal:** branca, raio de 16px e padding de 24px.
+- **Superficie principal:** branca e continua com o corpo, sem raio ou elevacao.
 - **Unidade independente:** borda discreta, raio entre 12px e 16px e sombra baixa
   somente quando a separacao fisica for importante.
 - **Secao interna:** sem sombra. Use espacamento de 16px a 24px, divisor de 1px

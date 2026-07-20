@@ -7,8 +7,11 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class PreConselhoMobileUiTest(unittest.TestCase):
     def test_selecao_de_turma_leva_a_lista_de_estudantes(self):
-        template = (ROOT / "templates" / "preconselho.html").read_text(encoding="utf-8")
-        script = (ROOT / "static" / "js" / "preconselho.js").read_text(encoding="utf-8")
+        template = (ROOT / "templates" / "preconselho" / "index.html").read_text(encoding="utf-8")
+        script = "\n".join(
+            (ROOT / "static" / "js" / "preconselho" / nome).read_text(encoding="utf-8")
+            for nome in ("docente.js", "events.js")
+        )
 
         self.assertIn('id="preconselhoSecaoEstudantes"', template)
         self.assertIn("function levarProfessorParaListaEstudantes()", script)

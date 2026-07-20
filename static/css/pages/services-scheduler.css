@@ -41,11 +41,18 @@
     justify-content: center;
     gap: 12px;
     cursor: pointer;
+    color: inherit;
+    text-decoration: none;
 }
 
 .service-card:hover {
     border: 1px solid var(--line-strong);
     background-color: var(--surface-1);
+}
+
+.service-card:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--brand) 28%, transparent);
+    outline-offset: 3px;
 }
 
 .card-text {
@@ -70,7 +77,7 @@
     text-align: center;
 }
 
-.service-card h2 {
+.service-card h3 {
     font-size: 22px;
 }
 
@@ -415,8 +422,8 @@ body.scheduler-drawer-open {
     padding: 12px 14px;
     border-radius: 12px;
     background: #fef2f2;
-    border: 1px solid #fecaca;
-    color: #991b1b;
+    border: 1px solid var(--state-danger-border);
+    color: var(--state-danger-text);
 }
 
 .download-details {
@@ -1091,7 +1098,7 @@ body.scheduler-drawer-open {
 }
 
 .scheduler-toolbar button.scheduler-extra-lesson-option:hover:not(:disabled) {
-    border-color: rgba(15, 118, 110, 0.28);
+    border-color: var(--brand-outline);
     box-shadow: 0 10px 22px rgba(15, 23, 42, 0.06);
     transform: translateY(-1px);
 }
@@ -1237,7 +1244,11 @@ body.scheduler-drawer-open {
     min-height: 20px;
     font-size: 13px;
     border-radius: 14px;
-    transition: all 0.18s ease;
+    transition:
+        border-color var(--motion-fast),
+        background-color var(--motion-fast),
+        color var(--motion-fast),
+        box-shadow var(--motion-fast);
 }
 
 .scheduler-feedback-message:not(:empty) {
@@ -1249,9 +1260,9 @@ body.scheduler-drawer-open {
 }
 
 .scheduler-feedback-message[data-variant="erro"] {
-    color: #b42318;
-    border-color: #fecaca;
-    background: #fff5f5;
+    color: var(--state-danger-text);
+    border-color: var(--state-danger-border);
+    background: var(--state-danger-bg);
 }
 
 .scheduler-feedback-message[data-variant="info"] {
@@ -1274,7 +1285,7 @@ body.scheduler-drawer-open {
 .scheduler-side-drawer {
     position: fixed;
     inset: 0;
-    z-index: 55;
+    z-index: var(--z-sticky);
     pointer-events: none;
 }
 
@@ -1530,11 +1541,6 @@ body.scheduler-drawer-open {
     padding: 0 10px;
 }
 
-.booking-detail {
-    font-size: 13px;
-    color: var(--text-muted);
-}
-
 .booking-theme {
     font-size: 13px;
     color: var(--text-main);
@@ -1726,7 +1732,7 @@ body.scheduler-drawer-open {
 .weekly-chip-cancel-btn {
     min-height: 24px;
     border-radius: var(--radius-sm);
-    border: 1px solid #fecaca;
+    border: 1px solid var(--state-danger-border);
     background: #fff1f2;
     color: #9f1239;
     font-size: 12px;
@@ -1788,7 +1794,7 @@ body.scheduler-drawer-open {
     padding: 8px 10px;
     border: 1px solid var(--line-soft);
     border-radius: 12px;
-    background: rgba(255, 255, 255, 0.96);
+    background: var(--surface-overlay);
     min-width: 0;
 }
 
@@ -2486,7 +2492,7 @@ body.scheduler-drawer-open {
     padding: 12px 14px;
     border: 1px solid var(--line-soft);
     border-radius: 14px;
-    background: rgba(255, 255, 255, 0.96);
+    background: var(--surface-overlay);
 }
 
 .scheduler-booking-details-list dt {
@@ -2645,14 +2651,14 @@ body.scheduler-drawer-open {
 }
 
 .scheduler-danger-solid:hover {
-    background: #991b1b;
-    border-color: #991b1b;
+    background: var(--state-danger-text);
+    border-color: var(--state-danger-text);
 }
 
 .scheduler-confirm-dialog {
     position: fixed;
     inset: 0;
-    z-index: 70;
+    z-index: var(--z-popover);
     display: grid;
     place-items: center;
     padding: 20px;

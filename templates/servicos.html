@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Suíte Escolar - Serviços</title>
+    {% set page_styles = ["css/pages/services-scheduler.css"] %}
     {% include "includes/style_bundle.html" %}
 </head>
 
@@ -21,96 +22,86 @@
         </header>
 
         <section class="services-grid">
-            <article id="cardImpressao" class="service-card" data-modulo="impressao" hidden>
-                <img class="service-img" src="/static/img/impressao.png" alt="impressão">
+            <a id="cardImpressao" class="service-card" data-modulo="impressao" href="/impressao" hidden>
+                <img class="service-img" src="/static/img/impressao.webp" alt="" width="512" height="512" decoding="async">
                 <div class="card-text">
                     <h3>Impressão de atividades</h3>
                     <p>Envie PDF, DOCX, DOC, PNG ou JPEG, configure cópias e acompanhe o consumo da cota.</p>
-                    <button id="btnIrImpressao" class="btn-destaque" type="button">Ir para impressão</button>
                 </div>
-            </article>
+            </a>
 
-            <article id="cardAgendamento" class="service-card" data-modulo="agendamento" hidden>
+            <a id="cardAgendamento" class="service-card" data-modulo="agendamento" href="/agendamento" hidden>
 
-                <img class="service-img" src="/static/img/agendamento.png" alt="agendamento">
+                <img class="service-img" src="/static/img/agendamento.webp" alt="" width="512" height="512" decoding="async">
                 <div class="card-text">
                     <h3>Agendamento de equipamentos</h3>
                     <p>Reserve recursos tecnológicos por data e aula com visão de calendário e disponibilidade.</p>
-                    <button id="btnIrAgendamento" class="btn-destaque" type="button">Ir para agendamento</button>
                 </div>
-            </article>
+            </a>
 
-            <article id="cardRelatorios" class="service-card" data-modulo="relatorios" hidden>
-                <img class="service-img" src="/static/img/sistema.png" alt="relatorios">
+            <a id="cardRelatorios" class="service-card" data-modulo="relatorios" href="/relatorios" hidden>
+                <img class="service-img" src="/static/img/sistema.webp" alt="" width="512" height="512" loading="lazy" decoding="async">
                 <div class="card-text">
-                    <h3>Relatorios gerenciais</h3>
-                    <p>Consulte o panorama de impressoes, uso de recursos tecnologicos e indicadores para apoiar a gestao escolar.</p>
-                    <button id="btnIrRelatorios" class="btn-destaque" type="button">Ir para relatorios</button>
+                    <h3>Relatórios gerenciais</h3>
+                    <p>Consulte o panorama de impressões, uso de recursos tecnológicos e indicadores para apoiar a gestão escolar.</p>
                 </div>
-            </article>
+            </a>
 
-            <article id="cardDownload" class="service-card" data-modulo="download" hidden>
-                <img class="service-img" src="/static/img/download-videos.png" alt="pcpi">
+            <a id="cardDownload" class="service-card" data-modulo="download" href="/download" hidden>
+                <img class="service-img" src="/static/img/download-videos.webp" alt="" width="512" height="512" loading="lazy" decoding="async">
                 <div class="card-text">
                     <h3>Baixar Vídeo ou Música</h3>
-                    <p>Cole o link do youtube para baixar vídeos ou músicas que deseja utilizar em aula.</p>
-                    <button id="btnIrDownload" class="btn-destaque" type="button">Ir para download</button>
+                    <p>Cole o link do YouTube para baixar vídeos ou músicas que deseja utilizar em aula.</p>
                 </div>
-            </article>
+            </a>
 
-            <article id="cardPreconselho" class="service-card" data-modulo="preconselho" hidden>
-                <img class="service-img" src="/static/img/preconselho.png" alt="pre conselho">
+            <a id="cardPreconselho" class="service-card" data-modulo="preconselho" href="/preconselho" hidden>
+                <img class="service-img" src="/static/img/preconselho.webp" alt="" width="512" height="512" loading="lazy" decoding="async">
                 <div class="card-text">
                     <h3>Pré Conselho</h3>
                     <p>Marque estudantes com baixo rendimento, registre os motivos e gere o texto-base para a ata.</p>
-                    <button id="btnIrPreconselho" class="btn-destaque" type="button">Ir para pre-conselho</button>
                 </div>
-            </article>
+            </a>
 
-            <article id="cardGestao" class="service-card" data-modulo="gestao" hidden>
-                <img class="service-img" src="/static/img/sistema.png" alt="gestão">
+            <a id="cardGestao" class="service-card" data-modulo="gestao" href="/admin" hidden>
+                <img class="service-img" src="/static/img/sistema.webp" alt="" width="512" height="512" loading="lazy" decoding="async">
                 <div class="card-text">
                     <h3>Módulos de gestão</h3>
                     <p>Acesse os recursos de coordenação para administrar operação, cadastros e relatórios.</p>
-                    <button id="btnIrGestao" class="btn-destaque" type="button">Ir para gestão</button>
                 </div>
-            </article>
+            </a>
 
-            <article id="cardCoordenacao" class="service-card" data-modulo="coordenacao" hidden>
-                <img class="service-img" src="/static/img/coordenacao.png" alt="coordenação">
+            <a id="cardCoordenacao" class="service-card" data-modulo="coordenacao" href="/coordenacao" hidden>
+                <img class="service-img" src="/static/img/coordenacao.webp" alt="" width="512" height="512" loading="lazy" decoding="async">
                 <div class="card-text">
                     <h3>Ocorrências da coordenação</h3>
                     <p>Registre, acompanhe e consulte ocorrências disciplinares e pedagógicas em um único fluxo.</p>
-                    <button id="btnIrCoordenacao" class="btn-destaque" type="button">Ir para ocorrências</button>
                 </div>
-            </article>
+            </a>
 
-            <article id="cardHorario" class="service-card" data-modulo="horario" hidden>
-                <img class="service-img" src="/static/img/coordenacao.png" alt="horário escolar">
+            <a id="cardHorario" class="service-card" data-modulo="horario" href="/horario-escolar" hidden>
+                <img class="service-img" src="/static/img/coordenacao.webp" alt="" width="512" height="512" loading="lazy" decoding="async">
                 <div class="card-text">
                     <h3>Horário escolar</h3>
                     <p>Organize a grade por turma, visualize o agrupamento por professor e prepare a base para entregas vinculadas ao horário.</p>
-                    <button id="btnIrHorario" class="btn-destaque" type="button">Ir para horário</button>
                 </div>
-            </article>
+            </a>
 
-            <article id="cardApc" class="service-card" data-modulo="apc" hidden>
-                <img class="service-img" src="/static/img/pcpi.png" alt="central de anexos">
+            <a id="cardApc" class="service-card" data-modulo="apc" href="/apc" hidden>
+                <img class="service-img" src="/static/img/pcpi.webp" alt="" width="512" height="512" loading="lazy" decoding="async">
                 <div class="card-text">
                     <h3>Central de Anexos</h3>
                     <p>Crie prazos de entrega, acompanhe quem já enviou e receba documentos como atividades pedagógicas, provas e outros materiais docentes.</p>
-                    <button id="btnIrApc" class="btn-destaque" type="button">Ir para anexos</button>
                 </div>
-            </article>
+            </a>
 
-            <article id="cardPcpi" class="service-card" data-modulo="pcpi" hidden>
-                <img class="service-img" src="/static/img/pcpi.png" alt="pcpi">
+            <a id="cardPcpi" class="service-card" data-modulo="pcpi" href="/pcpi" hidden>
+                <img class="service-img" src="/static/img/pcpi.webp" alt="" width="512" height="512" loading="lazy" decoding="async">
                 <div class="card-text">
                     <h3>Registro PCPI</h3>
                     <p>Importe agendamentos do turno, registre ações manuais e gere o texto administrativo do PCPI.</p>
-                    <button id="btnIrPcpi" class="btn-destaque" type="button">Ir para PCPI</button>
                 </div>
-            </article>
+            </a>
         </section>
     </main>
 
