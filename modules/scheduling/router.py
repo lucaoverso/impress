@@ -59,6 +59,15 @@ def scheduling_calendar_page(request: Request):
     )
 
 
+@router.get("/agendamento/catalogo")
+def scheduling_catalog_page(request: Request):
+    return render_template_response(
+        request,
+        "scheduling/catalog.html",
+        cache_control="no-store",
+    )
+
+
 @router.get("/agendamento/recursos", response_model=list[SchedulingResourceOption])
 def recursos_agendamento(_usuario=Depends(get_usuario_logado)):
     return listar_recursos_ativos()

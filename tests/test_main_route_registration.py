@@ -21,6 +21,7 @@ class MainRouteRegistrationTest(unittest.TestCase):
         self.assertIn(("GET", "/impressao/historico"), registered)
         self.assertIn(("GET", "/agendamento/meus-agendamentos"), registered)
         self.assertIn(("GET", "/agendamento/calendario"), registered)
+        self.assertIn(("GET", "/agendamento/catalogo"), registered)
         self.assertIn(("GET", "/preconselho/consolidacao"), registered)
         self.assertIn(("GET", "/preconselho/reavaliacao"), registered)
         self.assertIn(("GET", "/preconselho/relatorios"), registered)

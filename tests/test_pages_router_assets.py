@@ -140,19 +140,31 @@ class PagesRouterAssetsTest(unittest.TestCase):
             calendario = scheduling_router.scheduling_calendar_page(
                 _criar_request(app, "/agendamento/calendario")
             )
+            catalogo = scheduling_router.scheduling_catalog_page(
+                _criar_request(app, "/agendamento/catalogo")
+            )
 
         html_minhas = minhas.body.decode("utf-8")
         html_calendario = calendario.body.decode("utf-8")
+        html_catalogo = catalogo.body.decode("utf-8")
         self.assertEqual(minhas.headers.get("Cache-Control"), "no-store")
         self.assertEqual(calendario.headers.get("Cache-Control"), "no-store")
+        self.assertEqual(catalogo.headers.get("Cache-Control"), "no-store")
         self.assertIn('id="listaMinhasReservas"', html_minhas)
+        self.assertIn('id="bookingSearch"', html_minhas)
         self.assertIn('href="/agendamento/meus-agendamentos"', html_minhas)
         self.assertIn('id="calendarioGrid"', html_calendario)
+        self.assertIn('id="calendarResourceFilter"', html_calendario)
         self.assertIn('id="listaReservasDia"', html_calendario)
+        self.assertIn('id="catalogGrid"', html_catalogo)
+        self.assertIn('href="/agendamento/catalogo"', html_catalogo)
         self.assertIn("css/pages/scheduling-pages.css?v=build-scheduling-pages-456", html_minhas)
         self.assertIn("js/scheduling/bookings_pages.js?v=build-scheduling-pages-456", html_calendario)
+        self.assertIn("css/pages/scheduling-catalog.css?v=build-scheduling-pages-456", html_catalogo)
+        self.assertIn("js/scheduling/resource_catalog.js?v=build-scheduling-pages-456", html_catalogo)
         self.assertNotIn('class="scheduler-flow-stepper"', html_minhas)
         self.assertNotIn('class="scheduler-flow-stepper"', html_calendario)
+        self.assertNotIn('class="scheduler-flow-stepper"', html_catalogo)
 
     def test_paginas_preconselho_definem_contexto_e_navegacao_proprios(self):
         config, _pages_router = _reload_modulos("build-preconselho-pages-654")

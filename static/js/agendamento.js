@@ -535,6 +535,11 @@ function renderRecursosEtapaInicial() {
         const iconWrap = document.createElement("span");
         iconWrap.className = "scheduler-resource-stage-icon";
         iconWrap.setAttribute("aria-hidden", "true");
+        const imagemCapa = String(recurso.imagem_capa || "").trim();
+        if (imagemCapa) {
+            iconWrap.style.backgroundImage = `url("${imagemCapa.replace(/["\\]/g, "")}")`;
+            iconWrap.classList.add("has-image");
+        }
 
         const icon = document.createElement("i");
         icon.className = `bi ${obterClasseIconeRecurso(recurso)}`;
@@ -548,15 +553,26 @@ function renderRecursosEtapaInicial() {
         titulo.className = "scheduler-resource-stage-title";
         titulo.innerText = textoPadraoDetalheReserva(recurso?.nome, "Recurso sem nome");
 
-       
+        const tipo = document.createElement("span");
+        tipo.className = "scheduler-resource-stage-type";
+        tipo.innerText = textoPadraoDetalheReserva(recurso?.tipo, "Equipamento");
 
         const capacidade = document.createElement("p");
         capacidade.className = "scheduler-resource-stage-capacity";
         capacidade.innerText = obterResumoCapacidadeRecurso(recurso);
 
         copy.appendChild(titulo);
+        copy.appendChild(tipo);
         copy.appendChild(capacidade);
         botao.appendChild(copy);
+
+        const check = document.createElement("span");
+        check.className = "scheduler-resource-stage-check";
+        check.setAttribute("aria-hidden", "true");
+        const checkIcon = document.createElement("i");
+        checkIcon.className = "bi bi-check-lg";
+        check.appendChild(checkIcon);
+        botao.appendChild(check);
 
         botao.addEventListener("click", () => alternarSelecaoRecursoAgendamento(recurso.id));
         container.appendChild(botao);
@@ -583,17 +599,26 @@ function atualizarEtapaPrimariaAgendamento(state = null) {
     const etapaRecursos = el("etapaAgendamentoRecursos");
     const etapaAula = el("schedulerLessonStage");
     const etapaRepeticao = el("etapaAgendamentoRepeticao");
+    const agendaOverview = el("schedulerAgendaOverview");
+    const sideWizard = el("schedulerSideWizard");
+    const wizardAtivo = Number(estado?.currentStep || 1) > 1;
 
     renderRecursosEtapaInicial();
 
     if (etapaRecursos) {
-        etapaRecursos.hidden = estado?.currentStep !== 1;
+        etapaRecursos.hidden = false;
     }
     if (etapaAula) {
         etapaAula.hidden = estado?.currentStep !== 2;
     }
     if (etapaRepeticao) {
         etapaRepeticao.hidden = !estado?.selectionReady || estado?.currentStep !== 3;
+    }
+    if (agendaOverview) {
+        agendaOverview.hidden = wizardAtivo;
+    }
+    if (sideWizard) {
+        sideWizard.hidden = !wizardAtivo;
     }
 }
 
@@ -1293,14 +1318,17 @@ function animarEtapaAgendamento(card) {
 }
 
 function rolarParaInicioAgendamento() {
-    const anchor = el("schedulerWizardStartAnchor");
-    if (!anchor) {
+    const sideWizard = el("schedulerSideWizard");
+    const target = sideWizard && !sideWizard.hidden
+        ? sideWizard
+        : el("etapaAgendamentoRecursos");
+    if (!target) {
         return;
     }
 
     window.requestAnimationFrame(() => {
-        anchor.scrollIntoView({
-            behavior: "smooth",
+        target.scrollIntoView({
+            behavior: "auto",
             block: "start",
             inline: "nearest"
         });
@@ -1433,13 +1461,15 @@ function atualizarResumoWizardAgendamento(state) {
 }
 
 function atualizarStepperAgendamento(state) {
-    [
-        ["stepperAgendamentoRecursos", 1],
-        ["stepperAgendamentoAula", 2],
-        ["stepperAgendamentoDetalhes", 3],
-        ["stepperAgendamentoResumo", 4],
-        ["stepperAgendamentoRepetir", 5]
-    ].forEach(([id, step]) => {
+    const steps = [
+        ["stepperAgendamentoRecursos", 1, "Recurso"],
+        ["stepperAgendamentoAula", 2, "Aula"],
+        ["stepperAgendamentoDetalhes", 3, "Detalhes"],
+        ["stepperAgendamentoResumo", 4, "Resumo"],
+        ["stepperAgendamentoRepetir", 5, "Repetir"]
+    ];
+
+    steps.forEach(([id, step]) => {
         const item = el(id);
         if (!item) {
             return;
@@ -1458,6 +1488,16 @@ function atualizarStepperAgendamento(state) {
             item.removeAttribute("aria-current");
         }
     });
+
+    const currentStep = steps.find(([, step]) => step === state.currentStep) || steps[0];
+    const progress = el("schedulerStepperProgress");
+    const currentLabel = el("schedulerStepperCurrentLabel");
+    if (progress) {
+        progress.innerText = `Etapa ${currentStep[1]} de ${steps.length}`;
+    }
+    if (currentLabel) {
+        currentLabel.innerText = currentStep[2];
+    }
 }
 
 function renderEtapaAtualAgendamento(state) {
@@ -1833,6 +1873,12 @@ async function carregarRecursos() {
     }
 
     recursos = await res.json();
+    const recursoInicialId = Number(new URLSearchParams(window.location.search).get("recurso_id") || 0);
+    if (recursoInicialId > 0 && recursos.some((recurso) => Number(recurso.id) === recursoInicialId)) {
+        recursosSelecionadosAgendamento.clear();
+        recursosSelecionadosAgendamento.add(recursoInicialId);
+        agendamentoWizard.currentStep = 2;
+    }
     sincronizarFiltroRecursoAgendaComSelecao();
     renderRecursosEtapaInicial();
     atualizarOpcoesRecursoPorSelecao();

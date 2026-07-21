@@ -14,12 +14,13 @@
         "css/pages/professor.css",
         "css/pages/services-scheduler.css",
         "css/pages/scheduling-flow.css",
-        "css/pages/scheduling-repeat.css"
+        "css/pages/scheduling-repeat.css",
+        "css/pages/scheduling-stitch.css"
     ] %}
     {% include "includes/style_bundle.html" %}
 </head>
 
-<body>
+<body class="scheduling-module scheduling-new-page">
     {% set navbar_context = "Area docente" %}
     {% set navbar_current = "agendamento" %}
     {% set scheduling_page = "new" %}
@@ -29,42 +30,20 @@
         <input id="dataReserva" type="hidden">
         <p id="agendamentoUsuario" hidden></p>
 
-        <section class="scheduler-workspace">
-            <header class="scheduler-page-header page-header page-header--flush">
-                <div class="scheduler-page-header-copy page-header-main">
-                    <h1 class="page-title">Agendar equipamento</h1>
-                    <p class="scheduler-page-lead page-lead">Escolha as aulas em que o equipamento será utilizado.</p>
-                </div>
-                <a class="print-secondary-btn scheduler-header-calendar-btn button" href="/agendamento/calendario">
-                    <span class="scheduler-calendar-icon" aria-hidden="true"></span>
-                    Agenda geral
-                </a>
-            </header>
+        <header class="scheduler-page-header page-header page-header--flush">
+            <div class="scheduler-page-header-copy page-header-main">
+                <h1 class="page-title">Agendar equipamento</h1>
+                <p class="scheduler-page-lead page-lead">Escolha as aulas em que o equipamento será utilizado.</p>
+            </div>
+            <a class="print-secondary-btn scheduler-header-calendar-btn button" href="/agendamento/calendario">
+                <span class="scheduler-calendar-icon" aria-hidden="true"></span>
+                Agenda geral
+            </a>
+        </header>
 
-            <nav class="scheduler-flow-stepper" aria-label="Etapas do agendamento">
-                <ol>
-                    <li id="stepperAgendamentoRecursos" class="is-current" aria-current="step"><span>1</span><strong>Recurso</strong></li>
-                    <li id="stepperAgendamentoAula"><span>2</span><strong>Aula</strong></li>
-                    <li id="stepperAgendamentoDetalhes"><span>3</span><strong>Detalhes</strong></li>
-                    <li id="stepperAgendamentoResumo"><span>4</span><strong>Resumo</strong></li>
-                    <li id="stepperAgendamentoRepetir"><span>5</span><strong>Repetir</strong></li>
-                </ol>
-            </nav>
-
-            <section id="schedulerSelectionContext" class="scheduler-selection-context" hidden aria-live="polite">
-                <div class="scheduler-context-group">
-                    <span>Recurso selecionado</span>
-                    <div id="schedulerContextResources" class="scheduler-context-resources"></div>
-                </div>
-                <div class="scheduler-context-divider" aria-hidden="true"></div>
-                <div class="scheduler-context-group scheduler-context-lesson">
-                    <span>Aulas selecionadas</span>
-                    <strong id="schedulerContextLesson">Aguardando seleção</strong>
-                </div>
-            </section>
-
-            <section class="scheduler-flow-surface">
-                <div id="schedulerWizardStartAnchor" class="print-scroll-anchor" aria-hidden="true"></div>
+        <div class="scheduler-booking-layout">
+            <section class="scheduler-workspace">
+                <section class="scheduler-flow-surface">
 
                 <article id="etapaAgendamentoRecursos" class="scheduler-flow-step scheduler-resource-stage-card">
                     <header class="scheduler-flow-heading section-header">
@@ -78,6 +57,12 @@
                         aria-label="Recursos disponíveis da escola"></div>
                     <p id="resumoRecursosEtapaInicial" class="scheduler-step-note"></p>
 
+                </article>
+                </section>
+            </section>
+
+            <aside class="scheduler-agenda-column" aria-label="Agenda e etapas do agendamento">
+                <div id="schedulerAgendaOverview" class="scheduler-agenda-overview">
                     <section class="scheduler-day-overview" aria-labelledby="schedulerDayOverviewTitle">
                         <header class="scheduler-day-overview-header">
                             <h3 id="schedulerDayOverviewTitle">Agendamentos do dia</h3>
@@ -99,8 +84,36 @@
                         </summary>
                         <div id="schedulerUpcomingOverviewList" class="scheduler-upcoming-list" aria-live="polite"></div>
                     </details>
-                </article>
+                </div>
 
+                <div id="schedulerSideWizard" class="scheduler-side-wizard" hidden>
+                    <nav class="scheduler-flow-stepper" aria-label="Etapas do agendamento">
+                        <div class="scheduler-stepper-summary" aria-live="polite">
+                            <span id="schedulerStepperProgress">Etapa 2 de 5</span>
+                            <strong id="schedulerStepperCurrentLabel">Aula</strong>
+                        </div>
+                        <ol>
+                            <li id="stepperAgendamentoRecursos"><span>1</span><strong>Recurso</strong></li>
+                            <li id="stepperAgendamentoAula" class="is-current" aria-current="step"><span>2</span><strong>Aula</strong></li>
+                            <li id="stepperAgendamentoDetalhes"><span>3</span><strong>Detalhes</strong></li>
+                            <li id="stepperAgendamentoResumo"><span>4</span><strong>Resumo</strong></li>
+                            <li id="stepperAgendamentoRepetir"><span>5</span><strong>Repetir</strong></li>
+                        </ol>
+                    </nav>
+
+                    <section id="schedulerSelectionContext" class="scheduler-selection-context" hidden aria-live="polite">
+                        <div class="scheduler-context-group">
+                            <span>Recurso selecionado</span>
+                            <div id="schedulerContextResources" class="scheduler-context-resources"></div>
+                        </div>
+                        <div class="scheduler-context-divider" aria-hidden="true"></div>
+                        <div class="scheduler-context-group scheduler-context-lesson">
+                            <span>Aulas selecionadas</span>
+                            <strong id="schedulerContextLesson">Aguardando seleção</strong>
+                        </div>
+                    </section>
+
+                    <section class="scheduler-side-wizard-surface">
             <article id="schedulerLessonStage" class="scheduler-flow-step scheduler-lesson-stage" hidden>
                 <header class="scheduler-flow-heading section-header">
                     <div>
@@ -234,11 +247,13 @@
                     {% include "includes/scheduling_repeat_step.html" %}
                 </div>
 
-                <section class="scheduler-feedback-panel scheduler-feedback-panel-inline" aria-live="polite">
-                    <p id="msgAgendamento" class="scheduler-feedback-message feedback"></p>
-                </section>
-            </section>
-        </section>
+                        <section class="scheduler-feedback-panel scheduler-feedback-panel-inline" aria-live="polite">
+                            <p id="msgAgendamento" class="scheduler-feedback-message feedback"></p>
+                        </section>
+                    </section>
+                </div>
+            </aside>
+        </div>
     </main>
 
     {% include "scheduling/_booking_details.html" %}

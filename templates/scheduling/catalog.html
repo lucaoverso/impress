@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Catálogo de recursos</title>
+    {% set page_styles = ["css/pages/services-scheduler.css", "css/pages/scheduling-pages.css", "css/pages/scheduling-catalog.css", "css/pages/scheduling-stitch.css"] %}
+    {% include "includes/style_bundle.html" %}
+</head>
+<body class="scheduling-module scheduling-bookings-page scheduling-catalog-page" data-scheduling-page="catalog">
+    {% set navbar_context = "Área docente" %}
+    {% set navbar_current = "agendamento" %}
+    {% set scheduling_page = "catalog" %}
+    {% include "includes/app_navbar.html" %}
+    {% include "includes/app_sidebar_config.html" %}
+
+    <main class="scheduling-page-shell page-shell page-shell--medium">
+        <header class="scheduling-page-header page-header page-header--flush">
+            <div class="page-header-main">
+                <h1 class="page-title">Catálogo de recursos</h1>
+                <p class="page-lead">Conheça os equipamentos disponíveis antes de escolher uma data e uma aula.</p>
+            </div>
+            <a class="btn-destaque button button--primary" href="/agendamento"><i class="bi bi-calendar-plus" aria-hidden="true"></i>Novo agendamento</a>
+        </header>
+
+        <div class="catalog-workspace">
+            <section class="catalog-browser" aria-label="Recursos disponíveis">
+                <section class="catalog-toolbar" aria-label="Filtros do catálogo">
+                    <label class="catalog-search" for="catalogSearch">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <input id="catalogSearch" type="search" placeholder="Buscar recurso" autocomplete="off">
+                    </label>
+                    <label class="catalog-type" for="catalogTypeFilter">
+                        <span>Tipo</span>
+                        <select id="catalogTypeFilter"><option value="">Todos os tipos</option></select>
+                    </label>
+                    <label class="catalog-type" for="catalogCapacityFilter">
+                        <span>Capacidade</span>
+                        <select id="catalogCapacityFilter"><option value="">Qualquer</option><option value="1">1 item</option><option value="2">2 ou mais</option></select>
+                    </label>
+                </section>
+
+                <div class="catalog-heading">
+                    <div><h2>Recursos disponíveis</h2><p id="catalogSummary">Carregando catálogo...</p></div>
+                </div>
+                <p id="catalogMessage" class="scheduler-feedback-message feedback" role="status" aria-live="polite"></p>
+                <section id="catalogGrid" class="catalog-grid" aria-live="polite" aria-busy="true"></section>
+            </section>
+
+            <div id="catalogDrawer" class="catalog-drawer" aria-hidden="true" inert>
+                <button class="catalog-drawer-backdrop" type="button" data-close-catalog aria-label="Fechar detalhes"></button>
+                <aside class="catalog-drawer-panel" role="dialog" aria-modal="true" aria-labelledby="catalogDrawerTitle">
+            <button class="catalog-drawer-close" type="button" data-close-catalog aria-label="Fechar"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+            <div id="catalogDrawerCover" class="catalog-drawer-cover"><i class="bi bi-projector" aria-hidden="true"></i></div>
+            <div class="catalog-drawer-content">
+                <span id="catalogDrawerType" class="catalog-resource-type">Recurso</span>
+                <h2 id="catalogDrawerTitle">Detalhes do recurso</h2>
+                <p id="catalogDrawerDescription"></p>
+                <dl class="catalog-resource-facts">
+                    <div><dt>Capacidade cadastrada</dt><dd id="catalogDrawerQuantity">—</dd></div>
+                    <div><dt>Status</dt><dd><span class="catalog-status"><i aria-hidden="true"></i>Disponível para consulta</span></dd></div>
+                </dl>
+                <section class="catalog-rules"><h3>Regras de uso</h3><p><i class="bi bi-info-circle" aria-hidden="true"></i>Retire o recurso na coordenação e devolva-o ao final da aula.</p></section>
+                <p class="catalog-availability-note"><i class="bi bi-info-circle" aria-hidden="true"></i>A disponibilidade exata depende da data e da aula escolhidas.</p>
+                <a id="catalogDrawerSchedule" class="button button--primary catalog-schedule-button" href="/agendamento">Consultar horários e agendar</a>
+            </div>
+                </aside>
+            </div>
+        </div>
+    </main>
+
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/scheduling/resource_catalog.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+</html>

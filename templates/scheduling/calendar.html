@@ -4,10 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calendário geral de agendamentos</title>
-    {% set page_styles = ["css/pages/services-scheduler.css", "css/pages/scheduling-pages.css"] %}
+    {% set page_styles = ["css/pages/services-scheduler.css", "css/pages/scheduling-pages.css", "css/pages/scheduling-controls.css", "css/pages/scheduling-stitch.css"] %}
     {% include "includes/style_bundle.html" %}
 </head>
-<body class="scheduling-bookings-page" data-scheduling-page="calendar">
+<body class="scheduling-module scheduling-bookings-page" data-scheduling-page="calendar">
     {% set navbar_context = "Área docente" %}
     {% set navbar_current = "agendamento" %}
     {% set scheduling_page = "calendar" %}
@@ -19,6 +19,17 @@
             <div class="page-header-main"><h1 class="page-title">Calendário geral</h1><p class="page-lead">Consulte o mês e veja quais recursos já estão reservados em cada data.</p></div>
             <a class="btn-destaque button button--primary" href="/agendamento"><i class="bi bi-plus-lg" aria-hidden="true"></i>Novo agendamento</a>
         </header>
+        <section class="scheduling-calendar-toolbar" aria-label="Filtros do calendário">
+            <label for="calendarResourceFilter">Recurso</label>
+            <select id="calendarResourceFilter">
+                <option value="">Todos os recursos</option>
+            </select>
+            <div class="scheduling-calendar-legend" aria-label="Legenda">
+                <span><i class="is-free" aria-hidden="true"></i>Livre</span>
+                <span><i class="has-bookings" aria-hidden="true"></i>Com reservas</span>
+                <span><i class="is-selected" aria-hidden="true"></i>Selecionado</span>
+            </div>
+        </section>
         <section class="scheduling-calendar-layout">
             <article class="scheduling-page-surface scheduling-calendar-surface" aria-labelledby="mesAtual">
                 <header class="calendar-header">
@@ -31,7 +42,7 @@
             </article>
             <article class="scheduling-page-surface scheduling-day-surface" aria-labelledby="tituloDia">
                 <header class="scheduling-list-header section-header">
-                    <div><h2 id="tituloDia" class="section-title">Reservas do dia</h2><p class="section-copy">Selecione uma data no calendário.</p></div>
+                    <div><h2 id="tituloDia" class="section-title">Reservas do dia</h2><p id="calendarDaySummary" class="section-copy">Selecione uma data no calendário.</p></div>
                     <div class="booking-sort-controls action-group action-group--compact" data-sort-target="dia">
                         <button type="button" class="booking-sort-field button is-active" data-sort-field="aula">Aula</button>
                         <button type="button" class="booking-sort-field button" data-sort-field="turno">Turno</button>

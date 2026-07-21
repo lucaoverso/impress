@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-21T01:03:28.639103+00:00",
+  "generated_at": "2026-07-21T15:25:21.002530+00:00",
   "nodes": {
     "db_schema_migrations": {
       "code_fingerprint": "db3d0eecd167de377737fe00385e448560a09b457ef53d733baf17f9e217f8ea",
@@ -12,7 +12,7 @@
           "q": "Adicionar sexo ao cadastro de estudantes e adequar o artigo no texto consolidado do pré-conselho"
         }
       ],
-      "score": 0.860274167,
+      "score": 0.848459478,
       "source_file": "db/schema_migrations.py",
       "status": "tentative",
       "uses": 1
@@ -28,8 +28,24 @@
           "q": "Faça um impeccable audit para detectar padrões não usados ainda nas telas do nosso sistema"
         }
       ],
-      "score": 0.97011336,
+      "score": 0.95679018,
       "source_file": "DESIGN.md",
+      "status": "tentative",
+      "uses": 1
+    },
+    "modules_scheduling_router_recursos_agendamento": {
+      "code_fingerprint": "9bdf53bb68eca7c6e4460806f4aa30d61da2d8f6d756aa23f6e8d2c2d1235fca",
+      "label": "recursos_agendamento()",
+      "last": "2026-07-21T15:18:04.565685+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-21T15:18:04.565685+00:00",
+          "outcome": "useful",
+          "q": "Mapear as telas e regras do módulo de agendamento para gerar no Stitch versões desktop e mobile de Novo agendamento, Meus agendamentos, Calendário geral e Catálogo de recursos"
+        }
+      ],
+      "score": 0.999883296,
+      "source_file": "modules/scheduling/router.py",
       "status": "tentative",
       "uses": 1
     },
@@ -49,7 +65,7 @@
           "q": "Adicionar sexo ao cadastro de estudantes e adequar o artigo no texto consolidado do pré-conselho"
         }
       ],
-      "score": 1.720678253,
+      "score": 1.697047091,
       "source_file": "static/js/coordenacao/cadastros.js",
       "status": "preferred",
       "uses": 2
@@ -65,7 +81,7 @@
           "q": "Criar edição do sexo dos estudantes diretamente na tabela da turma selecionada"
         }
       ],
-      "score": 0.860404087,
+      "score": 0.848587613,
       "source_file": "static/js/coordenacao/painel.js",
       "status": "tentative",
       "uses": 1
@@ -81,8 +97,24 @@
           "q": "Faça um impeccable audit para detectar padrões não usados ainda nas telas do nosso sistema"
         }
       ],
-      "score": 0.97011336,
+      "score": 0.95679018,
       "source_file": "static/js/core/app_navbar.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "tests_test_scheduling_service_schedulingservicetest": {
+      "code_fingerprint": "95b472ebb23b494fc0c9854b90a8067e4154a406dc00919fc4d6e157152d05c3",
+      "label": "SchedulingServiceTest",
+      "last": "2026-07-21T15:18:04.565685+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-21T15:18:04.565685+00:00",
+          "outcome": "useful",
+          "q": "Mapear as telas e regras do módulo de agendamento para gerar no Stitch versões desktop e mobile de Novo agendamento, Meus agendamentos, Calendário geral e Catálogo de recursos"
+        }
+      ],
+      "score": 0.999883296,
+      "source_file": "tests/test_scheduling_service.py",
       "status": "tentative",
       "uses": 1
     }

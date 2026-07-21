@@ -4,7 +4,7 @@
         {"label": "Novo agendamento", "icon": "bi-calendar-plus", "href": "/agendamento", "active": scheduling_page | default("new") == "new"},
         {"label": "Meus agendamentos", "icon": "bi-calendar-check", "href": "/agendamento/meus-agendamentos", "active": scheduling_page | default("new") == "mine"},
         {"label": "Calendário geral", "icon": "bi-calendar3", "href": "/agendamento/calendario", "active": scheduling_page | default("new") == "calendar"},
-        {"label": "Catálogo de recursos", "icon": "bi-projector", "disabled": true}
+        {"label": "Catálogo de recursos", "icon": "bi-projector", "href": "/agendamento/catalogo", "active": scheduling_page | default("new") == "catalog"}
     ] %}
 {% elif navbar_current == "impressao" %}
     {% set sidebar_title = "Impressão" %}
