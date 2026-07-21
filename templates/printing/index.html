@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Professor - Impressão</title>
     {% set page_styles = [
         "css/printing/tokens.css",
@@ -15,6 +15,12 @@
         "css/printing/typography.css"
     ] %}
     {% include "includes/style_bundle.html" %}
+    <link rel="stylesheet"
+        href="{{ request.url_for('static', path='css/printing/experience.css') }}?v={{ asset_version | default('1') }}">
+    <link rel="stylesheet"
+        href="{{ request.url_for('static', path='css/printing/mobile-controls.css') }}?v={{ asset_version | default('1') }}">
+    <link rel="stylesheet"
+        href="{{ request.url_for('static', path='css/printing/desktop-carousel.css') }}?v={{ asset_version | default('1') }}">
 </head>
 
 <body class="professor-page">
@@ -48,9 +54,6 @@
                     <h1 class="page-title">Solicitar impressão</h1>
                     <p class="page-lead">Envie o arquivo, ajuste a impressão e confira tudo antes de confirmar.</p>
                 </div>
-                <a class="print-secondary-btn button" href="/impressao/historico">
-                    Meus pedidos
-                </a>
             </header>
 
             <nav id="printStepperCard" class="print-flow-stepper" aria-label="Progresso da solicitação de impressão">
@@ -87,6 +90,10 @@
                 <div class="print-context-group print-context-actions">
                     <span>Pré-visualização</span>
                     <button id="btnAbrirPreviewMobile" class="print-context-preview-btn button" type="button" disabled>
+                        <svg viewBox="0 0 24 24" aria-hidden="true">
+                            <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path>
+                            <circle cx="12" cy="12" r="2.75"></circle>
+                        </svg>
                         Ver prévia
                     </button>
                 </div>
@@ -364,11 +371,20 @@
                         </div>
                         <div class="print-preview-header-actions">
                             <button id="btnFecharPreviewMobile" class="print-secondary-btn print-preview-close-btn button"
-                                type="button">
-                                Fechar prévia
+                                type="button" aria-label="Voltar aos ajustes">
+                                <span aria-hidden="true">&#8592;</span>
+                                <span>Voltar</span>
                             </button>
                         </div>
                     </header>
+
+                    <section class="print-preview-document" aria-live="polite">
+                        <div>
+                            <span>Documento</span>
+                            <strong id="printPreviewFile">Aguardando arquivo</strong>
+                        </div>
+                        <p id="printPreviewSummary">A prévia será exibida após o envio do arquivo.</p>
+                    </section>
 
                     <section class="print-preview-pane">
                         <div id="previewContainer"></div>
@@ -379,6 +395,9 @@
                             <span id="contadorFolha"></span>
                             <button id="btnProxima" class="button" type="button" aria-label="Próxima folha">&#8250;</button>
                         </div>
+                        <p class="print-preview-selection-help">Toque em uma página para incluir ou remover da impressão.</p>
+                        <button id="btnVoltarAjustesPreview" class="print-secondary-btn print-preview-back-btn button"
+                            type="button">Voltar aos ajustes</button>
                     </footer>
                 </section>
             </aside>

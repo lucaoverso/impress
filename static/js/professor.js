@@ -926,12 +926,6 @@ function obterDimensoesMiniatura(tamanhoFolha, isMobile) {
     return ajustarDimensoesProporcionais(tamanhoFolha, larguraAlvo, alturaDisponivel);
 }
 
-function obterDimensoesMiniaturaDesktop(tamanhoFolha, larguraTrilha) {
-    const larguraDisponivel = Math.max(58, larguraTrilha - 18);
-    const alturaMaxima = 128;
-    return ajustarDimensoesProporcionais(tamanhoFolha, larguraDisponivel, alturaMaxima);
-}
-
 function obterPaginasPreview() {
     if (!pdfDoc) {
         return [];
@@ -947,10 +941,9 @@ function obterPaginasPreview() {
 function mostrarPreviewVazio(texto = obterMensagemPreviewVazio()) {
     const container = el("previewContainer");
     container.innerHTML = "";
-    const isMobile = isPreviewMobile();
-    container.classList.toggle("is-carousel", isMobile);
-    container.classList.toggle("is-desktop-focus", !isMobile);
-    atualizarModoNavegacaoPreview(isMobile);
+    container.classList.add("is-carousel");
+    container.classList.remove("is-desktop-focus");
+    atualizarModoNavegacaoPreview(true);
 
     const msg = document.createElement("p");
     msg.className = "preview-empty";
@@ -969,10 +962,6 @@ function atualizarDestaqueFolha() {
 function centralizarFolhaAtiva(suave = true) {
     const folhaAtiva = document.querySelector(`#previewContainer .print-sheet-thumb[data-folha="${folhaAtual}"]`);
     if (!folhaAtiva) {
-        return;
-    }
-    const isMobile = isPreviewMobile();
-    if (!isMobile) {
         return;
     }
     const previewPane = document.querySelector(".print-preview-pane");
@@ -1099,7 +1088,9 @@ function aplicarEstadoSelecaoWrapper(wrapper, paginaSelecionada, numeroPagina) {
 
     wrapper.classList.toggle("is-selected", paginaSelecionada);
     wrapper.classList.toggle("is-unchecked", !paginaSelecionada);
-    wrapper.dataset.pageLabel = `Pg ${numeroPagina}`;
+    wrapper.dataset.pageLabel = paginaSelecionada
+        ? `✓ Página ${numeroPagina}`
+        : `Página ${numeroPagina} removida`;
     wrapper.setAttribute("role", "checkbox");
     wrapper.setAttribute("tabindex", "0");
     wrapper.setAttribute("aria-checked", paginaSelecionada ? "true" : "false");
@@ -2274,7 +2265,7 @@ function atualizarContador() {
     if (folhaAtual > total) {
         folhaAtual = total;
     }
-    el("contadorFolha").innerText = `Página ${folhaAtual} de ${total}`;
+    el("contadorFolha").innerText = `Folha ${folhaAtual} de ${total}`;
 }
 
 function irParaFolha(indiceFolha) {
@@ -2291,10 +2282,6 @@ function irParaFolha(indiceFolha) {
     }
 
     folhaAtual = destino;
-    if (!isPreviewMobile()) {
-        renderFolha();
-        return;
-    }
     atualizarContador();
     atualizarDestaqueFolha();
     centralizarFolhaAtiva();
@@ -2312,7 +2299,7 @@ function atualizarFolhaAtualPorScroll() {
     }
 
     const paneRect = pane.getBoundingClientRect();
-    const mobile = isPreviewMobile();
+    const horizontal = el("previewContainer")?.classList.contains("is-carousel");
     let folhaDetectada = folhaAtual;
     let menorDistancia = Number.POSITIVE_INFINITY;
 
@@ -2320,7 +2307,7 @@ function atualizarFolhaAtualPorScroll() {
         const rect = thumb.getBoundingClientRect();
         let distancia = Number.POSITIVE_INFINITY;
 
-        if (mobile) {
+        if (horizontal) {
             if (rect.right < paneRect.left || rect.left > paneRect.right) {
                 return;
             }
@@ -2364,10 +2351,9 @@ function reagirScrollPreview() {
 async function renderFolha() {
     const container = el("previewContainer");
     container.innerHTML = "";
-    const isMobile = isPreviewMobile();
-    container.classList.toggle("is-carousel", isMobile);
-    container.classList.toggle("is-desktop-focus", !isMobile);
-    atualizarModoNavegacaoPreview(isMobile);
+    container.classList.add("is-carousel");
+    container.classList.remove("is-desktop-focus");
+    atualizarModoNavegacaoPreview(true);
 
     if (!pdfDoc) {
         mostrarPreviewVazio(obterMensagemPreviewVazio());
@@ -2396,45 +2382,14 @@ async function renderFolha() {
     }
 
     const folhasParaRenderizar = Array.from({ length: totalFolhas }, (_, i) => i + 1);
-    let tamanhoMiniatura = obterDimensoesMiniatura(tamanhoFolha, isMobile);
-    const previewPane = document.querySelector(".print-preview-pane");
-    let tamanhoPrincipal = tamanhoMiniatura;
-
-    if (!isMobile) {
-        const larguraPane = Math.max(320, previewPane?.clientWidth || 640);
-        const alturaPane = Math.max(320, previewPane?.clientHeight || 640);
-        const larguraTrilha = Math.min(110, Math.max(76, Math.round(larguraPane * 0.14)));
-        tamanhoMiniatura = obterDimensoesMiniaturaDesktop(tamanhoFolha, larguraTrilha);
-        const larguraPrincipalDisponivel = Math.max(260, larguraPane - larguraTrilha - 22);
-        const alturaPrincipalDisponivel = Math.max(340, alturaPane - 8);
-        tamanhoPrincipal = ajustarDimensoesProporcionais(
-            tamanhoFolha,
-            larguraPrincipalDisponivel,
-            alturaPrincipalDisponivel
-        );
-    }
+    const tamanhoMiniatura = obterDimensoesMiniatura(tamanhoFolha, true);
 
     const areaLargura = tamanhoMiniatura.largura - (FOLHA_PADDING * 2) - (FOLHA_GAP * (configLayout.colunas - 1));
     const areaAltura = tamanhoMiniatura.altura - (FOLHA_PADDING * 2) - (FOLHA_GAP * (configLayout.linhas - 1));
     const larguraCelula = areaLargura / configLayout.colunas;
     const alturaCelula = areaAltura / configLayout.linhas;
-    const areaPrincipalLargura = tamanhoPrincipal.largura - (FOLHA_PADDING * 2) - (FOLHA_GAP * (configLayout.colunas - 1));
-    const areaPrincipalAltura = tamanhoPrincipal.altura - (FOLHA_PADDING * 2) - (FOLHA_GAP * (configLayout.linhas - 1));
-    const larguraCelulaPrincipal = areaPrincipalLargura / configLayout.colunas;
-    const alturaCelulaPrincipal = areaPrincipalAltura / configLayout.linhas;
     const dpr = Math.min(window.devicePixelRatio || 1, QUALIDADE_MAX_DPR);
     const token = ++renderTokenAtual;
-    let faixaMiniaturas = null;
-    let painelPrincipal = null;
-
-    if (!isMobile) {
-        painelPrincipal = document.createElement("section");
-        painelPrincipal.classList.add("print-preview-featured");
-        faixaMiniaturas = document.createElement("section");
-        faixaMiniaturas.classList.add("print-preview-thumbs");
-        container.appendChild(painelPrincipal);
-        container.appendChild(faixaMiniaturas);
-    }
 
     for (const indiceFolha of folhasParaRenderizar) {
         if (token !== renderTokenAtual) {
@@ -2472,23 +2427,14 @@ async function renderFolha() {
         folha.style.display = "grid";
         folha.style.gap = `${FOLHA_GAP}px`;
         folha.style.padding = `${FOLHA_PADDING}px`;
-        const tamanhoBase = !isMobile && indiceFolha === folhaAtual ? tamanhoPrincipal : tamanhoMiniatura;
-        const larguraCelulaAtual = !isMobile && indiceFolha === folhaAtual ? larguraCelulaPrincipal : larguraCelula;
-        const alturaCelulaAtual = !isMobile && indiceFolha === folhaAtual ? alturaCelulaPrincipal : alturaCelula;
-        folha.style.width = `${tamanhoBase.largura}px`;
-        folha.style.height = `${tamanhoBase.altura}px`;
+        folha.style.width = `${tamanhoMiniatura.largura}px`;
+        folha.style.height = `${tamanhoMiniatura.altura}px`;
         folha.style.gridTemplateColumns = `repeat(${configLayout.colunas}, minmax(0, 1fr))`;
         folha.style.gridTemplateRows = `repeat(${configLayout.linhas}, minmax(0, 1fr))`;
 
         thumb.appendChild(folha);
 
-        if (isMobile) {
-            container.appendChild(thumb);
-        } else if (indiceFolha === folhaAtual) {
-            painelPrincipal.appendChild(thumb);
-        } else {
-            faixaMiniaturas.appendChild(thumb);
-        }
+        container.appendChild(thumb);
 
         for (const numeroPagina of paginasDaFolha) {
             if (token !== renderTokenAtual) {
@@ -2498,8 +2444,8 @@ async function renderFolha() {
             const page = await pdfDoc.getPage(numeroPagina);
             const viewportBase = page.getViewport({ scale: 1 });
             const escalaAjuste = Math.min(
-                larguraCelulaAtual / viewportBase.width,
-                alturaCelulaAtual / viewportBase.height
+                larguraCelula / viewportBase.width,
+                alturaCelula / viewportBase.height
             );
             const escalaRender = escalaAjuste * dpr;
             const viewport = page.getViewport({ scale: escalaRender });
@@ -2555,9 +2501,7 @@ async function renderFolha() {
 
     atualizarContador();
     atualizarDestaqueFolha();
-    if (isMobile) {
-        centralizarFolhaAtiva(false);
-    }
+    centralizarFolhaAtiva(false);
 }
 
 function proximaFolha() {
@@ -3075,6 +3019,7 @@ function sincronizarEstadoAcaoEnvio(mensagem = "") {
 function atualizarEstadoFluxoImpressao() {
     const resumoImpressao = calcularResumoImpressao();
     atualizarResumoImpressaoPainel(resumoImpressao);
+    atualizarResumoPreviewImpressao(resumoImpressao);
     sincronizarEstadoAcaoEnvio(envioEmAndamento ? "Enviando..." : "");
     const btnAbrirPreviewMobile = el("btnAbrirPreviewMobile");
     if (btnAbrirPreviewMobile) {
@@ -3110,6 +3055,27 @@ function atualizarEstadoFluxoImpressao() {
             }
             : undefined,
     });
+}
+
+function atualizarResumoPreviewImpressao(resumoImpressao) {
+    const arquivo = el("printPreviewFile");
+    const resumo = el("printPreviewSummary");
+    if (!arquivo || !resumo) {
+        return;
+    }
+
+    arquivo.innerText = obterArquivoSelecionado()?.name || "Aguardando arquivo";
+    if (!resumoImpressao) {
+        resumo.innerText = "A prévia será exibida após o envio do arquivo.";
+        return;
+    }
+
+    const { paginasSelecionadas, copias, consumo } = resumoImpressao;
+    resumo.innerText = [
+        `${paginasSelecionadas} ${paginasSelecionadas === 1 ? "página" : "páginas"}`,
+        `${copias} ${copias === 1 ? "cópia" : "cópias"}`,
+        `${consumo} ${consumo === 1 ? "folha" : "folhas"}`,
+    ].join(" · ");
 }
 
 function abrirPainelHistorico() {
@@ -3289,6 +3255,7 @@ registrarEventos = function registrarEventosRefatorado() {
 
     el("btnAbrirPreviewMobile")?.addEventListener("click", abrirPreviewMobile);
     el("btnFecharPreviewMobile")?.addEventListener("click", fecharPreviewMobile);
+    el("btnVoltarAjustesPreview")?.addEventListener("click", fecharPreviewMobile);
     el("btnImprimirOutroArquivo")?.addEventListener("click", () => {
         imprimirOutroArquivo().catch((err) => {
             el("msg").innerText = err?.message || "Falha ao reiniciar o fluxo de impressao.";

@@ -1,0 +1,60 @@
+/* Mobile-only controls for the professor printing workflow. */
+@media (max-width: 980px) {
+    html[data-printing-mobile-preview="true"] body.professor-page:not(.print-preview-modal-open) .print-wizard-shell {
+        padding-bottom: calc(96px + env(safe-area-inset-bottom));
+    }
+
+    .professor-page .print-selection-context {
+        position: fixed;
+        inset: auto 0 0;
+        z-index: var(--z-sticky);
+        display: block;
+        padding: var(--space-3) max(var(--space-4), env(safe-area-inset-right))
+            max(var(--space-3), env(safe-area-inset-bottom)) max(var(--space-4), env(safe-area-inset-left));
+        border-top: 1px solid var(--print-color-border);
+        background: var(--print-color-surface);
+        box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
+    }
+
+    .professor-page .print-selection-context > :not(.print-context-actions) {
+        display: none;
+    }
+
+    .professor-page .print-context-actions {
+        display: block;
+        width: 100%;
+    }
+
+    .professor-page .print-context-actions > span {
+        display: none;
+    }
+
+    .professor-page .print-context-preview-btn {
+        width: 100%;
+        min-height: 48px;
+        border-color: var(--print-color-border-strong);
+        background: var(--print-color-surface);
+        color: var(--print-color-primary-hover);
+    }
+
+    .professor-page .print-context-preview-btn:hover:not(:disabled) {
+        border-color: var(--print-color-primary);
+        background: var(--print-color-primary-light);
+    }
+
+    .professor-page .print-context-preview-btn svg {
+        width: 20px;
+        height: 20px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+    }
+
+    body.professor-page.print-preview-modal-open .print-selection-context {
+        display: none !important;
+    }
+
+    .professor-page #etapaConfiguracoes .print-step-actions {
+        order: 2;
+    }
+}

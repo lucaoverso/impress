@@ -70,6 +70,32 @@ class P3UiPolishContractTest(unittest.TestCase):
         for template in consumers:
             self.assertIn('navbar_context = "Painel de gestão"', template.read_text(encoding="utf-8"))
 
+    def test_preview_de_impressao_se_adapta_a_desktop_e_mobile(self):
+        template = (ROOT / "templates" / "printing" / "index.html").read_text(encoding="utf-8")
+        css = (ROOT / "static" / "css" / "printing" / "experience.css").read_text(encoding="utf-8")
+        mobile_css = (ROOT / "static" / "css" / "printing" / "mobile-controls.css").read_text(encoding="utf-8")
+        desktop_css = (ROOT / "static" / "css" / "printing" / "desktop-carousel.css").read_text(encoding="utf-8")
+        script = (ROOT / "static" / "js" / "professor.js").read_text(encoding="utf-8")
+
+        self.assertIn("viewport-fit=cover", template)
+        self.assertNotIn('href="/impressao/historico">\n                    Meus pedidos', template)
+        self.assertIn('id="printPreviewSummary"', template)
+        self.assertIn('id="btnVoltarAjustesPreview"', template)
+        self.assertIn("grid-template-columns: minmax(390px, 0.9fr) minmax(500px, 1.1fr);", css)
+        self.assertIn("height: 100dvh;", css)
+        self.assertIn("env(safe-area-inset-bottom)", css)
+        self.assertIn("css/printing/mobile-controls.css", template)
+        self.assertIn("css/printing/desktop-carousel.css", template)
+        self.assertIn("position: fixed;", mobile_css)
+        self.assertIn(".professor-page .print-context-preview-btn svg", mobile_css)
+        self.assertIn(".professor-page #etapaConfiguracoes .print-step-actions", mobile_css)
+        self.assertIn("order: 2;", mobile_css)
+        self.assertIn(".professor-page .print-selection-context", desktop_css)
+        self.assertIn("scroll-snap-type: x mandatory;", desktop_css)
+        self.assertIn('container.classList.add("is-carousel");', script)
+        self.assertNotIn("obterDimensoesMiniaturaDesktop", script)
+        self.assertIn('el("btnVoltarAjustesPreview")?.addEventListener("click", fecharPreviewMobile);', script)
+
 
 if __name__ == "__main__":
     unittest.main()

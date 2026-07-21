@@ -15,6 +15,7 @@ venv/
 
 # Environment variables
 .env
+stich_api_key.md
 
 # SQLite
 *.db
