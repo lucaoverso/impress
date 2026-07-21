@@ -28,7 +28,7 @@ import routers.config as config_module
 import modules.printing.router as impressao_router_module
 import routers.relatorios_router as relatorios_router_module
 import routers.download_router as download_router_module
-import routers.horario_escolar_router as horario_escolar_router_module
+import modules.scheduling.school_schedule_router as horario_escolar_router_module
 import routers.apc_router as apc_router_module
 import routers.pages_router as pages_router_module
 import routers.professores_common as professores_common_module

@@ -13,7 +13,15 @@ class ContinuousSurfacesContractTests(unittest.TestCase):
         self.assertIn("--bg-main: #ffffff", base)
         self.assertIn("--card-bg: var(--bg-main)", base)
         self.assertIn("background: var(--bg-main)", base)
-        self.assertIn("background: var(--surface-2, #eef3f8)", sidebar)
+        self.assertIn("--surface-sidebar: var(--surface-2)", base)
+        self.assertIn("background: var(--surface-sidebar)", sidebar)
+
+    def test_sidebar_colors_come_only_from_design_tokens(self):
+        sidebar = (ROOT / "static/css/components/app-sidebar.css").read_text(encoding="utf-8")
+
+        self.assertNotRegex(sidebar, r"#[0-9a-fA-F]{3,8}|rgba?\(")
+        self.assertIn("color: var(--text-disabled)", sidebar)
+        self.assertIn("box-shadow: var(--shadow-floating)", sidebar)
 
     def test_continuous_surface_rules_load_after_page_styles(self):
         bundle = (ROOT / "templates/includes/style_bundle.html").read_text(encoding="utf-8")

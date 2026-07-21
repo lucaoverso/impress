@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-14T12:50:16.836452+00:00",
+  "generated_at": "2026-07-21T01:03:28.639103+00:00",
   "nodes": {
     "db_schema_migrations": {
       "code_fingerprint": "db3d0eecd167de377737fe00385e448560a09b457ef53d733baf17f9e217f8ea",
@@ -12,24 +12,77 @@
           "q": "Adicionar sexo ao cadastro de estudantes e adequar o artigo no texto consolidado do pré-conselho"
         }
       ],
-      "score": 0.999889496,
+      "score": 0.860274167,
       "source_file": "db/schema_migrations.py",
       "status": "tentative",
       "uses": 1
     },
-    "static_js_coordenacao_cadastros": {
-      "code_fingerprint": "65d1053fb9c66aaec4a0964e2730bb01cec78b1a929f1da854dac9d8dd721d7b",
-      "label": "cadastros.js",
-      "last": "2026-07-14T12:43:23.586269+00:00",
+    "design_school_suite_design_system": {
+      "code_fingerprint": "3c8f09ff9e25a72145ef554299557c7b3521ec66da45ed4931473f18cfd4dd44",
+      "label": "School Suite Design System",
+      "last": "2026-07-19T17:32:24.474435+00:00",
       "provenance": [
+        {
+          "date": "2026-07-19T17:32:24.474435+00:00",
+          "outcome": "useful",
+          "q": "Faça um impeccable audit para detectar padrões não usados ainda nas telas do nosso sistema"
+        }
+      ],
+      "score": 0.97011336,
+      "source_file": "DESIGN.md",
+      "status": "tentative",
+      "uses": 1
+    },
+    "static_js_coordenacao_cadastros": {
+      "code_fingerprint": "7214346a66062455a50e78ef41f58752805990a944b4eade465502fd17b3f193",
+      "label": "cadastros.js",
+      "last": "2026-07-14T12:52:48.282174+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-14T12:52:48.282174+00:00",
+          "outcome": "useful",
+          "q": "Criar edição do sexo dos estudantes diretamente na tabela da turma selecionada"
+        },
         {
           "date": "2026-07-14T12:43:23.586269+00:00",
           "outcome": "useful",
           "q": "Adicionar sexo ao cadastro de estudantes e adequar o artigo no texto consolidado do pré-conselho"
         }
       ],
-      "score": 0.999889496,
+      "score": 1.720678253,
       "source_file": "static/js/coordenacao/cadastros.js",
+      "status": "preferred",
+      "uses": 2
+    },
+    "static_js_coordenacao_painel": {
+      "code_fingerprint": "2358f88ee56b43b8c3681c928e89e0f06ba72bf7958ddab0d6946d04cd157980",
+      "label": "painel.js",
+      "last": "2026-07-14T12:52:48.282174+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-14T12:52:48.282174+00:00",
+          "outcome": "useful",
+          "q": "Criar edição do sexo dos estudantes diretamente na tabela da turma selecionada"
+        }
+      ],
+      "score": 0.860404087,
+      "source_file": "static/js/coordenacao/painel.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "static_js_core_app_navbar": {
+      "code_fingerprint": "6decc073ff0bb3212a9e6de0a0d2e8a11bfde1530e9261b03b34ba6bd2a6c1b5",
+      "label": "app_navbar.js",
+      "last": "2026-07-19T17:32:24.474435+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-19T17:32:24.474435+00:00",
+          "outcome": "useful",
+          "q": "Faça um impeccable audit para detectar padrões não usados ainda nas telas do nosso sistema"
+        }
+      ],
+      "score": 0.97011336,
+      "source_file": "static/js/core/app_navbar.js",
       "status": "tentative",
       "uses": 1
     }

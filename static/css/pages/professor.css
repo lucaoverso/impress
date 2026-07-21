@@ -4,7 +4,7 @@
     --print-color-primary: var(--brand);
     --print-color-primary-hover: var(--brand-strong);
     --print-color-primary-light: var(--brand-soft);
-    --print-color-background: var(--surface-2);
+    --print-color-background: var(--bg-main);
     --print-color-surface: var(--surface-0);
     --print-color-surface-muted: var(--surface-1);
     --print-color-border: var(--line);
@@ -49,7 +49,7 @@
     min-height: 100svh;
     overflow-x: hidden;
     color: var(--print-color-text);
-    background: var(--surface-2);
+    background: var(--print-color-background);
 }
 
 .print-app-topbar,

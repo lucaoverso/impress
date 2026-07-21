@@ -92,6 +92,26 @@ class DesignSystemContractTests(unittest.TestCase):
             with self.subTest(class_name=class_name):
                 self.assertIn(f"`.{class_name}`", documentation)
 
+    def test_printing_pages_and_dynamic_items_use_shared_classes(self):
+        flow_template = (ROOT / "templates/printing/index.html").read_text(encoding="utf-8")
+        history_template = (ROOT / "templates/printing/history.html").read_text(encoding="utf-8")
+        flow_script = (ROOT / "static/js/professor.js").read_text(encoding="utf-8")
+        history_script = (ROOT / "static/js/printing/history.js").read_text(encoding="utf-8")
+
+        for template in (flow_template, history_template):
+            self.assertIn("page-shell", template)
+            self.assertIn("page-header", template)
+            self.assertIn("page-title", template)
+            self.assertIn("button", template)
+        self.assertIn('"css/printing/history.css"', history_template)
+        self.assertNotIn('<link rel="stylesheet"', history_template)
+        self.assertIn('print-job-item list-item', flow_script)
+        self.assertIn('print-history-item list-item', history_script)
+        self.assertIn('print-history-empty empty-state', history_script)
+
+        for template in (flow_template, history_template):
+            self.assertIn('"css/printing/typography.css"', template)
+
 
 if __name__ == "__main__":
     unittest.main()

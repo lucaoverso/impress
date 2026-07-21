@@ -63,6 +63,13 @@ class P2UiContractTest(unittest.TestCase):
         self.assertEqual(len(re.findall(r'<a id="card\w+" class="service-card"[^>]+href="/[^"]+"', template)), 10)
         self.assertNotIn('<article id="card', template)
 
+    def test_cards_da_central_usam_grade_compacta_sem_cortar_imagens(self):
+        css = (ROOT / "static" / "css" / "pages" / "services-scheduler.css").read_text(encoding="utf-8")
+
+        self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", css)
+        self.assertIn(".service-card .service-img", css)
+        self.assertIn("object-fit: contain;", css)
+
     def test_tokens_semanticos_tem_uma_unica_vocabulario(self):
         css = "\n".join(path.read_text(encoding="utf-8") for path in (ROOT / "static" / "css").rglob("*.css"))
 

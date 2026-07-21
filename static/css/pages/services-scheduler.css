@@ -1,7 +1,7 @@
 /* Services hub and equipment scheduling */
 
 .services-page {
-    max-width: 1100px;
+    max-width: 1200px;
     width: 100%;
     margin: 0 auto;
     padding: 28px 20px 36px;
@@ -25,7 +25,7 @@
 
 .services-grid {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 16px;
 }
 
@@ -34,12 +34,11 @@
     border: 1px solid var(--line-soft);
     border-radius: 18px;
     box-shadow: var(--shadow-card);
-    padding: 20px;
-    display: flex;
-    flex-direction: row;
+    padding: 16px;
+    display: grid;
+    grid-template-columns: 88px minmax(0, 1fr);
     align-items: center;
-    justify-content: center;
-    gap: 12px;
+    gap: 16px;
     cursor: pointer;
     color: inherit;
     text-decoration: none;
@@ -69,20 +68,23 @@
     display: none;
 }
 
-.service-card img {
-    width: 40%;
-    margin: auto;
-    border-radius: 12px;
-    object-fit: cover;
-    text-align: center;
+.service-card .service-img {
+    width: 88px;
+    height: 88px;
+    object-fit: contain;
 }
 
 .service-card h3 {
-    font-size: 22px;
+    margin: 0;
+    font-size: 18px;
+    line-height: 1.2;
 }
 
 .service-card p {
+    margin: 0;
     color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.45;
 }
 
 .services-actions {
@@ -1971,7 +1973,7 @@ body.scheduler-drawer-open {
 
 @media (max-width: 980px) {
     .services-grid {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .scheduler-page {
@@ -2100,6 +2102,23 @@ body.scheduler-drawer-open {
 
     .scheduler-wizard-shell .print-step-actions button {
         width: 100%;
+    }
+}
+
+@media (max-width: 640px) {
+    .services-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .service-card {
+        grid-template-columns: 72px minmax(0, 1fr);
+        gap: 12px;
+        padding: 14px;
+    }
+
+    .service-card .service-img {
+        width: 72px;
+        height: 72px;
     }
 }
 

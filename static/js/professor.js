@@ -304,7 +304,7 @@ function renderFilaVazia(texto) {
     obterListasJobsImpressao().forEach((ul) => {
         ul.innerHTML = "";
         const li = document.createElement("li");
-        li.classList.add("print-job-empty");
+        li.classList.add("print-job-empty", "empty-state");
         li.innerText = texto;
         ul.appendChild(li);
     });
@@ -1918,7 +1918,7 @@ async function carregarJobHistoricoNoPreview(job) {
 
 function preencherItemJob(li, job, { allowReuse = true } = {}) {
     li.replaceChildren();
-    li.className = "print-job-item";
+    li.className = "print-job-item list-item";
     li.dataset.jobId = String(job?.id || "");
     li.classList.toggle("is-selected-source", allowReuse && jobHistoricoEstaSelecionado(job));
     li.removeAttribute("role");
@@ -1941,7 +1941,7 @@ function preencherItemJob(li, job, { allowReuse = true } = {}) {
     topo.appendChild(status);
 
     const meta = document.createElement("p");
-    meta.classList.add("print-job-meta");
+    meta.classList.add("print-job-meta", "item-meta");
     const copias = Number(job?.copias || 1);
     const paginasTotais = Number(job?.paginas_totais || 0);
     meta.innerText = `#${job?.id || "-"} • ${copias} cópia(s) • ${paginasTotais} página(s)`;
@@ -2014,12 +2014,12 @@ function preencherItemJob(li, job, { allowReuse = true } = {}) {
 
     if (podeReutilizar || jobPodeSerCancelado(job)) {
         const acoes = document.createElement("div");
-        acoes.classList.add("print-job-actions");
+        acoes.classList.add("print-job-actions", "action-group", "action-group--compact");
 
         if (podeReutilizar) {
             const btnReutilizar = document.createElement("button");
             btnReutilizar.type = "button";
-            btnReutilizar.classList.add("print-job-reuse-btn");
+            btnReutilizar.classList.add("print-job-reuse-btn", "button");
             btnReutilizar.innerText = jobHistoricoEstaSelecionado(job) ? "No preview" : "Usar novamente";
             btnReutilizar.addEventListener("click", (event) => {
                 event.stopPropagation();
@@ -2033,7 +2033,7 @@ function preencherItemJob(li, job, { allowReuse = true } = {}) {
         if (jobPodeSerCancelado(job)) {
             const btnCancelar = document.createElement("button");
             btnCancelar.type = "button";
-            btnCancelar.classList.add("print-job-cancel-btn");
+            btnCancelar.classList.add("print-job-cancel-btn", "button", "button--danger");
             btnCancelar.innerText = "Cancelar";
             btnCancelar.addEventListener("click", (event) => {
                 event.stopPropagation();

@@ -266,6 +266,7 @@ Módulos já migrados para esta fundação:
 
 - Recursos administrativos;
 - Agendamento;
+- Impressão;
 - Relatórios.
 
 Os demais módulos ainda podem conter classes locais equivalentes. Esta documentação não declara essas classes como parte da API compartilhada.

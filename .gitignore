@@ -25,7 +25,7 @@ impressao.db
 data/
 spool/
 operacional/
-graphify-out/
+/graphify-out/
 
 # IDE
 .vscode/

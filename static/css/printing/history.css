@@ -1,6 +1,6 @@
 .print-history-page {
     min-height: 100vh;
-    background: var(--print-color-page, #f2efe9);
+    background: var(--print-color-background);
 }
 
 .print-history-shell {
