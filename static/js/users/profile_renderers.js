@@ -110,6 +110,19 @@
         );
     }
 
+    function scheduleTime(slot) {
+        return [slot.horario_inicio, slot.horario_fim].filter(Boolean).join("–");
+    }
+
+    function scheduleTimeCell(slot, className) {
+        const time = node("div", className);
+        const number = Number(slot.aula_numero);
+        time.appendChild(node("strong", "", number > 0 ? `${number}ª aula` : (slot.nome || "Aula")));
+        const range = scheduleTime(slot);
+        if (range) time.appendChild(node("span", "", range));
+        return time;
+    }
+
     function classSlot(item, current) {
         const slot = node("div", "profile-class-slot");
         if (item.tem_estudante_apoio) slot.classList.add("has-support");
@@ -132,7 +145,7 @@
     function renderScheduleTable(schedule) {
         const head = el("profileScheduleHead");
         const body = el("profileScheduleBody");
-        head.replaceChildren(node("th", "", "Horário"));
+        head.replaceChildren(node("th", "", "Aula / horário"));
         head.firstChild.scope = "col";
         schedule.dias_semana.forEach((day) => {
             const th = node("th", "", day.nome);
@@ -140,10 +153,12 @@
             head.appendChild(th);
         });
         body.replaceChildren();
-        schedule.faixas.forEach((slot) => {
+        schedule.faixas.filter((slot) =>
+            schedule.dias_semana.some((day) => itemFor(schedule, day.id, slot))
+        ).forEach((slot) => {
             const row = node("tr");
-            const time = node("td", "", slot.horario_inicio || slot.nome);
-            if (slot.horario_inicio && slot.horario_fim) time.title = `${slot.horario_inicio}–${slot.horario_fim}`;
+            const time = node("td");
+            time.appendChild(scheduleTimeCell(slot, "profile-schedule-time"));
             row.appendChild(time);
             schedule.dias_semana.forEach((day) => {
                 const cell = node("td");
@@ -164,7 +179,7 @@
             const lesson = node("article", "profile-mobile-lesson");
             if (item.tem_estudante_apoio) lesson.classList.add("has-support");
             if (isCurrent(dayId, slot)) lesson.classList.add("is-current");
-            const time = node("strong", "", slot.horario_inicio || slot.nome);
+            const time = scheduleTimeCell(slot, "profile-mobile-time");
             const detail = classSlot(item, isCurrent(dayId, slot));
             lesson.append(time, detail);
             target.appendChild(lesson);

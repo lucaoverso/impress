@@ -39,10 +39,15 @@ class UserProfileUiContractTests(unittest.TestCase):
 
     def test_profile_has_mobile_schedule_and_reduced_motion_rules(self):
         css = (ROOT / "static/css/pages/user-profile.css").read_text()
+        renderer = (ROOT / "static/js/users/profile_renderers.js").read_text()
 
         self.assertIn("@media (max-width: 720px)", css)
         self.assertIn(".profile-schedule-mobile:not([hidden])", css)
         self.assertIn("@media (prefers-reduced-motion: reduce)", css)
+        self.assertIn('"Aula / horário"', renderer)
+        self.assertIn("schedule.dias_semana.some", renderer)
+        self.assertIn("slot.horario_fim", renderer)
+        self.assertIn('`${number}ª aula`', renderer)
 
 
 if __name__ == "__main__":

@@ -157,10 +157,14 @@
 .profile-schedule-table td { height: 76px; padding: 10px 12px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); vertical-align: top; }
 .profile-schedule-table th { height: 48px; background: var(--surface-2); color: var(--text-muted); }
 .profile-schedule-table th:first-child,
-.profile-schedule-table td:first-child { width: 120px; text-align: center; font-variant-numeric: tabular-nums; }
+.profile-schedule-table td:first-child { width: 140px; text-align: center; font-variant-numeric: tabular-nums; }
 .profile-schedule-table tr:last-child td { border-bottom: 0; }
 .profile-schedule-table th:last-child,
 .profile-schedule-table td:last-child { border-right: 0; }
+.profile-schedule-time,
+.profile-mobile-time { display: grid; gap: 2px; }
+.profile-schedule-time span,
+.profile-mobile-time span { color: var(--text-muted); font-size: .8125rem; white-space: nowrap; }
 .profile-class-slot { position: relative; display: grid; gap: 2px; height: 100%; padding: 2px; }
 .profile-class-slot strong { color: var(--brand-strong); }
 .profile-class-slot span { color: var(--text-muted); font-size: .8125rem; }
@@ -205,7 +209,7 @@
     .profile-activity-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .profile-activity-panel:last-child { grid-column: 1 / -1; }
     .profile-schedule-table th:first-child,
-    .profile-schedule-table td:first-child { width: 94px; }
+    .profile-schedule-table td:first-child { width: 110px; }
 }
 
 @media (max-width: 800px) {
@@ -215,7 +219,7 @@
     .profile-day-tab { flex: 0 0 auto; min-width: 92px; }
     .profile-day-tab[aria-selected="true"] { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-strong); }
     .profile-day-lessons { display: grid; gap: 8px; }
-    .profile-mobile-lesson { display: grid; grid-template-columns: 72px 1fr; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-0); }
+    .profile-mobile-lesson { display: grid; grid-template-columns: 92px 1fr; gap: 12px; padding: 14px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-0); }
     .profile-mobile-lesson.is-current { border: 2px solid var(--brand); background: var(--brand-soft); }
     .profile-mobile-lesson.has-support { background: #fff5d8; }
 }
