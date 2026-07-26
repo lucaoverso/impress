@@ -39,9 +39,11 @@
             {% endfor %}
         </div>
         {% endif %}
-        <button id="appNavbarProfileToggle" class="app-navbar-avatar" type="button" aria-expanded="false"
+        <button id="appNavbarProfileToggle" class="app-navbar-user-toggle" type="button" aria-expanded="false"
             aria-controls="appNavbarProfileMenu" aria-label="Abrir menu do perfil">
-            <span id="appNavbarAvatarInitials" aria-hidden="true">...</span>
+            <span id="appNavbarAvatarInitials" class="app-navbar-avatar" aria-hidden="true">...</span>
+            <span id="appNavbarToggleName" class="app-navbar-toggle-name">Usuário</span>
+            <i class="bi bi-chevron-down" aria-hidden="true"></i>
         </button>
 
         <section id="appNavbarProfileMenu" class="app-navbar-profile-menu" aria-label="Perfil do usuário" hidden>
@@ -59,10 +61,10 @@
                 <small id="appNavbarUsageDetail">Consultando sua cota de impressão.</small>
             </div>
 
-            <button id="appNavbarEditProfile" class="app-navbar-profile-action" type="button">
-                <i class="bi bi-person-gear" aria-hidden="true"></i>
-                Alterar dados do perfil
-            </button>
+            <a id="appNavbarProfileLink" class="app-navbar-profile-action" href="/meu-perfil">
+                <i class="bi bi-person" aria-hidden="true"></i>
+                Meu perfil
+            </a>
             <button id="btnSair" class="app-navbar-profile-action is-danger" type="button">
                 <i class="bi bi-box-arrow-right" aria-hidden="true"></i>
                 Sair
@@ -70,31 +72,3 @@
         </section>
     </div>
 </header>
-
-<dialog id="appNavbarProfileDialog" class="app-profile-dialog" aria-labelledby="appProfileDialogTitle">
-    <form id="appNavbarProfileForm" method="dialog">
-        <header>
-            <div>
-                <h2 id="appProfileDialogTitle">Alterar perfil</h2>
-                <p>Atualize seus dados de acesso ao sistema.</p>
-            </div>
-            <button class="app-profile-dialog-close" type="button" data-profile-dialog-close
-                aria-label="Fechar edição do perfil"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
-        </header>
-        <div class="app-profile-dialog-fields">
-            <label for="appProfileName">Nome</label>
-            <input id="appProfileName" name="nome" maxlength="120" required autocomplete="name">
-            <label for="appProfileEmail">E-mail</label>
-            <input id="appProfileEmail" name="email" type="email" maxlength="254" required autocomplete="email">
-            <label for="appProfilePassword">Nova senha <span>(opcional)</span></label>
-            <input id="appProfilePassword" name="nova_senha" type="password" minlength="8"
-                autocomplete="new-password" aria-describedby="appProfilePasswordHint">
-            <small id="appProfilePasswordHint">Use maiúscula, minúscula, número e caractere especial.</small>
-        </div>
-        <p id="appProfileFeedback" class="app-profile-feedback" role="status" hidden></p>
-        <footer>
-            <button class="app-profile-dialog-cancel" type="button" data-profile-dialog-close>Cancelar</button>
-            <button id="appProfileSubmit" class="app-profile-dialog-submit" type="submit">Salvar alterações</button>
-        </footer>
-    </form>
-</dialog>

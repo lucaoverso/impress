@@ -17,6 +17,7 @@
         ["relatorios", "/relatorios", "Relatórios", "Consulte indicadores e informações da escola"],
         ["coordenacao", "/coordenacao", "Coordenação", "Acompanhe ocorrências e atendimentos"],
         ["gestao", "/admin", "Painel de gestão", "Administre usuários, recursos e impressão"],
+        ["servicos", "/meu-perfil", "Meu perfil", "Consulte e atualize seus dados pessoais"],
         ["servicos", "/servicos", "Todos os serviços", "Volte à central de serviços do sistema"],
     ].map(([module, href, label, description]) => ({ module, href, label, description }));
 
@@ -129,7 +130,7 @@
             return;
         }
         try {
-            const quota = await window.AppApi.fetchJson("/impressao/minha-cota", {
+            const quota = await window.AppApi.fetchJson("/minha-cota", {
                 headers: window.AppAuth.criarHeadersAuth(),
             });
             value.textContent = `${quota.restante ?? 0} páginas disponíveis`;
@@ -145,56 +146,12 @@
         const name = userName(user);
         const avatar = initials(name);
         if (el("appNavbarUserName")) el("appNavbarUserName").textContent = name;
+        if (el("appNavbarToggleName")) el("appNavbarToggleName").textContent = name;
         if (el("appNavbarUserMeta")) el("appNavbarUserMeta").textContent = user ? `${user.email || "Sem e-mail"} • ${userRole(user)}` : "Sessão não identificada";
         if (el("appNavbarAvatarInitials")) el("appNavbarAvatarInitials").textContent = avatar;
         if (el("appNavbarProfileInitials")) el("appNavbarProfileInitials").textContent = avatar;
         el("appNavbarProfileToggle")?.setAttribute("aria-label", `Abrir perfil de ${name}`);
         loadUsage();
-    }
-
-    function openProfileDialog() {
-        const dialog = el("appNavbarProfileDialog");
-        if (!dialog || !state.user) return;
-        el("appProfileName").value = state.user.nome || "";
-        el("appProfileEmail").value = state.user.email || "";
-        el("appProfilePassword").value = "";
-        el("appProfileFeedback").hidden = true;
-        setProfileOpen(false);
-        dialog.showModal();
-    }
-
-    async function saveProfile(event) {
-        event.preventDefault();
-        const submit = el("appProfileSubmit");
-        const feedback = el("appProfileFeedback");
-        const payload = {
-            nome: el("appProfileName").value.trim(),
-            email: el("appProfileEmail").value.trim(),
-            nova_senha: el("appProfilePassword").value,
-        };
-        submit.disabled = true;
-        submit.textContent = "Salvando...";
-        feedback.hidden = true;
-        feedback.classList.remove("is-success");
-        try {
-            const user = await window.AppApi.fetchJson("/me/profile", {
-                method: "PATCH",
-                headers: window.AppAuth.criarHeadersJsonAuth(),
-                body: JSON.stringify(payload),
-            });
-            applyUser(user);
-            sessionStorage.setItem("usuario_atual", JSON.stringify(user));
-            feedback.textContent = "Perfil atualizado com sucesso.";
-            feedback.classList.add("is-success");
-            feedback.hidden = false;
-            el("appProfilePassword").value = "";
-        } catch (error) {
-            feedback.textContent = error.message || "Não foi possível atualizar o perfil.";
-            feedback.hidden = false;
-        } finally {
-            submit.disabled = false;
-            submit.textContent = "Salvar alterações";
-        }
     }
 
     function bindEvents() {
@@ -211,11 +168,6 @@
             } else if (event.key === "Escape") closeSearch();
         });
         el("appNavbarProfileToggle")?.addEventListener("click", () => setProfileOpen(!profileOpen()));
-        el("appNavbarEditProfile")?.addEventListener("click", openProfileDialog);
-        el("appNavbarProfileForm")?.addEventListener("submit", saveProfile);
-        document.querySelectorAll("[data-profile-dialog-close]").forEach((button) =>
-            button.addEventListener("click", () => el("appNavbarProfileDialog")?.close())
-        );
         el("btnSair")?.addEventListener("click", () => {
             if (window.AppAuth?.encerrarSessao) window.AppAuth.encerrarSessao();
             else window.location.href = "/login-page";
