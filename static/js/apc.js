@@ -3358,10 +3358,26 @@ async function initApc() {
         contextoApc = await fetchJson("/apc/contexto", { headers: headersApc });
         usuarioApc = Object.assign({}, usuarioMe || {}, contextoApc?.usuario || {});
         perfilApc = perfilInicialApc();
+        const deepLinkId = Number(new URLSearchParams(window.location.search).get("periodo_id") || 0);
+        if (deepLinkId > 0) {
+            const detalheDeepLink = await fetchJson(
+                `/apc/periodos/${deepLinkId}?visao=${visaoAtivaApc()}`,
+                { headers: headersApc }
+            );
+            const periodoDeepLink = detalheDeepLink?.periodo || detalheDeepLink;
+            periodoSelecionadoApcId = deepLinkId;
+            if (periodoDeepLink?.data_referencia) {
+                dataSelecionadaApc = periodoDeepLink.data_referencia;
+                mesAtualApc = new Date(`${periodoDeepLink.data_referencia}T12:00:00`);
+            }
+            if (periodoDeepLink?.ano_letivo) {
+                contextoApc.ano_letivo_atual = Number(periodoDeepLink.ano_letivo);
+            }
+        }
         if (modoGestaoAtivoApc()) {
-            limparSelecaoDataGestaoApc();
+            if (!deepLinkId) limparSelecaoDataGestaoApc();
         } else {
-            dataSelecionadaApc = hojeIsoApc();
+            if (!deepLinkId) dataSelecionadaApc = hojeIsoApc();
         }
         preencherSelectPublicoApc();
         preencherSelectTiposEntregaApc();

@@ -172,7 +172,12 @@
             setProfileOpen(false);
         });
         el("appNavbarProfileToggle")?.addEventListener("click", () => setProfileOpen(!profileOpen()));
-        el("btnSair")?.addEventListener("click", () => {
+        el("btnSair")?.addEventListener("click", async () => {
+            try {
+                await window.AppNotifications?.beforeLogout?.();
+            } catch (_error) {
+                // O encerramento da sessao nao depende do canal de notificacoes.
+            }
             if (window.AppAuth?.encerrarSessao) window.AppAuth.encerrarSessao();
             else window.location.href = "/login-page";
         });

@@ -18,6 +18,7 @@ import modules.occurrences.router as occurrences_router_module
 import modules.audit.router as audit_router_module
 import modules.teacher_followup.router as teacher_followup_router_module
 import modules.users.router as users_router_module
+import modules.notifications.router as notifications_router_module
 import modules.admin.resources.router as admin_resources_router_module
 import modules.admin.classes.router as admin_classes_router_module
 import modules.admin.router as admin_pages_router_module
@@ -71,6 +72,7 @@ preconselho_router_module = _reload_or_import(preconselho_router_module)
 audit_router_module = _reload_or_import(audit_router_module)
 teacher_followup_router_module = _reload_or_import(teacher_followup_router_module)
 users_router_module = _reload_or_import(users_router_module)
+notifications_router_module = _reload_or_import(notifications_router_module)
 
 ENABLE_EMBEDDED_WORKER = config_module.ENABLE_EMBEDDED_WORKER
 STATIC_DIR = config_module.STATIC_DIR
@@ -93,6 +95,7 @@ occurrences_router = occurrences_router_module.router
 audit_router = audit_router_module.router
 teacher_followup_router = teacher_followup_router_module.router
 users_router = users_router_module.router
+notifications_router = notifications_router_module.router
 
 root = system_router_module.root
 health = system_router_module.health
@@ -223,5 +226,6 @@ app.include_router(preconselho_router)
 app.include_router(audit_router)
 app.include_router(teacher_followup_router)
 app.include_router(users_router)
+app.include_router(notifications_router)
 
 app.mount("/static", CachedStaticFiles(directory=str(STATIC_DIR)), name="static")

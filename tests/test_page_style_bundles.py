@@ -18,7 +18,7 @@ class PageStyleBundlesTest(unittest.TestCase):
             if 'include "includes/style_bundle.html"' in template.read_text(encoding="utf-8")
         ]
 
-        self.assertEqual(len(consumers), 25)
+        self.assertEqual(len(consumers), 27)
         for template in consumers:
             with self.subTest(template=template.relative_to(ROOT)):
                 self.assertIn("set page_styles", template.read_text(encoding="utf-8"))

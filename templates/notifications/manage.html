@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Gestão de notificações</title>
+    {% set page_styles = ["css/pages/notifications.css"] %}
+    {% include "includes/style_bundle.html" %}
+</head>
+<body class="notifications-page">
+    {% set navbar_context = "Gestão de notificações" %}
+    {% set navbar_current = "notifications" %}
+    {% include "includes/app_navbar.html" %}
+
+    <main class="notifications-shell notifications-manage-shell">
+        <header class="notifications-hero">
+            <div>
+                <a class="notifications-back" href="/notificacoes"><i class="bi bi-arrow-left"></i> Voltar à caixa de entrada</a>
+                <span class="notifications-eyebrow">Comunicação interna</span>
+                <h1>Enviar uma notificação</h1>
+                <p>O público é fotografado ao agendar. Revise a estimativa antes de confirmar um envio amplo.</p>
+            </div>
+        </header>
+
+        <div id="notificationsManageDenied" class="notifications-page-state" hidden>
+            <i class="bi bi-shield-lock" aria-hidden="true"></i>
+            <h2>Acesso restrito à gestão</h2>
+            <p>Somente administradores e coordenadores podem enviar notificações.</p>
+        </div>
+
+        <div id="notificationsManageContent" class="notifications-manage-grid" hidden>
+            <form id="notificationsComposer" class="notifications-composer">
+                <section>
+                    <span class="notifications-step">1</span>
+                    <div>
+                        <h2>Mensagem</h2>
+                        <p>Use texto direto e sem dados pessoais sensíveis.</p>
+                    </div>
+                </section>
+                <label>Título
+                    <input id="notificationTitle" maxlength="100" required>
+                    <small><span id="notificationTitleCount">0</span>/100</small>
+                </label>
+                <label>Mensagem
+                    <textarea id="notificationBody" maxlength="300" rows="4" required></textarea>
+                    <small><span id="notificationBodyCount">0</span>/300</small>
+                </label>
+                <div class="notifications-sensitive-warning">
+                    <i class="bi bi-eye-slash" aria-hidden="true"></i>
+                    <p>Não inclua nomes de estudantes, laudos, arquivos ou informações que possam aparecer na tela bloqueada.</p>
+                </div>
+                <div class="notifications-two-columns">
+                    <label>Link interno
+                        <input id="notificationUrl" value="/" maxlength="500" placeholder="/apc">
+                    </label>
+                    <label>Prioridade
+                        <select id="notificationPriority">
+                            <option value="normal">Normal</option>
+                            <option value="urgent">Urgente</option>
+                        </select>
+                    </label>
+                </div>
+
+                <section>
+                    <span class="notifications-step">2</span>
+                    <div><h2>Público</h2><p>As opções são unificadas sem duplicar pessoas.</p></div>
+                </section>
+                <fieldset class="notifications-audiences">
+                    <legend>Selecione um ou mais públicos</legend>
+                    <label><input type="checkbox" value="all"> Todos</label>
+                    <label><input type="checkbox" value="teachers"> Professores</label>
+                    <label><input type="checkbox" value="managers"> Coordenação e gestão</label>
+                </fieldset>
+                <label>Usuários específicos
+                    <input id="notificationRecipientSearch" type="search" placeholder="Busque por nome ou e-mail">
+                </label>
+                <div id="notificationRecipientResults" class="notifications-recipient-results"></div>
+                <div id="notificationSelectedRecipients" class="notifications-selected-recipients"></div>
+
+                <section>
+                    <span class="notifications-step">3</span>
+                    <div><h2>Disparo</h2><p>Envie agora ou escolha uma data e hora.</p></div>
+                </section>
+                <label>Agendar para <small>(opcional)</small>
+                    <input id="notificationSchedule" type="datetime-local">
+                </label>
+                <div class="notifications-estimate" aria-live="polite">
+                    <span>Público estimado</span>
+                    <strong id="notificationEstimate">0 destinatários</strong>
+                </div>
+                <p id="notificationComposerFeedback" class="notifications-feedback" role="status" hidden></p>
+                <button class="button button--primary notifications-send" type="submit">
+                    Revisar e enviar
+                </button>
+            </form>
+
+            <aside class="notifications-history" aria-labelledby="notificationsHistoryTitle">
+                <header>
+                    <h2 id="notificationsHistoryTitle">Envios recentes</h2>
+                    <p>Lotes enviados não podem ser editados ou reenviados automaticamente.</p>
+                </header>
+                <div id="notificationsBatchHistory"></div>
+            </aside>
+        </div>
+    </main>
+
+    <dialog id="notificationConfirmDialog" class="notification-confirm-dialog">
+        <form method="dialog">
+            <span class="notifications-eyebrow">Confirme o envio</span>
+            <h2 id="notificationConfirmTitle">Enviar notificação?</h2>
+            <p id="notificationConfirmCopy"></p>
+            <div>
+                <button class="button" value="cancel">Continuar revisando</button>
+                <button id="notificationConfirmSend" class="button button--primary" value="confirm">Enviar notificação</button>
+            </div>
+        </form>
+    </dialog>
+
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version }}"></script>
+    <script src="{{ request.url_for('static', path='js/notifications/manage.js') }}?v={{ asset_version }}"></script>
+</body>
+</html>

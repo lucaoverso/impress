@@ -50,7 +50,8 @@ body:has(> .app-navbar) {
 }
 .app-navbar-extra-action:hover { background: var(--brand-soft, #d6f2ef); }
 
-.app-navbar-help-toggle {
+.app-navbar-help-toggle,
+.app-navbar-notifications-toggle {
     display: inline-grid;
     place-items: center;
     width: 44px;
@@ -62,8 +63,10 @@ body:has(> .app-navbar) {
     background: var(--surface-0, #fff);
     color: var(--text-main, #1f2a37);
 }
-.app-navbar-help-toggle:hover { background: var(--surface-2, #eef3f8); }
-.app-navbar-help-toggle > i { font-size: 1.2rem; }
+.app-navbar-help-toggle:hover,
+.app-navbar-notifications-toggle:hover { background: var(--surface-2, #eef3f8); }
+.app-navbar-help-toggle > i,
+.app-navbar-notifications-toggle > i { font-size: 1.2rem; }
 
 .app-navbar-search { position: relative; }
 .app-navbar-search > .bi-search {
@@ -89,6 +92,7 @@ body:has(> .app-navbar) {
 
 .app-navbar-search input:focus-visible,
 .app-navbar-help-toggle:focus-visible,
+.app-navbar-notifications-toggle:focus-visible,
 .app-navbar-user-toggle:focus-visible,
 .app-navbar-profile-action:focus-visible {
     outline: 3px solid color-mix(in srgb, var(--brand, #0f766e) 28%, transparent);

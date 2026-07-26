@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Notificações</title>
+    {% set page_styles = ["css/pages/notifications.css"] %}
+    {% include "includes/style_bundle.html" %}
+</head>
+<body class="notifications-page">
+    {% set navbar_context = "Notificações" %}
+    {% set navbar_current = "notifications" %}
+    {% include "includes/app_navbar.html" %}
+
+    <main class="notifications-shell" id="notificationsMain">
+        <header class="notifications-hero">
+            <div>
+                <span class="notifications-eyebrow">Caixa de entrada</span>
+                <h1>Seus avisos em um só lugar</h1>
+                <p>Prazos, demandas e comunicados continuam disponíveis aqui, mesmo sem notificações no dispositivo.</p>
+            </div>
+            <button id="notificationsReadAll" class="button" type="button">
+                <i class="bi bi-check2-all" aria-hidden="true"></i>
+                Marcar todas como lidas
+            </button>
+        </header>
+
+        <section class="notifications-device-card" aria-labelledby="notificationsDeviceTitle">
+            <div class="notifications-device-icon" aria-hidden="true"><i class="bi bi-phone"></i></div>
+            <div>
+                <h2 id="notificationsDeviceTitle">Receba avisos neste dispositivo</h2>
+                <p data-push-status>Ative somente se quiser receber alertas mesmo com o sistema fechado.</p>
+            </div>
+            <div class="notifications-device-actions">
+                <button id="notificationsEnablePush" class="button button--primary" type="button">
+                    Ativar neste dispositivo
+                </button>
+                <button id="notificationsDisablePush" class="button" type="button" hidden>
+                    Desativar neste dispositivo
+                </button>
+            </div>
+        </section>
+
+        <section class="notifications-inbox-card" aria-labelledby="notificationsInboxTitle">
+            <header class="notifications-inbox-toolbar">
+                <div>
+                    <h2 id="notificationsInboxTitle">Notificações</h2>
+                    <p id="notificationsUnreadSummary">Consultando itens não lidos...</p>
+                </div>
+                <div class="notifications-filter" role="group" aria-label="Filtrar notificações">
+                    <button class="is-active" data-filter="all" type="button">Todas</button>
+                    <button data-filter="unread" type="button">Não lidas</button>
+                </div>
+            </header>
+            <div id="notificationsPageState" class="notifications-page-state" aria-live="polite">
+                <span class="app-notifications-spinner" aria-hidden="true"></span>
+                <p>Carregando suas notificações...</p>
+            </div>
+            <div id="notificationsPageList" class="notifications-page-list"></div>
+            <nav id="notificationsPagination" class="notifications-pagination" aria-label="Páginas de notificações"></nav>
+        </section>
+    </main>
+
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version }}"></script>
+    <script src="{{ request.url_for('static', path='js/notifications/inbox.js') }}?v={{ asset_version }}"></script>
+</body>
+</html>

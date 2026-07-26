@@ -33,7 +33,7 @@ APC_TIPOS_ENTREGA_VALIDOS = (
     APC_TIPO_ENTREGA_PROVA_BIMESTRAL,
 )
 
-APC_TIMEZONE = os.getenv("APP_TIMEZONE") or os.getenv("TZ") or "America/Cuiaba"
+APC_TIMEZONE = os.getenv("APP_TIMEZONE") or os.getenv("TZ") or "America/Campo_Grande"
 
 
 def _timezone_local_apc():

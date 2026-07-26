@@ -1,0 +1,19 @@
+[Unit]
+Description=Sistema Impress Worker (notificacoes e Web Push)
+After=network-online.target sistema-impress-api.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=sistema-impress
+Group=sistema-impress
+WorkingDirectory=/opt/sistema-impress
+EnvironmentFile=/opt/sistema-impress/.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/sistema-impress/.venv/bin/python notification_worker_main.py
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+
+[Install]
+WantedBy=multi-user.target

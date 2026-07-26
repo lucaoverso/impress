@@ -45,18 +45,18 @@ from modules.apc_activity.service import (
 )
 from modules.audit.models import AuditCategory, AuditOutcome
 from modules.audit.service import record_event
+from modules.notifications.apc_integration import (
+    cancel_apc_period,
+    sync_apc_period,
+)
 from modules.printing.attachment_printing import imprimir_anexo_pdf
 from services.apc_service import (
     APC_PUBLICO_ALVO_HORARIO_DIA,
     APC_PUBLICO_ALVO_PROFESSORES_SELECIONADOS,
     APC_PUBLICO_ALVO_TODOS_PROFESSORES,
-    agrupar_destinatarios_selecionados_apc,
-    agrupar_horarios_professor_dia,
-    agrupar_professores_elegiveis,
     chave_entrega_apc,
     contexto_apc_anos,
     enriquecer_periodo_apc,
-    filtrar_horarios_por_tipo_entrega,
     intervalo_mes_referencia,
     montar_painel_periodo_apc,
     montar_painel_professor_apc,
@@ -80,6 +80,7 @@ from services.apc_recipient_service import (
     group_recipient_options,
     merge_recipient_options,
 )
+from services.apc_recipients import resolve_apc_recipients
 from services.file_service import arquivo_suportado
 from services.horario_escolar_service import validar_ano_letivo
 
@@ -347,38 +348,17 @@ def _normalizar_destinatarios_payload(
     return itens
 
 
-def _obter_horarios_periodo(periodo: dict, professor_id: int | None = None) -> list[dict]:
-    periodo_norm = enriquecer_periodo_apc(periodo)
-    return listar_horarios_escolares(
-        ano_letivo=int(periodo_norm["ano_letivo"]),
-        professor_id=professor_id,
-        dia_semana=periodo_norm["dia_semana"],
-    )
-
-
 def _obter_elegiveis_periodo(periodo: dict, professor_id: int | None = None) -> list[dict]:
-    periodo_norm = enriquecer_periodo_apc(periodo)
-    if periodo_norm["publico_alvo"] == APC_PUBLICO_ALVO_TODOS_PROFESSORES:
-        professores = listar_professores_agendamento()
-        if professor_id is not None:
-            professores = [
-                item for item in professores if int(item.get("id") or 0) == int(professor_id)
-            ]
-        return agrupar_professores_elegiveis(professores)
+    return resolve_apc_recipients(periodo, professor_id=professor_id)
 
-    if periodo_norm["publico_alvo"] == APC_PUBLICO_ALVO_PROFESSORES_SELECIONADOS:
-        destinatarios = listar_apc_destinatarios(
-            periodo_id=int(periodo_norm["id"]),
-            professor_id=int(professor_id) if professor_id is not None else None,
+
+def _sync_notifications_safely(periodo_id: int):
+    try:
+        sync_apc_period(periodo_id)
+    except Exception:
+        logger.exception(
+            "Falha ao sincronizar notificacoes da solicitacao APC %s", periodo_id
         )
-        return agrupar_destinatarios_selecionados_apc(destinatarios)
-
-    horarios = _obter_horarios_periodo(periodo_norm, professor_id=professor_id)
-    horarios_filtrados = filtrar_horarios_por_tipo_entrega(
-        horarios,
-        periodo_norm["tipo_entrega"],
-    )
-    return agrupar_horarios_professor_dia(horarios_filtrados)
 
 
 def _selecionar_item_professor_periodo(
@@ -754,6 +734,7 @@ def criar_periodo_apc_api(payload: ApcPeriodoIn, usuario=Depends(get_usuario_log
             409,
             "Ja existe uma solicitacao semelhante cadastrada para essa data no ano letivo.",
         ) from exc
+    _sync_notifications_safely(int(periodo["id"]))
     return enriquecer_periodo_apc(periodo)
 
 
@@ -794,6 +775,7 @@ def atualizar_periodo_apc_api(
 
     if not periodo:
         raise HTTPException(404, "Solicitacao de entrega nao encontrada.")
+    _sync_notifications_safely(periodo_id)
     return enriquecer_periodo_apc(periodo)
 
 
@@ -811,6 +793,7 @@ def excluir_periodo_apc_api(periodo_id: int, usuario=Depends(get_usuario_logado)
         ) from exc
     if not removido:
         raise HTTPException(404, "Solicitacao de entrega nao encontrada.")
+    cancel_apc_period(periodo_id)
     return {"mensagem": "Solicitacao de entrega removida com sucesso."}
 
 

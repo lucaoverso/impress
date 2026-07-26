@@ -7,6 +7,7 @@ class AuditCategory(StrEnum):
     PRINTING = "printing"
     SCHEDULING = "scheduling"
     ATTACHMENTS = "attachments"
+    NOTIFICATIONS = "notifications"
 
 
 class AuditOutcome(StrEnum):

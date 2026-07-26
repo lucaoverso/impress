@@ -156,7 +156,7 @@ class ContextualHelpUiContractTests(unittest.TestCase):
             if 'include "includes/app_navbar.html"' in path.read_text(encoding="utf-8")
         ]
 
-        self.assertEqual(len(consumers), 24)
+        self.assertEqual(len(consumers), 26)
         for template in consumers:
             with self.subTest(template=template.relative_to(ROOT)):
                 text = template.read_text(encoding="utf-8")

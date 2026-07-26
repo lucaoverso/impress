@@ -1,0 +1,23 @@
+{
+  "name": "Sistema EEPJD",
+  "short_name": "EEPJD",
+  "description": "Serviços escolares, anexos e notificações da EEPJD.",
+  "start_url": "/servicos",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f5f7fb",
+  "theme_color": "#0f766e",
+  "lang": "pt-BR",
+  "icons": [
+    {
+      "src": "/static/img/notification-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/static/img/notification-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
