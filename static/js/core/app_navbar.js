@@ -167,6 +167,10 @@
                 document.querySelector(`.app-navbar-search-result[data-result-index="${state.activeResult}"]`)?.click();
             } else if (event.key === "Escape") closeSearch();
         });
+        el("appNavbarHelpToggle")?.addEventListener("click", () => {
+            closeSearch();
+            setProfileOpen(false);
+        });
         el("appNavbarProfileToggle")?.addEventListener("click", () => setProfileOpen(!profileOpen()));
         el("btnSair")?.addEventListener("click", () => {
             if (window.AppAuth?.encerrarSessao) window.AppAuth.encerrarSessao();

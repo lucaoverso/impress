@@ -39,6 +39,11 @@
             {% endfor %}
         </div>
         {% endif %}
+        <button id="appNavbarHelpToggle" class="app-navbar-help-toggle" type="button"
+            aria-expanded="false" aria-controls="appHelpDialog" aria-label="Ajuda desta tela"
+            data-help-content-url="{{ request.url_for('static', path='data/help-contexts.json') }}?v={{ asset_version | default('1') }}">
+            <i class="bi bi-question-circle" aria-hidden="true"></i>
+        </button>
         <button id="appNavbarProfileToggle" class="app-navbar-user-toggle" type="button" aria-expanded="false"
             aria-controls="appNavbarProfileMenu" aria-label="Abrir menu do perfil">
             <span id="appNavbarAvatarInitials" class="app-navbar-avatar" aria-hidden="true">...</span>
@@ -72,3 +77,19 @@
         </section>
     </div>
 </header>
+
+<dialog id="appHelpDialog" class="app-help-dialog" role="dialog" aria-modal="true"
+    aria-labelledby="appHelpTitle">
+    <header class="app-help-header">
+        <div>
+            <span>Ajuda desta tela</span>
+            <h2 id="appHelpTitle">Orientações</h2>
+        </div>
+        <button id="appHelpClose" class="app-help-close" type="button" aria-label="Fechar ajuda">
+            <i class="bi bi-x-lg" aria-hidden="true"></i>
+        </button>
+    </header>
+    <div id="appHelpBody" class="app-help-body" aria-live="polite">
+        <p>Carregando orientações...</p>
+    </div>
+</dialog>

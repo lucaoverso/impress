@@ -1,8 +1,12 @@
 {% set css_version = asset_version | default('1') %}
+{% set app_help_enabled = request.url.path not in ["/login-page", "/cadastro-professor"] %}
 <link rel="stylesheet" href="{{ request.url_for('static', path='vendor/bootstrap-icons/bootstrap-icons.min.css') }}?v=1.13.1">
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/base.css') }}?v={{ css_version }}">
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/components.css') }}?v={{ css_version }}">
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/components/app-navbar.css') }}?v={{ css_version }}">
+{% if app_help_enabled %}
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/components/app-help.css') }}?v={{ css_version }}">
+{% endif %}
 {% for page_style in page_styles | default([]) %}
 <link rel="stylesheet" href="{{ request.url_for('static', path=page_style) }}?v={{ css_version }}">
 {% endfor %}
@@ -10,3 +14,6 @@
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/components/continuous-surfaces.css') }}?v={{ css_version }}">
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/components/app-sidebar.css') }}?v={{ css_version }}">
 <script defer src="{{ request.url_for('static', path='js/core/dialog_accessibility.js') }}?v={{ css_version }}"></script>
+{% if app_help_enabled %}
+<script defer src="{{ request.url_for('static', path='js/core/app_help.js') }}?v={{ css_version }}"></script>
+{% endif %}

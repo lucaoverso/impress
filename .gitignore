@@ -24,6 +24,9 @@ impressao.db
 
 # Dados locais
 data/
+!static/data/
+static/data/*
+!static/data/help-contexts.json
 spool/
 operacional/
 /graphify-out/
