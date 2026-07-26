@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-07-21T15:25:21.002530+00:00",
+  "generated_at": "2026-07-26T02:53:36.927177+00:00",
   "nodes": {
     "db_schema_migrations": {
       "code_fingerprint": "db3d0eecd167de377737fe00385e448560a09b457ef53d733baf17f9e217f8ea",
@@ -12,7 +12,7 @@
           "q": "Adicionar sexo ao cadastro de estudantes e adequar o artigo no texto consolidado do pré-conselho"
         }
       ],
-      "score": 0.848459478,
+      "score": 0.765063956,
       "source_file": "db/schema_migrations.py",
       "status": "tentative",
       "uses": 1
@@ -20,21 +20,58 @@
     "design_school_suite_design_system": {
       "code_fingerprint": "3c8f09ff9e25a72145ef554299557c7b3521ec66da45ed4931473f18cfd4dd44",
       "label": "School Suite Design System",
-      "last": "2026-07-19T17:32:24.474435+00:00",
+      "last": "2026-07-24T00:36:24.652939+00:00",
       "provenance": [
+        {
+          "date": "2026-07-24T00:36:24.652939+00:00",
+          "outcome": "useful",
+          "q": "O design do sistema em geral ainda tem muita borda desnecessária. Muito padding tomando espaçamento desnecessário nada de acordo com o nosso DEISGN.md"
+        },
         {
           "date": "2026-07-19T17:32:24.474435+00:00",
           "outcome": "useful",
           "q": "Faça um impeccable audit para detectar padrões não usados ainda nas telas do nosso sistema"
         }
       ],
-      "score": 0.95679018,
+      "score": 1.81548865,
       "source_file": "DESIGN.md",
+      "status": "preferred",
+      "uses": 2
+    },
+    "docs_refatoracao_sprint_6_css_modular": {
+      "code_fingerprint": "43423c0ac6e18f90c212668a60c89b5ce483b4bbf31316219014bc58fe8d5b44",
+      "label": "Sprint 6 — CSS Modular",
+      "last": "2026-07-24T00:36:24.652939+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-24T00:36:24.652939+00:00",
+          "outcome": "useful",
+          "q": "O design do sistema em geral ainda tem muita borda desnecessária. Muito padding tomando espaçamento desnecessário nada de acordo com o nosso DEISGN.md"
+        }
+      ],
+      "score": 0.952741873,
+      "source_file": "docs/refatoracao/sprint-6.md",
+      "status": "tentative",
+      "uses": 1
+    },
+    "models_ocorrenciaout": {
+      "code_fingerprint": "fc0c4beb34e42f1b7eea1eccf78987b58090759328584bd3953c3fd8effa5751",
+      "label": "OcorrenciaOut",
+      "last": "2026-07-23T23:15:51.035931+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-23T23:15:51.035931+00:00",
+          "outcome": "useful",
+          "q": "Quero mandar um prompt para o stich, para gerar nova UI das ocorrências da coordenação. Me indique os requisitos que eu devo mandar para ele"
+        }
+      ],
+      "score": 0.951511158,
+      "source_file": "models.py",
       "status": "tentative",
       "uses": 1
     },
     "modules_scheduling_router_recursos_agendamento": {
-      "code_fingerprint": "9bdf53bb68eca7c6e4460806f4aa30d61da2d8f6d756aa23f6e8d2c2d1235fca",
+      "code_fingerprint": "7bd069c01116e01cf4cf53ecb8c975d469b9f6369b2b16f625223912eaa6d714",
       "label": "recursos_agendamento()",
       "last": "2026-07-21T15:18:04.565685+00:00",
       "provenance": [
@@ -44,13 +81,84 @@
           "q": "Mapear as telas e regras do módulo de agendamento para gerar no Stitch versões desktop e mobile de Novo agendamento, Meus agendamentos, Calendário geral e Catálogo de recursos"
         }
       ],
-      "score": 0.999883296,
+      "score": 0.901604248,
       "source_file": "modules/scheduling/router.py",
       "status": "tentative",
       "uses": 1
     },
+    "ocorrencias_router": {
+      "code_fingerprint": "987cc87facad7f188dcc84cf354e272b7ece1878b7b8ac4ba006504cc3a503f7",
+      "label": "ocorrencias_router.py",
+      "last": "2026-07-24T00:05:37.096802+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-24T00:05:37.096802+00:00",
+          "outcome": "useful",
+          "q": "Faça mais uma passada focando em deixar as telas mais parecidas com o stich, remover o número de cards/bordas e deixar a tela ajustada sem vazamento no desktop"
+        },
+        {
+          "date": "2026-07-23T23:15:51.035931+00:00",
+          "outcome": "useful",
+          "q": "Quero mandar um prompt para o stich, para gerar nova UI das ocorrências da coordenação. Me indique os requisitos que eu devo mandar para ele"
+        }
+      ],
+      "score": 1.903782427,
+      "source_file": "ocorrencias_router.py",
+      "status": "preferred",
+      "uses": 2
+    },
+    "routers_config_render_template_response": {
+      "code_fingerprint": "11819655d248dd4750154d1351f3bdf00a743dc9b2b603bdc8fa817489a0b29a",
+      "label": "render_template_response()",
+      "last": "2026-07-24T00:36:24.652939+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-24T00:36:24.652939+00:00",
+          "outcome": "useful",
+          "q": "O design do sistema em geral ainda tem muita borda desnecessária. Muito padding tomando espaçamento desnecessário nada de acordo com o nosso DEISGN.md"
+        }
+      ],
+      "score": 0.952741873,
+      "source_file": "routers/config.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "routers_impressao_router": {
+      "code_fingerprint": "2a8aa5a19780ea027e392ce17546a21968a4fac5b28cfe22ee9bc3493f51b0c6",
+      "label": "impressao_router.py",
+      "last": "2026-07-24T13:03:35.874728+00:00",
+      "neg": 1,
+      "provenance": [
+        {
+          "date": "2026-07-24T13:03:35.874728+00:00",
+          "outcome": "useful",
+          "q": "Implementar o mesmo stepper de agendamento no modulo de impressao mantendo o mesmo design"
+        }
+      ],
+      "score": 0.074494741,
+      "source_file": "routers/impressao_router.py",
+      "status": "contested",
+      "uses": 1,
+      "verdict": "useful"
+    },
+    "static_js_apc": {
+      "code_fingerprint": "56625992fb787a5f0784e837640660feed56c43b53e9cfe39a701a005dd12616",
+      "label": "apc.js",
+      "last": "2026-07-21T22:53:13.938989+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-21T22:53:13.938989+00:00",
+          "outcome": "useful",
+          "q": "O que acontece com a APC hoje se eu trocar a data de uma demanda? Quem enviou é perdido? Se o professor ter aula para o dia que eu trocar mantem o envio dele?"
+        }
+      ],
+      "score": 0.908212779,
+      "source_file": "static/js/apc.js",
+      "status": "tentative",
+      "uses": 1
+    },
     "static_js_coordenacao_cadastros": {
-      "code_fingerprint": "7214346a66062455a50e78ef41f58752805990a944b4eade465502fd17b3f193",
+      "code_fingerprint": "4e0a66aba0fecc8f97966b52be483a6fdb1a4f0d7b92d9cad073758eadf849ad",
       "label": "cadastros.js",
       "last": "2026-07-14T12:52:48.282174+00:00",
       "provenance": [
@@ -65,26 +173,47 @@
           "q": "Adicionar sexo ao cadastro de estudantes e adequar o artigo no texto consolidado do pré-conselho"
         }
       ],
-      "score": 1.697047091,
+      "score": 1.530243452,
       "source_file": "static/js/coordenacao/cadastros.js",
       "status": "preferred",
       "uses": 2
     },
-    "static_js_coordenacao_painel": {
-      "code_fingerprint": "2358f88ee56b43b8c3681c928e89e0f06ba72bf7958ddab0d6946d04cd157980",
-      "label": "painel.js",
-      "last": "2026-07-14T12:52:48.282174+00:00",
+    "static_js_coordenacao_ocorrencias": {
+      "code_fingerprint": "49576b4f7e9b6323dbe74d92cbc7c51dab6f1d404ab41b7f5c59a29c4a86ca09",
+      "label": "ocorrencias.js",
+      "last": "2026-07-23T23:15:51.035931+00:00",
       "provenance": [
+        {
+          "date": "2026-07-23T23:15:51.035931+00:00",
+          "outcome": "useful",
+          "q": "Quero mandar um prompt para o stich, para gerar nova UI das ocorrências da coordenação. Me indique os requisitos que eu devo mandar para ele"
+        }
+      ],
+      "score": 0.951511158,
+      "source_file": "static/js/coordenacao/ocorrencias.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "static_js_coordenacao_painel": {
+      "code_fingerprint": "eba43aad3550d6fb59e48df8bf34a661ca6a57fae149dd93430a5afb3a5d794b",
+      "label": "painel.js",
+      "last": "2026-07-23T23:15:51.035931+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-23T23:15:51.035931+00:00",
+          "outcome": "useful",
+          "q": "Quero mandar um prompt para o stich, para gerar nova UI das ocorrências da coordenação. Me indique os requisitos que eu devo mandar para ele"
+        },
         {
           "date": "2026-07-14T12:52:48.282174+00:00",
           "outcome": "useful",
           "q": "Criar edição do sexo dos estudantes diretamente na tabela da turma selecionada"
         }
       ],
-      "score": 0.848587613,
+      "score": 1.716690655,
       "source_file": "static/js/coordenacao/painel.js",
-      "status": "tentative",
-      "uses": 1
+      "status": "preferred",
+      "uses": 2
     },
     "static_js_core_app_navbar": {
       "code_fingerprint": "6decc073ff0bb3212a9e6de0a0d2e8a11bfde1530e9261b03b34ba6bd2a6c1b5",
@@ -97,8 +226,56 @@
           "q": "Faça um impeccable audit para detectar padrões não usados ainda nas telas do nosso sistema"
         }
       ],
-      "score": 0.95679018,
+      "score": 0.862746777,
       "source_file": "static/js/core/app_navbar.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "static_js_printing_index": {
+      "code_fingerprint": "07d816da2f054f594bea13aaf64d553659aa7992a4170304839454630159723c",
+      "label": "index.js",
+      "last": "2026-07-24T13:03:35.874728+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-24T13:03:35.874728+00:00",
+          "outcome": "useful",
+          "q": "Implementar o mesmo stepper de agendamento no modulo de impressao mantendo o mesmo design"
+        }
+      ],
+      "score": 0.964232724,
+      "source_file": "static/js/printing/index.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "static_js_printing_workflow": {
+      "code_fingerprint": "f2c967df9aa87a6848784ce659f84990535328170b97c53318dc50ce5edf2662",
+      "label": "workflow.js",
+      "last": "2026-07-24T13:03:35.874728+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-24T13:03:35.874728+00:00",
+          "outcome": "useful",
+          "q": "Implementar o mesmo stepper de agendamento no modulo de impressao mantendo o mesmo design"
+        }
+      ],
+      "score": 0.964232724,
+      "source_file": "static/js/printing/workflow.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "templates_coordenacao_central_de_registros": {
+      "code_fingerprint": "79525dc6b09c84b7bd5317d03af9c29346b370eab5a6a63b1f80590e1ab5956c",
+      "label": "Central de Registros da Coordenação",
+      "last": "2026-07-24T00:05:37.096802+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-24T00:05:37.096802+00:00",
+          "outcome": "useful",
+          "q": "Faça mais uma passada focando em deixar as telas mais parecidas com o stich, remover o número de cards/bordas e deixar a tela ajustada sem vazamento no desktop"
+        }
+      ],
+      "score": 0.952271268,
+      "source_file": "templates/coordenacao.html",
       "status": "tentative",
       "uses": 1
     },
@@ -113,7 +290,7 @@
           "q": "Mapear as telas e regras do módulo de agendamento para gerar no Stitch versões desktop e mobile de Novo agendamento, Meus agendamentos, Calendário geral e Catálogo de recursos"
         }
       ],
-      "score": 0.999883296,
+      "score": 0.901604248,
       "source_file": "tests/test_scheduling_service.py",
       "status": "tentative",
       "uses": 1

@@ -452,19 +452,82 @@ function criarSelectSexoEstudante(estudante) {
     return select;
 }
 
+function obterIniciaisOcorrencia(nome) {
+    return String(nome || "")
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .map((parte) => parte.charAt(0))
+        .join("")
+        .toUpperCase() || "—";
+}
+
+function criarReferenciaOcorrencia(ocorrencia) {
+    const referencia = obterReferenciaRegistro(ocorrencia);
+    const wrapper = document.createElement("div");
+    wrapper.className = "coordenacao-reference";
+
+    const avatar = document.createElement("span");
+    avatar.className = "coordenacao-reference-avatar";
+    avatar.innerText = obterIniciaisOcorrencia(referencia);
+    avatar.setAttribute("aria-hidden", "true");
+
+    const copy = document.createElement("span");
+    copy.className = "coordenacao-reference-copy";
+    const nome = document.createElement("strong");
+    nome.innerText = referencia;
+    const contexto = document.createElement("small");
+    contexto.innerText = ocorrencia.disciplina || rotuloTipoRegistro(ocorrencia.tipo_registro);
+    copy.append(nome, contexto);
+    wrapper.append(avatar, copy);
+    return wrapper;
+}
+
+function renderEstadoTabelaOcorrencias(tipo = "empty") {
+    const tbody = el("tbodyOcorrencias");
+    tbody.innerHTML = "";
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 7;
+    td.className = `booking-empty coordenacao-occurrence-state is-${tipo}`;
+
+    if (tipo === "loading") {
+        td.innerHTML = `
+            <span class="coordenacao-state-spinner" aria-hidden="true"></span>
+            <strong>Carregando ocorrências</strong>
+            <span>Estamos organizando os registros para você.</span>
+        `;
+    } else if (tipo === "error") {
+        td.innerHTML = `
+            <i class="bi bi-wifi-off" aria-hidden="true"></i>
+            <strong>Não foi possível carregar os registros</strong>
+            <span>Verifique sua conexão e tente novamente.</span>
+        `;
+    } else {
+        td.innerHTML = `
+            <i class="bi bi-clipboard2-check" aria-hidden="true"></i>
+            <strong>Nenhuma ocorrência encontrada</strong>
+            <span>Ajuste os filtros ou crie um novo registro.</span>
+        `;
+        const botao = document.createElement("button");
+        botao.type = "button";
+        botao.className = "btn-destaque";
+        botao.innerText = "Novo registro";
+        botao.addEventListener("click", () => el("btnNovaOcorrencia").click());
+        td.appendChild(botao);
+    }
+
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+}
+
 function renderTabelaOcorrencias() {
     const tbody = el("tbodyOcorrencias");
     atualizarResumoOcorrencias();
     tbody.innerHTML = "";
 
     if (!Array.isArray(ocorrenciasCache) || ocorrenciasCache.length === 0) {
-        const tr = document.createElement("tr");
-        const td = document.createElement("td");
-        td.colSpan = 7;
-        td.className = "booking-empty";
-        td.innerText = "Nenhum registro encontrado.";
-        tr.appendChild(td);
-        tbody.appendChild(tr);
+        renderEstadoTabelaOcorrencias();
         return;
     }
 
@@ -477,8 +540,13 @@ function renderTabelaOcorrencias() {
         });
 
         tr.appendChild(criarCelulaTabela("Data", formatarDataBr(ocorrencia.data_ocorrencia)));
-        tr.appendChild(criarCelulaTabela("Tipo", rotuloTipoRegistro(ocorrencia.tipo_registro)));
-        tr.appendChild(criarCelulaTabela("Referência", obterReferenciaRegistro(ocorrencia)));
+        const tipoTabela = {
+            estudante: "Estudante",
+            professor: "Professor",
+            orientacao_geral: "Orientação geral",
+        }[String(ocorrencia.tipo_registro || "").trim()] || rotuloTipoRegistro(ocorrencia.tipo_registro);
+        tr.appendChild(criarCelulaTabela("Tipo", tipoTabela));
+        tr.appendChild(criarCelulaTabela("Referência", criarReferenciaOcorrencia(ocorrencia)));
         tr.appendChild(criarCelulaTabela("Contexto", obterContextoRegistro(ocorrencia)));
         tr.appendChild(criarCelulaTabela("Ação aplicada", rotuloAcao(ocorrencia.acao_aplicada)));
 
@@ -492,7 +560,9 @@ function renderTabelaOcorrencias() {
 
         const btnPdf = document.createElement("button");
         btnPdf.type = "button";
-        btnPdf.innerText = "PDF";
+        btnPdf.innerHTML = '<i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>';
+        btnPdf.setAttribute("aria-label", "Gerar PDF");
+        btnPdf.title = "Gerar PDF";
         btnPdf.addEventListener("click", (event) => {
             event.stopPropagation();
             abrirPdfOcorrencia(ocorrencia);
@@ -500,7 +570,9 @@ function renderTabelaOcorrencias() {
 
         const btnEditar = document.createElement("button");
         btnEditar.type = "button";
-        btnEditar.innerText = "Editar";
+        btnEditar.innerHTML = '<i class="bi bi-pencil" aria-hidden="true"></i>';
+        btnEditar.setAttribute("aria-label", "Editar ocorrência");
+        btnEditar.title = "Editar ocorrência";
         btnEditar.addEventListener("click", (event) => {
             event.stopPropagation();
             selecionarOcorrencia(ocorrencia);
@@ -510,7 +582,9 @@ function renderTabelaOcorrencias() {
         const btnExcluir = document.createElement("button");
         btnExcluir.type = "button";
         btnExcluir.className = "coordenacao-btn-danger";
-        btnExcluir.innerText = "Excluir";
+        btnExcluir.innerHTML = '<i class="bi bi-trash" aria-hidden="true"></i>';
+        btnExcluir.setAttribute("aria-label", "Excluir ocorrência");
+        btnExcluir.title = "Excluir ocorrência";
         btnExcluir.addEventListener("click", (event) => {
             event.stopPropagation();
             excluirOcorrencia(ocorrencia);
@@ -606,7 +680,13 @@ function renderTabelaEstudantes() {
 }
 
 async function carregarOcorrencias() {
-    ocorrenciasCache = await fetchJson(`/ocorrencias${queryFiltrosOcorrencias()}`, { headers });
+    renderEstadoTabelaOcorrencias("loading");
+    try {
+        ocorrenciasCache = await fetchJson(`/ocorrencias${queryFiltrosOcorrencias()}`, { headers });
+    } catch (err) {
+        renderEstadoTabelaOcorrencias("error");
+        throw err;
+    }
     const ocorrenciaSelecionada = ocorrenciasCache.find(
         (ocorrencia) => Number(ocorrencia.id) === Number(ocorrenciaSelecionadaId)
     ) || null;

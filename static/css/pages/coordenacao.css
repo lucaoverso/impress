@@ -11,6 +11,8 @@
 
 .coordenacao-workspace {
     position: relative;
+    width: 100%;
+    min-width: 0;
     overflow: clip;
     border: 1px solid var(--line-soft);
     border-radius: var(--radius-lg);

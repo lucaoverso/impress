@@ -23,14 +23,21 @@ class ContinuousSurfacesContractTests(unittest.TestCase):
         self.assertIn("color: var(--text-disabled)", sidebar)
         self.assertIn("box-shadow: var(--shadow-floating)", sidebar)
 
-    def test_continuous_surface_rules_load_after_page_styles(self):
+    def test_continuous_surface_rules_load_after_page_styles_without_generic_card_reset(self):
         bundle = (ROOT / "templates/includes/style_bundle.html").read_text(encoding="utf-8")
         stylesheet = (ROOT / "static/css/components/continuous-surfaces.css").read_text(encoding="utf-8")
 
         self.assertGreater(bundle.index("continuous-surfaces.css"), bundle.index("{% endfor %}"))
-        self.assertIn('main :where([class*="card"], [class*="panel"], [class*="surface"])', stylesheet)
-        self.assertIn('background-color: transparent', stylesheet)
-        self.assertIn('box-shadow: none', stylesheet)
+        self.assertNotIn('main :where([class*="card"], [class*="panel"], [class*="surface"])', stylesheet)
+        self.assertNotIn(".apc-pendencia-card", stylesheet)
+
+    def test_density_tokens_are_shared_without_overriding_component_borders(self):
+        base = (ROOT / "static/css/base.css").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static/css/components/continuous-surfaces.css").read_text(encoding="utf-8")
+
+        self.assertIn("--page-gutter: var(--space-4)", base)
+        self.assertIn("--surface-padding: var(--space-3)", base)
+        self.assertIn("padding: var(--surface-padding)", stylesheet)
 
     def test_shared_navbar_is_fixed_and_reserves_its_space(self):
         navbar = (ROOT / "static/css/components/app-navbar.css").read_text(encoding="utf-8")

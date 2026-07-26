@@ -17,23 +17,26 @@
     background: var(--bg-main);
 }
 
-main :where([class*="card"], [class*="panel"], [class*="surface"]):not(
-    [class*="modal"]
-):not(
-    [class*="dialog"]
-):not(
-    [class*="drawer"]
-):not(
-    [class*="overlay"]
-):not(
-    [class*="preview"]
+body :is(
+    .page-shell,
+    .admin-page,
+    .apc-page,
+    .coordenacao-page,
+    .download-page,
+    .horario-page,
+    .pcpi-page,
+    .preconselho-page,
+    .professor-page,
+    .reports-page,
+    .scheduler-flow-page,
+    .scheduling-bookings-page,
+    .services-page
 ) {
-    background-color: transparent;
-    background-image: none;
-    box-shadow: none;
+    gap: var(--flow-gap);
+    padding: var(--page-padding-start) var(--page-gutter) var(--page-padding-end);
 }
 
-:where(
+body :is(
     .panel-card,
     .admin-card,
     .coordenacao-card,
@@ -44,15 +47,65 @@ main :where([class*="card"], [class*="panel"], [class*="surface"]):not(
     .horario-filter-card,
     .horario-matrix-card,
     .pcpi-card,
-    .reports-chart-card,
-    .reports-filter-card,
-    .reports-insights-card,
-    .reports-placeholder-card,
-    .reports-table-card,
-    .scheduler-flow-surface,
-    .scheduler-workspace,
-    .scheduling-page-surface
+    .reports-filter-card
 ) {
-    border-color: transparent;
+    padding: var(--surface-padding);
+}
+
+body .admin-tabs {
+    gap: var(--space-1);
+    margin-bottom: var(--flow-gap);
+    padding: 0 0 var(--space-2);
+    border: 0;
+    border-bottom: 1px solid var(--line-soft);
     border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+body .admin-tab-btn {
+    border-color: transparent;
+    box-shadow: none;
+}
+
+body .admin-tab-btn.is-active {
+    background: var(--brand-soft);
+    color: var(--brand-strong);
+}
+
+body :is(.admin-fieldset, .admin-upload-field, .register-fieldset) {
+    padding: var(--space-3);
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: var(--surface-1);
+}
+
+body :is(.reports-metrics-grid, .reports-summary-grid, .reports-insights-list) {
+    gap: 0;
+}
+
+body :is(.reports-metric-card, .reports-summary-card) {
+    min-height: 0;
+    padding: var(--space-3);
+    border: 0;
+    border-bottom: 1px solid var(--line-soft);
+    border-radius: 0;
+    background: transparent;
+}
+
+body .reports-insight-item {
+    padding: var(--space-3) 0;
+    border: 0;
+    border-bottom: 1px solid var(--line-soft);
+    border-radius: 0;
+    background: transparent;
+}
+
+@media (max-width: 760px) {
+    :root {
+        --page-gutter: var(--space-3);
+        --page-padding-start: var(--space-3);
+        --page-padding-end: var(--space-4);
+        --flow-gap: var(--space-3);
+    }
 }

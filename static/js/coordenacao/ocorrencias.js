@@ -1699,6 +1699,40 @@ function selecionarOcorrencia(ocorrencia) {
     ocorrenciaSelecionadaId = ocorrencia ? Number(ocorrencia.id || 0) || null : null;
     renderDetalhesOcorrencia(ocorrencia || null);
     renderTabelaOcorrencias();
+    if (ocorrencia) {
+        abrirDetalhesOcorrencia();
+    } else {
+        fecharDetalhesOcorrencia();
+    }
+}
+
+function abrirDetalhesOcorrencia() {
+    const painel = el("painelDetalhesOcorrencia");
+    const backdrop = el("backdropDetalhesOcorrencia");
+    if (!painel || !backdrop) return;
+    painel.hidden = false;
+    backdrop.hidden = false;
+    document.body.classList.add("coordenacao-detail-open");
+    painel.focus({ preventScroll: true });
+}
+
+function fecharDetalhesOcorrencia() {
+    const painel = el("painelDetalhesOcorrencia");
+    const backdrop = el("backdropDetalhesOcorrencia");
+    if (painel) painel.hidden = true;
+    if (backdrop) backdrop.hidden = true;
+    document.body.classList.remove("coordenacao-detail-open");
+}
+
+function alternarFiltrosOcorrencias(aberto) {
+    const formulario = el("formFiltrosOcorrencias");
+    const backdrop = el("backdropFiltrosOcorrencias");
+    const gatilho = el("btnAbrirFiltrosOcorrencias");
+    if (!formulario || !backdrop || !gatilho) return;
+    formulario.classList.toggle("is-open", aberto);
+    backdrop.hidden = !aberto;
+    gatilho.setAttribute("aria-expanded", String(aberto));
+    document.body.classList.toggle("coordenacao-filters-open", aberto);
 }
 
 function obterNomeArquivoContentDisposition(contentDisposition, ocorrencia) {
@@ -1807,6 +1841,27 @@ function renderDetalhesOcorrencia(ocorrencia) {
     }
 
     container.innerHTML = "";
+    const tipoRegistro = String(ocorrencia.tipo_registro || "estudante").trim() || "estudante";
+    const referencia = obterReferenciaRegistro(ocorrencia);
+    const summary = document.createElement("div");
+    summary.className = "coordenacao-detail-summary";
+    const avatar = document.createElement("span");
+    avatar.className = "coordenacao-detail-avatar";
+    avatar.innerText = obterIniciaisOcorrencia(referencia);
+    avatar.setAttribute("aria-hidden", "true");
+    const summaryCopy = document.createElement("div");
+    summaryCopy.className = "coordenacao-detail-summary-copy";
+    const summaryTitle = document.createElement("h3");
+    summaryTitle.innerText = referencia;
+    const summaryMeta = document.createElement("p");
+    summaryMeta.innerText = `${obterContextoRegistro(ocorrencia)} · ${rotuloTipoRegistro(tipoRegistro)}`;
+    const summaryStatus = document.createElement("span");
+    summaryStatus.className = `status-chip ${classeStatus(ocorrencia.status)}`;
+    summaryStatus.innerText = rotuloStatus(ocorrencia.status);
+    summaryCopy.append(summaryTitle, summaryMeta, summaryStatus);
+    summary.append(avatar, summaryCopy);
+    container.appendChild(summary);
+
     const actions = document.createElement("div");
     actions.className = "coordenacao-detail-actions";
 
@@ -1826,14 +1881,7 @@ function renderDetalhesOcorrencia(ocorrencia) {
         abrirPdfOcorrencia(ocorrencia);
     });
     actions.appendChild(btnPdf);
-    container.appendChild(actions);
 
-    const hint = document.createElement("p");
-    hint.className = "coordenacao-detail-hint";
-    hint.innerText = "Use este documento para impressão, assinatura e arquivamento físico.";
-    container.appendChild(hint);
-
-    const tipoRegistro = String(ocorrencia.tipo_registro || "estudante").trim() || "estudante";
     const estudantesVinculados = normalizarEstudantesVinculados(ocorrencia.estudantes_vinculados);
     const professoresVinculados = normalizarProfessoresVinculados(ocorrencia.professores_vinculados);
     let campos;
@@ -1888,11 +1936,14 @@ function renderDetalhesOcorrencia(ocorrencia) {
         ];
     }
 
+    const grid = document.createElement("div");
+    grid.className = "coordenacao-detail-grid";
     campos.forEach(([rotulo, valor]) => {
         const linha = document.createElement(rotulo === "Descrição" ? "div" : "p");
         linha.className = "coordenacao-detail-line";
+        if (rotulo === "Descrição") linha.classList.add("coordenacao-detail-line--wide");
         const strong = document.createElement("strong");
-        strong.innerText = `${rotulo}: `;
+        strong.innerText = rotulo;
         const span = document.createElement("span");
         if (rotulo === "Descrição") {
             renderizarDescricaoFormatada(
@@ -1906,11 +1957,13 @@ function renderDetalhesOcorrencia(ocorrencia) {
         }
         linha.appendChild(strong);
         linha.appendChild(span);
-        container.appendChild(linha);
+        grid.appendChild(linha);
     });
+    container.appendChild(grid);
 
     const blocoRegimento = criarBlocoDetalhesRegimento(ocorrencia);
     if (blocoRegimento) {
         container.appendChild(blocoRegimento);
     }
+    container.appendChild(actions);
 }

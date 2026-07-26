@@ -1,0 +1,189 @@
+/* Central de Anexos: somente o conteudo do modulo. */
+.apc-page {
+    width: 100%;
+    max-width: 1480px;
+    margin-inline: auto;
+    padding: 30px 36px 56px;
+}
+
+.apc-workspace { display: grid; gap: 28px; }
+.apc-page-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; }
+.apc-page-header-copy { display: grid; gap: 6px; }
+.apc-page-header h1 { margin: 0; font-size: 2.125rem; line-height: 1.1; letter-spacing: -.02em; }
+.apc-page-lead { max-width: 62ch; margin: 0; color: var(--text-muted); line-height: 1.45; text-wrap: pretty; }
+.apc-page-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+.apc-page-actions[hidden] { display: none; }
+.apc-page-actions button { min-height: 44px; }
+.apc-topbar-user { display: none; }
+
+.apc-field { display: grid; gap: 6px; min-width: 0; }
+.apc-field label { color: var(--text-main); font-size: .8125rem; font-weight: 700; }
+.apc-gestao-filtros[hidden],
+.apc-docente-detalhe[hidden], .apc-gestao-detalhe[hidden] { display: none; }
+
+.apc-flow-surface { min-width: 0; background: var(--surface-0); }
+.apc-page .apc-flow-surface, .apc-page .apc-detail-card { padding: 0; }
+.apc-toolbar-message { min-height: 0; margin: 0; color: var(--brand-strong); font-weight: 700; }
+.apc-toolbar-message:not(:empty) { margin-bottom: 18px; padding: 12px 16px; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface-2); }
+.apc-toolbar-message.is-error { border-color: var(--state-danger-border-strong); background: var(--state-danger-bg); color: var(--state-danger-text); }
+.apc-toolbar-message.is-success { border-color: var(--state-success-border-strong); background: var(--state-success-bg); color: var(--state-success-text); }
+.apc-detail-card { display: grid; }
+
+.apc-docente-workspace {
+    display: grid;
+    grid-template-columns: minmax(320px, 36fr) minmax(0, 64fr);
+    min-height: 480px;
+}
+.apc-solicitacoes-column {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-content: start;
+    gap: 10px;
+    min-width: 0;
+    padding: 0 28px 36px 0;
+    border-right: 1px solid var(--line-soft);
+}
+.apc-column-header h2 { margin: 0; font-size: 1.25rem; }
+.apc-column-header p { margin: 5px 0 0; color: var(--text-muted); font-size: .875rem; }
+.apc-page.is-professor .apc-column-header p { display: none; }
+.apc-solicitacoes-data { display: grid; align-content: start; gap: 8px; }
+
+.apc-pendencia-card {
+    position: relative;
+    display: grid;
+    gap: 7px;
+    min-height: 72px;
+    padding: 14px 16px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--surface-0);
+    transition: background var(--motion-fast), border-color var(--motion-fast);
+}
+.apc-pendencia-card:hover { border-color: var(--line-strong); background: var(--surface-1); }
+.apc-pendencia-card.is-selected { border-color: var(--brand); background: var(--brand-soft); }
+.apc-pendencia-card:focus-within { box-shadow: var(--focus-ring); }
+.apc-pendencia-card-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.apc-pendencia-card-copy { min-width: 0; }
+.apc-pendencia-card-copy h3 { margin: 0; font-size: 1rem; line-height: 1.25; }
+.apc-pendencia-card-copy p { margin: 4px 0 0; color: var(--text-muted); font-size: .8125rem; }
+.apc-pendencia-card-meta { display: flex; flex-wrap: wrap; gap: 5px 12px; color: var(--text-muted); font-size: .75rem; }
+.apc-pendencia-card > button { position: absolute; inset: 0; z-index: 1; width: 100%; opacity: 0; }
+
+.apc-docente-detalhe, .apc-gestao-detalhe { display: grid; align-content: start; gap: 24px; min-width: 0; padding: 0 0 40px 32px; }
+.apc-docente-detalhe-header, .apc-gestao-detalhe-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.apc-docente-detalhe-header h2, .apc-gestao-detalhe-header h2 { margin: 0; font-size: 1.5rem; line-height: 1.2; letter-spacing: -.01em; text-wrap: balance; }
+.apc-docente-detalhe-header p, .apc-gestao-detalhe-header p { margin: 6px 0 0; color: var(--text-muted); }
+.apc-accordion-body { display: grid; gap: 20px; }
+.apc-accordion-note, .apc-inline-hint { margin: 0; color: var(--text-muted); font-size: .875rem; line-height: 1.5; }
+.apc-inline-observacao { display: grid; gap: 5px; padding: 16px 18px; border-radius: var(--radius-md); background: var(--surface-2); }
+.apc-inline-observacao strong { font-size: .9375rem; }
+.apc-inline-observacao p { max-width: 70ch; margin: 0; color: var(--text-muted); line-height: 1.45; }
+
+.apc-professor-card-grid { display: grid; }
+.apc-professor-card { display: grid; gap: 16px; padding: 24px 0; border-top: 1px solid var(--line-soft); }
+.apc-professor-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; }
+.apc-professor-topo-copy { display: grid; gap: 3px; }
+.apc-professor-topo h4, .apc-professor-topo p { margin: 0; }
+.apc-professor-topo h4 { font-size: 1.125rem; }
+.apc-professor-turma { color: var(--text-muted); font-size: .875rem; }
+.apc-lesson-label { color: var(--brand-strong); font-size: .8125rem; font-weight: 800; }
+
+.apc-envio-card { display: grid; gap: 14px; padding: 16px; border: 1px solid #f2d18d; border-radius: var(--radius-md); background: #fffaf0; }
+.apc-envio-card-topo { display: flex; align-items: center; gap: 12px; }
+.apc-envio-card-topo > div { display: grid; gap: 2px; min-width: 0; }
+.apc-file-icon { position: relative; width: 40px; height: 46px; border: 2px solid var(--warning); border-radius: 7px; background: #fff; }
+.apc-file-icon::before { position: absolute; inset: 10px 8px; border-block: 2px solid var(--warning); content: ""; }
+.apc-envio-nome { overflow: hidden; font-size: 1rem; text-overflow: ellipsis; white-space: nowrap; }
+.apc-envio-meta { margin: 0; color: #6f501f; font-size: .8125rem; }
+.apc-review-guidance { margin: 0; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--surface-0); line-height: 1.45; }
+.apc-envio-actions, .apc-delivery-actions, .apc-inline-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.apc-envio-actions button { min-height: 40px; }
+.apc-replace-toggle { border-color: var(--brand); color: var(--brand-strong); font-weight: 700; }
+
+.apc-inline-form { display: grid; justify-items: center; gap: 14px; min-height: 240px; padding: 28px; border: 1px dashed var(--line-strong); border-radius: var(--radius-md); background: var(--surface-1); text-align: center; }
+.apc-inline-form[hidden] { display: none; }
+.apc-upload-dropzone { position: relative; display: grid; justify-items: center; gap: 7px; width: 100%; cursor: pointer; }
+.apc-upload-dropzone input[type="file"] { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+.apc-upload-icon { display: grid; width: 52px; height: 52px; place-items: center; border-radius: 50%; background: var(--surface-2); color: var(--text-muted); font-size: 1.35rem; }
+.apc-upload-title { font-size: 1.125rem; font-weight: 800; }
+.apc-upload-copy, .apc-upload-file-name { color: var(--text-muted); }
+.apc-upload-file-name { font-size: .8125rem; }
+.apc-delivery-actions { justify-content: center; width: 100%; }
+.apc-delivery-actions > button { min-height: 44px; }
+.apc-delivery-actions .btn-destaque { min-width: 170px; }
+.apc-create-activity-button { min-width: 170px; border-color: var(--brand); color: var(--brand-strong); font-weight: 700; }
+.apc-remove-file { color: var(--state-danger-text); }
+
+.apc-status { display: inline-flex; align-items: center; min-height: 28px; padding: 0 10px; border-radius: 999px; font-size: .75rem; font-weight: 700; white-space: nowrap; }
+.apc-status.is-ok { background: var(--state-success-bg); color: var(--state-success-text); }
+.apc-status.is-pending { background: #fff4d8; color: #82510a; }
+.apc-status.is-adjustment { background: #ffedd5; color: #8b3a15; }
+.apc-status.is-closed { background: var(--state-danger-bg); color: var(--state-danger-text); }
+.apc-status.is-printed { background: #e8f3ff; color: #235e8f; }
+.apc-chip-row { display: flex; flex-wrap: wrap; gap: 7px; }
+.apc-chip { display: inline-flex; align-items: center; min-height: 26px; padding: 0 8px; border-radius: 999px; background: var(--brand-soft); color: var(--brand-strong); font-size: .6875rem; font-weight: 700; }
+
+.apc-gestao-filtros {
+    display: grid;
+    grid-template-columns: minmax(240px, 2fr) repeat(2, minmax(150px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+    padding: 18px 20px 20px;
+    border-block: 1px solid var(--line-soft);
+    background: var(--surface-1);
+}
+.apc-filter-header { grid-column: 1 / -1; display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; }
+.apc-filter-header h2, .apc-filter-header p { margin: 0; }
+.apc-filter-header h2 { font-size: 1rem; }
+.apc-filter-header p { margin-top: 3px; color: var(--text-muted); font-size: .8125rem; }
+.apc-clear-filters { min-height: 40px; }
+.apc-gestao-filtros input, .apc-gestao-filtros select { width: 100%; min-width: 0; }
+.apc-mobile-filter-toggle { display: none; }
+.apc-lista-painel, .apc-professor-group-list { display: grid; }
+.apc-professor-group { border-bottom: 1px solid var(--line-soft); }
+.apc-professor-group-summary { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 72px; padding: 14px 4px; cursor: pointer; }
+.apc-professor-group-main, .apc-professor-group-side { display: grid; gap: 3px; }
+.apc-professor-group-meta { color: var(--text-muted); font-size: .875rem; }
+.apc-professor-group-body { padding: 16px; background: var(--surface-1); }
+.apc-professor-entrega-list { display: grid; gap: 10px; }
+.apc-entrega-item { display: grid; gap: 10px; padding: 14px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); background: var(--surface-0); }
+.apc-entrega-topo { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.apc-horarios-lista { margin: 0; padding-left: 18px; color: var(--text-muted); }
+.booking-empty { padding: 24px; color: var(--text-muted); text-align: center; }
+.apc-empty-state { display: grid; justify-items: center; gap: 8px; max-width: 480px; margin: 24px auto; padding: 32px 20px; color: var(--text-muted); text-align: center; }
+.apc-empty-icon { display: grid; width: 48px; height: 48px; place-items: center; border-radius: 50%; background: var(--surface-2); color: var(--brand-strong); font-size: 1.25rem; }
+.apc-empty-state h3, .apc-empty-state p { margin: 0; }
+.apc-empty-state h3 { color: var(--text-main); font-size: 1rem; }
+.apc-empty-state p { max-width: 42ch; font-size: .875rem; line-height: 1.5; text-wrap: pretty; }
+.apc-empty-state button { margin-top: 6px; min-height: 40px; }
+
+@media (max-width: 1120px) {
+    .apc-page { padding-inline: 24px; }
+    .apc-docente-workspace { grid-template-columns: 1fr; }
+    .apc-solicitacoes-column { padding: 0 0 24px; border-right: 0; border-bottom: 1px solid var(--line-soft); }
+    .apc-docente-detalhe, .apc-gestao-detalhe { padding: 28px 0 40px; }
+    .apc-gestao-filtros { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 780px) {
+    .apc-page { padding: 18px 12px 40px; }
+    .apc-workspace { gap: 20px; }
+    .apc-page-header h1 { font-size: 1.625rem; }
+    .apc-page-lead { font-size: .9375rem; }
+    .apc-page-header { align-items: stretch; flex-direction: column; }
+    .apc-page-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); justify-content: stretch; }
+    .apc-page-actions #btnAbrirEditarApc:not([hidden]) { grid-column: 1 / -1; }
+    .apc-page-actions > button { width: 100%; }
+    .apc-docente-detalhe-header, .apc-gestao-detalhe-header { display: grid; }
+    .apc-docente-detalhe-header h2, .apc-gestao-detalhe-header h2 { font-size: 1.5rem; }
+    .apc-inline-form { min-height: 250px; padding: 24px 16px; }
+    .apc-envio-actions, .apc-delivery-actions { display: grid; grid-template-columns: 1fr; }
+    .apc-envio-actions button, .apc-delivery-actions button { width: 100%; }
+    .apc-mobile-filter-toggle { display: inline-flex; }
+    .apc-gestao-filtros { display: none; grid-template-columns: 1fr; margin: -4px 0 20px; padding-inline: 14px; }
+    .apc-gestao-filtros.is-mobile-open { display: grid; }
+    .apc-filter-header { align-items: stretch; flex-direction: column; }
+    .apc-clear-filters { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) { .apc-pendencia-card { transition: none; } }

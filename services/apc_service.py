@@ -255,6 +255,7 @@ def enriquecer_envio_apc(item: dict) -> dict:
         "review_message": str(envio.get("review_message") or "").strip(),
         "reviewed_by_user_id": envio.get("reviewed_by_user_id"),
         "reviewed_by_name": str(envio.get("reviewed_by_name") or "").strip(),
+        "reviewed_by_cargo": str(envio.get("reviewed_by_cargo") or "").strip().upper(),
         "reviewed_at": reviewed_at,
     }
 

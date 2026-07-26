@@ -1,10 +1,62 @@
 /* Step navigation, forms and review content. */
-.professor-page .print-flow-stepper { padding: var(--space-3) var(--space-8) var(--space-4); border-bottom: 1px solid var(--print-color-border); }
-.professor-page .print-flow-stepper li { min-height: 40px; color: var(--print-color-text-muted); }
-.professor-page .print-flow-stepper li span { width: 28px; height: 28px; flex-basis: 28px; border-color: var(--print-color-border-strong); background: var(--print-color-surface); font-weight: 700; }
-.professor-page .print-flow-stepper li strong { background: var(--print-color-surface); font-size: 13px; }
-.professor-page .print-flow-stepper li.is-current span { border-color: var(--print-color-primary); background: var(--print-color-primary); color: #fff; box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent); }
-.professor-page .print-flow-stepper li.is-ready span { border-color: var(--print-color-success); background: color-mix(in srgb, var(--print-color-success) 10%, white); color: var(--print-color-success); }
+.professor-page .print-flow-stepper {
+    overflow: hidden;
+    padding: 22px var(--space-8) 20px;
+    border-bottom: 1px solid var(--print-color-border);
+    background: var(--print-color-surface-muted);
+}
+.professor-page .print-stepper-summary {
+    display: flex;
+    gap: var(--space-4);
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: var(--space-4);
+}
+.professor-page .print-stepper-summary span {
+    color: var(--print-color-text-muted);
+    font-size: .82rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+}
+.professor-page .print-stepper-summary strong {
+    color: var(--print-color-primary-hover);
+    font-size: 1.35rem;
+    line-height: 1.1;
+}
+.professor-page .print-flow-stepper ol {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 4px;
+    min-width: 0;
+    width: 100%;
+}
+.professor-page .print-flow-stepper li {
+    display: block;
+    min-width: 0;
+    min-height: 8px;
+    height: 8px;
+    padding: 0;
+    background: var(--print-color-surface);
+    color: transparent;
+    opacity: 1;
+    transition: background-color var(--print-transition);
+}
+.professor-page .print-flow-stepper li:first-child { border-radius: 999px 0 0 999px; }
+.professor-page .print-flow-stepper li:last-child { border-radius: 0 999px 999px 0; }
+.professor-page .print-flow-stepper li.is-ready,
+.professor-page .print-flow-stepper li.is-current { background: var(--print-color-primary-hover); }
+.professor-page .print-flow-stepper li:not(:last-child)::after { display: none; }
+.professor-page .print-flow-stepper li > * {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
 .professor-page .print-wizard-left .print-step-card { gap: var(--print-space-section); }
 .professor-page .print-step-header > div { gap: var(--space-1); }
 .professor-page .print-step-header h2 { font-size: 24px; line-height: 1.15; }
@@ -43,7 +95,10 @@
 .professor-page .print-printer-icon svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 
 @media (max-width: 980px) {
-    .professor-page .print-flow-stepper { padding: var(--space-3) var(--space-4); }
+    .professor-page .print-flow-stepper { padding: 18px var(--space-4) var(--space-4); }
+    .professor-page .print-stepper-summary { margin-bottom: 13px; }
+    .professor-page .print-stepper-summary span { font-size: .72rem; }
+    .professor-page .print-stepper-summary strong { font-size: 1.15rem; }
     .professor-page .print-step-header h2 { font-size: 20px; }
 }
 

@@ -792,6 +792,7 @@ class ApcEnvioOut(BaseModel):
     review_message: str = ""
     reviewed_by_user_id: int | None = None
     reviewed_by_name: str = ""
+    reviewed_by_cargo: str = ""
     reviewed_at: str = ""
 
 

@@ -244,13 +244,15 @@
             }
         }
 
-        [
-            ["stepperArquivo", 1],
-            ["stepperSolicitacao", 2],
-            ["stepperConfiguracoes", 3],
-            ["stepperResumo", 4],
-            ["stepperAcompanhamento", 5],
-        ].forEach(([id, step]) => {
+        const steps = [
+            ["stepperArquivo", 1, "Arquivo"],
+            ["stepperSolicitacao", 2, "Configuração"],
+            ["stepperConfiguracoes", 3, "Destino"],
+            ["stepperResumo", 4, "Conferência"],
+            ["stepperAcompanhamento", 5, "Acompanhamento"],
+        ];
+
+        steps.forEach(([id, step]) => {
             const item = document.getElementById(id);
             if (!item) {
                 return;
@@ -266,6 +268,16 @@
                 item.removeAttribute("aria-current");
             }
         });
+
+        const currentStepData = steps.find(([, step]) => step === currentStep) || steps[0];
+        const progress = document.getElementById("printStepperProgress");
+        const currentLabel = document.getElementById("printStepperCurrentLabel");
+        if (progress) {
+            progress.innerText = `Etapa ${currentStepData[1]} de ${steps.length}`;
+        }
+        if (currentLabel) {
+            currentLabel.innerText = currentStepData[2];
+        }
 
         document.documentElement.dataset.printingCurrentStep = String(currentStep);
         lastRenderedStep = currentStep;

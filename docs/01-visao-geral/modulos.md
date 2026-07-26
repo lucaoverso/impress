@@ -120,7 +120,7 @@ Status: inventario inicial consolidado a partir do codigo atual.
 | Atores | Professor; gestao APC: admin/coordenador/professor com acesso de coordenacao. |
 | Endpoints | `GET /apc/contexto`; `GET /apc/destinatarios/opcoes`; `GET /apc/calendario`; `GET /apc/solicitacoes`; `GET /apc/periodos/{id}`; `POST /apc/periodos`; `PUT /apc/periodos/{id}`; `DELETE /apc/periodos/{id}`; `POST /apc/periodos/{id}/envio`; `PUT /apc/envios/{id}/revisao`; `DELETE /apc/envios/{id}`; `GET /apc/envios/{id}/arquivo`; `GET /apc/envios/{id}/preview`; `POST /apc/envios/{id}/imprimir`. |
 | Paginas | `GET /apc`. |
-| Arquivos principais | `routers/apc_router.py`; `services/apc_service.py`; `services/apc_recipient_service.py`; `services/apc_preview_service.py`; `services/apc_preview_worker.py`; `modules/apc_review/*`; `modules/printing/attachment_printing.py`; `db/apc.py`; `templates/apc.html`; `static/js/apc.js`. |
+| Arquivos principais | `routers/apc_router.py`; `services/apc_service.py`; `services/apc_recipient_service.py`; `services/apc_preview_service.py`; `services/apc_preview_worker.py`; `modules/apc_review/*`; `modules/printing/attachment_printing.py`; `db/apc.py`; `templates/apc/index.html`; `static/js/apc.js`. |
 | Tabelas utilizadas | `apc_periodos`, `apc_periodo_destinatarios`, `apc_envios`, `apc_envio_historico`, `apc_preview_jobs`, `usuarios`, `turmas`, `disciplinas`, `horarios_escolares`, `audit_events`. |
 | Dependencias | Autenticacao, permissoes, horario escolar, impressão, PDF/preview, APC dir/spool, auditoria. |
 | Regras de negocio | RN-ANE-001 a RN-ANE-007; RF-ANE-001 a RF-ANE-007. |

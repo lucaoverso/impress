@@ -48,6 +48,11 @@
     --space-4: 16px;
     --space-6: 24px;
     --space-8: 32px;
+    --page-gutter: var(--space-4);
+    --page-padding-start: var(--space-4);
+    --page-padding-end: var(--space-6);
+    --flow-gap: var(--space-4);
+    --surface-padding: var(--space-3);
     --page-width: 1400px;
     --page-width-wide: 1480px;
     --page-width-compact: 1100px;

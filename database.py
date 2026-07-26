@@ -6577,6 +6577,7 @@ def _mapear_apc_envio(row) -> dict:
             else None
         ),
         "reviewed_by_name": str(row["reviewed_by_name"] or "").strip(),
+        "reviewed_by_cargo": str(row["reviewed_by_cargo"] or "").strip().upper(),
         "reviewed_at": str(row["reviewed_at"] or "").strip(),
     }
 
@@ -6609,6 +6610,7 @@ def _consultar_apc_envios(cursor, *, filtros_sql=None, params=None):
             COALESCE(u.nome, '') AS professor_nome,
             COALESCE(u.email, '') AS professor_email,
             COALESCE(reviewer.nome, '') AS reviewed_by_name,
+            COALESCE(reviewer.cargo, '') AS reviewed_by_cargo,
             COALESCE(t.nome, '') AS turma_nome,
             COALESCE(d.nome, '') AS disciplina_nome
         FROM apc_envios ae

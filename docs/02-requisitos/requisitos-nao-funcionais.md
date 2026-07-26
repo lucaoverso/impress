@@ -89,7 +89,7 @@ Classificacao:
 
 | ID | Descricao | Evidencia | Teste relacionado | Classificacao |
 | --- | --- | --- | --- | --- |
-| RNF-UX-001 | Telas devem usar atributos ARIA em fluxos interativos principais. | `templates/scheduling/*`, `templates/printing/index.html`, `templates/apc.html`, `templates/admin.html` contem `aria-*`, `role`, `aria-live` | `tests/test_scheduling_day_overview.py` cobre presenca de partes do template | Confirmada pelo codigo |
+| RNF-UX-001 | Telas devem usar atributos ARIA em fluxos interativos principais. | `templates/scheduling/*`, `templates/printing/index.html`, `templates/apc/index.html`, `templates/admin.html` contem `aria-*`, `role`, `aria-live` | `tests/test_scheduling_day_overview.py` cobre presenca de partes do template | Confirmada pelo codigo |
 | RNF-UX-002 | Responsividade visual deve ser garantida por CSS responsivo. | Existem CSS por pagina em `static/css/pages/`; revisao completa nao realizada. | Pendente | Pendente de validacao |
 | RNF-UX-003 | Acessibilidade deve ser validada por teste automatizado/auditoria dedicada. | Nao localizado teste axe/lighthouse ou equivalente. | Pendente | Pendente de validacao |
 

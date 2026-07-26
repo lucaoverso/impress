@@ -26,8 +26,8 @@
 {% elif navbar_current == "apc" %}
     {% set sidebar_title = "Central de anexos" %}
     {% set sidebar_items = [
-        {"label": "Entregas e solicitações", "icon": "bi-paperclip", "href": "/apc", "active": true},
-        {"label": "Calendário mensal", "icon": "bi-calendar3", "target_id": "btnAlternarCalendarioApc"}
+        {"label": "Entregas e solicitações", "icon": "bi-paperclip", "href": "/apc", "active": apc_page | default("deliveries") == "deliveries"},
+        {"label": "Calendário mensal", "icon": "bi-calendar3", "href": "/apc/calendario/", "active": apc_page | default("deliveries") == "calendar"}
     ] %}
 {% elif navbar_current == "pcpi" %}
     {% set sidebar_title = "PCPI" %}

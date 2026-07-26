@@ -11,7 +11,7 @@ class P2UiContractTest(unittest.TestCase):
         main = (ROOT / "main.py").read_text(encoding="utf-8")
         templates = [
             ROOT / "templates" / "relatorios.html",
-            ROOT / "templates" / "apc.html",
+            ROOT / "templates" / "apc" / "index.html",
             ROOT / "templates" / "printing" / "index.html",
         ]
         vendor_assets = [
@@ -101,6 +101,31 @@ class P2UiContractTest(unittest.TestCase):
         self.assertIn(".booking-sort-controls button {\n    min-height: 44px;", scheduling)
         self.assertIn(".booking-item-actions .print-secondary-btn { min-height: 44px; }", scheduling)
         self.assertRegex(history, r"\.print-history-item-actions button \{\n    min-height: 44px;")
+
+    def test_acoes_de_revisao_apc_ficam_ocultas_para_professores(self):
+        template = (ROOT / "templates" / "apc" / "index.html").read_text(encoding="utf-8")
+        script = (ROOT / "static" / "js" / "apc.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static" / "css" / "apc" / "dialogs.css").read_text(encoding="utf-8")
+
+        self.assertIn('id="formApcReview" class="apc-review-form" hidden', template)
+        self.assertIn('id="btnSalvarReviewApc" class="btn-destaque"', template)
+        self.assertIn("form.hidden = !gestaoAtiva;", script)
+        self.assertIn('el("btnSalvarReviewApc").hidden = !gestaoAtiva;', script)
+        self.assertIn(".apc-review-panel[hidden], .apc-review-form[hidden],", stylesheet)
+        self.assertIn("#btnSalvarReviewApc[hidden] { display: none; }", stylesheet)
+
+    def test_historico_apc_identifica_decisao_data_e_responsavel(self):
+        script = (ROOT / "static" / "js" / "apc.js").read_text(encoding="utf-8")
+        stylesheet = (ROOT / "static" / "css" / "apc" / "dialogs.css").read_text(encoding="utf-8")
+
+        self.assertIn('if (statusNormalizado === "APROVADO") return "Aprovado";', script)
+        self.assertIn('cargo === "COORDENADOR"', script)
+        self.assertIn('? "Coord."', script)
+        self.assertIn('cargo === "ADMIN"', script)
+        self.assertIn('? "PCPI"', script)
+        self.assertIn('responsavel ? `Por ${responsavel}` : ""', script)
+        self.assertIn("envio.reviewed_at", script)
+        self.assertIn(".apc-review-history-event::before", stylesheet)
 
 
 if __name__ == "__main__":

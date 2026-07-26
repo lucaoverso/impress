@@ -28,9 +28,6 @@ let periodoSelecionadoApcId = null;
 let periodoEmEdicaoApcId = null;
 let perfilApc = "docente";
 let focoAntesModalApc = null;
-let calendarioVisivelApc = false;
-let calendarioDrawerTimerApc = null;
-let focoAntesCalendarioApc = null;
 let envioPreviewApc = null;
 let envioPreviewApcId = null;
 const professoresAbertosPorPeriodoApc = new Map();
@@ -54,6 +51,8 @@ let timerPreviewAtividadeApc = null;
 let tokenPreviewAtividadeApc = 0;
 let controllerPreviewAtividadeApc = null;
 let timerFechamentoAtividadeApc = null;
+let documentoPreviewAtividadeApc = null;
+let paginaPreviewAtividadeApc = 1;
 const cachePreviewAtividadeApc = new Map();
 const LIMITE_CACHE_PREVIEW_APC = 6;
 let opcoesDestinatariosApc = [];
@@ -74,6 +73,28 @@ function setMensagemApc(texto, erro = false) {
     msg.innerText = texto || "";
     msg.classList.toggle("is-error", Boolean(texto) && erro);
     msg.classList.toggle("is-success", Boolean(texto) && !erro);
+}
+
+function renderEstadoVazioApc(container, { icone, titulo, descricao, acao, aoClicar }) {
+    if (!container) return;
+    container.innerHTML = "";
+
+    const estado = document.createElement("div");
+    estado.className = "apc-empty-state";
+    estado.innerHTML = `
+        <span class="apc-empty-icon" aria-hidden="true"><i class="bi ${icone}"></i></span>
+        <h3>${titulo}</h3>
+        <p>${descricao}</p>
+    `;
+
+    if (acao && aoClicar) {
+        const botao = document.createElement("button");
+        botao.type = "button";
+        botao.innerText = acao;
+        botao.addEventListener("click", aoClicar);
+        estado.appendChild(botao);
+    }
+    container.appendChild(estado);
 }
 
 function mesIsoApc(data) {
@@ -427,6 +448,12 @@ function limparPreviewArquivoApc(mensagem = "Selecione um arquivo para visualiza
     if (el("formApcReview")) {
         el("formApcReview").hidden = true;
         el("formApcReview").reset();
+    }
+    if (el("btnSalvarReviewApc")) {
+        el("btnSalvarReviewApc").hidden = true;
+    }
+    if (el("apcReviewHistory")) {
+        el("apcReviewHistory").innerHTML = "";
     }
     if (el("apcReviewMessageState")) {
         el("apcReviewMessageState").innerText = "";
@@ -794,50 +821,6 @@ async function enviarImpressaoApc(event) {
     }
 }
 
-function calendarioDrawerAbertoApc() {
-    return modoDocenteAtivoApc() && calendarioVisivelApc;
-}
-
-function abrirCalendarioApc() {
-    const drawer = el("apcCalendarDrawer");
-    const painel = el("apcCalendarCard");
-    if (!drawer || !painel || !modoDocenteAtivoApc()) return;
-
-    if (calendarioDrawerTimerApc) {
-        window.clearTimeout(calendarioDrawerTimerApc);
-        calendarioDrawerTimerApc = null;
-    }
-
-    focoAntesCalendarioApc = document.activeElement;
-    calendarioVisivelApc = true;
-    drawer.hidden = false;
-    document.body.classList.add("apc-calendar-drawer-open");
-    aplicarVisibilidadeApc();
-    window.requestAnimationFrame(() => {
-        drawer.classList.add("is-visible");
-        focarSemRolagemApc(painel);
-    });
-}
-
-function fecharCalendarioApc({ devolverFoco = true } = {}) {
-    const drawer = el("apcCalendarDrawer");
-    if (!drawer || !modoDocenteAtivoApc()) return;
-
-    calendarioVisivelApc = false;
-    drawer.classList.remove("is-visible");
-    document.body.classList.remove("apc-calendar-drawer-open");
-    aplicarVisibilidadeApc();
-    calendarioDrawerTimerApc = window.setTimeout(() => {
-        drawer.hidden = true;
-        calendarioDrawerTimerApc = null;
-    }, 260);
-
-    if (devolverFoco && focoAntesCalendarioApc instanceof HTMLElement) {
-        focarSemRolagemApc(focoAntesCalendarioApc);
-    }
-    focoAntesCalendarioApc = null;
-}
-
 function perfilInicialApc() {
     return usuarioPodeVerGestaoApc() ? "gestao" : "docente";
 }
@@ -852,18 +835,8 @@ function visaoAtivaApc() {
     return modoGestaoAtivoApc() ? "gestao" : "docente";
 }
 
-function preencherSelectAnosApc() {
-    const select = el("apcAnoLetivo");
-    select.innerHTML = "";
-    (contextoApc?.anos_letivos || []).forEach((ano) => {
-        const option = document.createElement("option");
-        option.value = String(ano);
-        option.innerText = String(ano);
-        select.appendChild(option);
-    });
-    if (contextoApc?.ano_letivo_atual) {
-        select.value = String(contextoApc.ano_letivo_atual);
-    }
+function anoLetivoAtivoApc() {
+    return Number(contextoApc?.ano_letivo_atual || new Date().getFullYear());
 }
 
 function preencherSelectPublicoApc() {
@@ -896,10 +869,6 @@ function preencherSelectTiposEntregaApc() {
     }
 }
 
-function periodosResumoPorData(dataIso) {
-    return (calendarioApc.periodos || []).filter((item) => item.data_referencia === dataIso);
-}
-
 function periodoResumoSelecionado(periodos) {
     const itens = Array.isArray(periodos) ? periodos : [];
     if (!itens.length) return null;
@@ -910,35 +879,11 @@ function periodoResumoSelecionado(periodos) {
     return itens[0];
 }
 
-function atualizarResumoMesApc() {
-    const periodos = Array.isArray(calendarioApc.periodos) ? calendarioApc.periodos : [];
-    if (modoGestaoAtivoApc()) {
-        const totalSolicitacoes = periodos.length;
-        const totalPendencias = periodos.reduce(
-            (soma, item) => soma + Number(item.total_pendentes || 0),
-            0
-        );
-        el("apcResumoMes").innerText =
-            `${pluralizarApc(totalSolicitacoes, "solicitacao", "solicitacoes")} neste ano | `
-            + `${pluralizarApc(totalPendencias, "pendencia", "pendencias")} de envio.`;
-        return;
-    }
-
-    const totalSolicitacoes = periodos.length;
-    const enviados = periodos.filter((item) => Boolean(item.enviado)).length;
-    el("apcResumoMes").innerText =
-        `${pluralizarApc(totalSolicitacoes, "entrega prevista", "entregas previstas")} para voce neste ano | `
-        + `${pluralizarApc(enviados, "arquivo enviado", "arquivos enviados")}.`;
-}
-
 function aplicarVisibilidadeApc() {
     const podeGerir = usuarioPodeVerGestaoApc();
     const layoutProfessor = modoDocenteAtivoApc();
     const pagina = obterPaginaApc();
     const acoesGestao = el("apcGestaoActions");
-    const calendarioDrawer = el("apcCalendarDrawer");
-    const calendarioCard = el("apcCalendarCard");
-    const botaoCalendario = el("btnAlternarCalendarioApc");
     const detalheDocente = el("apcDocenteDetalhe");
     const detalheGestao = el("apcGestaoDetalhe");
     const filtrosGestao = el("apcGestaoFiltros");
@@ -946,19 +891,6 @@ function aplicarVisibilidadeApc() {
     const descricaoSolicitacoes = el("apcSolicitacoesDescricao");
     const gestaoAtiva = podeGerir && modoGestaoAtivoApc();
 
-    if (calendarioDrawer && !layoutProfessor) {
-        calendarioDrawer.hidden = true;
-        calendarioDrawer.classList.remove("is-visible");
-    }
-    if (calendarioCard) {
-        calendarioCard.setAttribute("role", layoutProfessor ? "dialog" : "region");
-        calendarioCard.setAttribute("aria-modal", layoutProfessor ? "true" : "false");
-    }
-    if (botaoCalendario) {
-        botaoCalendario.hidden = !layoutProfessor;
-        botaoCalendario.innerText = calendarioVisivelApc ? "Ocultar calendario" : "Ver calendario";
-        botaoCalendario.setAttribute("aria-expanded", calendarioVisivelApc ? "true" : "false");
-    }
     if (detalheDocente) {
         detalheDocente.hidden = !layoutProfessor;
     }
@@ -969,12 +901,12 @@ function aplicarVisibilidadeApc() {
         filtrosGestao.hidden = !gestaoAtiva;
     }
     if (tituloSolicitacoes) {
-        tituloSolicitacoes.innerText = layoutProfessor ? "Entregas do ano" : "Demandas de entrega";
+        tituloSolicitacoes.innerText = layoutProfessor ? "Minhas entregas" : "Solicitações";
     }
     if (descricaoSolicitacoes) {
         descricaoSolicitacoes.innerText = layoutProfessor
-            ? "As pendencias aparecem primeiro e a mais urgente ja fica aberta."
-            : "Use os filtros e selecione uma demanda para acompanhar os professores.";
+            ? "Pendências aparecem primeiro; a mais urgente já fica aberta."
+            : "Selecione uma solicitação para acompanhar professores e anexos.";
     }
     if (acoesGestao) {
         acoesGestao.hidden = !gestaoAtiva;
@@ -1013,11 +945,11 @@ function preencherFormularioPeriodo(periodo) {
 function atualizarCabecalhoModalApc(periodo = null) {
     const editando = Boolean(periodoEmEdicaoApcId && periodo);
     el("apcModalTitulo").innerText = editando
-        ? "Editar solicitacao de entrega"
-        : "Nova solicitacao de entrega";
+        ? "Editar solicitação de entrega"
+        : "Nova solicitação de entrega";
     el("apcModalDescricao").innerText = editando
-        ? "Ajuste o documento solicitado, o prazo e os destinatarios desta solicitacao."
-        : "Defina o documento solicitado, o prazo e quem deve visualizar essa entrega.";
+        ? "Ajuste o documento, o prazo e os responsáveis por esta entrega."
+        : "Defina o documento, o prazo e quem deve realizar a entrega.";
 }
 
 function abrirModalFormularioApc(periodo = null) {
@@ -1091,6 +1023,50 @@ function statusRevisaoEnvioApc(envio) {
         return { status, texto: "Realizar ajuste", tipo: "adjustment" };
     }
     return { status: "PENDENTE", texto: "Aguardando analise", tipo: "pending" };
+}
+
+function tituloHistoricoRevisaoApc(status) {
+    const statusNormalizado = String(status || "").toUpperCase();
+    if (statusNormalizado === "APROVADO") return "Aprovado";
+    if (statusNormalizado === "AJUSTE_SOLICITADO") return "Ajuste solicitado";
+    if (statusNormalizado === "IMPRESSO") return "Marcado como impresso";
+    return "";
+}
+
+function nomeResponsavelRevisaoApc(envio) {
+    const nome = String(envio?.reviewed_by_name || "").trim();
+    const cargo = String(envio?.reviewed_by_cargo || "").trim().toUpperCase();
+    const prefixo = cargo === "COORDENADOR"
+        ? "Coord."
+        : cargo === "ADMIN"
+            ? "PCPI"
+            : "";
+    return [prefixo, nome].filter(Boolean).join(" ");
+}
+
+function criarEventoHistoricoApc(titulo, responsavel, dataHora) {
+    const evento = document.createElement("div");
+    evento.className = "apc-review-history-event";
+
+    const acao = document.createElement("p");
+    const destaque = document.createElement("strong");
+    destaque.innerText = titulo;
+    acao.appendChild(destaque);
+    evento.appendChild(acao);
+
+    if (responsavel) {
+        const autor = document.createElement("p");
+        autor.innerText = responsavel;
+        evento.appendChild(autor);
+    }
+
+    if (dataHora) {
+        const data = document.createElement("small");
+        data.innerText = formatarDataHoraApc(dataHora);
+        evento.appendChild(data);
+    }
+
+    return evento;
 }
 
 function criarOrientacaoRevisaoApc(envio) {
@@ -1167,8 +1143,8 @@ function atualizarResumoDestinatariosApc() {
     if (!resumo) return;
     const total = selecoesDestinatariosApc.size;
     resumo.innerText = total
-        ? `${pluralizarApc(total, "combinacao selecionada", "combinacoes selecionadas")} para esta solicitacao.`
-        : "Nenhuma combinacao selecionada ainda.";
+        ? `${pluralizarApc(total, "combinação selecionada", "combinações selecionadas")} para esta solicitação.`
+        : "Nenhuma combinação selecionada ainda.";
 }
 
 async function carregarOpcoesDestinatariosApc(force = false) {
@@ -1177,7 +1153,7 @@ async function carregarOpcoesDestinatariosApc(force = false) {
         renderDestinatariosApc();
         return;
     }
-    const anoLetivo = Number(el("apcAnoLetivo")?.value || 0);
+    const anoLetivo = anoLetivoAtivoApc();
     if (!anoLetivo) {
         opcoesDestinatariosApc = [];
         renderDestinatariosApc();
@@ -1404,7 +1380,10 @@ function statusResumoPeriodoApc(item, modoGestao = false) {
         if (item.prazo_expirado) {
             return { texto: "Prazo encerrado", tipo: "closed" };
         }
-        return { texto: "Aguardando envios", tipo: "pending" };
+        return {
+            texto: pluralizarApc(Number(item.total_pendentes || 0), "pendência", "pendências"),
+            tipo: "pending",
+        };
     }
     if (Number(item.total_ajustes || 0) > 0) {
         return { texto: "Realizar ajuste", tipo: "adjustment" };
@@ -1502,21 +1481,21 @@ function criarCardEnvioExistenteApc(periodo, item) {
     const envioCard = document.createElement("div");
     envioCard.className = "apc-envio-card";
 
-    const topo = document.createElement("div");
-    topo.className = "apc-envio-card-topo";
-    const review = statusRevisaoEnvioApc(envio);
-    topo.appendChild(criarStatusApc(review.texto, review.tipo));
-
-    const enviadoEm = document.createElement("p");
-    enviadoEm.className = "apc-envio-meta";
-    enviadoEm.innerText = `Enviado em ${formatarDataHoraApc(envio.enviado_em)}`;
-    topo.appendChild(enviadoEm);
-    envioCard.appendChild(topo);
-
+    const arquivo = document.createElement("div");
+    arquivo.className = "apc-envio-card-topo";
+    const icone = document.createElement("span");
+    icone.className = "apc-file-icon";
+    icone.setAttribute("aria-hidden", "true");
+    const copia = document.createElement("div");
     const nome = document.createElement("strong");
     nome.className = "apc-envio-nome";
     nome.innerText = nomeArquivoPrincipalApc(envio);
-    envioCard.appendChild(nome);
+    const enviadoEm = document.createElement("p");
+    enviadoEm.className = "apc-envio-meta";
+    enviadoEm.innerText = `Enviado em ${formatarDataHoraApc(envio.enviado_em)}`;
+    copia.append(nome, enviadoEm);
+    arquivo.append(icone, copia);
+    envioCard.appendChild(arquivo);
 
     const guidance = criarOrientacaoRevisaoApc(envio);
     if (guidance) {
@@ -1527,25 +1506,6 @@ function criarCardEnvioExistenteApc(periodo, item) {
     acoes.className = "apc-inline-actions apc-envio-actions";
 
     acoes.appendChild(criarBotaoVisualizarApc(envio));
-
-    const abrir = document.createElement("button");
-    abrir.type = "button";
-    abrir.innerText = "Baixar arquivo";
-    abrir.addEventListener("click", async () => {
-        await baixarArquivoApc(envio);
-    });
-    acoes.appendChild(abrir);
-
-    if (!periodo?.prazo_expirado) {
-        const remover = document.createElement("button");
-        remover.type = "button";
-        remover.className = "btn-perigo";
-        remover.dataset.envioId = String(envio.id);
-        remover.dataset.periodoId = String(periodo.id || 0);
-        remover.innerText = "Remover arquivo";
-        remover.addEventListener("click", removerArquivoApc);
-        acoes.appendChild(remover);
-    }
 
     envioCard.appendChild(acoes);
 
@@ -1559,7 +1519,7 @@ function criarCardEnvioExistenteApc(periodo, item) {
     return envioCard;
 }
 
-function criarCardEntregaProfessorApc(periodo, item) {
+function criarCardEntregaProfessorApc(periodo, item, indice = 0, total = 1) {
     const card = document.createElement("article");
     card.className = "apc-professor-card";
     card.classList.add(
@@ -1568,10 +1528,27 @@ function criarCardEntregaProfessorApc(periodo, item) {
 
     const topo = document.createElement("div");
     topo.className = "apc-professor-topo";
-    const titulo = item.disciplina_nome
-        ? `${item.disciplina_nome}${item.turma_nome ? ` - ${item.turma_nome}` : ""}`
-        : "Entrega geral";
-    topo.innerHTML = `<div><h4>${titulo}</h4></div>`;
+    const copia = document.createElement("div");
+    copia.className = "apc-professor-topo-copy";
+    const aulas = [...new Set((item.horarios || [])
+        .map((horario) => Number(horario.aula_numero || 0))
+        .filter(Boolean))].sort((a, b) => a - b);
+    if (aulas.length) {
+        const aula = document.createElement("p");
+        aula.className = "apc-lesson-label";
+        aula.innerText = aulas.map((numero) => `${numero}ª aula`).join(" · ");
+        copia.appendChild(aula);
+    }
+    const titulo = document.createElement("h4");
+    titulo.innerText = item.disciplina_nome || "Entrega geral";
+    copia.appendChild(titulo);
+    if (item.turma_nome) {
+        const turma = document.createElement("p");
+        turma.className = "apc-professor-turma";
+        turma.innerText = item.turma_nome;
+        copia.appendChild(turma);
+    }
+    topo.appendChild(copia);
     const review = statusRevisaoEnvioApc(item.envio);
     topo.appendChild(
         item.enviado
@@ -1580,22 +1557,8 @@ function criarCardEntregaProfessorApc(periodo, item) {
     );
     card.appendChild(topo);
 
-    const resumo = document.createElement("div");
-    resumo.className = "apc-professor-card-resumo";
-
-    const turma = document.createElement("p");
-    turma.className = "apc-inline-hint";
-    turma.innerText = item.turma_nome
-        ? `Turma: ${item.turma_nome}`
-        : "Entrega sem turma vinculada.";
-    resumo.appendChild(turma);
-
-    if (item.envio?.id) {
-        const envioExistente = criarCardEnvioExistenteApc(periodo, item);
-        if (envioExistente) {
-            card.appendChild(envioExistente);
-        }
-    }
+    const envioExistente = item.envio?.id ? criarCardEnvioExistenteApc(periodo, item) : null;
+    if (envioExistente) card.appendChild(envioExistente);
 
     if (periodo.prazo_expirado) {
         return card;
@@ -1606,22 +1569,43 @@ function criarCardEntregaProfessorApc(periodo, item) {
     form.dataset.periodoId = String(periodo.id);
     form.dataset.turmaId = String(item.turma_id || 0);
     form.dataset.disciplinaId = String(item.disciplina_id || 0);
+    form.setAttribute("aria-label", `Local de envio do anexo ${indice + 1} de ${total}`);
+    form.hidden = Boolean(item.envio?.id);
 
-    const label = document.createElement("label");
-    label.innerText = "Arquivo";
-    form.appendChild(label);
-
+    const inputId = `apcArquivo-${periodo.id}-${item.turma_id || 0}-${item.disciplina_id || 0}`;
     const input = document.createElement("input");
+    input.id = inputId;
     input.type = "file";
     input.required = true;
     input.name = "arquivo";
-    form.appendChild(input);
+
+    const dropzone = document.createElement("label");
+    dropzone.className = "apc-upload-dropzone";
+    dropzone.htmlFor = inputId;
+    const icon = document.createElement("i");
+    icon.className = "bi bi-paperclip apc-upload-icon";
+    icon.setAttribute("aria-hidden", "true");
+    const uploadTitle = document.createElement("strong");
+    uploadTitle.className = "apc-upload-title";
+    uploadTitle.innerText = item.envio?.id ? "Selecionar arquivo corrigido" : "Selecionar arquivo";
+    const uploadCopy = document.createElement("span");
+    uploadCopy.className = "apc-upload-copy";
+    uploadCopy.innerText = "Arraste e solte ou clique para procurar";
+    const fileName = document.createElement("span");
+    fileName.className = "apc-upload-file-name";
+    fileName.innerText = "Nenhum arquivo selecionado";
+    dropzone.append(icon, uploadTitle, uploadCopy, fileName, input);
+    form.appendChild(dropzone);
+
+    input.addEventListener("change", () => {
+        fileName.innerText = input.files?.[0]?.name || "Nenhum arquivo selecionado";
+    });
 
     const dica = document.createElement("p");
     dica.className = "apc-inline-hint";
     dica.innerText = item.envio?.id
-        ? "Se necessario, remova o arquivo atual ou envie uma nova versao para esta disciplina."
-        : "Anexe o arquivo correspondente a esta disciplina.";
+        ? "O novo arquivo substituirá o envio atual."
+        : `Local de envio para ${item.disciplina_nome || "esta aula"}.`;
     form.appendChild(dica);
 
     const actions = document.createElement("div");
@@ -1636,12 +1620,38 @@ function criarCardEntregaProfessorApc(periodo, item) {
     const create = document.createElement("button");
     create.type = "button";
     create.className = "apc-create-activity-button";
-    create.innerText = item.envio?.id ? "Criar APC e substituir" : "Criar APC";
+    create.innerText = "Criar atividade";
     actions.appendChild(create);
+
+    if (item.envio?.id) {
+        const remover = document.createElement("button");
+        remover.type = "button";
+        remover.className = "btn-perigo apc-remove-file";
+        remover.dataset.envioId = String(item.envio.id);
+        remover.dataset.periodoId = String(periodo.id || 0);
+        remover.innerText = "Remover envio atual";
+        remover.addEventListener("click", removerArquivoApc);
+        actions.appendChild(remover);
+    }
     form.appendChild(actions);
 
     form.addEventListener("submit", enviarArquivoApc);
     card.appendChild(form);
+
+    if (envioExistente && !periodo.prazo_expirado) {
+        const alternar = document.createElement("button");
+        alternar.type = "button";
+        alternar.className = "apc-replace-toggle";
+        alternar.innerText = "Corrigir envio";
+        alternar.setAttribute("aria-expanded", "false");
+        alternar.addEventListener("click", () => {
+            form.hidden = !form.hidden;
+            alternar.innerText = form.hidden ? "Corrigir envio" : "Cancelar correção";
+            alternar.setAttribute("aria-expanded", form.hidden ? "false" : "true");
+            if (!form.hidden) input.focus();
+        });
+        envioExistente.querySelector(".apc-envio-actions")?.appendChild(alternar);
+    }
     create.addEventListener("click", () => {
         void abrirModalAtividadeApc(periodo, item, create);
     });
@@ -1671,6 +1681,8 @@ function imagemSelecionadaEditorApc(editor) {
 function selecionarImagemEditorApc(editor, imagem) {
     editor.querySelectorAll("img.is-selected").forEach((item) => item.classList.remove("is-selected"));
     if (imagem) imagem.classList.add("is-selected");
+    const controles = editor.parentElement?.querySelector(".apc-rich-image-controls");
+    if (controles) controles.hidden = !imagem;
 }
 
 function notificarMudancaEditorApc(editor) {
@@ -1728,29 +1740,32 @@ function criarAreaRichTextApc(rotulo, placeholder) {
     let insertionRange = null;
     let enviandoImagens = false;
     [
-        ["Negrito", "bold"],
-        ["Italico", "italic"],
-        ["Sublinhado", "underline"],
-        ["Lista", "insertUnorderedList"],
-        ["Numeracao", "insertOrderedList"],
-        ["Limpar", "removeFormat"],
-    ].forEach(([texto, comando]) => {
+        ["Negrito", "bold", "<strong>B</strong>"],
+        ["Itálico", "italic", "<em>I</em>"],
+        ["Sublinhado", "underline", "<u>U</u>"],
+        ["Lista", "insertUnorderedList", '<i class="bi bi-list-ul" aria-hidden="true"></i>'],
+        ["Numeração", "insertOrderedList", '<i class="bi bi-list-ol" aria-hidden="true"></i>'],
+        ["Limpar", "removeFormat", '<i class="bi bi-eraser" aria-hidden="true"></i>'],
+    ].forEach(([texto, comando, icone]) => {
         const button = document.createElement("button");
         button.type = "button";
-        button.innerText = texto;
+        button.innerHTML = icone;
+        button.setAttribute("aria-label", texto);
+        button.title = texto;
         button.addEventListener("mousedown", (event) => event.preventDefault());
         button.addEventListener("click", () => executarComandoEditorApc(editor, comando));
         toolbar.appendChild(button);
     });
     [
-        ["Esquerda", "justifyLeft"],
-        ["Centro", "justifyCenter"],
-        ["Direita", "justifyRight"],
-        ["Justificar", "justifyFull"],
-    ].forEach(([texto, comando]) => {
+        ["Esquerda", "justifyLeft", "text-left"],
+        ["Centro", "justifyCenter", "text-center"],
+        ["Direita", "justifyRight", "text-right"],
+        ["Justificar", "justifyFull", "justify"],
+    ].forEach(([texto, comando, icone]) => {
         const button = document.createElement("button");
         button.type = "button";
-        button.innerText = texto;
+        button.innerHTML = `<i class="bi bi-${icone}" aria-hidden="true"></i>`;
+        button.setAttribute("aria-label", texto);
         button.title = `${texto} o paragrafo selecionado`;
         button.addEventListener("mousedown", (event) => event.preventDefault());
         button.addEventListener("click", () => executarComandoEditorApc(editor, comando));
@@ -1763,7 +1778,7 @@ function criarAreaRichTextApc(rotulo, placeholder) {
     imageInput.hidden = true;
     const imageButton = document.createElement("button");
     imageButton.type = "button";
-    imageButton.innerText = "Imagem";
+    imageButton.innerHTML = '<i class="bi bi-image" aria-hidden="true"></i> Imagem';
     imageButton.title = "Inserir imagem (PNG, JPEG ou WebP, ate 5 MB)";
     imageButton.addEventListener("mousedown", (event) => {
         event.preventDefault();
@@ -1836,7 +1851,7 @@ function criarAreaRichTextApc(rotulo, placeholder) {
             enviandoImagens = false;
             insertionRange = null;
             imageButton.disabled = false;
-            imageButton.innerText = "Imagem";
+            imageButton.innerHTML = '<i class="bi bi-image" aria-hidden="true"></i> Imagem';
         }
     }
 
@@ -1862,6 +1877,7 @@ function criarAreaRichTextApc(rotulo, placeholder) {
 
     const imageControls = document.createElement("span");
     imageControls.className = "apc-rich-image-controls";
+    imageControls.hidden = true;
     [25, 50, 75, 100].forEach((width) => {
         const button = document.createElement("button");
         button.type = "button";
@@ -1971,6 +1987,12 @@ function setMensagemActivityModalApc(texto = "", erro = false) {
     message.classList.toggle("is-error", Boolean(texto) && erro);
 }
 
+function setRotuloSalvarAtividadeApc(texto, icone = "stars") {
+    const botao = el("btnSalvarActivityModalApc");
+    if (!botao) return;
+    botao.innerHTML = `<i class="bi bi-${icone}" aria-hidden="true"></i> ${texto}`;
+}
+
 function cancelarPreviewAtividadeApc() {
     window.clearTimeout(timerPreviewAtividadeApc);
     timerPreviewAtividadeApc = null;
@@ -1983,34 +2005,34 @@ async function renderizarPaginasAtividadeApc(pdfDocument, token) {
     const pages = el("apcActivityPreviewPages");
     const viewportElement = el("apcActivityPreviewViewport");
     if (!pages || !viewportElement || token !== tokenPreviewAtividadeApc) return;
-    const novasPaginas = document.createDocumentFragment();
-    const total = Number(pdfDocument.numPages || 0);
-    const availableWidth = Math.max(300, Math.min(820, viewportElement.clientWidth - 34));
-    const availableHeight = Math.max(420, viewportElement.clientHeight - 34);
+    const total = Math.max(1, Number(pdfDocument.numPages || 1));
+    paginaPreviewAtividadeApc = Math.min(Math.max(1, paginaPreviewAtividadeApc), total);
+    const numero = paginaPreviewAtividadeApc;
+    const page = await pdfDocument.getPage(numero);
+    if (token !== tokenPreviewAtividadeApc) return;
+    const availableWidth = Math.max(1, viewportElement.clientWidth - 36);
+    const availableHeight = Math.max(1, viewportElement.clientHeight - 24);
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-    for (let number = 1; number <= total; number += 1) {
-        if (token !== tokenPreviewAtividadeApc) return;
-        const page = await pdfDocument.getPage(number);
-        const base = page.getViewport({ scale: 1 });
-        const cssScale = Math.min(availableWidth / base.width, availableHeight / base.height);
-        const renderViewport = page.getViewport({ scale: cssScale * dpr });
-        const figure = document.createElement("figure");
-        figure.className = "apc-activity-preview-page";
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.floor(renderViewport.width);
-        canvas.height = Math.floor(renderViewport.height);
-        canvas.style.width = `${Math.floor(renderViewport.width / dpr)}px`;
-        canvas.style.height = `${Math.floor(renderViewport.height / dpr)}px`;
-        canvas.setAttribute("aria-label", `Página ${number} de ${total}`);
-        const caption = document.createElement("figcaption");
-        caption.innerText = `Página ${number} de ${total}`;
-        figure.append(canvas, caption);
-        novasPaginas.appendChild(figure);
-        await page.render({ canvasContext: canvas.getContext("2d"), viewport: renderViewport }).promise;
-    }
-    if (token === tokenPreviewAtividadeApc) {
-        pages.replaceChildren(novasPaginas);
-        el("apcActivityPageCount").innerText = total === 1 ? "1 página · A4" : `${total} páginas · A4`;
+    const base = page.getViewport({ scale: 1 });
+    const cssScale = Math.min(availableWidth / base.width, availableHeight / base.height);
+    const renderViewport = page.getViewport({ scale: cssScale * dpr });
+    const figure = document.createElement("figure");
+    figure.className = "apc-activity-preview-page";
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.floor(renderViewport.width);
+    canvas.height = Math.floor(renderViewport.height);
+    canvas.style.width = `${Math.floor(renderViewport.width / dpr)}px`;
+    canvas.style.height = `${Math.floor(renderViewport.height / dpr)}px`;
+    canvas.setAttribute("aria-label", `Página ${numero} de ${total}`);
+    const caption = document.createElement("figcaption");
+    caption.innerText = `Página ${numero} de ${total}`;
+    figure.append(canvas, caption);
+    await page.render({ canvasContext: canvas.getContext("2d"), viewport: renderViewport }).promise;
+    if (token === tokenPreviewAtividadeApc && numero === paginaPreviewAtividadeApc) {
+        pages.replaceChildren(figure);
+        el("apcActivityPageCount").innerText = `Página ${numero} de ${total} · A4`;
+        el("btnApcActivityPreviewAnterior").disabled = numero <= 1;
+        el("btnApcActivityPreviewProxima").disabled = numero >= total;
     }
 }
 
@@ -2068,6 +2090,7 @@ async function atualizarPreviewAtividadeApc(panel) {
         if (token !== tokenPreviewAtividadeApc) return;
         const pdfDocument = await window.pdfjsLib.getDocument({ data: buffer.slice(0) }).promise;
         if (token !== tokenPreviewAtividadeApc) return;
+        documentoPreviewAtividadeApc = pdfDocument;
         await renderizarPaginasAtividadeApc(pdfDocument, token);
         if (token === tokenPreviewAtividadeApc) setEstadoPreviewAtividadeApc("");
     } catch (err) {
@@ -2091,13 +2114,22 @@ async function abrirModalAtividadeApc(periodo, item, trigger) {
     window.clearTimeout(timerFechamentoAtividadeApc);
     focoAntesAtividadeApc = trigger || document.activeElement;
     painelAtividadeApc = criarEditorAtividadeApc(periodo, item);
+    documentoPreviewAtividadeApc = null;
+    paginaPreviewAtividadeApc = 1;
     slot.replaceChildren(painelAtividadeApc);
-    el("apcActivityModalTitle").innerText = item.envio?.id ? "Editar APC padronizada" : "Criar APC padronizada";
-    el("apcActivityModalDescription").innerText = `${item.disciplina_nome || "Disciplina"} · ${item.turma_nome || "Entrega geral"}`;
+    el("apcActivityModalTitle").innerText = item.envio?.id ? "Editar atividade" : "Geração de Atividades";
+    const aulas = [...new Set((item.horarios || [])
+        .map((horario) => Number(horario.aula_numero || 0))
+        .filter(Boolean))].sort((a, b) => a - b);
+    el("apcActivityModalDescription").innerText = [
+        aulas.map((numero) => `${numero}ª aula`).join(" · "),
+        item.disciplina_nome || "Disciplina",
+        item.turma_nome || "Entrega geral",
+    ].filter(Boolean).join(" · ");
     const saveButton = el("btnSalvarActivityModalApc");
     saveButton.disabled = false;
-    saveButton.innerText = item.envio?.id ? "Salvar e substituir anexo" : "Salvar e anexar";
-    setMensagemActivityModalApc("");
+    setRotuloSalvarAtividadeApc(item.envio?.id ? "Salvar e substituir anexo" : "Gerar e anexar atividade");
+    setMensagemActivityModalApc("O PDF será anexado automaticamente a esta entrega.");
     setEstadoPreviewAtividadeApc("Preparando a folha da atividade...");
     el("apcActivityPreviewPages").innerHTML = "";
     modal.hidden = false;
@@ -2120,6 +2152,8 @@ function fecharModalAtividadeApc() {
         modal.hidden = true;
         el("apcActivityFormSlot")?.replaceChildren();
         el("apcActivityPreviewPages")?.replaceChildren();
+        documentoPreviewAtividadeApc = null;
+        paginaPreviewAtividadeApc = 1;
         painelAtividadeApc = null;
         timerFechamentoAtividadeApc = null;
     }, 220);
@@ -2139,7 +2173,7 @@ async function salvarAtividadeApc(event) {
     if (panel.dataset.hasSubmission === "true" && !window.confirm("A APC gerada substituira o anexo atual desta disciplina. Deseja continuar?")) return;
     const submit = el("btnSalvarActivityModalApc");
     submit.disabled = true;
-    submit.innerText = "Salvando e anexando...";
+    setRotuloSalvarAtividadeApc("Salvando e anexando...", "arrow-repeat");
     try {
         await fetchJson(`/apc/periodos/${panel.dataset.periodoId}/atividade`, {
             method: "POST",
@@ -2153,7 +2187,7 @@ async function salvarAtividadeApc(event) {
     } catch (err) {
         setMensagemActivityModalApc(err.message || "Não foi possível gerar a APC.", true);
         submit.disabled = false;
-        submit.innerText = panel.dataset.hasSubmission === "true" ? "Salvar e substituir anexo" : "Salvar e anexar";
+        setRotuloSalvarAtividadeApc(panel.dataset.hasSubmission === "true" ? "Salvar e substituir anexo" : "Gerar e anexar atividade");
     }
 }
 
@@ -2165,21 +2199,21 @@ function criarEditorAtividadeApc(periodo, item) {
     panel.dataset.disciplinaId = String(item.disciplina_id || 0);
     panel.dataset.hasSubmission = String(Boolean(item.envio?.id));
     panel.dataset.envioId = String(item.envio?.id || 0);
-    const skill = document.createElement("textarea");
-    skill.rows = 3;
+    const skill = document.createElement("input");
+    skill.type = "text";
     skill.maxLength = 2000;
     skill.required = true;
-    skill.placeholder = "Cole o codigo e a descricao da habilidade relacionada.";
+    skill.placeholder = "Selecione ou informe uma habilidade...";
     skill.dataset.apcActivitySkill = "true";
     panel.appendChild(criarCampoEditorApc("Habilidade", skill));
-    const content = document.createElement("textarea");
-    content.rows = 2;
+    const content = document.createElement("input");
+    content.type = "text";
     content.maxLength = 1000;
     content.required = true;
-    content.placeholder = "Conteudo relacionado a habilidade.";
+    content.placeholder = "Ex.: Adição e subtração de números decimais";
     content.dataset.apcActivityContent = "true";
-    panel.appendChild(criarCampoEditorApc("Conteudo", content));
-    const body = criarAreaRichTextApc("Texto da APC", "Organize livremente textos, leituras, pesquisas, orientacoes ou questoes.");
+    panel.appendChild(criarCampoEditorApc("Conteúdo específico", content));
+    const body = criarAreaRichTextApc("Corpo da atividade", "Organize livremente textos, leituras, pesquisas, orientações ou questões.");
     body.editor.dataset.apcActivityBody = "true";
     panel.appendChild(body.wrap);
     const layout = document.createElement("fieldset");
@@ -2206,26 +2240,14 @@ function criarCorpoProfessorPeriodoApc(detalhe) {
 
     const periodo = detalhe.periodo;
 
-    if ((detalhe.turmas || []).length) {
-        const chips = document.createElement("div");
-        chips.className = "apc-chip-row";
-        (detalhe.turmas || []).forEach((turma) => {
-            chips.appendChild(criarChipApc(turma));
-        });
-        body.appendChild(chips);
-    }
-
-    const resumo = document.createElement("p");
-    resumo.className = "apc-inline-hint";
-    resumo.innerText = detalhe.total_entregas > 1
-        ? `Voce possui ${detalhe.total_entregas} entregas nesta solicitacao. Cada disciplina precisa do seu proprio anexo.`
-        : "Voce possui 1 entrega nesta solicitacao.";
-    body.appendChild(resumo);
-
     if (periodo.observacao) {
-        const observacao = document.createElement("p");
+        const observacao = document.createElement("div");
         observacao.className = "apc-inline-observacao";
-        observacao.innerText = periodo.observacao;
+        const titulo = document.createElement("strong");
+        titulo.innerText = "Instruções da coordenação";
+        const texto = document.createElement("p");
+        texto.innerText = periodo.observacao;
+        observacao.append(titulo, texto);
         body.appendChild(observacao);
     }
 
@@ -2233,16 +2255,24 @@ function criarCorpoProfessorPeriodoApc(detalhe) {
         const vazio = document.createElement("p");
         vazio.className = "apc-accordion-note";
         vazio.innerText = periodo.publico_alvo === "PROFESSORES_SELECIONADOS"
-            ? "Nenhuma disciplina foi vinculada a voce nesta solicitacao."
-            : "Nenhuma disciplina vinculada a esta solicitacao para o seu horario.";
+            ? "Nenhuma disciplina foi vinculada a você nesta solicitação."
+            : "Nenhuma disciplina vinculada a esta solicitação para o seu horário.";
         body.appendChild(vazio);
         return body;
     }
 
+    const itensOrdenados = [...detalhe.itens].sort((a, b) => {
+        const primeiraAula = (item) => Math.min(
+            ...(item.horarios || []).map((horario) => Number(horario.aula_numero || 999))
+        );
+        return primeiraAula(a) - primeiraAula(b)
+            || String(a.disciplina_nome || "").localeCompare(String(b.disciplina_nome || ""), "pt-BR");
+    });
+
     const grid = document.createElement("div");
     grid.className = "apc-professor-card-grid";
-    detalhe.itens.forEach((item) => {
-        grid.appendChild(criarCardEntregaProfessorApc(periodo, item));
+    itensOrdenados.forEach((item, indice) => {
+        grid.appendChild(criarCardEntregaProfessorApc(periodo, item, indice, itensOrdenados.length));
     });
     body.appendChild(grid);
 
@@ -2263,8 +2293,11 @@ function renderSolicitacoesDocenteApc(periodos) {
     wrap.innerHTML = "";
 
     if (!Array.isArray(periodos) || !periodos.length) {
-        wrap.innerHTML =
-            '<div class="booking-empty">Nenhuma entrega foi encontrada neste ano letivo.</div>';
+        renderEstadoVazioApc(wrap, {
+            icone: "bi-inbox",
+            titulo: "Nenhuma entrega por enquanto",
+            descricao: "Quando uma nova solicitação for enviada a você, ela aparecerá nesta lista.",
+        });
         return;
     }
 
@@ -2284,24 +2317,13 @@ function renderSolicitacoesDocenteApc(periodos) {
         copia.appendChild(titulo);
 
         const resumo = document.createElement("p");
-        resumo.innerText = periodo.enviado
-            ? "Todos os anexos desta solicitacao foram enviados."
-            : `${periodo.total_pendentes || periodo.total_entregas || 0} anexo(s) pendente(s)`;
+        resumo.innerText = `Prazo: ${formatarDataHoraApc(periodo.prazo_envio)}`;
         copia.appendChild(resumo);
         topo.appendChild(copia);
 
         const status = statusResumoPeriodoApc(periodo);
         topo.appendChild(criarStatusApc(status.texto, status.tipo));
         card.appendChild(topo);
-
-        const meta = document.createElement("div");
-        meta.className = "apc-pendencia-card-meta";
-        meta.appendChild(criarMetaApc(paraDataBr(periodo.data_referencia)));
-        meta.appendChild(criarMetaApc(`Prazo: ${formatarDataHoraApc(periodo.prazo_envio)}`));
-        if (periodo.tipo_entrega_label) {
-            meta.appendChild(criarMetaApc(periodo.tipo_entrega_label));
-        }
-        card.appendChild(meta);
 
         const abrir = document.createElement("button");
         abrir.type = "button";
@@ -2313,7 +2335,8 @@ function renderSolicitacoesDocenteApc(periodos) {
             dataSelecionadaApc = periodo.data_referencia;
             await carregarDetalheSelecionadoApc();
             if (window.matchMedia("(max-width: 1120px)").matches) {
-                el("apcDocenteDetalhe")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                const comportamento = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+                el("apcDocenteDetalhe")?.scrollIntoView({ behavior: comportamento, block: "start" });
             }
         });
         card.appendChild(abrir);
@@ -2327,8 +2350,11 @@ function renderDetalheDocenteApc(detalhe) {
     painel.innerHTML = "";
 
     if (!detalhe?.periodo) {
-        painel.innerHTML =
-            '<div class="booking-empty">Nenhuma demanda pendente foi encontrada neste mes.</div>';
+        renderEstadoVazioApc(painel, {
+            icone: "bi-paperclip",
+            titulo: "Tudo em dia",
+            descricao: "Não há uma entrega aberta para mostrar neste momento.",
+        });
         return;
     }
 
@@ -2337,18 +2363,12 @@ function renderDetalheDocenteApc(detalhe) {
     header.className = "apc-docente-detalhe-header";
 
     const copia = document.createElement("div");
-    const eyebrow = document.createElement("p");
-    eyebrow.className = "apc-section-eyebrow";
-    eyebrow.innerText = "Anexos necessarios";
-    copia.appendChild(eyebrow);
-
     const titulo = document.createElement("h2");
     titulo.innerText = periodo.titulo || "Documento";
     copia.appendChild(titulo);
 
     const prazo = document.createElement("p");
-    prazo.innerText =
-        `Prazo: ${formatarDataHoraApc(periodo.prazo_envio)}`;
+    prazo.innerText = `${pluralizarApc(detalhe.total_entregas || 0, "anexo", "anexos")} · Prazo: ${formatarDataHoraApc(periodo.prazo_envio)}`;
     copia.appendChild(prazo);
     header.appendChild(copia);
 
@@ -2359,14 +2379,6 @@ function renderDetalheDocenteApc(detalhe) {
     );
     header.appendChild(criarStatusApc(status.texto, status.tipo));
     painel.appendChild(header);
-    painel.appendChild(
-        renderResumoCompactoApc([
-            { label: "Pendentes", valor: String(detalhe.total_pendentes || 0) },
-            { label: "Enviadas", valor: String(detalhe.total_enviadas || 0) },
-            { label: "Impressas", valor: String(detalhe.total_impressos || 0) },
-            { label: "Prazo", valor: periodo.prazo_expirado ? "Encerrado" : "Aberto" },
-        ])
-    );
     painel.appendChild(criarCorpoProfessorPeriodoApc(detalhe));
 }
 
@@ -2469,11 +2481,26 @@ function solicitacoesGestaoFiltradasApc() {
 function renderSolicitacoesGestaoApc() {
     const wrap = el("apcSolicitacoesData");
     const periodos = solicitacoesGestaoFiltradasApc();
+    atualizarFiltroMobileApc();
     wrap.innerHTML = "";
 
     if (!periodos.length) {
-        wrap.innerHTML =
-            '<div class="booking-empty">Nenhuma demanda corresponde aos filtros selecionados.</div>';
+        const possuiSolicitacoes = Boolean((calendarioApc.periodos || []).length);
+        renderEstadoVazioApc(wrap, possuiSolicitacoes
+            ? {
+                icone: "bi-search",
+                titulo: "Nenhum resultado",
+                descricao: "Revise a busca ou limpe os filtros para ver todas as solicitações.",
+                acao: "Limpar filtros",
+                aoClicar: limparFiltrosGestaoApc,
+            }
+            : {
+                icone: "bi-file-earmark-plus",
+                titulo: "Nenhuma solicitação criada",
+                descricao: "Crie a primeira solicitação para começar a receber anexos dos professores.",
+                acao: "Criar solicitação",
+                aoClicar: () => el("btnAbrirNovaApc")?.click(),
+            });
         return;
     }
 
@@ -2507,16 +2534,6 @@ function renderSolicitacoesGestaoApc() {
         ));
         card.appendChild(meta);
 
-        const dimensoes = document.createElement("div");
-        dimensoes.className = "apc-demanda-dimensoes";
-        (periodo.disciplinas || []).slice(0, 2).forEach(
-            (item) => dimensoes.appendChild(criarChipApc(item))
-        );
-        (periodo.turmas || []).slice(0, 2).forEach(
-            (item) => dimensoes.appendChild(criarChipApc(item))
-        );
-        if (dimensoes.childNodes.length) card.appendChild(dimensoes);
-
         const abrir = document.createElement("button");
         abrir.type = "button";
         abrir.className = selecionado ? "btn-destaque" : "";
@@ -2527,12 +2544,39 @@ function renderSolicitacoesGestaoApc() {
             dataSelecionadaManualmenteApc = true;
             await carregarDetalheSelecionadoApc();
             if (window.matchMedia("(max-width: 1120px)").matches) {
-                el("apcGestaoDetalhe")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                const comportamento = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+                el("apcGestaoDetalhe")?.scrollIntoView({ behavior: comportamento, block: "start" });
             }
         });
         card.appendChild(abrir);
         wrap.appendChild(card);
     });
+}
+
+function atualizarFiltroMobileApc() {
+    const botao = el("btnAlternarFiltrosApc");
+    const filtros = el("apcGestaoFiltros");
+    if (!botao || !filtros) return;
+    const ativos = [
+        el("apcFiltroBusca")?.value,
+        el("apcFiltroProfessor")?.value,
+        el("apcFiltroDisciplina")?.value,
+        el("apcFiltroTurma")?.value,
+        el("apcFiltroStatus")?.value,
+    ].filter(Boolean).length;
+    botao.innerText = ativos ? `Filtros (${ativos})` : "Filtros";
+    botao.setAttribute("aria-expanded", filtros.classList.contains("is-mobile-open") ? "true" : "false");
+}
+
+function limparFiltrosGestaoApc() {
+    ["apcFiltroBusca", "apcFiltroProfessor", "apcFiltroDisciplina", "apcFiltroTurma", "apcFiltroStatus"]
+        .forEach((id) => {
+            const campo = el(id);
+            if (campo) campo.value = "";
+        });
+    if (el("apcOrdenacaoGestao")) el("apcOrdenacaoGestao").value = "prazo";
+    renderSolicitacoesGestaoApc();
+    el("apcFiltroBusca")?.focus();
 }
 
 function renderSolicitacoesData(periodos, detalheSelecionado = null) {
@@ -2555,12 +2599,16 @@ function renderListaGestaoApc(detalhe) {
     }
     if (el("apcGestaoDetalheDescricao")) {
         el("apcGestaoDetalheDescricao").innerText = periodo
-            ? `${paraDataBr(periodo.data_referencia)} | Prazo: ${formatarDataHoraApc(periodo.prazo_envio)}`
-            : "Os professores e anexos da solicitacao aparecerao aqui.";
+            ? `${paraDataBr(periodo.data_referencia)} · Prazo: ${formatarDataHoraApc(periodo.prazo_envio)}`
+            : "Os professores e anexos da solicitação aparecerão aqui.";
     }
 
     if (!detalhe || !Array.isArray(detalhe.itens) || detalhe.itens.length === 0) {
-        lista.innerHTML = '<div class="booking-empty">Nenhum professor elegivel para esta solicitacao.</div>';
+        renderEstadoVazioApc(lista, {
+            icone: "bi-people",
+            titulo: "Nenhum professor vinculado",
+            descricao: "Esta solicitação ainda não possui professores elegíveis para a entrega.",
+        });
         return;
     }
 
@@ -2597,7 +2645,7 @@ function renderListaGestaoApc(detalhe) {
         meta.className = "apc-professor-group-meta";
         meta.innerText =
             `${grupo.total_enviadas}/${grupo.total_entregas} entregas enviadas | `
-            + `${grupo.total_pendentes} pendencia(s)`;
+            + pluralizarApc(grupo.total_pendentes, "pendência", "pendências");
         main.appendChild(meta);
         summary.appendChild(main);
 
@@ -2730,32 +2778,56 @@ function preencherMetaModalPreviewApc(envio) {
     if (!meta) return;
     meta.innerHTML = "";
 
-    const eyebrow = document.createElement("p");
-    eyebrow.className = "apc-section-eyebrow";
-    eyebrow.innerText = "Visualizacao do anexo";
-    meta.appendChild(eyebrow);
-
     const titulo = document.createElement("h2");
     titulo.id = "apcArquivoPreviewTitulo";
     titulo.innerText = nomeArquivoPrincipalApc(envio);
     meta.appendChild(titulo);
 
-    const contexto = document.createElement("p");
-    contexto.innerText = [
-        envio.professor_nome || "",
-        envio.disciplina_nome || "Entrega geral",
-        envio.turma_nome || "",
-    ].filter(Boolean).join(" | ");
-    meta.appendChild(contexto);
+    const tamanho = Number(envio.arquivo_tamanho || 0);
+    const tamanhoTexto = tamanho >= 1048576
+        ? `${(tamanho / 1048576).toFixed(1)} MB`
+        : tamanho >= 1024
+            ? `${Math.ceil(tamanho / 1024)} KB`
+            : `${tamanho} bytes`;
+    const arquivoInfo = document.createElement("p");
+    arquivoInfo.innerText = [tamanhoTexto, String(envio.arquivo_tipo || "Arquivo").split("/").pop()?.toUpperCase()].filter(Boolean).join(" · ");
+    meta.appendChild(arquivoInfo);
 
-    const data = document.createElement("p");
-    data.innerText = `Enviado em ${formatarDataHoraApc(envio.enviado_em)}`;
-    meta.appendChild(data);
+    const historico = el("apcReviewHistory");
+    if (historico) {
+        historico.innerHTML = "";
+        historico.appendChild(
+            criarEventoHistoricoApc(
+                "Envio realizado",
+                `Professor: ${envio.professor_nome || "Professor"}`,
+                envio.enviado_em
+            )
+        );
 
-    if (nomeArquivoPadronizadoDivergeApc(envio)) {
-        const nomeSistema = document.createElement("p");
-        nomeSistema.innerText = `Salvo no sistema como: ${nomeArquivoSistemaApc(envio)}`;
-        meta.appendChild(nomeSistema);
+        const tituloRevisao = tituloHistoricoRevisaoApc(envio.review_status);
+        if (tituloRevisao && envio.reviewed_at) {
+            const responsavel = nomeResponsavelRevisaoApc(envio);
+            historico.appendChild(
+                criarEventoHistoricoApc(
+                    tituloRevisao,
+                    responsavel ? `Por ${responsavel}` : "",
+                    envio.reviewed_at
+                )
+            );
+        }
+    }
+
+    if (el("apcArquivoPreviewTopbarTitle")) {
+        el("apcArquivoPreviewTopbarTitle").innerText = modoGestaoAtivoApc()
+            ? "Revisar envio"
+            : "Visualizar envio";
+    }
+    if (el("apcArquivoPreviewContext")) {
+        el("apcArquivoPreviewContext").innerText = [
+            envio.disciplina_nome || "Entrega geral",
+            envio.turma_nome || "",
+            envio.professor_nome || "",
+        ].filter(Boolean).join(" · ");
     }
 }
 
@@ -2767,6 +2839,22 @@ function setMensagemReviewApc(texto, erro = false) {
     mensagem.classList.toggle("is-success", Boolean(texto) && !erro);
 }
 
+function atualizarEstadoFormularioReviewApc() {
+    const status = el("apcReviewStatus")?.value || "PENDENTE";
+    const mensagem = el("apcReviewMessage");
+    const submit = el("btnSalvarReviewApc");
+    const solicitandoAjuste = status === "AJUSTE_SOLICITADO";
+    if (mensagem) {
+        mensagem.required = solicitandoAjuste;
+        mensagem.disabled = !solicitandoAjuste;
+    }
+    if (!submit) return;
+    const texto = solicitandoAjuste ? "Solicitar ajuste" : "Aprovar envio";
+    const icone = solicitandoAjuste ? "flag" : "patch-check";
+    submit.innerHTML = `<i class="bi bi-${icone}" aria-hidden="true"></i> ${texto}`;
+    submit.classList.toggle("is-warning", solicitandoAjuste);
+}
+
 function renderReviewPanelApc(envio) {
     const panel = el("apcReviewPanel");
     const summary = el("apcReviewSummary");
@@ -2776,32 +2864,30 @@ function renderReviewPanelApc(envio) {
     const review = statusRevisaoEnvioApc(envio);
     panel.hidden = false;
     summary.innerHTML = "";
-    summary.appendChild(criarStatusApc(review.texto, review.tipo));
+    const topbarStatus = el("apcArquivoPreviewTopbarStatus");
+    if (topbarStatus) {
+        const statusVisual = criarStatusApc(review.texto, review.tipo);
+        topbarStatus.className = statusVisual.className;
+        topbarStatus.innerText = review.texto;
+    }
 
     const guidance = criarOrientacaoRevisaoApc(envio);
     if (guidance) {
         summary.appendChild(guidance);
-    } else {
-        const empty = document.createElement("p");
-        empty.innerText = review.status === "PENDENTE"
-            ? "Este anexo ainda nao foi analisado pela coordenacao."
-            : "A coordenacao nao adicionou uma orientacao.";
-        summary.appendChild(empty);
     }
 
-    if (envio.reviewed_at) {
-        const reviewedAt = document.createElement("small");
-        reviewedAt.innerText = [
-            `Revisado em ${formatarDataHoraApc(envio.reviewed_at)}`,
-            envio.reviewed_by_name || "",
-        ].filter(Boolean).join(" por ");
-        summary.appendChild(reviewedAt);
-    }
-
-    form.hidden = !modoGestaoAtivoApc();
-    if (modoGestaoAtivoApc()) {
-        el("apcReviewStatus").value = review.status;
+    const gestaoAtiva = modoGestaoAtivoApc();
+    form.hidden = !gestaoAtiva;
+    el("btnSalvarReviewApc").hidden = !gestaoAtiva;
+    if (gestaoAtiva) {
+        const decisao = ["APROVADO", "AJUSTE_SOLICITADO"].includes(review.status)
+            ? review.status
+            : "APROVADO";
+        el("apcReviewStatus").value = decisao;
+        const radio = form.querySelector(`input[name="apcReviewDecision"][value="${decisao}"]`);
+        if (radio) radio.checked = true;
         el("apcReviewMessage").value = String(envio.review_message || "");
+        atualizarEstadoFormularioReviewApc();
     }
     setMensagemReviewApc("");
 }
@@ -2810,7 +2896,7 @@ async function salvarRevisaoApc(event) {
     event.preventDefault();
     if (!envioPreviewApc?.id || !modoGestaoAtivoApc()) return;
 
-    const submit = event.currentTarget.querySelector("button[type='submit']");
+    const submit = el("btnSalvarReviewApc");
     if (submit) submit.disabled = true;
     setMensagemReviewApc("Salvando revisao...");
     try {
@@ -2893,16 +2979,28 @@ async function carregarPreviewArquivoApc(envio) {
         el("btnApcBaixarArquivo").hidden = false;
         el("btnApcImprimirArquivo").hidden = !modoGestaoAtivoApc();
     } catch (err) {
-        limparPreviewArquivoApc(err.message || "Nao foi possivel carregar o arquivo.");
+        const state = el("apcArquivoPreviewState");
+        state.hidden = false;
+        state.innerHTML = "";
+        const vazio = document.createElement("div");
+        vazio.className = "booking-empty";
+        vazio.innerText = err.message || "Não foi possível carregar a visualização do arquivo.";
+        state.appendChild(vazio);
     }
 }
 
 function renderPainelSelecionadoVazio() {
     const modoGestao = modoGestaoAtivoApc();
     renderSolicitacoesData([]);
-    el("apcListaPainel").innerHTML = modoGestao
-        ? '<div class="booking-empty">Abra o modal de nova solicitação para comecar a receber anexos dos professores.</div>'
-        : "";
+    if (modoGestao) {
+        renderEstadoVazioApc(el("apcListaPainel"), {
+            icone: "bi-paperclip",
+            titulo: "Comece por uma solicitação",
+            descricao: "Depois de criada, os professores e os anexos recebidos aparecerão aqui.",
+        });
+    } else {
+        el("apcListaPainel").innerHTML = "";
+    }
     renderDetalheDocenteApc(null);
     if (el("apcGestaoDetalheTitulo")) el("apcGestaoDetalheTitulo").innerText = "Selecione uma demanda";
     if (el("apcGestaoDetalheDescricao")) {
@@ -2914,8 +3012,11 @@ function renderPainelSelecionadoVazio() {
 }
 
 function renderPainelSemSelecaoGestao() {
-    el("apcListaPainel").innerHTML =
-        '<div class="booking-empty">Selecione uma demanda para analisar os professores e seus anexos.</div>';
+    renderEstadoVazioApc(el("apcListaPainel"), {
+        icone: "bi-cursor",
+        titulo: "Selecione uma solicitação",
+        descricao: "Escolha um item da lista para analisar os professores e seus anexos.",
+    });
     renderSolicitacoesData(calendarioApc.periodos || []);
     aplicarVisibilidadeApc();
 }
@@ -2956,121 +3057,8 @@ async function carregarDetalheSelecionadoApc() {
     renderDetalheDocenteApc(detalhe);
 }
 
-function renderCalendarioApc() {
-    const ano = mesAtualApc.getFullYear();
-    const mes = mesAtualApc.getMonth();
-    el("apcMesAtual").innerText = `${nomesMesesApc[mes]} ${ano}`;
-
-    const grid = el("apcCalendarioGrid");
-    grid.innerHTML = "";
-
-    nomesDiasSemanaApc.forEach((dia) => {
-        const celula = document.createElement("div");
-        celula.className = "calendar-weekday";
-        celula.innerText = dia;
-        grid.appendChild(celula);
-    });
-
-    const primeiroDiaSemana = new Date(ano, mes, 1).getDay();
-    const totalDias = new Date(ano, mes + 1, 0).getDate();
-    const hojeIso = paraIso(new Date());
-
-    for (let i = 0; i < primeiroDiaSemana; i += 1) {
-        const vazio = document.createElement("div");
-        vazio.className = "calendar-empty";
-        grid.appendChild(vazio);
-    }
-
-    for (let dia = 1; dia <= totalDias; dia += 1) {
-        const dataIso = paraIso(new Date(ano, mes, dia));
-        const periodos = periodosResumoPorData(dataIso);
-
-        const btnDia = document.createElement(modoGestaoAtivoApc() ? "button" : "div");
-        if (modoGestaoAtivoApc()) {
-            btnDia.type = "button";
-        }
-        btnDia.className = "calendar-day apc-calendar-day";
-        if (modoGestaoAtivoApc() && dataIso === dataSelecionadaApc && dataSelecionadaManualmenteApc) {
-            btnDia.classList.add("is-selected");
-        }
-        if (modoDocenteAtivoApc()) {
-            btnDia.classList.add("is-readonly");
-            btnDia.setAttribute("aria-label", `${paraDataBr(dataIso)}: ${periodos.length} entrega(s)`);
-        }
-        if (dataIso === hojeIso) btnDia.classList.add("is-today");
-        if (periodos.length) {
-            btnDia.classList.add("has-apc");
-            const todosConcluidos = modoGestaoAtivoApc()
-                ? periodos.every(
-                    (item) => (
-                        Number(item.total_elegiveis || 0) > 0
-                        && (
-                            Number(item.total_aprovados || 0) === Number(item.total_elegiveis || 0)
-                            || Number(item.total_impressos || 0) === Number(item.total_elegiveis || 0)
-                        )
-                    )
-                )
-                : periodos.every((item) => (
-                    Number(item.total_entregas || 0) > 0
-                    && (
-                        Number(item.total_aprovados || 0) === Number(item.total_entregas || 0)
-                        || Number(item.total_impressos || 0) === Number(item.total_entregas || 0)
-                    )
-                ));
-            btnDia.classList.add(todosConcluidos ? "is-ok" : "is-pending");
-        }
-
-        const numero = document.createElement("span");
-        numero.className = "calendar-number";
-        numero.innerText = String(dia);
-        btnDia.appendChild(numero);
-
-        const resumo = document.createElement("small");
-        resumo.className = "calendar-count";
-        if (!periodos.length) {
-            resumo.innerText = "Livre";
-        } else if (modoGestaoAtivoApc()) {
-            const totalElegiveis = periodos.reduce((soma, item) => soma + Number(item.total_elegiveis || 0), 0);
-            const totalEnviados = periodos.reduce((soma, item) => soma + Number(item.total_enviados || 0), 0);
-            resumo.innerText = `${totalEnviados}/${totalElegiveis}`;
-        } else {
-            const enviados = periodos.filter((item) => Boolean(item.enviado)).length;
-            resumo.innerText = enviados === periodos.length ? "OK" : `${periodos.length} entrega(s)`;
-        }
-        btnDia.appendChild(resumo);
-
-        if (periodos.length) {
-            const flag = document.createElement("span");
-            flag.className = "apc-calendar-flag";
-            flag.innerText = periodos.length === 1
-                ? (periodos[0].titulo || "Documento")
-                : `${periodos.length} entregas`;
-            btnDia.appendChild(flag);
-        }
-
-        if (modoGestaoAtivoApc()) {
-            btnDia.addEventListener("click", async () => {
-                dataSelecionadaApc = dataIso;
-                dataSelecionadaManualmenteApc = true;
-                const periodosDaData = periodosResumoPorData(dataIso);
-                const atualNaData = periodosDaData.find(
-                    (item) => Number(item.id) === Number(periodoSelecionadoApcId)
-                );
-                periodoSelecionadoApcId = atualNaData
-                    ? Number(atualNaData.id)
-                    : Number(periodosDaData[0]?.id || 0);
-                aplicarVisibilidadeApc();
-                renderCalendarioApc();
-                await carregarDetalheSelecionadoApc();
-            });
-        }
-
-        grid.appendChild(btnDia);
-    }
-}
-
 async function carregarCalendarioApc() {
-    const anoLetivo = el("apcAnoLetivo").value;
+    const anoLetivo = anoLetivoAtivoApc();
     if (modoGestaoAtivoApc()) {
         calendarioApc = await fetchJson(`/apc/solicitacoes?ano_letivo=${anoLetivo}`, {
             headers: headersApc,
@@ -3082,7 +3070,6 @@ async function carregarCalendarioApc() {
             `/apc/calendario?mes=${mes}&ano_letivo=${anoLetivo}&visao=${visaoAtivaApc()}`,
             { headers: headersApc }
         );
-        renderCalendarioApc();
     }
 
     const periodos = modoDocenteAtivoApc()
@@ -3097,14 +3084,13 @@ async function carregarCalendarioApc() {
         dataSelecionadaApc = selecionado.data_referencia;
     }
 
-    atualizarResumoMesApc();
     await carregarDetalheSelecionadoApc();
 }
 
 async function salvarPeriodoApc(event) {
     event.preventDefault();
     const payload = {
-        ano_letivo: Number(el("apcAnoLetivo").value || 0),
+        ano_letivo: anoLetivoAtivoApc(),
         data_referencia: el("apcDataReferencia").value,
         prazo_envio: el("apcPrazoEnvio").value,
         titulo: el("apcTitulo").value.trim(),
@@ -3201,18 +3187,11 @@ function registrarEventosApc() {
     el("btnSair").addEventListener("click", () => {
         encerrarSessao();
     });
-    el("btnAlternarCalendarioApc")?.addEventListener("click", () => {
-        if (calendarioDrawerAbertoApc()) {
-            fecharCalendarioApc();
-        } else {
-            abrirCalendarioApc();
-        }
+    el("btnAlternarFiltrosApc")?.addEventListener("click", () => {
+        el("apcGestaoFiltros")?.classList.toggle("is-mobile-open");
+        atualizarFiltroMobileApc();
     });
-    document.querySelectorAll("[data-apc-calendar-close='true']").forEach((elemento) => {
-        elemento.addEventListener("click", () => {
-            fecharCalendarioApc();
-        });
-    });
+    el("btnLimparFiltrosApc")?.addEventListener("click", limparFiltrosGestaoApc);
     el("btnFecharPreviewApc")?.addEventListener("click", fecharModalPreviewApc);
     document.querySelectorAll("[data-apc-preview-close='true']").forEach((elemento) => {
         elemento.addEventListener("click", fecharModalPreviewApc);
@@ -3229,6 +3208,14 @@ function registrarEventosApc() {
         }
     });
     el("formApcReview")?.addEventListener("submit", salvarRevisaoApc);
+    el("apcReviewStatus")?.addEventListener("change", atualizarEstadoFormularioReviewApc);
+    document.querySelectorAll('input[name="apcReviewDecision"]').forEach((input) => {
+        input.addEventListener("change", () => {
+            if (!input.checked || !el("apcReviewStatus")) return;
+            el("apcReviewStatus").value = input.value;
+            atualizarEstadoFormularioReviewApc();
+        });
+    });
     el("btnFecharPrintWizardApc")?.addEventListener("click", fecharPrintWizardApc);
     document.querySelectorAll("[data-apc-print-close='true']").forEach((elemento) => {
         elemento.addEventListener("click", fecharPrintWizardApc);
@@ -3267,6 +3254,16 @@ function registrarEventosApc() {
     el("btnSalvarActivityModalApc")?.addEventListener("click", () => painelAtividadeApc?.requestSubmit());
     el("btnCancelarActivityModalApc")?.addEventListener("click", fecharModalAtividadeApc);
     el("btnFecharActivityModalApc")?.addEventListener("click", fecharModalAtividadeApc);
+    el("btnApcActivityPreviewAnterior")?.addEventListener("click", () => {
+        if (!documentoPreviewAtividadeApc || paginaPreviewAtividadeApc <= 1) return;
+        paginaPreviewAtividadeApc -= 1;
+        void renderizarPaginasAtividadeApc(documentoPreviewAtividadeApc, tokenPreviewAtividadeApc);
+    });
+    el("btnApcActivityPreviewProxima")?.addEventListener("click", () => {
+        if (!documentoPreviewAtividadeApc || paginaPreviewAtividadeApc >= documentoPreviewAtividadeApc.numPages) return;
+        paginaPreviewAtividadeApc += 1;
+        void renderizarPaginasAtividadeApc(documentoPreviewAtividadeApc, tokenPreviewAtividadeApc);
+    });
     document.querySelectorAll("[data-apc-activity-modal-close='true']").forEach((elemento) => {
         elemento.addEventListener("click", fecharModalAtividadeApc);
     });
@@ -3281,43 +3278,11 @@ function registrarEventosApc() {
     });
     el("apcFiltroBusca")?.addEventListener("input", renderSolicitacoesGestaoApc);
 
-    el("apcAnoLetivo").addEventListener("change", async () => {
-        limparSelecaoDataGestaoApc();
-        opcoesDestinatariosApc = [];
-        selecoesDestinatariosApc = new Set();
-        aplicarVisibilidadeApc();
-        await sincronizarVisibilidadeDestinatariosApc({ recarregar: true });
-        await carregarCalendarioApc();
-    });
-
     el("apcPublicoAlvo")?.addEventListener("change", async () => {
         if (!publicoSelecionadoManualApc()) {
             selecoesDestinatariosApc = new Set();
         }
         await sincronizarVisibilidadeDestinatariosApc({ recarregar: true });
-    });
-
-    el("btnApcMesAnterior").addEventListener("click", async () => {
-        mesAtualApc = new Date(mesAtualApc.getFullYear(), mesAtualApc.getMonth() - 1, 1);
-        limparSelecaoDataGestaoApc();
-        aplicarVisibilidadeApc();
-        await carregarCalendarioApc();
-    });
-    el("btnApcMesProximo").addEventListener("click", async () => {
-        mesAtualApc = new Date(mesAtualApc.getFullYear(), mesAtualApc.getMonth() + 1, 1);
-        limparSelecaoDataGestaoApc();
-        aplicarVisibilidadeApc();
-        await carregarCalendarioApc();
-    });
-    el("btnApcMesHoje").addEventListener("click", async () => {
-        const hoje = new Date();
-        mesAtualApc = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-        limparSelecaoDataGestaoApc();
-        if (!modoGestaoAtivoApc()) {
-            dataSelecionadaApc = paraIso(hoje);
-        }
-        aplicarVisibilidadeApc();
-        await carregarCalendarioApc();
     });
 
     el("formApcPeriodo")?.addEventListener("submit", salvarPeriodoApc);
@@ -3376,10 +3341,6 @@ function registrarEventosApc() {
             fecharModalPreviewApc();
             return;
         }
-        if (event.key === "Escape" && calendarioDrawerAbertoApc()) {
-            fecharCalendarioApc();
-            return;
-        }
         if (event.key === "Escape" && modalApcAberto()) {
             fecharModalFormularioApc({ limpar: true });
         }
@@ -3402,7 +3363,6 @@ async function initApc() {
         } else {
             dataSelecionadaApc = hojeIsoApc();
         }
-        preencherSelectAnosApc();
         preencherSelectPublicoApc();
         preencherSelectTiposEntregaApc();
         atualizarResumoDestinatariosApc();

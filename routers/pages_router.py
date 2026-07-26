@@ -133,7 +133,17 @@ def horario_escolar_page(request: Request):
 def apc_page(request: Request):
     return render_template_response(
         request,
-        "apc.html",
+        "apc/index.html",
+        {"asset_version": ASSET_VERSION},
+        cache_control="no-store",
+    )
+
+
+@router.get("/apc/calendario/")
+def apc_calendario_page(request: Request):
+    return render_template_response(
+        request,
+        "apc/calendario/index.html",
         {"asset_version": ASSET_VERSION},
         cache_control="no-store",
     )
