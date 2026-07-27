@@ -48,20 +48,39 @@
                     <div>
                         <p class="coordenacao-eyebrow">Montagem visual</p>
                         <h2>Construtor da grade</h2>
-                        <p>Selecione a turma e monte o horário arrastando os cards de disciplina e professor para a matriz semanal.</p>
+                        <p id="horarioBuilderDescricao">Selecione a turma e monte o horário arrastando os cards de disciplina e professor para a matriz semanal.</p>
                     </div>
                     <p id="msgHorarioForm" class="coordenacao-status-copy"></p>
                 </div>
 
                 <div class="coordenacao-form coordenacao-form-grid">
+                    <div class="horario-builder-mode" role="group" aria-labelledby="horarioBuilderModeLabel">
+                        <span id="horarioBuilderModeLabel">Editar horário</span>
+                        <div class="horario-builder-mode-options">
+                            <label class="horario-builder-mode-option">
+                                <input type="radio" name="horarioEdicaoModo" value="turma" checked>
+                                <span>Por turma</span>
+                            </label>
+                            <label class="horario-builder-mode-option">
+                                <input type="radio" name="horarioEdicaoModo" value="professor">
+                                <span>Por professor</span>
+                            </label>
+                        </div>
+                    </div>
+
                     <label class="coordenacao-field" for="horarioAnoLetivo">
                         <span>Ano letivo</span>
                         <select id="horarioAnoLetivo" required></select>
                     </label>
 
-                    <label class="coordenacao-field" for="horarioTurmaId">
+                    <label id="horarioTurmaField" class="coordenacao-field" for="horarioTurmaId">
                         <span>Turma</span>
                         <select id="horarioTurmaId" required></select>
+                    </label>
+
+                    <label id="horarioProfessorField" class="coordenacao-field" for="horarioProfessorId" hidden>
+                        <span>Professor</span>
+                        <select id="horarioProfessorId"></select>
                     </label>
 
                     <div class="horario-builder-note">
@@ -74,9 +93,9 @@
             <article class="coordenacao-card horario-matrix-card">
                 <div class="coordenacao-section-header">
                     <div>
-                        <p class="coordenacao-eyebrow">Grade da turma</p>
+                        <p id="horarioMatrizEyebrow" class="coordenacao-eyebrow">Grade da turma</p>
                         <h2 id="horarioMatrizTitulo">Matriz semanal</h2>
-                        <p>Solte um card em um campo vazio para criar a aula. Arraste uma aula preenchida para outro campo vazio para reposicionar.</p>
+                        <p id="horarioMatrizDescricao">Solte um card em um campo vazio para criar a aula. Arraste uma aula preenchida para outro campo vazio para reposicionar.</p>
                     </div>
                 </div>
                 <div id="horarioAlertas" class="horario-alert-stack" hidden></div>
@@ -89,13 +108,14 @@
                 <div class="coordenacao-section-header">
                     <div>
                         <p class="coordenacao-eyebrow">Cards disponíveis</p>
-                        <h2>Disciplinas da turma</h2>
-                        <p>O sistema gera um card para cada aula disponível da disciplina com o professor atribuído.</p>
+                        <h2 id="horarioPoolTitulo">Disciplinas da turma</h2>
+                        <p id="horarioPoolDescricao">O sistema gera um card para cada aula disponível da disciplina com o professor atribuído.</p>
                     </div>
+                    <button id="btnCriarAulaAtividade" class="btn-destaque horario-create-activity" type="button" hidden>Criar aula atividade</button>
                 </div>
                 <div id="horarioPoolMeta" class="horario-pool-meta"></div>
                 <div id="horarioDropPool" class="horario-drop-pool">
-                    <p class="horario-drop-pool-copy">Arraste uma aula da matriz de volta para esta área para remover o lançamento do horário.</p>
+                    <p id="horarioDropPoolCopy" class="horario-drop-pool-copy">Arraste uma aula da matriz de volta para esta área para remover o lançamento do horário.</p>
                     <div id="horarioCardsDisponiveis" class="horario-card-pool"></div>
                 </div>
             </article>
@@ -142,7 +162,7 @@
                             <span>Por professor</span>
                         </label>
                     </div>
-                    <p class="horario-professor-scope-help">Na visão por professor, você também pode criar, alocar e reorganizar aulas atividade para planejamento.</p>
+                    <p class="horario-professor-scope-help">A visão por professor é somente para consulta. Para alterar aulas atividade, use o construtor da grade acima.</p>
                 </div>
 
                 <form id="formFiltrosHorarioEscolar" class="coordenacao-filter-grid">

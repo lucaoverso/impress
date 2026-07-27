@@ -36,6 +36,7 @@ let ultimoResultadoHorario = {
 let estadoMatrizHorario = null;
 let escopoProfessorHorario = "geral";
 let modoVisualizacaoGestorHorario = "turmas";
+let modoEdicaoHorario = "turma";
 const TIPO_GRADE_AULA = "AULA";
 const TIPO_GRADE_INTERVALO = "INTERVALO";
 
@@ -49,6 +50,10 @@ function interfaceGestorAtiva() {
 
 function visualizacaoGestorPorProfessorAtiva() {
     return interfaceGestorAtiva() && modoVisualizacaoGestorHorario === "professores";
+}
+
+function edicaoHorarioPorProfessorAtiva() {
+    return permiteEdicaoHorario() && modoEdicaoHorario === "professor";
 }
 
 function permiteEdicaoHorario() {
@@ -158,39 +163,12 @@ function obterResultadoHorarioFiltrado() {
 }
 
 function gruposProfessoresParaExibicao(resultado) {
-    const grupos = new Map(
-        (resultado?.grupos_professor || []).map((grupo) => [
-            `${grupo.ano_letivo}:${grupo.professor_id}`,
-            grupo,
-        ])
-    );
-    const turmaFiltrada = String(el("filtroHorarioTurmaId")?.value || "").trim();
-    if (!permiteEdicaoHorario() || turmaFiltrada) {
-        return Array.from(grupos.values());
-    }
-
-    const ano = Number(
-        el("filtroHorarioAnoLetivo")?.value
-        || contextoHorario.ano_letivo_atual
-        || 0
-    );
-    const professorFiltro = Number(el("filtroHorarioProfessorId")?.value || 0);
-    (contextoHorario.professores || [])
-        .filter((professor) => !professorFiltro || Number(professor.id) === professorFiltro)
-        .forEach((professor) => {
-            const chave = `${ano}:${professor.id}`;
-            if (!grupos.has(chave)) {
-                grupos.set(chave, {
-                    ano_letivo: ano,
-                    professor_id: Number(professor.id || 0),
-                    professor_nome: professor.nome || "",
-                    professor_email: professor.email || "",
-                    itens: [],
-                    aulas_atividade: [],
-                });
-            }
-        });
-    return Array.from(grupos.values()).sort((a, b) =>
+    return (resultado?.grupos_professor || [])
+        .filter((grupo) =>
+            (grupo.itens || []).length > 0
+            || (grupo.aulas_atividade || []).some((item) => item.alocada)
+        )
+        .sort((a, b) =>
         String(a.professor_nome || "").localeCompare(
             String(b.professor_nome || ""),
             "pt-BR"
@@ -522,6 +500,10 @@ function preencherContextoHorario() {
         preencherSelect("horarioTurmaId", contextoHorario.turmas, {
             placeholder: "Selecione a turma",
         });
+        preencherSelect("horarioProfessorId", contextoHorario.professores, {
+            placeholder: "Selecione o professor",
+            label: "label",
+        });
         preencherSelect("filtroHorarioProfessorId", contextoHorario.professores, {
             incluirTodos: true,
             label: "label",
@@ -662,8 +644,61 @@ function obterTurmaBuilderId() {
     return Number(el("horarioTurmaId")?.value || 0);
 }
 
+function obterProfessorBuilderId() {
+    return Number(el("horarioProfessorId")?.value || 0);
+}
+
+function obterProfessorPorId(professorId) {
+    return (contextoHorario.professores || []).find(
+        (professor) => Number(professor.id || 0) === Number(professorId || 0)
+    ) || null;
+}
+
+function atualizarModoEdicaoHorario() {
+    const porProfessor = edicaoHorarioPorProfessorAtiva();
+    const turmaField = el("horarioTurmaField");
+    const professorField = el("horarioProfessorField");
+    const builderDescricao = el("horarioBuilderDescricao");
+    const matrizEyebrow = el("horarioMatrizEyebrow");
+    const matrizDescricao = el("horarioMatrizDescricao");
+    const poolTitulo = el("horarioPoolTitulo");
+    const poolDescricao = el("horarioPoolDescricao");
+    const dropCopy = el("horarioDropPoolCopy");
+    const criarAtividade = el("btnCriarAulaAtividade");
+
+    if (turmaField) turmaField.hidden = porProfessor;
+    if (professorField) professorField.hidden = !porProfessor;
+    if (el("horarioTurmaId")) el("horarioTurmaId").required = !porProfessor;
+    if (el("horarioProfessorId")) el("horarioProfessorId").required = porProfessor;
+
+    if (builderDescricao) {
+        builderDescricao.innerText = porProfessor
+            ? "Selecione o professor e organize as aulas atividade na mesma matriz semanal usada para editar o horario."
+            : "Selecione a turma e monte o horario arrastando os cards de disciplina e professor para a matriz semanal.";
+    }
+    if (matrizEyebrow) matrizEyebrow.innerText = porProfessor ? "Grade do professor" : "Grade da turma";
+    if (matrizDescricao) {
+        matrizDescricao.innerText = porProfessor
+            ? "As aulas regulares ficam bloqueadas. Arraste apenas os cards de aula atividade para os horarios livres."
+            : "Solte um card em um campo vazio para criar a aula. Arraste uma aula preenchida para outro campo vazio para reposicionar.";
+    }
+    if (poolTitulo) poolTitulo.innerText = porProfessor ? "Aulas atividade" : "Disciplinas da turma";
+    if (poolDescricao) {
+        poolDescricao.innerText = porProfessor
+            ? "Crie os cards de planejamento e aloque-os nos horarios livres do professor."
+            : "O sistema gera um card para cada aula disponivel da disciplina com o professor atribuido.";
+    }
+    if (dropCopy) {
+        dropCopy.innerText = porProfessor
+            ? "Arraste uma aula atividade da matriz de volta para esta area para deixa-la sem alocacao."
+            : "Arraste uma aula da matriz de volta para esta area para remover o lancamento do horario.";
+    }
+    if (criarAtividade) {
+        criarAtividade.hidden = !porProfessor || obterProfessorBuilderId() <= 0;
+    }
+}
+
 function atualizarCabecalhoBuilder() {
-    const turma = obterTurmaPorId(obterTurmaBuilderId());
     const ano = obterAnoBuilder();
     const titulo = el("horarioBuilderTitulo");
     const meta = el("horarioBuilderMeta");
@@ -671,6 +706,25 @@ function atualizarCabecalhoBuilder() {
 
     if (!titulo || !meta || !tituloMatriz) return;
 
+    if (edicaoHorarioPorProfessorAtiva()) {
+        const professor = obterProfessorPorId(obterProfessorBuilderId());
+        if (!professor || ano <= 0) {
+            titulo.innerText = "Selecione um professor para abrir a matriz.";
+            meta.innerText =
+                "As aulas regulares aparecerao como ocupadas e os cards de planejamento ficarao disponiveis ao lado.";
+            tituloMatriz.innerText = "Matriz semanal do professor";
+            atualizarModoEdicaoHorario();
+            return;
+        }
+
+        titulo.innerText = `${professor.nome || professor.label || "Professor"} - ${ano}`;
+        meta.innerText = "Planejamento semanal com as aulas regulares preservadas.";
+        tituloMatriz.innerText = `Matriz semanal de ${professor.nome || professor.label || "professor"}`;
+        atualizarModoEdicaoHorario();
+        return;
+    }
+
+    const turma = obterTurmaPorId(obterTurmaBuilderId());
     if (!turma || ano <= 0) {
         titulo.innerText = "Selecione uma turma para abrir a matriz.";
         meta.innerText =
@@ -682,13 +736,16 @@ function atualizarCabecalhoBuilder() {
     titulo.innerText = `${turma.nome} - ${ano}`;
     meta.innerText = `${turma.turno || "Turno nao informado"} com montagem visual por arraste.`;
     tituloMatriz.innerText = `Matriz semanal da turma ${turma.nome}`;
+    atualizarModoEdicaoHorario();
 }
 
 function limparMatrizHorario() {
     estadoMatrizHorario = null;
     if (el("horarioMatrizWrap")) {
         el("horarioMatrizWrap").innerHTML =
-            '<div class="horario-empty-state">Selecione uma turma para visualizar a matriz do horario.</div>';
+            edicaoHorarioPorProfessorAtiva()
+                ? '<div class="horario-empty-state">Selecione um professor para visualizar a matriz do horario.</div>'
+                : '<div class="horario-empty-state">Selecione uma turma para visualizar a matriz do horario.</div>';
     }
     if (el("horarioCardsDisponiveis")) {
         el("horarioCardsDisponiveis").innerHTML = "";
@@ -727,6 +784,10 @@ async function excluirRegistroHorario(id, mensagem = "Registro removido com suce
 
 async function abrirTurmaNaMatriz(item) {
     if (!permiteEdicaoHorario()) return;
+    modoEdicaoHorario = "turma";
+    const modoTurma = document.querySelector('input[name="horarioEdicaoModo"][value="turma"]');
+    if (modoTurma) modoTurma.checked = true;
+    atualizarModoEdicaoHorario();
     if (item?.ano_letivo) {
         el("horarioAnoLetivo").value = String(item.ano_letivo);
     }
@@ -959,7 +1020,10 @@ function renderizarGradeTurmaSemanal(grupo) {
     return card;
 }
 
-function obterDiasGradeProfessor() {
+function obterDiasGradeProfessor({ ignorarFiltro = false } = {}) {
+    if (ignorarFiltro) {
+        return Array.isArray(contextoHorario.dias_semana) ? contextoHorario.dias_semana : [];
+    }
     const diaSelecionado = String(el("filtroHorarioDiaSemana")?.value || "").trim().toUpperCase();
     if (diaSelecionado) {
         const diaInfo = obterDiaInfo(diaSelecionado);
@@ -995,7 +1059,7 @@ function obterFaixasGradeProfessor(itens) {
     });
 }
 
-function criarConteudoCelulaGradeProfessor(item) {
+function criarConteudoCelulaGradeProfessor(item, { editavelAtividade = false } = {}) {
     const conteudo = document.createElement("div");
     conteudo.className = "horario-professor-cell";
     const aulaAtividade = String(item?.tipo_registro || "") === "AULA_ATIVIDADE";
@@ -1021,7 +1085,7 @@ function criarConteudoCelulaGradeProfessor(item) {
         );
     conteudo.appendChild(turma);
 
-    if (aulaAtividade && permiteEdicaoHorario()) {
+    if (aulaAtividade && editavelAtividade && permiteEdicaoHorario()) {
         const desalocar = criarBotaoAcao("Desalocar", async (event) => {
             event.stopPropagation();
             await desalocarAulaAtividade(item.id);
@@ -1057,7 +1121,7 @@ async function criarAulaAtividadeProfessor(grupo) {
             }),
         });
         setMensagemHorario("Card de aula atividade criado. Arraste-o para um horario vazio.");
-        await carregarRegistrosHorario();
+        await recarregarDadosHorarioCompleto();
     } catch (err) {
         setMensagemHorario(err.message || "Nao foi possivel criar a aula atividade.", true);
     }
@@ -1080,7 +1144,7 @@ async function desalocarAulaAtividade(atividadeId) {
     try {
         await atualizarAlocacaoAulaAtividade(atividadeId, null, null);
         setMensagemHorario("Aula atividade devolvida aos cards nao alocados.");
-        await carregarRegistrosHorario();
+        await recarregarDadosHorarioCompleto();
     } catch (err) {
         setMensagemHorario(err.message || "Nao foi possivel desalocar a aula atividade.", true);
     }
@@ -1093,7 +1157,7 @@ async function excluirAulaAtividade(atividadeId) {
             headers: headersHorario,
         });
         setMensagemHorario("Aula atividade excluida.");
-        await carregarRegistrosHorario();
+        await recarregarDadosHorarioCompleto();
     } catch (err) {
         setMensagemHorario(err.message || "Nao foi possivel excluir a aula atividade.", true);
     }
@@ -1124,7 +1188,7 @@ async function processarDropAulaAtividade(payload, diaSemana, aulaNumero, ocupad
             Number(aulaNumero)
         );
         setMensagemHorario("Aula atividade alocada com sucesso.");
-        await carregarRegistrosHorario();
+        await recarregarDadosHorarioCompleto();
     } catch (err) {
         setMensagemHorario(err.message || "Nao foi possivel alocar a aula atividade.", true);
     }
@@ -1217,9 +1281,20 @@ function renderizarCardsAulaAtividadePendentes(grupo) {
     return bloco;
 }
 
-function renderizarGradeProfessorSemanal(grupo, { tituloCard = "", subtituloCard = "" } = {}) {
+function renderizarGradeProfessorSemanal(
+    grupo,
+    {
+        tituloCard = "",
+        subtituloCard = "",
+        modoEdicao = false,
+        somenteGrade = false,
+    } = {}
+) {
     const card = document.createElement("article");
     card.className = "horario-group-card horario-professor-grid-card";
+    if (somenteGrade) {
+        card.classList.add("horario-professor-grid-editor");
+    }
 
     const header = document.createElement("div");
     header.className = "horario-group-header";
@@ -1256,23 +1331,12 @@ function renderizarGradeProfessorSemanal(grupo, { tituloCard = "", subtituloCard
     count.className = "horario-group-count";
     count.innerText = `${(grupo.itens || []).length} aula(s) · ${atividadesAlocadas} atividade(s)`;
     controles.appendChild(count);
-    if (permiteEdicaoHorario()) {
-        const criar = criarBotaoAcao(
-            "Criar aula atividade",
-            () => criarAulaAtividadeProfessor(grupo)
-        );
-        criar.classList.add("btn-destaque", "horario-create-activity");
-        controles.appendChild(criar);
-    }
     header.appendChild(controles);
-    card.appendChild(header);
-
-    const poolAtividades = renderizarCardsAulaAtividadePendentes(grupo);
-    if (poolAtividades) {
-        card.appendChild(poolAtividades);
+    if (!somenteGrade) {
+        card.appendChild(header);
     }
 
-    const dias = obterDiasGradeProfessor();
+    const dias = obterDiasGradeProfessor({ ignorarFiltro: modoEdicao });
     const faixas = obterFaixasGradeProfessor(grupo.itens || []);
     if (dias.length === 0 || faixas.length === 0) {
         const vazio = document.createElement("p");
@@ -1349,16 +1413,18 @@ function renderizarGradeProfessorSemanal(grupo, { tituloCard = "", subtituloCard
                 td.className = "is-empty";
                 const hint = document.createElement("span");
                 hint.className = "horario-activity-drop-hint";
-                hint.innerText = permiteEdicaoHorario() ? "Solte a atividade aqui" : "";
+                hint.innerText = modoEdicao ? "Solte a atividade aqui" : "";
                 td.appendChild(hint);
-                configurarDropTarget(td, async (payload) => {
-                    await processarDropAulaAtividade(
-                        payload,
-                        dia.valor,
-                        aulaNumero,
-                        false
-                    );
-                });
+                if (modoEdicao) {
+                    configurarDropTarget(td, async (payload) => {
+                        await processarDropAulaAtividade(
+                            payload,
+                            dia.valor,
+                            aulaNumero,
+                            false
+                        );
+                    });
+                }
             } else {
                 td.classList.add(
                     String(item.tipo_registro || "") === "AULA_ATIVIDADE"
@@ -1369,7 +1435,11 @@ function renderizarGradeProfessorSemanal(grupo, { tituloCard = "", subtituloCard
                                 : "is-colleague"
                         )
                 );
-                td.appendChild(criarConteudoCelulaGradeProfessor(item));
+                td.appendChild(
+                    criarConteudoCelulaGradeProfessor(item, {
+                        editavelAtividade: modoEdicao,
+                    })
+                );
             }
 
             tr.appendChild(td);
@@ -1789,11 +1859,7 @@ function renderizarMatrizHorario() {
     wrap.appendChild(tabela);
 }
 
-async function carregarMatrizHorario() {
-    if (!permiteEdicaoHorario()) return;
-
-    atualizarCabecalhoBuilder();
-
+async function carregarMatrizTurmaHorario() {
     const turmaId = obterTurmaBuilderId();
     const anoLetivo = obterAnoBuilder();
     if (turmaId <= 0 || anoLetivo <= 0) {
@@ -1820,10 +1886,109 @@ async function carregarMatrizHorario() {
     }
 }
 
+function renderizarPoolAulasAtividade(grupo) {
+    const container = el("horarioCardsDisponiveis");
+    const meta = el("horarioPoolMeta");
+    if (!container || !meta) return;
+    container.innerHTML = "";
+    meta.innerHTML = "";
+
+    const atividades = grupo.aulas_atividade || [];
+    const pendentes = atividades.filter((item) => !item.alocada);
+    const alocadas = atividades.filter((item) => item.alocada);
+
+    const resumo = document.createElement("p");
+    resumo.className = "horario-pool-summary";
+    resumo.innerText = `${pendentes.length} card(s) disponivel(is) · ${alocadas.length} alocado(s).`;
+    meta.appendChild(resumo);
+
+    const bloco = renderizarCardsAulaAtividadePendentes(grupo);
+    if (bloco) {
+        container.appendChild(bloco);
+        return;
+    }
+
+    const vazio = document.createElement("p");
+    vazio.className = "horario-empty-state";
+    vazio.innerText = "Nenhuma aula atividade disponivel. Use o botao acima para criar um card.";
+    container.appendChild(vazio);
+}
+
+function renderizarMatrizProfessorHorario(grupo) {
+    const wrap = el("horarioMatrizWrap");
+    if (!wrap) return;
+    wrap.innerHTML = "";
+    wrap.appendChild(
+        renderizarGradeProfessorSemanal(grupo, {
+            modoEdicao: true,
+            somenteGrade: true,
+        })
+    );
+}
+
+async function carregarMatrizProfessorHorario() {
+    const professorId = obterProfessorBuilderId();
+    const anoLetivo = obterAnoBuilder();
+    if (professorId <= 0 || anoLetivo <= 0) {
+        limparMatrizHorario();
+        return;
+    }
+
+    try {
+        const params = new URLSearchParams({
+            ano_letivo: String(anoLetivo),
+            professor_id: String(professorId),
+            incluir_aulas_atividade: "true",
+        });
+        const resultado = await fetchJson(
+            `/horario-escolar/registros?${params.toString()}`,
+            { headers: headersHorario }
+        );
+        const professor = obterProfessorPorId(professorId) || {};
+        const grupo = {
+            ano_letivo: anoLetivo,
+            professor_id: professorId,
+            professor_nome: professor.nome || professor.label || "",
+            professor_email: professor.email || "",
+            itens: resultado.itens || [],
+            aulas_atividade: resultado.aulas_atividade || [],
+        };
+        estadoMatrizHorario = {
+            modo: "professor",
+            grupo,
+        };
+        atualizarCabecalhoBuilder();
+        renderizarAlertasHorario([]);
+        renderizarPoolAulasAtividade(grupo);
+        renderizarMatrizProfessorHorario(grupo);
+    } catch (err) {
+        limparMatrizHorario();
+        setMensagemHorario(err.message || "Nao foi possivel carregar a matriz do professor.", true);
+    }
+}
+
+async function carregarMatrizHorario() {
+    if (!permiteEdicaoHorario()) return;
+    atualizarCabecalhoBuilder();
+    if (edicaoHorarioPorProfessorAtiva()) {
+        await carregarMatrizProfessorHorario();
+        return;
+    }
+    await carregarMatrizTurmaHorario();
+}
+
 function configurarDropPool() {
     const pool = el("horarioDropPool");
     if (!pool) return;
     configurarDropTarget(pool, async (payload) => {
+        if (
+            edicaoHorarioPorProfessorAtiva()
+            && payload?.source === "activity-scheduled"
+            && payload?.atividade_id
+        ) {
+            await desalocarAulaAtividade(payload.atividade_id);
+            return;
+        }
         if (!payload || payload.source !== "scheduled" || !payload.registro_id) {
             return;
         }
@@ -1863,11 +2028,35 @@ function registrarEventosHorario() {
         });
     });
 
+    document.querySelectorAll('input[name="horarioEdicaoModo"]').forEach((input) => {
+        input.addEventListener("change", async (event) => {
+            modoEdicaoHorario = String(event.target?.value || "turma");
+            atualizarModoEdicaoHorario();
+            await carregarMatrizHorario();
+        });
+    });
+
     el("horarioAnoLetivo")?.addEventListener("change", async () => {
         await carregarMatrizHorario();
     });
     el("horarioTurmaId")?.addEventListener("change", async () => {
         await carregarMatrizHorario();
+    });
+    el("horarioProfessorId")?.addEventListener("change", async () => {
+        atualizarModoEdicaoHorario();
+        await carregarMatrizHorario();
+    });
+    el("btnCriarAulaAtividade")?.addEventListener("click", async () => {
+        const professorId = obterProfessorBuilderId();
+        const anoLetivo = obterAnoBuilder();
+        if (!edicaoHorarioPorProfessorAtiva() || professorId <= 0 || anoLetivo <= 0) {
+            setMensagemHorario("Selecione o ano letivo e o professor.", true);
+            return;
+        }
+        await criarAulaAtividadeProfessor({
+            ano_letivo: anoLetivo,
+            professor_id: professorId,
+        });
     });
 
     el("btnVoltarServicos")?.addEventListener("click", () => {

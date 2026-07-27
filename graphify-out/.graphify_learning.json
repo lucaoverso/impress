@@ -1,6 +1,22 @@
 {
-  "generated_at": "2026-07-14T12:50:16.836452+00:00",
+  "generated_at": "2026-07-27T18:35:05.745091+00:00",
   "nodes": {
+    "database": {
+      "code_fingerprint": "e6819cd6d3db19d3362591fe90429aef61f8bfd7c7a4c55974930e109ad13b62",
+      "label": "database.py",
+      "last": "2026-07-27T18:11:13.948623+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-27T18:11:13.948623+00:00",
+          "outcome": "useful",
+          "q": "No módulo de horário escolar. Quero acrescentar nos professores a aula atividade usada para planejamento, Preciso de um botão para criar aula atividade ai gera um cardzinho e eu consigo editar a grade do professor e alocar essa aula. Tem como implementar isso?"
+        }
+      ],
+      "score": 0.999617185,
+      "source_file": "database.py",
+      "status": "tentative",
+      "uses": 1
+    },
     "db_schema_migrations": {
       "code_fingerprint": "db3d0eecd167de377737fe00385e448560a09b457ef53d733baf17f9e217f8ea",
       "label": "schema_migrations.py",
@@ -12,24 +28,318 @@
           "q": "Adicionar sexo ao cadastro de estudantes e adequar o artigo no texto consolidado do pré-conselho"
         }
       ],
-      "score": 0.999889496,
+      "score": 0.736381558,
       "source_file": "db/schema_migrations.py",
       "status": "tentative",
       "uses": 1
     },
-    "static_js_coordenacao_cadastros": {
-      "code_fingerprint": "65d1053fb9c66aaec4a0964e2730bb01cec78b1a929f1da854dac9d8dd721d7b",
-      "label": "cadastros.js",
-      "last": "2026-07-14T12:43:23.586269+00:00",
+    "design_school_suite_design_system": {
+      "code_fingerprint": "a872ac580da17b0f7a2c76ecaa469c486a6b764bdb10632aea3c017050d13af2",
+      "label": "School Suite Design System",
+      "last": "2026-07-24T00:36:24.652939+00:00",
       "provenance": [
+        {
+          "date": "2026-07-24T00:36:24.652939+00:00",
+          "outcome": "useful",
+          "q": "O design do sistema em geral ainda tem muita borda desnecessária. Muito padding tomando espaçamento desnecessário nada de acordo com o nosso DEISGN.md"
+        },
+        {
+          "date": "2026-07-19T17:32:24.474435+00:00",
+          "outcome": "useful",
+          "q": "Faça um impeccable audit para detectar padrões não usados ainda nas telas do nosso sistema"
+        }
+      ],
+      "score": 1.747425625,
+      "source_file": "DESIGN.md",
+      "status": "preferred",
+      "uses": 2
+    },
+    "docs_refatoracao_sprint_6_css_modular": {
+      "code_fingerprint": "43423c0ac6e18f90c212668a60c89b5ce483b4bbf31316219014bc58fe8d5b44",
+      "label": "Sprint 6 — CSS Modular",
+      "last": "2026-07-24T00:36:24.652939+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-24T00:36:24.652939+00:00",
+          "outcome": "useful",
+          "q": "O design do sistema em geral ainda tem muita borda desnecessária. Muito padding tomando espaçamento desnecessário nada de acordo com o nosso DEISGN.md"
+        }
+      ],
+      "score": 0.917023393,
+      "source_file": "docs/refatoracao/sprint-6.md",
+      "status": "tentative",
+      "uses": 1
+    },
+    "models_ocorrenciaout": {
+      "code_fingerprint": "363719f1a238067f8ac50a6983222b2613365b2f56dc644e33c30d65b2077fa6",
+      "label": "OcorrenciaOut",
+      "last": "2026-07-23T23:15:51.035931+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-23T23:15:51.035931+00:00",
+          "outcome": "useful",
+          "q": "Quero mandar um prompt para o stich, para gerar nova UI das ocorrências da coordenação. Me indique os requisitos que eu devo mandar para ele"
+        }
+      ],
+      "score": 0.915838819,
+      "source_file": "models.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "modules_scheduling_router_recursos_agendamento": {
+      "code_fingerprint": "186a58a262307a3126956c6c5928b12aa461c86853d601b274cac82382baf5c0",
+      "label": "recursos_agendamento()",
+      "last": "2026-07-21T15:18:04.565685+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-21T15:18:04.565685+00:00",
+          "outcome": "useful",
+          "q": "Mapear as telas e regras do módulo de agendamento para gerar no Stitch versões desktop e mobile de Novo agendamento, Meus agendamentos, Calendário geral e Catálogo de recursos"
+        }
+      ],
+      "score": 0.867802928,
+      "source_file": "modules/scheduling/router.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "ocorrencias_router": {
+      "code_fingerprint": "987cc87facad7f188dcc84cf354e272b7ece1878b7b8ac4ba006504cc3a503f7",
+      "label": "ocorrencias_router.py",
+      "last": "2026-07-24T00:05:37.096802+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-24T00:05:37.096802+00:00",
+          "outcome": "useful",
+          "q": "Faça mais uma passada focando em deixar as telas mais parecidas com o stich, remover o número de cards/bordas e deixar a tela ajustada sem vazamento no desktop"
+        },
+        {
+          "date": "2026-07-23T23:15:51.035931+00:00",
+          "outcome": "useful",
+          "q": "Quero mandar um prompt para o stich, para gerar nova UI das ocorrências da coordenação. Me indique os requisitos que eu devo mandar para ele"
+        }
+      ],
+      "score": 1.832409251,
+      "source_file": "ocorrencias_router.py",
+      "status": "preferred",
+      "uses": 2
+    },
+    "routers_config_render_template_response": {
+      "code_fingerprint": "11819655d248dd4750154d1351f3bdf00a743dc9b2b603bdc8fa817489a0b29a",
+      "label": "render_template_response()",
+      "last": "2026-07-24T00:36:24.652939+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-24T00:36:24.652939+00:00",
+          "outcome": "useful",
+          "q": "O design do sistema em geral ainda tem muita borda desnecessária. Muito padding tomando espaçamento desnecessário nada de acordo com o nosso DEISGN.md"
+        }
+      ],
+      "score": 0.917023393,
+      "source_file": "routers/config.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "routers_horario_escolar_router": {
+      "code_fingerprint": "7ab87ce8d22afb2139c4eaedc28cbdb61ed9247db9dc3884756069d0f1a51c94",
+      "label": "horario_escolar_router.py",
+      "last": "2026-07-27T18:11:13.948623+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-27T18:11:13.948623+00:00",
+          "outcome": "useful",
+          "q": "No módulo de horário escolar. Quero acrescentar nos professores a aula atividade usada para planejamento, Preciso de um botão para criar aula atividade ai gera um cardzinho e eu consigo editar a grade do professor e alocar essa aula. Tem como implementar isso?"
+        }
+      ],
+      "score": 0.999617185,
+      "source_file": "routers/horario_escolar_router.py",
+      "status": "tentative",
+      "uses": 1
+    },
+    "routers_impressao_router": {
+      "code_fingerprint": "2a8aa5a19780ea027e392ce17546a21968a4fac5b28cfe22ee9bc3493f51b0c6",
+      "label": "impressao_router.py",
+      "last": "2026-07-24T13:03:35.874728+00:00",
+      "neg": 1,
+      "provenance": [
+        {
+          "date": "2026-07-24T13:03:35.874728+00:00",
+          "outcome": "useful",
+          "q": "Implementar o mesmo stepper de agendamento no modulo de impressao mantendo o mesmo design"
+        }
+      ],
+      "score": 0.071701919,
+      "source_file": "routers/impressao_router.py",
+      "status": "contested",
+      "uses": 1,
+      "verdict": "useful"
+    },
+    "static_js_apc": {
+      "code_fingerprint": "b17225f4471778e5e2ca7cab6b33e780b1f1d19ddeecc0c4f2676b2f89e633f1",
+      "label": "apc.js",
+      "last": "2026-07-21T22:53:13.938989+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-21T22:53:13.938989+00:00",
+          "outcome": "useful",
+          "q": "O que acontece com a APC hoje se eu trocar a data de uma demanda? Quem enviou é perdido? Se o professor ter aula para o dia que eu trocar mantem o envio dele?"
+        }
+      ],
+      "score": 0.874163705,
+      "source_file": "static/js/apc.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "static_js_coordenacao_cadastros": {
+      "code_fingerprint": "7214346a66062455a50e78ef41f58752805990a944b4eade465502fd17b3f193",
+      "label": "cadastros.js",
+      "last": "2026-07-14T12:52:48.282174+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-14T12:52:48.282174+00:00",
+          "outcome": "useful",
+          "q": "Criar edição do sexo dos estudantes diretamente na tabela da turma selecionada"
+        },
         {
           "date": "2026-07-14T12:43:23.586269+00:00",
           "outcome": "useful",
           "q": "Adicionar sexo ao cadastro de estudantes e adequar o artigo no texto consolidado do pré-conselho"
         }
       ],
-      "score": 0.999889496,
+      "score": 1.472874326,
       "source_file": "static/js/coordenacao/cadastros.js",
+      "status": "preferred",
+      "uses": 2
+    },
+    "static_js_coordenacao_ocorrencias": {
+      "code_fingerprint": "771a083bb38df56f87c0337edbed507f4e063b08504cb2a729c57790560e8177",
+      "label": "ocorrencias.js",
+      "last": "2026-07-23T23:15:51.035931+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-23T23:15:51.035931+00:00",
+          "outcome": "useful",
+          "q": "Quero mandar um prompt para o stich, para gerar nova UI das ocorrências da coordenação. Me indique os requisitos que eu devo mandar para ele"
+        }
+      ],
+      "score": 0.915838819,
+      "source_file": "static/js/coordenacao/ocorrencias.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "static_js_coordenacao_painel": {
+      "code_fingerprint": "2358f88ee56b43b8c3681c928e89e0f06ba72bf7958ddab0d6946d04cd157980",
+      "label": "painel.js",
+      "last": "2026-07-23T23:15:51.035931+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-23T23:15:51.035931+00:00",
+          "outcome": "useful",
+          "q": "Quero mandar um prompt para o stich, para gerar nova UI das ocorrências da coordenação. Me indique os requisitos que eu devo mandar para ele"
+        },
+        {
+          "date": "2026-07-14T12:52:48.282174+00:00",
+          "outcome": "useful",
+          "q": "Criar edição do sexo dos estudantes diretamente na tabela da turma selecionada"
+        }
+      ],
+      "score": 1.652331586,
+      "source_file": "static/js/coordenacao/painel.js",
+      "status": "preferred",
+      "uses": 2
+    },
+    "static_js_core_app_navbar": {
+      "code_fingerprint": "4a6c8436b548b2a87bc20281c61268329e1d1b04c34700e7c73c51bd981fa333",
+      "label": "app_navbar.js",
+      "last": "2026-07-19T17:32:24.474435+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-19T17:32:24.474435+00:00",
+          "outcome": "useful",
+          "q": "Faça um impeccable audit para detectar padrões não usados ainda nas telas do nosso sistema"
+        }
+      ],
+      "score": 0.830402232,
+      "source_file": "static/js/core/app_navbar.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "static_js_horario_escolar": {
+      "code_fingerprint": "2716ee62727243829a5c958ec154e47642719de7537a47b1a392eab36e0d9cf2",
+      "label": "horario_escolar.js",
+      "last": "2026-07-27T18:11:13.948623+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-27T18:11:13.948623+00:00",
+          "outcome": "useful",
+          "q": "No módulo de horário escolar. Quero acrescentar nos professores a aula atividade usada para planejamento, Preciso de um botão para criar aula atividade ai gera um cardzinho e eu consigo editar a grade do professor e alocar essa aula. Tem como implementar isso?"
+        }
+      ],
+      "score": 0.999617185,
+      "source_file": "static/js/horario_escolar.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "static_js_printing_index": {
+      "code_fingerprint": "82c6cddc21e1fcc9072d881758a09e84d9814f179b19f0aaa6fe001604a0761e",
+      "label": "index.js",
+      "last": "2026-07-24T13:03:35.874728+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-24T13:03:35.874728+00:00",
+          "outcome": "useful",
+          "q": "Implementar o mesmo stepper de agendamento no modulo de impressao mantendo o mesmo design"
+        }
+      ],
+      "score": 0.92808345,
+      "source_file": "static/js/printing/index.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "static_js_printing_workflow": {
+      "code_fingerprint": "fd9de0491059c436ccbc775631b28939a1cfeef684f27629547b285765173c1f",
+      "label": "workflow.js",
+      "last": "2026-07-24T13:03:35.874728+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-24T13:03:35.874728+00:00",
+          "outcome": "useful",
+          "q": "Implementar o mesmo stepper de agendamento no modulo de impressao mantendo o mesmo design"
+        }
+      ],
+      "score": 0.92808345,
+      "source_file": "static/js/printing/workflow.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "templates_coordenacao_central_de_registros": {
+      "code_fingerprint": "2d8a30ab9572487f80172ec26cdfd5cb031adf1e5ede559cc7a6efe189dfe5bc",
+      "label": "Central de Registros da Coordenação",
+      "last": "2026-07-24T00:05:37.096802+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-24T00:05:37.096802+00:00",
+          "outcome": "useful",
+          "q": "Faça mais uma passada focando em deixar as telas mais parecidas com o stich, remover o número de cards/bordas e deixar a tela ajustada sem vazamento no desktop"
+        }
+      ],
+      "score": 0.916570432,
+      "source_file": "templates/coordenacao.html",
+      "status": "tentative",
+      "uses": 1
+    },
+    "tests_test_scheduling_service_schedulingservicetest": {
+      "code_fingerprint": "95b472ebb23b494fc0c9854b90a8067e4154a406dc00919fc4d6e157152d05c3",
+      "label": "SchedulingServiceTest",
+      "last": "2026-07-21T15:18:04.565685+00:00",
+      "provenance": [
+        {
+          "date": "2026-07-21T15:18:04.565685+00:00",
+          "outcome": "useful",
+          "q": "Mapear as telas e regras do módulo de agendamento para gerar no Stitch versões desktop e mobile de Novo agendamento, Meus agendamentos, Calendário geral e Catálogo de recursos"
+        }
+      ],
+      "score": 0.867802928,
+      "source_file": "tests/test_scheduling_service.py",
       "status": "tentative",
       "uses": 1
     }
