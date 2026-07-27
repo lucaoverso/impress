@@ -6231,6 +6231,74 @@ def _buscar_horario_escolar_conflito_professor_cursor(
     return int(row["id"]) if row else None
 
 
+def _buscar_aula_atividade_conflito_professor_cursor(
+    cursor,
+    *,
+    ano_letivo: int,
+    professor_usuario_id: int,
+    dia_semana: str,
+    faixa_global: int,
+    ignorar_registro_id: int | None = None,
+):
+    filtros = [
+        "ano_letivo = ?",
+        "professor_usuario_id = ?",
+        "UPPER(dia_semana) = ?",
+        "faixa_global = ?",
+    ]
+    params = [
+        int(ano_letivo),
+        int(professor_usuario_id),
+        str(dia_semana or "").strip().upper(),
+        int(faixa_global or 0),
+    ]
+    if ignorar_registro_id is not None:
+        filtros.append("id <> ?")
+        params.append(int(ignorar_registro_id))
+    cursor.execute(
+        f"""
+        SELECT id
+        FROM aulas_atividade_professores
+        WHERE {' AND '.join(filtros)}
+        ORDER BY id ASC
+        LIMIT 1
+        """,
+        params,
+    )
+    row = cursor.fetchone()
+    return int(row["id"]) if row else None
+
+
+def _validar_conflito_total_professor_cursor(
+    cursor,
+    *,
+    ano_letivo: int,
+    professor_usuario_id: int,
+    dia_semana: str,
+    faixa_global: int,
+    ignorar_horario_id: int | None = None,
+    ignorar_aula_atividade_id: int | None = None,
+) -> None:
+    if _buscar_horario_escolar_conflito_professor_cursor(
+        cursor,
+        ano_letivo=ano_letivo,
+        professor_usuario_id=professor_usuario_id,
+        dia_semana=dia_semana,
+        faixa_global=faixa_global,
+        ignorar_registro_id=ignorar_horario_id,
+    ):
+        raise sqlite3.IntegrityError("idx_horarios_escolares_professor_faixa_slot")
+    if _buscar_aula_atividade_conflito_professor_cursor(
+        cursor,
+        ano_letivo=ano_letivo,
+        professor_usuario_id=professor_usuario_id,
+        dia_semana=dia_semana,
+        faixa_global=faixa_global,
+        ignorar_registro_id=ignorar_aula_atividade_id,
+    ):
+        raise sqlite3.IntegrityError("idx_aulas_atividade_professor_slot")
+
+
 def _recalcular_faixa_global_horarios_turma(cursor, turma_id: int, turno: str) -> None:
     cursor.execute(
         """
@@ -6361,6 +6429,190 @@ def listar_horarios_escolares(
     return itens
 
 
+def _mapear_aula_atividade_professor(row) -> dict:
+    item = dict(row)
+    return {
+        "id": int(item["id"]),
+        "ano_letivo": int(item["ano_letivo"]),
+        "professor_id": int(item["professor_usuario_id"]),
+        "professor_nome": item.get("professor_nome", "") or "",
+        "professor_email": item.get("professor_email", "") or "",
+        "dia_semana": item.get("dia_semana", "") or "",
+        "aula_numero": int(item.get("aula_numero") or 0),
+        "faixa_global": int(item.get("faixa_global") or 0),
+        "criado_em": item.get("criado_em", "") or "",
+        "atualizado_em": item.get("atualizado_em", "") or "",
+    }
+
+
+def listar_aulas_atividade_professores(
+    *,
+    ano_letivo: int | None = None,
+    professor_id: int | None = None,
+    dia_semana: str | None = None,
+):
+    conn = get_connection()
+    cursor = conn.cursor()
+    filtros = []
+    params = []
+    if ano_letivo is not None:
+        filtros.append("aa.ano_letivo = ?")
+        params.append(int(ano_letivo))
+    if professor_id is not None:
+        filtros.append("aa.professor_usuario_id = ?")
+        params.append(int(professor_id))
+    if str(dia_semana or "").strip():
+        filtros.append("(UPPER(aa.dia_semana) = ? OR aa.dia_semana IS NULL)")
+        params.append(str(dia_semana).strip().upper())
+    clausula_where = f"WHERE {' AND '.join(filtros)}" if filtros else ""
+    cursor.execute(
+        f"""
+        SELECT
+            aa.id,
+            aa.ano_letivo,
+            aa.professor_usuario_id,
+            aa.dia_semana,
+            aa.aula_numero,
+            aa.faixa_global,
+            aa.criado_em,
+            aa.atualizado_em,
+            COALESCE(u.nome, '') AS professor_nome,
+            COALESCE(u.email, '') AS professor_email
+        FROM aulas_atividade_professores aa
+        INNER JOIN usuarios u ON u.id = aa.professor_usuario_id
+        {clausula_where}
+        ORDER BY
+            aa.ano_letivo DESC,
+            u.nome COLLATE NOCASE ASC,
+            aa.dia_semana IS NULL DESC,
+            aa.dia_semana ASC,
+            aa.faixa_global ASC,
+            aa.id ASC
+        """,
+        params,
+    )
+    itens = [_mapear_aula_atividade_professor(row) for row in cursor.fetchall()]
+    conn.close()
+    return itens
+
+
+def buscar_aula_atividade_professor_por_id(registro_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        """
+        SELECT
+            aa.id,
+            aa.ano_letivo,
+            aa.professor_usuario_id,
+            aa.dia_semana,
+            aa.aula_numero,
+            aa.faixa_global,
+            aa.criado_em,
+            aa.atualizado_em,
+            COALESCE(u.nome, '') AS professor_nome,
+            COALESCE(u.email, '') AS professor_email
+        FROM aulas_atividade_professores aa
+        INNER JOIN usuarios u ON u.id = aa.professor_usuario_id
+        WHERE aa.id = ?
+        """,
+        (int(registro_id),),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return _mapear_aula_atividade_professor(row) if row else None
+
+
+def criar_aula_atividade_professor(*, ano_letivo: int, professor_usuario_id: int):
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT INTO aulas_atividade_professores (
+                ano_letivo,
+                professor_usuario_id,
+                dia_semana,
+                aula_numero,
+                faixa_global,
+                criado_em,
+                atualizado_em
+            )
+            VALUES (?, ?, NULL, NULL, NULL, datetime('now'), datetime('now'))
+            """,
+            (int(ano_letivo), int(professor_usuario_id)),
+        )
+        registro_id = int(cursor.lastrowid)
+        conn.commit()
+    finally:
+        conn.close()
+    return buscar_aula_atividade_professor_por_id(registro_id)
+
+
+def atualizar_aula_atividade_professor(
+    *,
+    registro_id: int,
+    dia_semana: str | None,
+    aula_numero: int | None,
+    faixa_global: int | None,
+):
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT id, ano_letivo, professor_usuario_id
+            FROM aulas_atividade_professores
+            WHERE id = ?
+            """,
+            (int(registro_id),),
+        )
+        atual = cursor.fetchone()
+        if not atual:
+            return None
+
+        dia_normalizado = str(dia_semana or "").strip().upper() or None
+        aula_valor = int(aula_numero or 0) or None
+        faixa_valor = int(faixa_global or 0) or None
+        if dia_normalizado:
+            _validar_conflito_total_professor_cursor(
+                cursor,
+                ano_letivo=int(atual["ano_letivo"]),
+                professor_usuario_id=int(atual["professor_usuario_id"]),
+                dia_semana=dia_normalizado,
+                faixa_global=int(faixa_valor or 0),
+                ignorar_aula_atividade_id=int(registro_id),
+            )
+        cursor.execute(
+            """
+            UPDATE aulas_atividade_professores
+            SET dia_semana = ?,
+                aula_numero = ?,
+                faixa_global = ?,
+                atualizado_em = datetime('now')
+            WHERE id = ?
+            """,
+            (dia_normalizado, aula_valor, faixa_valor, int(registro_id)),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+    return buscar_aula_atividade_professor_por_id(registro_id)
+
+
+def excluir_aula_atividade_professor(registro_id: int):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute(
+        "DELETE FROM aulas_atividade_professores WHERE id = ?",
+        (int(registro_id),),
+    )
+    alterado = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return alterado
+
+
 def buscar_horario_escolar_por_id(registro_id: int):
     conn = get_connection()
     cursor = conn.cursor()
@@ -6393,15 +6645,13 @@ def criar_horario_escolar(
             aula_numero=int(aula_numero),
             faixa_global=faixa_global,
         )
-        conflito_id = _buscar_horario_escolar_conflito_professor_cursor(
+        _validar_conflito_total_professor_cursor(
             cursor,
             ano_letivo=int(ano_letivo),
             professor_usuario_id=int(professor_usuario_id),
             dia_semana=dia_semana_normalizado,
             faixa_global=faixa_global_resolvida,
         )
-        if conflito_id:
-            raise sqlite3.IntegrityError("idx_horarios_escolares_professor_faixa_slot")
 
         cursor.execute(
             """
@@ -6456,16 +6706,14 @@ def atualizar_horario_escolar(
             aula_numero=int(aula_numero),
             faixa_global=faixa_global,
         )
-        conflito_id = _buscar_horario_escolar_conflito_professor_cursor(
+        _validar_conflito_total_professor_cursor(
             cursor,
             ano_letivo=int(ano_letivo),
             professor_usuario_id=int(professor_usuario_id),
             dia_semana=dia_semana_normalizado,
             faixa_global=faixa_global_resolvida,
-            ignorar_registro_id=int(registro_id),
+            ignorar_horario_id=int(registro_id),
         )
-        if conflito_id:
-            raise sqlite3.IntegrityError("idx_horarios_escolares_professor_faixa_slot")
 
         cursor.execute(
             """

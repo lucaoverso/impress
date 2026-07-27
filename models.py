@@ -697,6 +697,35 @@ class HorarioEscolarRegistroOut(BaseModel):
     atualizado_em: str = ""
 
 
+class AulaAtividadeProfessorCreateIn(BaseModel):
+    ano_letivo: int
+    professor_id: int
+
+
+class AulaAtividadeProfessorUpdateIn(BaseModel):
+    dia_semana: str | None = None
+    aula_numero: int | None = None
+
+
+class AulaAtividadeProfessorOut(BaseModel):
+    id: int
+    ano_letivo: int
+    professor_id: int
+    professor_nome: str = ""
+    professor_email: str = ""
+    dia_semana: str = ""
+    dia_semana_nome: str = ""
+    aula_numero: int = 0
+    faixa_global: int = 0
+    aula_label: str = ""
+    alocada: bool = False
+    tipo_registro: str = "AULA_ATIVIDADE"
+    titulo: str = "Aula atividade"
+    descricao: str = "Planejamento"
+    criado_em: str = ""
+    atualizado_em: str = ""
+
+
 ApcPublicoAlvo = Literal[
     "TODOS_PROFESSORES",
     "HORARIO_DIA",

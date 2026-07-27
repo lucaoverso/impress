@@ -285,6 +285,30 @@ def enriquecer_horario_escolar(
     }
 
 
+def enriquecer_aula_atividade_professor(
+    item: dict,
+    configuracoes_aulas: list[dict] | None = None,
+) -> dict:
+    aula_numero = int((item or {}).get("aula_numero") or 0)
+    dia_semana = str((item or {}).get("dia_semana") or "").strip()
+    aula_config = find_lesson_by_number(configuracoes_aulas or [], aula_numero)
+    alocada = bool(dia_semana and aula_numero > 0)
+    return {
+        **dict(item or {}),
+        "dia_semana": normalizar_dia_semana(dia_semana) if alocada else "",
+        "dia_semana_nome": nome_dia_semana(dia_semana) if alocada else "",
+        "aula_numero": aula_numero,
+        "faixa_global": int((item or {}).get("faixa_global") or aula_numero or 0),
+        "aula_label": str((aula_config or {}).get("label") or "").strip()
+        if alocada
+        else "",
+        "alocada": alocada,
+        "tipo_registro": "AULA_ATIVIDADE",
+        "titulo": "Aula atividade",
+        "descricao": "Planejamento",
+    }
+
+
 def ordenar_horarios_escolares(
     itens: list[dict],
     configuracoes_aulas: list[dict] | None = None,
