@@ -122,6 +122,22 @@ def _teacher_conflict(
     return int(row["id"]) if row else None
 
 
+def _teacher_activity_conflict(cursor, *, year, teacher_id, weekday, slot):
+    row = cursor.execute(
+        """SELECT id FROM aulas_atividade_professores
+           WHERE ano_letivo = ? AND professor_usuario_id = ?
+             AND UPPER(dia_semana) = ? AND faixa_global = ?
+           ORDER BY id ASC LIMIT 1""",
+        (
+            int(year),
+            int(teacher_id),
+            str(weekday).strip().upper(),
+            int(slot),
+        ),
+    ).fetchone()
+    return int(row["id"]) if row else None
+
+
 def create_school_schedule(
     *, ano_letivo, turma_id, disciplina_id, professor_usuario_id,
     dia_semana, aula_numero, faixa_global=None
@@ -135,6 +151,14 @@ def create_school_schedule(
             weekday=weekday, slot=slot
         ):
             raise IntegrityError("idx_horarios_escolares_professor_faixa_slot")
+        if _teacher_activity_conflict(
+            cursor,
+            year=ano_letivo,
+            teacher_id=professor_usuario_id,
+            weekday=weekday,
+            slot=slot,
+        ):
+            raise IntegrityError("idx_aulas_atividade_professor_slot")
         cursor.execute(
             """INSERT INTO horarios_escolares (
                    ano_letivo, turma_id, disciplina_id, professor_usuario_id,
@@ -161,6 +185,14 @@ def update_school_schedule(
             weekday=weekday, slot=slot, ignored_record_id=registro_id
         ):
             raise IntegrityError("idx_horarios_escolares_professor_faixa_slot")
+        if _teacher_activity_conflict(
+            cursor,
+            year=ano_letivo,
+            teacher_id=professor_usuario_id,
+            weekday=weekday,
+            slot=slot,
+        ):
+            raise IntegrityError("idx_aulas_atividade_professor_slot")
         cursor.execute(
             """UPDATE horarios_escolares
                SET ano_letivo = ?, turma_id = ?, disciplina_id = ?,

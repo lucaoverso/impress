@@ -4,6 +4,13 @@ from modules.scheduling.repository import (
     list_lesson_configurations,
     update_lesson_configuration,
 )
+from modules.scheduling.school_activity_repository import (
+    create_teacher_activity,
+    delete_teacher_activity,
+    get_teacher_activity,
+    list_teacher_activities,
+    update_teacher_activity,
+)
 from modules.scheduling.school_schedule_repository import (
     create_school_schedule,
     delete_school_schedule,
@@ -21,6 +28,11 @@ excluir_horario_escolar = delete_school_schedule
 listar_anos_letivos_horario_escolar = list_school_years
 listar_horarios_escolares = list_school_schedules
 atualizar_horario_escolar = update_school_schedule
+atualizar_aula_atividade_professor = update_teacher_activity
+buscar_aula_atividade_professor_por_id = get_teacher_activity
+criar_aula_atividade_professor = create_teacher_activity
+excluir_aula_atividade_professor = delete_teacher_activity
+listar_aulas_atividade_professores = list_teacher_activities
 
 
 def listar_configuracoes_aulas(incluir_inativas: bool = False):
@@ -61,13 +73,18 @@ def atualizar_configuracao_aula(
 
 __all__ = [
     "atualizar_configuracao_aula",
+    "atualizar_aula_atividade_professor",
+    "buscar_aula_atividade_professor_por_id",
     "buscar_horario_escolar_por_id",
     "buscar_configuracao_aula_por_id",
     "criar_horario_escolar",
+    "criar_aula_atividade_professor",
     "criar_configuracao_aula",
     "excluir_horario_escolar",
+    "excluir_aula_atividade_professor",
     "listar_anos_letivos_horario_escolar",
     "listar_configuracoes_aulas",
     "listar_horarios_escolares",
+    "listar_aulas_atividade_professores",
     "atualizar_horario_escolar",
 ]

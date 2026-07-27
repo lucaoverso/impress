@@ -78,6 +78,58 @@
     align-items: end;
 }
 
+.horario-builder-mode {
+    grid-column: 1 / -1;
+    display: grid;
+    gap: 0.55rem;
+}
+
+.horario-builder-mode > span {
+    color: #17324d;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.horario-builder-mode-options {
+    display: inline-flex;
+    width: fit-content;
+    padding: 0.3rem;
+    border: 1px solid rgba(23, 50, 77, 0.14);
+    border-radius: 14px;
+    background: #f6f9fc;
+}
+
+.horario-builder-mode-option {
+    position: relative;
+    cursor: pointer;
+}
+
+.horario-builder-mode-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.horario-builder-mode-option span {
+    display: block;
+    padding: 0.6rem 0.9rem;
+    border-radius: 10px;
+    color: #4b5563;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.horario-builder-mode-option input:checked + span {
+    background: #17324d;
+    color: #ffffff;
+    box-shadow: 0 5px 14px rgba(23, 50, 77, 0.18);
+}
+
+.horario-builder-mode-option input:focus-visible + span {
+    outline: 3px solid rgba(38, 77, 115, 0.25);
+    outline-offset: 2px;
+}
+
 .horario-builder-note {
     grid-column: 1 / -1;
     display: grid;
@@ -168,7 +220,8 @@
 }
 
 .horario-slot.is-drop-target,
-.horario-drop-pool.is-drop-target {
+.horario-drop-pool.is-drop-target,
+.horario-professor-grid td.is-drop-target {
     border-color: #0f766e;
     box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
     transform: translateY(-1px);
@@ -382,6 +435,18 @@
     color: #4b5563;
 }
 
+.horario-professor-header-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    flex-wrap: wrap;
+}
+
+.horario-create-activity {
+    min-height: 40px;
+}
+
 .horario-group-count {
     font-size: 0.9rem;
     color: #35597f;
@@ -461,6 +526,15 @@
     background: #f9fbfd;
 }
 
+.horario-professor-grid td.is-activity {
+    background: #d6f2ef;
+    color: #0b5b55;
+}
+
+.horario-professor-grid td.is-drop-target {
+    background: #eefbf9;
+}
+
 .horario-professor-grid td.is-own {
     background: linear-gradient(180deg, rgba(38, 77, 115, 0.12) 0%, rgba(38, 77, 115, 0.05) 100%);
     box-shadow: inset 3px 0 0 #264d73;
@@ -476,10 +550,107 @@
     gap: 0.3rem;
 }
 
+.horario-professor-grid-editor .horario-professor-cell.is-activity {
+    cursor: grab;
+}
+
+.horario-professor-cell.is-activity .horario-professor-cell-disciplina {
+    color: #0b5b55;
+}
+
 .horario-professor-cell-disciplina {
     display: block;
     color: #17324d;
     font-size: 0.94rem;
+}
+
+.horario-activity-action {
+    justify-self: start;
+    margin-top: 0.25rem;
+}
+
+.horario-activity-drop-hint {
+    display: grid;
+    min-height: 48px;
+    place-items: center;
+    color: #64748b;
+    font-size: 0.78rem;
+    text-align: center;
+}
+
+.horario-activity-pool {
+    display: grid;
+    gap: 0.65rem;
+    padding: 0.9rem;
+    border: 1px solid #b8dfda;
+    border-radius: 14px;
+    background: #eefbf9;
+}
+
+.horario-card-pool .horario-activity-pool {
+    width: 100%;
+}
+
+.horario-professor-grid-editor {
+    padding: 0;
+    border: 0;
+    background: transparent;
+}
+
+.horario-activity-pool > p {
+    margin: 0;
+    color: #0b5b55;
+    font-size: 0.9rem;
+    font-weight: 700;
+}
+
+.horario-activity-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+}
+
+.horario-activity-card {
+    display: grid;
+    grid-template-columns: minmax(130px, 1fr) auto;
+    align-items: center;
+    gap: 0.8rem;
+    min-width: min(100%, 420px);
+    padding: 0.75rem;
+    border: 1px solid #b8dfda;
+    border-radius: 12px;
+    background: #ffffff;
+    cursor: grab;
+}
+
+.horario-activity-card > div {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.horario-activity-card strong {
+    color: #0b5b55;
+}
+
+.horario-activity-card span {
+    color: #4b5563;
+    font-size: 0.82rem;
+}
+
+.horario-activity-allocate-controls {
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(2, minmax(120px, 1fr)) auto;
+    gap: 0.5rem;
+}
+
+.horario-activity-allocate-controls select {
+    min-height: 42px;
+    border: 1px solid #c9d2de;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #1f2a37;
+    padding: 0 0.65rem;
 }
 
 .horario-professor-cell-turma {
@@ -588,6 +759,20 @@
 
     .horario-group-header {
         flex-direction: column;
+    }
+
+    .horario-professor-header-actions {
+        width: 100%;
+        align-items: stretch;
+        justify-content: flex-start;
+    }
+
+    .horario-create-activity {
+        flex: 1;
+    }
+
+    .horario-activity-allocate-controls {
+        grid-template-columns: 1fr;
     }
 
     .horario-professor-scope-options {

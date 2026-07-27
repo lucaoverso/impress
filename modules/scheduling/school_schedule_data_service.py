@@ -12,6 +12,13 @@ from modules.scheduling.repository import (
     list_lesson_configurations,
     list_scheduling_teachers as listar_professores_agendamento,
 )
+from modules.scheduling.school_activity_repository import (
+    create_teacher_activity as criar_aula_atividade_professor,
+    delete_teacher_activity as excluir_aula_atividade_professor,
+    get_teacher_activity as buscar_aula_atividade_professor_por_id,
+    list_teacher_activities as listar_aulas_atividade_professores,
+    update_teacher_activity as atualizar_aula_atividade_professor,
+)
 from modules.scheduling.school_schedule_repository import (
     create_school_schedule as criar_horario_escolar,
     delete_school_schedule as excluir_horario_escolar,

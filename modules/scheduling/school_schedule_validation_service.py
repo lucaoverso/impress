@@ -32,6 +32,8 @@ def validate_iso_date(value: str, field: str = "Data") -> str:
 
 def translate_integrity_error(exc: IntegrityError) -> str:
     text = str(exc).lower()
+    if "idx_aulas_atividade_professor_slot" in text:
+        return "O professor já possui uma aula ou aula atividade nessa faixa e nesse dia."
     if "idx_horarios_escolares_professor_faixa_slot" in text:
         return "O professor já possui aula cadastrada nessa faixa e nesse dia."
     if "idx_horarios_escolares_professor_slot" in text:
@@ -45,7 +47,7 @@ def translate_integrity_error(exc: IntegrityError) -> str:
     return "Conflito ao salvar o horário escolar."
 
 
-def _active_teacher(teacher_id: int) -> dict:
+def validate_active_teacher(teacher_id: int) -> dict:
     teacher = buscar_usuario_por_id(int(teacher_id))
     if not teacher or normalizar_cargo_usuario(teacher) != CARGO_PROFESSOR:
         raise HTTPException(404, "Professor não encontrado.")
@@ -104,7 +106,7 @@ def validate_school_schedule_payload(payload) -> dict:
     discipline = buscar_disciplina_por_id(int(payload.disciplina_id))
     if not discipline:
         raise HTTPException(404, "Disciplina não encontrada.")
-    teacher = _active_teacher(int(payload.professor_id))
+    teacher = validate_active_teacher(int(payload.professor_id))
     try:
         weekday = normalizar_dia_semana(payload.dia_semana)
         lesson_number = validar_aula_numero(
