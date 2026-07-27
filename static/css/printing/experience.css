@@ -4,6 +4,221 @@
 }
 .professor-page .print-workspace {
     overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+.professor-page .print-page-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: var(--space-8);
+    padding: var(--space-8) 0;
+    border: 0;
+}
+.professor-page .print-page-quota {
+    display: grid;
+    gap: var(--space-2);
+    width: 298px;
+    min-width: 0;
+    padding: var(--space-4) var(--space-6);
+    border: 1px solid var(--print-color-border);
+    border-radius: var(--radius-lg);
+    background: var(--print-color-surface);
+    color: var(--print-color-text-muted);
+    box-shadow: var(--shadow-low);
+    text-align: left;
+}
+.professor-page .print-page-quota-copy {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+}
+.professor-page .print-page-quota span {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+.professor-page .print-page-quota strong {
+    color: var(--print-color-text);
+    font-size: 0.9375rem;
+    text-align: right;
+}
+.professor-page .print-quota-meter {
+    width: 100%;
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--print-color-surface-muted);
+}
+.professor-page .print-quota-meter span {
+    display: block;
+    width: var(--print-quota-progress, 0%);
+    height: 100%;
+    border-radius: inherit;
+    background: var(--print-color-primary);
+    transition: width var(--print-transition);
+}
+.professor-page .print-page-quota small {
+    color: var(--print-color-text-muted);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+.professor-page .print-flow-stepper[hidden] {
+    display: none;
+}
+.professor-page .print-flow-stepper ol {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.professor-page .print-request-owner {
+    display: grid;
+}
+.professor-page .print-request-owner[hidden] {
+    display: none;
+}
+html[data-printing-current-step="1"] body.professor-page .print-upload-dropzone {
+    min-height: 320px;
+    padding: var(--space-8) var(--space-6);
+    border-color: color-mix(in srgb, var(--print-color-primary) 42%, var(--print-color-border));
+    border-radius: 0;
+    background: var(--print-color-surface);
+}
+html[data-printing-current-step="1"] body.professor-page .print-wizard-stage {
+    border: 1px solid var(--print-color-border);
+    background: var(--print-color-surface);
+    box-shadow: var(--shadow-low);
+}
+html[data-printing-current-step="1"] body.professor-page .print-wizard-left {
+    padding: var(--space-8);
+}
+html[data-printing-current-step="1"] body.professor-page #etapaArquivo {
+    gap: var(--space-6);
+    justify-items: stretch;
+    text-align: left;
+}
+html[data-printing-current-step="1"] body.professor-page #etapaArquivo .print-step-header {
+    display: none;
+}
+html[data-printing-current-step="1"] body.professor-page #etapaArquivo > .print-field-group,
+html[data-printing-current-step="1"] body.professor-page #grupoProfessorSolicitante {
+    width: min(100%, 360px);
+}
+html[data-printing-current-step="1"] body.professor-page #etapaArquivo select {
+    min-height: 52px;
+}
+html[data-printing-current-step="1"] body.professor-page #etapaArquivo .print-file-hint {
+    margin: 0;
+    text-align: left;
+}
+html[data-printing-current-step="1"] body.professor-page #resumoTurmaImpressao {
+    display: none;
+}
+html[data-printing-current-step="1"] body.professor-page .print-upload-icon {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: var(--print-color-primary-light);
+    color: var(--print-color-primary);
+}
+html[data-printing-current-step="1"] body.professor-page .print-upload-icon svg {
+    width: 44px;
+    height: 44px;
+}
+html[data-printing-current-step="1"] body.professor-page .print-upload-title {
+    margin-top: var(--space-2);
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+html[data-printing-current-step="1"] body.professor-page .print-upload-subtitle {
+    color: var(--print-color-text-muted);
+    font-size: 0.9375rem;
+}
+html[data-printing-current-step="1"] body.professor-page .print-upload-subtitle strong {
+    color: var(--print-color-primary);
+}
+.professor-page .print-upload-formats {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+.professor-page .print-upload-formats > span {
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--print-color-surface-muted);
+    color: var(--print-color-text-muted);
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+html[data-printing-current-step="1"] body.professor-page .print-upload-file {
+    display: none;
+}
+html[data-printing-current-step="1"] body.professor-page .print-upload-dropzone.has-file .print-upload-file {
+    display: block;
+    max-width: min(100%, 60ch);
+    color: var(--print-color-primary);
+    font-weight: 800;
+}
+html[data-printing-current-step="1"] body.professor-page #etapaArquivo .print-step-actions {
+    justify-content: flex-end;
+    padding-top: var(--space-4);
+    border: 0;
+}
+html[data-printing-current-step="1"] body.professor-page #btnContinuarArquivo {
+    display: inline-flex;
+    min-width: 230px;
+    min-height: 56px;
+    gap: var(--space-3);
+    font-size: 1rem;
+}
+html[data-printing-current-step="1"] body.professor-page #btnContinuarArquivo svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+}
+.professor-page .print-entry-benefits {
+    display: none;
+}
+html[data-printing-current-step="1"] body.professor-page .print-entry-benefits {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-8);
+    padding: var(--space-8) var(--space-2);
+}
+.professor-page .print-entry-benefits article {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+}
+.professor-page .print-entry-benefits svg {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: var(--print-color-primary);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+}
+.professor-page .print-entry-benefits strong {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--print-color-text);
+    font-size: 0.875rem;
+}
+.professor-page .print-entry-benefits p {
+    max-width: 34ch;
+    margin: 0;
+    color: var(--print-color-text-muted);
+    font-size: 0.875rem;
+    line-height: 1.55;
 }
 .professor-page .print-wizard-stage {
     grid-template-columns: minmax(390px, 0.9fr) minmax(500px, 1.1fr);
@@ -14,7 +229,7 @@
 .professor-page .print-wizard-right {
     top: calc(var(--app-navbar-height) + var(--space-3));
     min-height: 640px;
-    padding: var(--space-5) var(--space-6) var(--space-6) 0;
+    padding: var(--space-6) var(--space-6) var(--space-6) 0;
 }
 .professor-page .print-preview-stage {
     height: min(720px, calc(100svh - var(--app-navbar-height) - 48px));
@@ -31,6 +246,11 @@
     align-items: center;
     padding: var(--space-3) var(--space-4);
     border-bottom: 1px solid var(--print-color-border);
+}
+.professor-page .print-preview-header > .print-preview-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
 }
 .professor-page .print-preview-title h2 {
     font-size: 1.125rem;
@@ -129,6 +349,31 @@
     .professor-page .print-workspace {
         overflow: clip;
     }
+    .professor-page .print-page-header {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+        gap: var(--space-4);
+        padding: var(--space-6) var(--space-4);
+    }
+    .professor-page .print-page-quota {
+        width: 100%;
+        text-align: left;
+    }
+    html[data-printing-current-step="1"] body.professor-page .print-upload-dropzone {
+        min-height: 240px;
+        padding: var(--space-6);
+    }
+    html[data-printing-current-step="1"] body.professor-page .print-wizard-stage {
+        margin-inline: var(--space-2);
+    }
+    html[data-printing-current-step="1"] body.professor-page .print-wizard-left {
+        padding: var(--space-6);
+    }
+    html[data-printing-current-step="1"] body.professor-page .print-entry-benefits {
+        grid-template-columns: 1fr;
+        gap: var(--space-6);
+        padding: var(--space-6) var(--space-4);
+    }
     .professor-page .print-selection-context {
         position: sticky;
         top: var(--app-navbar-height);
@@ -183,12 +428,6 @@
         order: -1;
         width: auto;
         flex: 0 0 auto;
-    }
-    .professor-page .print-preview-title > svg {
-        display: none;
-    }
-    .professor-page .print-preview-title p {
-        display: none;
     }
     .professor-page .print-preview-close-btn {
         display: inline-flex;
@@ -259,6 +498,28 @@
     }
 }
 @media (max-width: 640px) {
+    html[data-printing-current-step="1"] body.professor-page .print-upload-dropzone {
+        min-height: 220px;
+        padding: var(--space-6);
+    }
+    html[data-printing-current-step="1"] body.professor-page .print-wizard-left {
+        padding: var(--space-6) var(--space-4);
+    }
+    html[data-printing-current-step="1"] body.professor-page .print-upload-icon {
+        width: 72px;
+        height: 72px;
+    }
+    html[data-printing-current-step="1"] body.professor-page .print-upload-icon svg {
+        width: 36px;
+        height: 36px;
+    }
+    html[data-printing-current-step="1"] body.professor-page .print-upload-title {
+        font-size: 1.0625rem;
+    }
+    html[data-printing-current-step="1"] body.professor-page #btnContinuarArquivo {
+        width: 100%;
+        min-width: 0;
+    }
     .professor-page .print-preview-document {
         display: grid;
         gap: var(--space-1);

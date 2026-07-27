@@ -96,6 +96,42 @@ class P3UiPolishContractTest(unittest.TestCase):
         self.assertNotIn("obterDimensoesMiniaturaDesktop", script)
         self.assertIn('el("btnVoltarAjustesPreview")?.addEventListener("click", fecharPreviewMobile);', script)
 
+    def test_entrada_da_impressao_remove_moldura_e_destaca_upload(self):
+        css = (ROOT / "static" / "css" / "printing" / "experience.css").read_text(encoding="utf-8")
+        workspace = css[css.index(".professor-page .print-workspace {"):css.index(".professor-page .print-page-header {")]
+
+        self.assertIn("border: 0;", workspace)
+        self.assertIn("box-shadow: none;", workspace)
+        self.assertIn("min-height: 320px;", css)
+        self.assertIn("grid-template-columns: repeat(4, minmax(0, 1fr));", css)
+
+    def test_troca_de_professor_descarta_respostas_assincronas_antigas(self):
+        script = (ROOT / "static" / "js" / "professor.js").read_text(encoding="utf-8")
+
+        self.assertGreaterEqual(
+            script.count("professorConsultaId !== obterProfessorSolicitanteSelecionadoId()"),
+            2,
+        )
+
+    def test_seletor_de_professor_e_exclusivo_de_gestores(self):
+        script = (ROOT / "static" / "js" / "professor.js").read_text(encoding="utf-8")
+        history_script = (ROOT / "static" / "js" / "printing" / "history.js").read_text(encoding="utf-8")
+
+        self.assertIn("return usuarioEhGestor();", script)
+        self.assertNotIn("usuarioPodeGerirImpressoes", script)
+        self.assertNotIn("tem_acesso_coordenacao", history_script)
+
+    def test_selecao_redundante_de_paginas_fica_oculta_e_preview_alinha_titulo(self):
+        template = (ROOT / "templates" / "printing" / "index.html").read_text(encoding="utf-8")
+        preview_css = (ROOT / "static" / "css" / "printing" / "preview.css").read_text(encoding="utf-8")
+        experience_css = (ROOT / "static" / "css" / "printing" / "experience.css").read_text(encoding="utf-8")
+
+        self.assertIn('<section class="print-config-section" hidden>\n                        <h3>Páginas</h3>', template)
+        self.assertIn('<div class="print-preview-title">', template)
+        self.assertNotIn("<p>Confira antes de confirmar.</p>", template)
+        self.assertIn(".professor-page .print-preview-title { display: flex; align-items: center;", preview_css)
+        self.assertIn(".professor-page .print-preview-header > .print-preview-title {", experience_css)
+
 
 if __name__ == "__main__":
     unittest.main()

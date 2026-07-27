@@ -102,6 +102,14 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn("css/pages/professor.css?v=build-print-789", html)
         self.assertIn("js/printing/index.js?v=build-print-789", html)
         self.assertIn('id="printStepperCard"', html)
+        self.assertIn('id="printStepperCard" class="print-flow-stepper" aria-label="Progresso da solicitação de impressão" hidden', html)
+        self.assertNotIn('id="stepperArquivo"', html)
+        self.assertIn('id="printStepperProgress">Etapa 1 de 4', html)
+        self.assertIn('id="tituloCotaEtapaArquivo">Cota mensal', html)
+        self.assertIn('id="printQuotaMeter"', html)
+        self.assertIn('class="print-upload-formats"', html)
+        self.assertIn('class="print-entry-benefits"', html)
+        self.assertLess(html.index('id="cotaPainelEtapaArquivo"'), html.index('id="printStepperCard"'))
         self.assertIn('id="printSelectionContext"', html)
         self.assertIn('id="resumoDuplex"', html)
         self.assertIn('id="resumoTags"', html)
@@ -125,6 +133,7 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn('aria-current="page"', html)
         self.assertIn("css/printing/history.css?v=build-print-history-321", html)
         self.assertIn("js/printing/history.js?v=build-print-history-321", html)
+        self.assertIn('id="printHistoryProfessor"', html)
         self.assertNotIn('id="printStepperCard"', html)
 
     def test_paginas_de_consulta_agendamento_tem_rotas_e_assets_proprios(self):

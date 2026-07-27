@@ -173,6 +173,38 @@ def list_serialized_jobs_for_user(usuario_id: int, spool_dir: Path | None = None
     ]
 
 
+def list_combined_serialized_jobs(
+    usuario_atual: dict,
+    usuario_consulta: dict,
+    spool_dir: Path | None = None,
+):
+    fontes = [
+        (usuario_atual, "proprio"),
+        (usuario_consulta, "professor"),
+    ]
+    jobs_por_id = {}
+
+    for usuario_fonte, origem in fontes:
+        usuario_id = int(usuario_fonte["id"])
+        for job in list_serialized_jobs_for_user(usuario_id, spool_dir=spool_dir):
+            job_id = int(job["id"])
+            if job_id in jobs_por_id:
+                continue
+            job["origem_historico"] = origem
+            job["origem_nome"] = str(
+                usuario_fonte.get("nome")
+                or usuario_fonte.get("email")
+                or "Usuário"
+            )
+            jobs_por_id[job_id] = job
+
+    return sorted(
+        jobs_por_id.values(),
+        key=lambda job: (str(job.get("criado_em") or ""), int(job.get("id") or 0)),
+        reverse=True,
+    )
+
+
 def get_print_quota_response(usuario_consulta: dict, obter_cota_atual, usuario_tem_cota_ilimitada):
     if usuario_tem_cota_ilimitada(usuario_consulta):
         return {

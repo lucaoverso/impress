@@ -245,7 +245,6 @@
         }
 
         const steps = [
-            ["stepperArquivo", 1, "Arquivo"],
             ["stepperSolicitacao", 2, "Configuração"],
             ["stepperConfiguracoes", 3, "Destino"],
             ["stepperResumo", 4, "Conferência"],
@@ -269,11 +268,19 @@
             }
         });
 
-        const currentStepData = steps.find(([, step]) => step === currentStep) || steps[0];
+        const currentStepIndex = Math.max(
+            steps.findIndex(([, step]) => step === currentStep),
+            0,
+        );
+        const currentStepData = steps[currentStepIndex];
+        const stepper = document.getElementById("printStepperCard");
         const progress = document.getElementById("printStepperProgress");
         const currentLabel = document.getElementById("printStepperCurrentLabel");
+        if (stepper) {
+            stepper.hidden = currentStep <= 1;
+        }
         if (progress) {
-            progress.innerText = `Etapa ${currentStepData[1]} de ${steps.length}`;
+            progress.innerText = `Etapa ${currentStepIndex + 1} de ${steps.length}`;
         }
         if (currentLabel) {
             currentLabel.innerText = currentStepData[2];

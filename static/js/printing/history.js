@@ -10,9 +10,41 @@
     const POLL_INTERVAL_MS = 6000;
     let pollTimer = null;
     let hasLoaded = false;
+    let currentUser = null;
+    let professors = [];
+    let loadSequence = 0;
 
     const el = (id) => document.getElementById(id);
     const authHeaders = () => window.AppAuth.criarHeadersAuth();
+
+    function canSelectProfessor(user) {
+        const cargo = String(user?.cargo || "").trim().toUpperCase();
+        const perfil = String(user?.perfil || "").trim().toLowerCase();
+        return Boolean(
+            user?.eh_admin
+            || cargo === "ADMIN"
+            || cargo === "COORDENADOR"
+            || perfil === "admin"
+            || perfil === "coordenador"
+        );
+    }
+
+    function selectedProfessorId() {
+        return Number(el("printHistoryProfessor")?.value || 0);
+    }
+
+    function selectedProfessor() {
+        const professorId = selectedProfessorId();
+        return professors.find((professor) => Number(professor.id) === professorId) || null;
+    }
+
+    function buildDelegatedUrl(base, { includeOwn = false } = {}) {
+        const professorId = selectedProfessorId();
+        if (professorId <= 0) return base;
+        const params = new URLSearchParams({ professor_id: String(professorId) });
+        if (includeOwn) params.set("incluir_proprios", "true");
+        return `${base}?${params.toString()}`;
+    }
 
     function showFeedback(message, isError = false) {
         const feedback = el("printHistoryFeedback");
@@ -58,7 +90,7 @@
             showFeedback(refunded > 0
                 ? `Pedido cancelado. ${refunded} página(s) foram devolvidas à sua cota.`
                 : "Pedido cancelado com sucesso.");
-            await loadPage();
+            await refresh();
         } catch (error) {
             showFeedback(error.message || "Não foi possível cancelar o pedido.", true);
             button.disabled = false;
@@ -82,6 +114,12 @@
         const copies = Number(job?.copias || 1);
         const pages = Number(job?.paginas_totais || 0);
         appendText(main, "p", "print-history-item-meta item-meta", `Pedido #${job?.id || "-"} · ${copies} cópia(s) · ${pages} página(s) · ${formatDate(job?.criado_em)}`);
+        if (job?.origem_historico) {
+            const origin = job.origem_historico === "proprio"
+                ? "Seu histórico"
+                : `Histórico de ${job?.origem_nome || selectedProfessor()?.nome || "professor"}`;
+            appendText(main, "p", "print-history-item-origin", origin);
+        }
         if (Array.isArray(job?.tags) && job.tags.length) {
             appendText(main, "p", "print-history-item-note", `Tipo de material: ${job.tags.join(", ")}`);
         }
@@ -96,7 +134,10 @@
         actions.className = "print-history-item-actions action-group action-group--compact";
         if (job?.pode_reutilizar) {
             const reuse = document.createElement("a");
-            reuse.href = `/impressao?reutilizar=${encodeURIComponent(job.id)}`;
+            const params = new URLSearchParams({ reutilizar: String(job.id) });
+            const professorId = selectedProfessorId();
+            if (professorId > 0) params.set("professor_id", String(professorId));
+            reuse.href = `/impressao?${params.toString()}`;
             reuse.className = "button button--primary";
             reuse.textContent = "Usar novamente";
             actions.appendChild(reuse);
@@ -118,7 +159,15 @@
         list.replaceChildren();
         list.setAttribute("aria-busy", "false");
         if (!jobs.length) {
-            appendText(list, "li", "print-history-empty empty-state", "Você ainda não enviou nenhuma impressão.");
+            const professor = selectedProfessor();
+            appendText(
+                list,
+                "li",
+                "print-history-empty empty-state",
+                professor
+                    ? `Você e ${professor.nome} ainda não possuem impressões neste histórico.`
+                    : "Você ainda não enviou nenhuma impressão.",
+            );
             return;
         }
         jobs.forEach((job) => list.appendChild(createJobItem(job)));
@@ -140,38 +189,74 @@
         list.setAttribute("aria-busy", "false");
     }
 
-    async function loadPage() {
+    async function loadPage(sequence) {
         const [quota, jobs] = await Promise.all([
-            window.AppApi.fetchJson("/minha-cota", { headers: authHeaders() }),
-            window.AppApi.fetchJson("/meus-jobs", { headers: authHeaders() }),
+            window.AppApi.fetchJson(buildDelegatedUrl("/minha-cota"), { headers: authHeaders() }),
+            window.AppApi.fetchJson(
+                buildDelegatedUrl("/meus-jobs", { includeOwn: true }),
+                { headers: authHeaders() },
+            ),
         ]);
+        if (sequence !== loadSequence) return false;
         el("printHistoryQuota").textContent = quota.ilimitada
-            ? "Cota ilimitada"
-            : `${quota.restante} de ${quota.limite} páginas disponíveis`;
+            ? "Uso ilimitado"
+            : `${quota.usadas} de ${quota.limite} páginas usadas`;
         renderJobs(Array.isArray(jobs) ? jobs : []);
         hasLoaded = true;
+        return true;
     }
 
     async function refresh({ announce = false } = {}) {
+        const sequence = ++loadSequence;
         const button = el("printHistoryRefresh");
         if (button) button.disabled = true;
         el("printHistoryList")?.setAttribute("aria-busy", "true");
         try {
-            await loadPage();
-            if (announce) showFeedback("Histórico atualizado.");
+            const rendered = await loadPage(sequence);
+            if (rendered && announce) showFeedback("Histórico atualizado.");
         } catch (error) {
+            if (sequence !== loadSequence) return;
             el("printHistoryList")?.setAttribute("aria-busy", "false");
             if (!hasLoaded) renderLoadError();
             showFeedback(error.message || "Não foi possível carregar seu histórico.", true);
         } finally {
-            if (button) button.disabled = false;
+            if (sequence === loadSequence && button) button.disabled = false;
         }
     }
 
-    function init() {
+    async function loadProfessorContext() {
+        currentUser = await window.AppApi.fetchJson("/me", { headers: authHeaders() });
+        if (!canSelectProfessor(currentUser)) return;
+
+        professors = await window.AppApi.fetchJson("/agendamento/professores", {
+            headers: authHeaders(),
+        });
+        if (!Array.isArray(professors)) professors = [];
+
+        const owner = el("printHistoryOwner");
+        const select = el("printHistoryProfessor");
+        professors.forEach((professor) => {
+            const option = document.createElement("option");
+            option.value = String(professor.id);
+            option.textContent = professor.nome;
+            select.appendChild(option);
+        });
+        owner.hidden = false;
+        select.addEventListener("change", () => {
+            showFeedback("");
+            refresh({ announce: true });
+        });
+    }
+
+    async function init() {
         window.AppAuth.garantirToken();
         el("printHistoryRefresh")?.addEventListener("click", () => refresh({ announce: true }));
-        refresh();
+        try {
+            await loadProfessorContext();
+        } catch (error) {
+            showFeedback(error.message || "Não foi possível carregar os professores.", true);
+        }
+        await refresh();
         pollTimer = window.setInterval(refresh, POLL_INTERVAL_MS);
     }
 

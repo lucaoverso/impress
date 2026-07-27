@@ -25,6 +25,7 @@ from modules.printing.service import (
     ensure_print_is_available,
     get_formatted_print_status,
     get_print_quota_response,
+    list_combined_serialized_jobs,
     list_formatted_print_classes,
     list_available_printers,
     list_print_tags,
@@ -268,6 +269,7 @@ def prioridade(
 @router.get("/meus-jobs")
 def meus_jobs(
     professor_id: int | None = None,
+    incluir_proprios: bool = False,
     usuario=Depends(get_usuario_logado),
 ):
     usuario_consulta = resolve_print_teacher(
@@ -276,10 +278,14 @@ def meus_jobs(
         contexto="na impressão",
         permitir_professor_com_acesso_coordenacao=True,
     )
-    return list_serialized_jobs_for_user(
-        usuario_consulta["id"],
-        spool_dir=_ensure_spool_dir(),
-    )
+    spool_dir = _ensure_spool_dir()
+    if incluir_proprios and professor_id is not None:
+        return list_combined_serialized_jobs(
+            usuario,
+            usuario_consulta,
+            spool_dir=spool_dir,
+        )
+    return list_serialized_jobs_for_user(usuario_consulta["id"], spool_dir=spool_dir)
 
 
 @router.get("/minha-cota")

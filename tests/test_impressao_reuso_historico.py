@@ -18,6 +18,7 @@ def _reload_modulos(db_path: str, spool_dir: str):
     config_stub.DEFAULT_PRINTER_NAME = "HP_LaserJet"
     config_stub.FORMATOS_UPLOAD_DESCRICAO = "PDF, DOCX, DOC, PNG, JPG ou JPEG"
     config_stub.SPOOL_DIR = spool_dir
+    config_stub.render_template_response = lambda *_args, **_kwargs: None
 
     pdf_service_stub = types.ModuleType("services.pdf_service")
     pdf_service_stub.contar_paginas_pdf = lambda _caminho: 4
@@ -135,7 +136,7 @@ class ImpressaoReusoHistoricoTest(unittest.TestCase):
             self.assertNotEqual(caminho_novo.resolve(), caminho_pdf.resolve())
             self.assertEqual(caminho_novo.read_bytes(), PDF_MINIMO)
 
-    def test_professor_com_acesso_coordenacao_pode_consultar_job_de_outro_professor(self):
+    def test_professor_com_acesso_coordenacao_nao_consulta_job_de_outro_professor(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             db_path = os.path.join(tmp_dir, "impressao.db")
             spool_dir = Path(tmp_dir) / "spool"
@@ -183,18 +184,16 @@ class ImpressaoReusoHistoricoTest(unittest.TestCase):
             )
             database.atualizar_status(job_id, "CONCLUIDO")
 
-            jobs = impressao_router.meus_jobs(
-                professor_id=professor_colega_id,
-                usuario=usuario_hibrido,
-            )
+            with self.assertRaises(HTTPException) as historico_negado:
+                impressao_router.meus_jobs(
+                    professor_id=professor_colega_id,
+                    usuario=usuario_hibrido,
+                )
+            self.assertEqual(historico_negado.exception.status_code, 403)
 
-            self.assertEqual(len(jobs), 1)
-            self.assertEqual(int(jobs[0]["id"]), int(job_id))
-
-            resposta = impressao_router.preview_job_historico(job_id, usuario=usuario_hibrido)
-
-            self.assertEqual(resposta.media_type, "application/pdf")
-            self.assertEqual(resposta.body, PDF_MINIMO)
+            with self.assertRaises(HTTPException) as preview_negado:
+                impressao_router.preview_job_historico(job_id, usuario=usuario_hibrido)
+            self.assertEqual(preview_negado.exception.status_code, 403)
             self.assertEqual(int(usuario_hibrido["id"]), professor_hibrido_id)
 
     def test_meus_jobs_retorna_tags_para_historico(self):

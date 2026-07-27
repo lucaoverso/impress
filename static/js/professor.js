@@ -3,7 +3,6 @@ const {
     garantirToken,
     criarHeadersAuth,
     encerrarSessao,
-    usuarioPodeGerirImpressoes,
 } = window.AppAuth;
 const { fetchComAuth, obterMensagemErroResposta, lerJsonResposta } = window.AppApi;
 
@@ -197,7 +196,7 @@ function usuarioEhGestor() {
 }
 
 function usuarioPodeSelecionarProfessorImpressao() {
-    return Boolean(usuarioAtual) && usuarioPodeGerirImpressoes(usuarioAtual);
+    return usuarioEhGestor();
 }
 
 function obterProfessorSolicitanteSelecionadoId() {
@@ -233,13 +232,38 @@ function atualizarEspelhosCotaImpressao(texto) {
     });
 }
 
-function montarUrlConsultaImpressao(urlBase) {
+function atualizarProgressoCotaImpressao(usadas, limite) {
+    const medidor = el("printQuotaMeter");
+    const percentualTexto = el("printQuotaPercent");
+    if (!medidor || !percentualTexto) return;
+
+    const possuiLimite = Number.isFinite(Number(limite)) && Number(limite) > 0;
+    if (!possuiLimite) {
+        medidor.hidden = true;
+        percentualTexto.hidden = true;
+        medidor.removeAttribute("aria-valuenow");
+        medidor.style.removeProperty("--print-quota-progress");
+        return;
+    }
+
+    const percentual = Math.min(100, Math.max(0, Math.round((Number(usadas) / Number(limite)) * 100)));
+    medidor.hidden = false;
+    percentualTexto.hidden = false;
+    medidor.setAttribute("aria-valuenow", String(percentual));
+    medidor.style.setProperty("--print-quota-progress", `${percentual}%`);
+    percentualTexto.innerText = `${percentual}% utilizado`;
+}
+
+function montarUrlConsultaImpressao(urlBase, { incluirProprios = false } = {}) {
     const professorId = obterProfessorSolicitanteSelecionadoId();
     if (!(usuarioPodeSelecionarProfessorImpressao() && professorId > 0)) {
         return urlBase;
     }
 
     const params = new URLSearchParams({ professor_id: String(professorId) });
+    if (incluirProprios) {
+        params.set("incluir_proprios", "true");
+    }
     return `${urlBase}?${params.toString()}`;
 }
 
@@ -247,7 +271,7 @@ function atualizarTitulosContextoImpressao() {
     const contexto = el("contextoProfessorImpressao");
 
     if (!usuarioPodeSelecionarProfessorImpressao()) {
-        IDS_TITULOS_COTA_IMPRESSAO.forEach((id) => definirTexto(id, "Sua cota"));
+        IDS_TITULOS_COTA_IMPRESSAO.forEach((id) => definirTexto(id, "Cota mensal"));
         IDS_TITULOS_JOBS_IMPRESSAO.forEach((id) => definirTexto(id, "Seus pedidos"));
         if (contexto) {
             contexto.innerText = "";
@@ -257,7 +281,7 @@ function atualizarTitulosContextoImpressao() {
 
     const professor = obterProfessorSelecionado();
     if (!professor) {
-        IDS_TITULOS_COTA_IMPRESSAO.forEach((id) => definirTexto(id, "Sua cota"));
+        IDS_TITULOS_COTA_IMPRESSAO.forEach((id) => definirTexto(id, "Cota mensal"));
         IDS_TITULOS_JOBS_IMPRESSAO.forEach((id) => definirTexto(id, "Seus pedidos"));
         if (contexto) {
             contexto.innerText = obterMensagemSelecaoProfessorImpressao();
@@ -265,7 +289,7 @@ function atualizarTitulosContextoImpressao() {
         return;
     }
 
-    IDS_TITULOS_COTA_IMPRESSAO.forEach((id) => definirTexto(id, `Cota de ${professor.nome}`));
+    IDS_TITULOS_COTA_IMPRESSAO.forEach((id) => definirTexto(id, `Cota mensal de ${professor.nome}`));
     IDS_TITULOS_JOBS_IMPRESSAO.forEach((id) => definirTexto(id, `Pedidos de ${professor.nome}`));
     if (contexto) {
         contexto.innerText = `A impressao sera contabilizada para ${professor.nome}.`;
@@ -395,6 +419,10 @@ async function carregarProfessoresImpressaoAdmin() {
         select.appendChild(option);
     });
     select.disabled = false;
+    const professorUrlId = Number(new URLSearchParams(window.location.search).get("professor_id") || 0);
+    if (professorUrlId > 0 && professoresImpressao.some((professor) => Number(professor.id) === professorUrlId)) {
+        select.value = String(professorUrlId);
+    }
     select.dataset.previousProfessorId = String(obterProfessorSolicitanteSelecionadoId() || 0);
     atualizarTitulosContextoImpressao();
     window.PrintingUI?.ui?.syncFromLegacyDom?.();
@@ -493,7 +521,7 @@ async function carregarTurmasImpressao() {
     const placeholder = document.createElement("option");
     placeholder.value = "";
     placeholder.innerText = turmasImpressao.length > 0
-        ? "Selecione uma turma"
+        ? "Escolha uma turma..."
         : "Nenhuma turma ativa cadastrada";
     placeholder.selected = true;
     select.appendChild(placeholder);
@@ -1724,21 +1752,30 @@ async function carregarCota() {
     atualizarTitulosContextoImpressao();
 
     if (professorSolicitantePendente()) {
-        el("cota").innerText = "Selecione um professor para consultar a cota.";
+        el("cota").innerText = "Selecione um professor";
+        atualizarProgressoCotaImpressao();
         return;
     }
 
+    const professorConsultaId = obterProfessorSolicitanteSelecionadoId();
     const res = await fetchComAuth(montarUrlConsultaImpressao("/minha-cota"), { headers });
+    if (professorConsultaId !== obterProfessorSolicitanteSelecionadoId()) {
+        return;
+    }
     if (!res.ok) {
+        el("cota").innerText = "Indisponível";
+        atualizarProgressoCotaImpressao();
         throw new Error(await obterMensagemErroResposta(res, "Não foi possível carregar a cota."));
     }
 
     const data = await lerJsonResposta(res, "Não foi possível carregar a cota.");
     if (data.ilimitada) {
-        el("cota").innerText = "Cota ilimitada";
+        el("cota").innerText = "Uso ilimitado";
+        atualizarProgressoCotaImpressao();
         return;
     }
-    el("cota").innerText = `Cota restante: ${data.restante} páginas`;
+    el("cota").innerText = `${data.usadas} de ${data.limite} páginas`;
+    atualizarProgressoCotaImpressao(data.usadas, data.limite);
 }
 
 async function cancelarJobProfessor(jobId, botaoCancelar) {
@@ -2081,7 +2118,14 @@ async function carregarFila() {
         return [];
     }
 
-    const res = await fetchComAuth(montarUrlConsultaImpressao("/meus-jobs"), { headers });
+    const professorConsultaId = obterProfessorSolicitanteSelecionadoId();
+    const res = await fetchComAuth(
+        montarUrlConsultaImpressao("/meus-jobs", { incluirProprios: true }),
+        { headers },
+    );
+    if (professorConsultaId !== obterProfessorSolicitanteSelecionadoId()) {
+        return [];
+    }
     if (!res.ok) {
         throw new Error(await obterMensagemErroResposta(res, "Não foi possível carregar os pedidos de impressão."));
     }
@@ -2754,19 +2798,12 @@ function registrarEventos() {
     const professorSolicitante = el("professorSolicitante");
     if (professorSolicitante) {
         professorSolicitante.addEventListener("change", async () => {
-            const professorAnteriorId = Number(professorSolicitante.dataset.previousProfessorId || 0);
             const professorAtualId = obterProfessorSolicitanteSelecionadoId();
             professorSolicitante.dataset.previousProfessorId = String(professorAtualId || 0);
             atualizarTitulosContextoImpressao();
             el("msg").innerText = "";
 
             try {
-                if (
-                    professorAnteriorId !== professorAtualId
-                    && Number(jobHistoricoSelecionadoAtual?.id || 0) > 0
-                ) {
-                    await carregarPreview(null);
-                }
                 await carregarCota();
                 await carregarFila();
             } catch (err) {
@@ -3237,9 +3274,12 @@ carregarJobHistoricoNoPreview = async function carregarJobHistoricoNoPreviewRefa
 
 const carregarCotaOriginal = carregarCota;
 carregarCota = async function carregarCotaRefatorado() {
-    await carregarCotaOriginal();
-    atualizarEspelhosCotaImpressao(el("cota")?.innerText || "Carregando...");
-    atualizarEstadoFluxoImpressao();
+    try {
+        await carregarCotaOriginal();
+    } finally {
+        atualizarEspelhosCotaImpressao(el("cota")?.innerText || "Carregando...");
+        atualizarEstadoFluxoImpressao();
+    }
 };
 
 atualizarEstadoEnvio = function atualizarEstadoEnvioRefatorado(ativo, mensagem = "") {
