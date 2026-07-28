@@ -184,6 +184,18 @@ function aulaLabel(aula) {
     return `${aula}ª aula`;
 }
 
+function aulaLabelComHorario(aula, faixaGlobal = aula) {
+    const numeroAula = Number(aula || 0);
+    const rotulo = numeroAula > 0 ? `${numeroAula}ª aula` : aulaLabel(aula);
+    const aulaConfig = obterAulaGlobalPorNumero(faixaGlobal);
+    const horarioInicio = String(aulaConfig?.horario_inicio || "").trim();
+    const horarioFim = String(aulaConfig?.horario_fim || "").trim();
+
+    return horarioInicio && horarioFim
+        ? `${rotulo}: ${horarioInicio} - ${horarioFim}`
+        : rotulo;
+}
+
 function aulaExibicaoPorFaixa(faixaGlobal) {
     const faixa = Number(faixaGlobal || 0);
     if (!Number.isFinite(faixa) || faixa <= 0) {
@@ -586,16 +598,23 @@ function renderRecursosEtapaInicial() {
     registrarCarrosselRecursosEtapaInicial();
 
     if (recursosSelecionadosAgendamento.size === 0) {
-        resumo.innerText = "Escolha um recurso para consultar sua agenda por aula.";
+        resumo.innerText = "Escolha ao menos um recurso para consultar a agenda por aula.";
         return;
     }
 
     const resumoRecursos = formatarResumoRecursosSelecionados();
-    resumo.innerText = `Recurso selecionado: ${resumoRecursos}.`;
+    const quantidade = recursosSelecionadosAgendamento.size;
+    resumo.innerText = quantidade === 1
+        ? `1 recurso selecionado: ${resumoRecursos}.`
+        : `${quantidade} recursos selecionados: ${resumoRecursos}.`;
 }
 
 function atualizarEtapaPrimariaAgendamento(state = null) {
     const estado = state || obterEstadoWizardAgendamento();
+    const layout = document.querySelector(".scheduler-booking-layout");
+    const primarySlot = el("schedulerPrimarySlot");
+    const secondarySlot = el("schedulerSecondarySlot");
+    const resourceSurface = el("schedulerResourceSurface");
     const etapaRecursos = el("etapaAgendamentoRecursos");
     const etapaAula = el("schedulerLessonStage");
     const etapaRepeticao = el("etapaAgendamentoRepeticao");
@@ -604,6 +623,23 @@ function atualizarEtapaPrimariaAgendamento(state = null) {
     const wizardAtivo = Number(estado?.currentStep || 1) > 1;
 
     renderRecursosEtapaInicial();
+
+    layout?.classList.toggle("is-flow-active", wizardAtivo);
+    if (wizardAtivo) {
+        if (primarySlot && sideWizard && sideWizard.parentElement !== primarySlot) {
+            primarySlot.appendChild(sideWizard);
+        }
+        if (secondarySlot && resourceSurface && resourceSurface.parentElement !== secondarySlot) {
+            secondarySlot.appendChild(resourceSurface);
+        }
+    } else {
+        if (primarySlot && resourceSurface && resourceSurface.parentElement !== primarySlot) {
+            primarySlot.appendChild(resourceSurface);
+        }
+        if (secondarySlot && sideWizard && sideWizard.parentElement !== secondarySlot) {
+            secondarySlot.appendChild(sideWizard);
+        }
+    }
 
     if (etapaRecursos) {
         etapaRecursos.hidden = false;
@@ -623,38 +659,14 @@ function atualizarEtapaPrimariaAgendamento(state = null) {
 }
 
 function atualizarContextoRecursoAgendamento(state) {
-    const recurso = obterRecursosSelecionadosAgendamento()[0] || null;
-    const mobileCover = el("schedulerMobileResourceCover");
-    const mobileName = el("schedulerMobileResourceName");
-    const mobileAvailability = el("schedulerMobileResourceAvailability");
-    const imagem = String(recurso?.imagem_capa || "").trim();
+    const recursosSelecionados = obterRecursosSelecionadosAgendamento();
+    const recurso = recursosSelecionados[0] || null;
     const tituloEtapa = el("schedulerLessonStageTitle");
     const copyEtapa = el("schedulerLessonStageCopy");
-    if (mobileCover) {
-        mobileCover.style.backgroundImage = imagem ? `url("${imagem}")` : "";
-        mobileCover.classList.toggle("has-image", Boolean(imagem));
-    }
-    if (mobileName) {
-        const dataLocal = criarDataLocalPorIso(dataSelecionada);
-        const diaSemana = dataLocal ? formatarDiaSemanaAgenda(dataLocal) : "";
-        mobileName.innerText = [paraDataBr(dataSelecionada), diaSemana].filter(Boolean).join(" · ");
-    }
-    if (mobileAvailability) {
-        const aulasDisponiveis = (Array.isArray(aulasProfessorDia) ? aulasProfessorDia : [])
-            .filter((item) => (
-                aulaSuportaRecursosSelecionados(item, recurso ? [recurso] : [])
-                && (
-                    usuarioEhAdmin()
-                    || Number(item.professor_id || 0) === Number(usuarioAtual?.id || 0)
-                )
-            ))
-            .length;
-        mobileAvailability.innerText = aulasDisponiveis === 1
-            ? "1 aula disponível"
-            : `${aulasDisponiveis} aulas disponíveis`;
-    }
     if (tituloEtapa) {
-        tituloEtapa.innerText = recurso?.nome || "Escolha a aula principal";
+        tituloEtapa.innerText = recursosSelecionados.length > 1
+            ? `${recursosSelecionados.length} recursos selecionados`
+            : recurso?.nome || "Escolha a aula principal";
     }
     if (copyEtapa) {
         const total = obterAulasSelecionadasAgendamento().length;
@@ -941,15 +953,40 @@ function alternarSelecaoRecursoAgendamento(recursoId) {
         return;
     }
 
-    recursosSelecionadosAgendamento.clear();
-    recursosSelecionadosAgendamento.add(id);
-    limparSelecaoAulaAgendamento({ manterFormulario: false, limparRecursos: false });
-    agendamentoWizard.currentStep = 2;
-    sincronizarFiltroRecursoAgendaComSelecao(id);
+    const selecionado = recursosSelecionadosAgendamento.has(id);
+    const primeiraSelecao = recursosSelecionadosAgendamento.size === 0;
+    const aulasSelecionadas = obterAulasSelecionadasAgendamento();
+    const recurso = recursos.find((item) => Number(item.id) === id);
+
+    if (!selecionado && aulasSelecionadas.some((aula) => obterVagasRestantesRecurso(recurso, aula) <= 0)) {
+        setMensagem(`${recurso?.nome || "O recurso"} não está disponível em todas as aulas selecionadas.`, "erro");
+        return;
+    }
+
+    if (selecionado) {
+        recursosSelecionadosAgendamento.delete(id);
+    } else {
+        recursosSelecionadosAgendamento.add(id);
+    }
+
+    setMensagem("");
+    if (recursosSelecionadosAgendamento.size === 0) {
+        limparSelecaoAulaAgendamento({ manterFormulario: false, limparRecursos: false });
+        sincronizarWizardAgendamento({ scroll: true });
+        renderAgendaDiaAulas();
+        return;
+    }
+
+    if (primeiraSelecao) {
+        limparSelecaoAulaAgendamento({ manterFormulario: false, limparRecursos: false });
+        agendamentoWizard.currentStep = 2;
+    }
+
+    sincronizarFiltroRecursoAgendaComSelecao(primeiraSelecao ? id : 0);
     renderRecursosEtapaInicial();
     atualizarOpcoesRecursoPorSelecao();
     renderAgendaDiaAulas();
-    sincronizarWizardAgendamento({ scroll: true });
+    sincronizarWizardAgendamento({ scroll: primeiraSelecao });
 }
 
 function atualizarOpcoesRecursoPorSelecao() {
@@ -1462,7 +1499,7 @@ function atualizarResumoWizardAgendamento(state) {
 
 function atualizarStepperAgendamento(state) {
     const steps = [
-        ["stepperAgendamentoRecursos", 1, "Recurso"],
+        ["stepperAgendamentoRecursos", 1, "Recursos"],
         ["stepperAgendamentoAula", 2, "Aula"],
         ["stepperAgendamentoDetalhes", 3, "Detalhes"],
         ["stepperAgendamentoResumo", 4, "Resumo"],
@@ -3219,6 +3256,7 @@ function renderSemanaAgendamento() {
         const botao = document.createElement("button");
         botao.type = "button";
         botao.className = "scheduler-week-day";
+        botao.setAttribute("aria-pressed", dataIso === dataSelecionada ? "true" : "false");
 
         if (dataIso === dataSelecionada) {
             botao.classList.add("is-selected");
@@ -3240,8 +3278,24 @@ function renderSemanaAgendamento() {
             day: "2-digit",
             month: "2-digit"
         });
+
+        const rotuloData = dataDia.toLocaleDateString("pt-BR", {
+            weekday: "long",
+            day: "numeric",
+            month: "long"
+        });
+        botao.setAttribute("aria-label", dataIso === hojeIso ? `${rotuloData}, hoje` : rotuloData);
+
         botao.appendChild(diaSemana);
         botao.appendChild(numero);
+        if (dataIso === hojeIso || dataIso === dataSelecionada) {
+            const estado = document.createElement("small");
+            estado.className = "scheduler-week-day-state";
+            estado.innerText = dataIso === hojeIso
+                ? "Hoje"
+                : "Escolhido";
+            botao.appendChild(estado);
+        }
         botao.addEventListener("click", async () => {
             try {
                 await selecionarDataAgendamento(dataIso);

@@ -1,4 +1,13 @@
-{% if navbar_current == "agendamento" %}
+{% if navbar_current == "servicos" %}
+    {% set sidebar_title = "Atalhos" %}
+    {% set sidebar_items = [
+        {"label": "Central de serviços", "mobile_label": "Início", "icon": "bi-grid", "href": "/servicos", "active": true},
+        {"label": "Coordenação", "mobile_label": "Coord.", "icon": "bi-clipboard2-check", "href": "/coordenacao", "module": "coordenacao"},
+        {"label": "Agendamento", "mobile_label": "Agenda", "icon": "bi-calendar-check", "href": "/agendamento", "module": "agendamento"},
+        {"label": "Gestão", "mobile_label": "Gestão", "icon": "bi-gear", "href": "/admin", "module": "gestao"},
+        {"label": "Relatórios", "mobile_label": "Relatórios", "icon": "bi-bar-chart", "href": "/relatorios", "module": "relatorios"}
+    ] %}
+{% elif navbar_current == "agendamento" %}
     {% set sidebar_title = "Agendamento" %}
     {% set sidebar_items = [
         {"label": "Novo agendamento", "icon": "bi-calendar-plus", "href": "/agendamento", "active": scheduling_page | default("new") == "new"},

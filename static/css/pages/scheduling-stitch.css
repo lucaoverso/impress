@@ -119,6 +119,7 @@ html[data-scheduler-current-step] body.scheduling-new-page .scheduler-flow-page 
     border: 0;
 }
 .scheduling-new-page .scheduler-flow-surface { padding: 16px; border: 1px solid var(--line); border-radius: 10px; }
+.scheduling-new-page #schedulerResourceSurface { padding: 0; border: 0; }
 .scheduling-new-page .scheduler-resource-stage-card {
     display: grid;
     gap: 14px;
@@ -127,14 +128,14 @@ html[data-scheduler-current-step] body.scheduling-new-page .scheduler-flow-page 
 .scheduling-new-page .scheduler-flow-page .scheduler-resource-stage-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; overflow: visible; padding: 0; }
 .scheduling-new-page .scheduler-flow-page .scheduler-resource-stage-button {
     position: relative;
-    grid-template-columns: 82px minmax(0, 1fr);
-    gap: 12px;
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 16px;
     width: 100%;
-    min-height: 86px;
-    padding: 6px;
-    border-radius: 8px;
+    min-height: 112px;
+    padding: 8px;
+    border-radius: 10px;
 }
-.scheduling-new-page .scheduler-flow-page .scheduler-resource-stage-icon { width: 82px; height: 72px; border-radius: 6px; background-position: center; background-size: cover; }
+.scheduling-new-page .scheduler-flow-page .scheduler-resource-stage-icon { width: 112px; height: 94px; border-radius: 8px; background-position: center; background-size: cover; }
 .scheduling-new-page .scheduler-resource-stage-icon.has-image .bi { display: none; }
 .scheduling-new-page .scheduler-resource-stage-title { white-space: normal; }
 .scheduling-new-page .scheduler-resource-stage-type { display: block; margin-top: 3px; color: var(--text-muted); font-size: .7rem; }
@@ -182,7 +183,85 @@ html[data-scheduler-current-step] body.scheduling-new-page .scheduler-flow-page 
 .scheduling-new-page .scheduler-side-wizard .scheduler-lesson-list-subject { grid-area: subject; }
 .scheduling-new-page .scheduler-side-wizard .scheduler-lesson-list-class { grid-area: class; }
 .scheduling-new-page .scheduler-side-wizard .scheduler-lesson-list-time { grid-area: time; justify-self: end; }
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-side-wizard {
+    margin: 0;
+    overflow: hidden;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface-0);
+}
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-side-wizard-surface { padding: 24px; }
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-selection-context {
+    grid-template-columns: minmax(0, 1fr) 1px minmax(280px, .9fr);
+    gap: 28px;
+    padding: 14px 24px;
+}
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-context-divider { display: block; }
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-week-header {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+    gap: 12px;
+}
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-week-nav {
+    grid-template-columns: 44px minmax(190px, auto) 44px auto;
+}
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace #btnSemanaHoje { grid-column: auto; }
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-week-strip { display: grid; overflow: visible; }
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-week-day { min-width: 0; }
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-lesson-list-columns { display: grid; }
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-shift-header {
+    padding: 7px 10px 0;
+    background: var(--scheduler-canvas);
+}
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-shift-slots {
+    overflow: visible;
+    border: 0;
+    border-top: 1px solid var(--scheduler-border);
+    border-radius: 0;
+}
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-lesson-option-row {
+    grid-template-columns: 22px minmax(120px, .75fr) minmax(130px, .7fr) minmax(180px, 1.25fr) minmax(120px, .8fr);
+    grid-template-areas: none;
+    gap: 14px;
+    min-height: 56px;
+    padding: 8px 10px;
+}
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-lesson-radio,
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-lesson-list-period,
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-lesson-list-subject,
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-lesson-list-class,
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-lesson-list-time {
+    grid-area: auto;
+}
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-lesson-list-time { justify-self: start; }
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-agenda-column {
+    max-height: calc(100vh - var(--app-navbar-height) - 36px);
+    overflow-y: auto;
+}
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-agenda-column .scheduler-flow-surface {
+    padding: 0;
+    border: 0;
+}
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-agenda-column .scheduler-resource-stage-grid {
+    grid-template-columns: 1fr;
+}
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-agenda-column .scheduler-resource-stage-button {
+    grid-template-columns: 82px minmax(0, 1fr);
+    gap: 12px;
+    min-height: 86px;
+    padding: 6px;
+    border-radius: 8px;
+}
+.scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-agenda-column .scheduler-resource-stage-icon {
+    width: 82px;
+    height: 72px;
+    border-radius: 6px;
+}
 .scheduling-new-page .scheduler-agenda-column .scheduler-day-overview { margin: 0; padding: 0; border: 0; }
+.scheduling-new-page .scheduler-agenda-overview > section.scheduler-day-overview {
+    align-content: start;
+    align-self: start;
+}
 .scheduling-new-page .scheduler-agenda-column .scheduler-day-overview-list { align-content: start; }
 .scheduling-new-page .scheduler-upcoming-overview { align-self: end; padding-top: 16px !important; border-top: 1px solid var(--line) !important; }
 .scheduling-new-page .scheduler-upcoming-summary { display: grid; gap: 8px; }
@@ -265,6 +344,34 @@ html[data-scheduler-current-step] body.scheduling-new-page .scheduler-flow-page 
     .scheduling-new-page .scheduler-agenda-column { position: static; grid-template-rows: auto; min-height: 0; }
     .scheduling-new-page .scheduler-agenda-overview { grid-template-rows: auto auto; min-height: 0; }
     .scheduling-new-page .scheduler-side-wizard { margin: -18px; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-side-wizard { margin: 0; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-side-wizard-surface { padding: 18px; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-selection-context { grid-template-columns: 1fr; gap: 10px; padding: 12px 18px; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-context-divider { display: none; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-week-header { grid-template-columns: 1fr; align-items: stretch; gap: 10px; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-week-nav { grid-template-columns: 44px minmax(0, 1fr) 44px; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace #btnSemanaHoje { grid-column: 1 / -1; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-week-strip { display: flex; overflow-x: auto; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-week-day { min-width: 76px; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-lesson-list-columns { display: none; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-shift-header { padding: 16px 0 8px; background: transparent; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-shift-slots { overflow: hidden; border: 1px solid var(--line); border-radius: 8px; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-lesson-option-row {
+        grid-template-columns: 22px minmax(0, 1fr) auto;
+        grid-template-areas: "radio subject period" "radio class time";
+        gap: 2px 10px;
+        min-height: 64px;
+        padding: 9px 12px;
+    }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-lesson-radio { grid-area: radio; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-lesson-list-period { grid-area: period; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-lesson-list-subject { grid-area: subject; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-lesson-list-class { grid-area: class; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-workspace .scheduler-lesson-list-time { grid-area: time; justify-self: end; }
+    .scheduling-new-page .scheduler-booking-layout.is-flow-active .scheduler-agenda-column {
+        max-height: none;
+        overflow: visible;
+    }
     .scheduling-new-page .scheduler-agenda-column .scheduler-day-overview-list { min-height: 0; }
     .scheduling-booking-columns { display: none; }
     .scheduling-module .scheduling-booking-list { padding: 0 14px 14px; }

@@ -23,6 +23,7 @@ let filaPollingTimer = null;
 let usuarioAtual = null;
 let professoresImpressao = [];
 let turmasImpressao = [];
+let indiceOpcaoTurmaImpressaoAtiva = -1;
 let tagsImpressaoDisponiveis = [];
 let arquivoSelecionadoAtual = null;
 let jobHistoricoSelecionadoAtual = null;
@@ -83,6 +84,7 @@ function aplicarBloqueioSemPapelNosCampos() {
         "arquivoDropzone",
         "professorSolicitante",
         "turmaImpressao",
+        "turmaImpressaoBusca",
         "copias",
         "intervaloPaginas",
         "paginasPorFolha",
@@ -445,6 +447,145 @@ function obterQuantidadeCopiasTurma(turma) {
     return Math.floor(quantidade);
 }
 
+function obterTextoTurmaImpressao(turma) {
+    const quantidade = obterQuantidadeCopiasTurma(turma);
+    return quantidade > 0
+        ? `${turma.nome} (${quantidade} estudante(s))`
+        : `${turma.nome} (sem quantidade)`;
+}
+
+function encontrarOpcaoTurmaPeloTexto(texto) {
+    const textoNormalizado = String(texto || "").trim().toLocaleLowerCase("pt-BR");
+    if (!textoNormalizado) return null;
+
+    return Array.from(el("turmaImpressao")?.options || []).find((option) => (
+        option.value
+        && option.textContent.trim().toLocaleLowerCase("pt-BR") === textoNormalizado
+    )) || null;
+}
+
+function fecharListaTurmasImpressao() {
+    const input = el("turmaImpressaoBusca");
+    const lista = el("turmasImpressaoLista");
+    if (lista) lista.hidden = true;
+    input?.setAttribute("aria-expanded", "false");
+    input?.removeAttribute("aria-activedescendant");
+    indiceOpcaoTurmaImpressaoAtiva = -1;
+}
+
+function selecionarTurmaImpressaoPeloId(turmaId) {
+    const input = el("turmaImpressaoBusca");
+    const select = el("turmaImpressao");
+    const option = Array.from(select?.options || []).find(
+        (item) => item.value === String(turmaId)
+    );
+    if (!input || !select || !option) return;
+
+    select.value = option.value;
+    input.value = option.textContent;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    fecharListaTurmasImpressao();
+    input.focus();
+}
+
+function renderizarListaTurmasImpressao() {
+    const input = el("turmaImpressaoBusca");
+    const select = el("turmaImpressao");
+    const lista = el("turmasImpressaoLista");
+    if (!input || !select || !lista || input.disabled) {
+        fecharListaTurmasImpressao();
+        return;
+    }
+
+    const textoSelecionado = select.value
+        ? (select.selectedOptions[0]?.textContent || "")
+        : "";
+    const termoDigitado = input.value.trim().toLocaleLowerCase("pt-BR");
+    const termo = input.value === textoSelecionado ? "" : termoDigitado;
+    const turmasFiltradas = turmasImpressao.filter((turma) => (
+        obterTextoTurmaImpressao(turma).toLocaleLowerCase("pt-BR").includes(termo)
+    ));
+
+    lista.replaceChildren();
+    turmasFiltradas.forEach((turma) => {
+        const quantidade = obterQuantidadeCopiasTurma(turma);
+        const option = document.createElement("button");
+        const titulo = document.createElement("strong");
+        const detalhe = document.createElement("small");
+        option.type = "button";
+        option.id = `turmaImpressaoOpcao-${turma.id}`;
+        option.className = "print-class-search-option";
+        option.role = "option";
+        option.tabIndex = -1;
+        option.dataset.turmaId = String(turma.id);
+        option.setAttribute("aria-selected", String(select.value === String(turma.id)));
+        titulo.textContent = turma.nome;
+        detalhe.textContent = quantidade > 0
+            ? `${quantidade} estudante(s)`
+            : "Quantidade não cadastrada";
+        option.append(titulo, detalhe);
+        option.addEventListener("mousedown", (event) => event.preventDefault());
+        option.addEventListener("click", () => selecionarTurmaImpressaoPeloId(turma.id));
+        lista.appendChild(option);
+    });
+
+    if (turmasFiltradas.length === 0) {
+        const vazio = document.createElement("p");
+        vazio.className = "print-class-search-empty";
+        vazio.textContent = "Nenhuma turma encontrada.";
+        lista.appendChild(vazio);
+    }
+
+    lista.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+    indiceOpcaoTurmaImpressaoAtiva = -1;
+}
+
+function moverSelecaoListaTurmasImpressao(direcao) {
+    const input = el("turmaImpressaoBusca");
+    const lista = el("turmasImpressaoLista");
+    if (!input || !lista) return;
+    if (lista.hidden) renderizarListaTurmasImpressao();
+
+    const options = Array.from(lista.querySelectorAll(".print-class-search-option"));
+    if (options.length === 0) return;
+    indiceOpcaoTurmaImpressaoAtiva = (
+        indiceOpcaoTurmaImpressaoAtiva + direcao + options.length
+    ) % options.length;
+    options.forEach((option, index) => {
+        option.classList.toggle("is-active", index === indiceOpcaoTurmaImpressaoAtiva);
+    });
+    const optionAtiva = options[indiceOpcaoTurmaImpressaoAtiva];
+    input.setAttribute("aria-activedescendant", optionAtiva.id);
+    optionAtiva.scrollIntoView({ block: "nearest" });
+}
+
+function atualizarBuscaTurmaImpressao() {
+    const input = el("turmaImpressaoBusca");
+    const select = el("turmaImpressao");
+    const lista = el("turmasImpressaoLista");
+    if (!input || !select || !lista) return;
+
+    fecharListaTurmasImpressao();
+    input.disabled = select.disabled;
+    input.value = select.value ? (select.selectedOptions[0]?.textContent || "") : "";
+}
+
+function sincronizarTurmaImpressaoPelaBusca() {
+    const input = el("turmaImpressaoBusca");
+    const select = el("turmaImpressao");
+    if (!input || !select) return false;
+
+    const option = encontrarOpcaoTurmaPeloTexto(input.value);
+    const proximoValor = option?.value || "";
+    if (select.value !== proximoValor) {
+        select.value = proximoValor;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    if (option) input.value = option.textContent;
+    return Boolean(option);
+}
+
 function atualizarResumoTurmaImpressao() {
     const resumo = el("resumoTurmaImpressao");
     if (!resumo) {
@@ -500,6 +641,12 @@ async function carregarTurmasImpressao() {
     select.disabled = true;
     select.innerHTML = "";
     turmasImpressao = [];
+    const buscaTurma = el("turmaImpressaoBusca");
+    if (buscaTurma) {
+        buscaTurma.disabled = true;
+        buscaTurma.value = "";
+        buscaTurma.placeholder = "Carregando turmas...";
+    }
 
     const optionCarregando = document.createElement("option");
     optionCarregando.value = "";
@@ -528,15 +675,14 @@ async function carregarTurmasImpressao() {
 
     turmasImpressao.forEach((turma) => {
         const option = document.createElement("option");
-        const quantidade = obterQuantidadeCopiasTurma(turma);
         option.value = String(turma.id);
-        option.innerText = quantidade > 0
-            ? `${turma.nome} (${quantidade} estudante(s))`
-            : `${turma.nome} (sem quantidade)`;
+        option.innerText = obterTextoTurmaImpressao(turma);
         select.appendChild(option);
     });
 
     select.disabled = turmasImpressao.length === 0;
+    if (buscaTurma) buscaTurma.placeholder = "Busque pelo nome da turma";
+    atualizarBuscaTurmaImpressao();
     if (turmasImpressao.length === 0 && resumo) {
         resumo.innerText = "Nenhuma turma ativa cadastrada para preenchimento automático.";
         return;
@@ -2713,6 +2859,44 @@ function registrarEventos() {
         calcularConsumo();
     });
     el("turmaImpressao").addEventListener("change", aplicarTurmaImpressaoSelecionada);
+    const buscaTurmaImpressao = el("turmaImpressaoBusca");
+    buscaTurmaImpressao?.addEventListener("focus", renderizarListaTurmasImpressao);
+    buscaTurmaImpressao?.addEventListener("click", renderizarListaTurmasImpressao);
+    buscaTurmaImpressao?.addEventListener("input", () => {
+        sincronizarTurmaImpressaoPelaBusca();
+        renderizarListaTurmasImpressao();
+    });
+    buscaTurmaImpressao?.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            moverSelecaoListaTurmasImpressao(event.key === "ArrowDown" ? 1 : -1);
+            return;
+        }
+        if (event.key === "Enter" && indiceOpcaoTurmaImpressaoAtiva >= 0) {
+            event.preventDefault();
+            const options = el("turmasImpressaoLista")?.querySelectorAll(
+                ".print-class-search-option"
+            ) || [];
+            const optionAtiva = options[indiceOpcaoTurmaImpressaoAtiva];
+            if (optionAtiva) selecionarTurmaImpressaoPeloId(optionAtiva.dataset.turmaId);
+            return;
+        }
+        if (event.key === "Escape") fecharListaTurmasImpressao();
+    });
+    buscaTurmaImpressao?.addEventListener("blur", () => {
+        window.setTimeout(() => {
+            if (document.activeElement?.closest(".print-class-search-control")) return;
+            if (!sincronizarTurmaImpressaoPelaBusca()) buscaTurmaImpressao.value = "";
+            fecharListaTurmasImpressao();
+        }, 0);
+    });
+    document.addEventListener("click", (event) => {
+        if (event.target.closest(".print-class-search-control")) return;
+        if (!sincronizarTurmaImpressaoPelaBusca() && buscaTurmaImpressao) {
+            buscaTurmaImpressao.value = "";
+        }
+        fecharListaTurmasImpressao();
+    });
     el("printerName")?.addEventListener("change", atualizarEstadoFluxoImpressao);
     el("duplex").addEventListener("change", atualizarPreview);
     el("paginasPorFolha").addEventListener("change", () => {

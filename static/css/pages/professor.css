@@ -398,11 +398,7 @@ html[data-printing-current-step="1"] #etapaArquivo .print-step-actions {
 }
 
 .print-hidden-select {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    opacity: 0;
-    pointer-events: none;
+    display: none !important;
 }
 
 .print-layout-choice-grid {

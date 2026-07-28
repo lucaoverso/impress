@@ -105,8 +105,90 @@ html[data-printing-current-step="1"] body.professor-page #etapaArquivo > .print-
 html[data-printing-current-step="1"] body.professor-page #grupoProfessorSolicitante {
     width: min(100%, 360px);
 }
-html[data-printing-current-step="1"] body.professor-page #etapaArquivo select {
+html[data-printing-current-step="1"] body.professor-page #etapaArquivo select,
+html[data-printing-current-step="1"] body.professor-page #turmaImpressaoBusca {
     min-height: 52px;
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-control {
+    position: relative;
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-icon,
+html[data-printing-current-step="1"] body.professor-page .print-class-search-chevron {
+    position: absolute;
+    top: 50%;
+    z-index: 1;
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: var(--print-color-text-muted);
+    stroke-linecap: round;
+    stroke-width: 1.8;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-icon {
+    left: var(--space-4);
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-chevron {
+    right: var(--space-4);
+    transition: transform var(--print-transition);
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-control:has(
+    #turmaImpressaoBusca[aria-expanded="true"]
+) .print-class-search-chevron {
+    transform: translateY(-50%) rotate(180deg);
+}
+html[data-printing-current-step="1"] body.professor-page #turmaImpressaoBusca {
+    width: 100%;
+    padding-right: 44px;
+    padding-left: 44px;
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-list {
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    right: 0;
+    left: 0;
+    z-index: var(--z-dropdown);
+    max-height: 240px;
+    padding: var(--space-2);
+    overflow-y: auto;
+    border: 1px solid var(--print-color-border);
+    border-radius: var(--print-radius-control);
+    background: var(--print-color-surface);
+    box-shadow: var(--shadow-floating);
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-list[hidden] {
+    display: none;
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-option {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: calc(var(--print-radius-control) - 4px);
+    background: transparent;
+    color: var(--print-color-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-option:hover,
+html[data-printing-current-step="1"] body.professor-page .print-class-search-option.is-active,
+html[data-printing-current-step="1"] body.professor-page .print-class-search-option[aria-selected="true"] {
+    background: var(--print-color-primary-light);
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-option strong,
+html[data-printing-current-step="1"] body.professor-page .print-class-search-option small {
+    display: block;
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-option small {
+    margin-top: 2px;
+    color: var(--print-color-text-muted);
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-empty {
+    margin: 0;
+    padding: 12px;
+    color: var(--print-color-text-muted);
 }
 html[data-printing-current-step="1"] body.professor-page #etapaArquivo .print-file-hint {
     margin: 0;
@@ -546,6 +628,9 @@ html[data-printing-current-step="1"] body.professor-page .print-entry-benefits {
     }
 }
 @media (prefers-reduced-motion: reduce) {
+    .professor-page .print-class-search-chevron {
+        transition: none;
+    }
     .professor-page .print-preview-pane {
         scroll-behavior: auto;
     }

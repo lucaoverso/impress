@@ -45,17 +45,13 @@ class P2UiContractTest(unittest.TestCase):
             self.assertRegex(template, r'width="\d+"')
             self.assertRegex(template, r'height="\d+"')
 
-    def test_central_usa_imagens_otimizadas_sem_deslocamento(self):
+    def test_central_usa_icones_semanticos_sem_dependencia_externa(self):
         template = (ROOT / "templates" / "servicos.html").read_text(encoding="utf-8")
-        images = re.findall(r'<img class="service-img"[^>]+>', template)
+        icons = re.findall(r'<span class="service-card-icon [^"]+" aria-hidden="true">', template)
 
-        self.assertEqual(len(images), 10)
-        for image in images:
-            self.assertIn('.webp"', image)
-            self.assertIn('width="512"', image)
-            self.assertIn('height="512"', image)
-            self.assertIn('decoding="async"', image)
-        self.assertGreaterEqual(sum('loading="lazy"' in image for image in images), 8)
+        self.assertEqual(len(icons), 10)
+        self.assertNotIn("fonts.googleapis.com", template)
+        self.assertNotIn("tailwindcss.com", template)
 
     def test_cards_da_central_sao_links_nativos(self):
         template = (ROOT / "templates" / "servicos.html").read_text(encoding="utf-8")
@@ -63,12 +59,27 @@ class P2UiContractTest(unittest.TestCase):
         self.assertEqual(len(re.findall(r'<a id="card\w+" class="service-card"[^>]+href="/[^"]+"', template)), 10)
         self.assertNotIn('<article id="card', template)
 
-    def test_cards_da_central_usam_grade_compacta_sem_cortar_imagens(self):
+    def test_cards_da_central_usam_grade_responsiva_de_tres_colunas(self):
         css = (ROOT / "static" / "css" / "pages" / "services-scheduler.css").read_text(encoding="utf-8")
 
         self.assertIn("grid-template-columns: repeat(3, minmax(0, 1fr));", css)
-        self.assertIn(".service-card .service-img", css)
-        self.assertIn("object-fit: contain;", css)
+        self.assertIn("grid-template-columns: repeat(2, minmax(0, 1fr));", css)
+        self.assertIn(".service-card-icon", css)
+
+    def test_atalhos_da_central_respeitam_o_atributo_hidden(self):
+        css = (ROOT / "static" / "css" / "components" / "app-sidebar.css").read_text(encoding="utf-8")
+
+        self.assertIn(".app-sidebar-link[hidden] { display: none; }", css)
+
+    def test_central_mobile_tem_navegacao_inferior_e_safe_area(self):
+        template = (ROOT / "templates" / "servicos.html").read_text(encoding="utf-8")
+        css = (ROOT / "static" / "css" / "pages" / "services-scheduler.css").read_text(encoding="utf-8")
+
+        self.assertIn("viewport-fit=cover", template)
+        self.assertIn(".services-dashboard-body .app-sidebar {", css)
+        self.assertIn("padding-bottom: env(safe-area-inset-bottom);", css)
+        self.assertIn("grid-template-columns: 48px minmax(0, 1fr) 20px;", css)
+        self.assertIn('mobile_label": "Início"', (ROOT / "templates" / "includes" / "app_sidebar_config.html").read_text(encoding="utf-8"))
 
     def test_tokens_semanticos_tem_uma_unica_vocabulario(self):
         css = "\n".join(path.read_text(encoding="utf-8") for path in (ROOT / "static" / "css").rglob("*.css"))

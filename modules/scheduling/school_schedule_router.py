@@ -56,6 +56,9 @@ from modules.scheduling.school_schedule_validation_service import (
     validate_iso_date,
     validate_school_schedule_payload,
 )
+from modules.scheduling.teacher_dashboard_service import (
+    listar_proximas_aulas_professor,
+)
 
 from routers.common import (
     exigir_gestor,
@@ -134,6 +137,14 @@ def obter_contexto_horario_escolar_api(usuario=Depends(get_usuario_logado)):
         "permite_edicao": eh_gestor,
         "professor_logado_id": professor_logado_id,
     }
+
+
+@router.get("/horario-escolar/minhas-proximas-aulas")
+def obter_proximas_aulas_professor_api(usuario=Depends(get_usuario_logado)):
+    professor_id = _id_professor_logado(usuario)
+    if not professor_id:
+        raise HTTPException(403, "A visão de próximas aulas é exclusiva para professores.")
+    return listar_proximas_aulas_professor(professor_id)
 
 
 @router.get("/horario-escolar/registros")

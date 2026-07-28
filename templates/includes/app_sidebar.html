@@ -24,11 +24,12 @@
                     <span>{{ item.label }}<small>Em breve</small></span>
                 </span>
                 {% elif item.href %}
-                <a class="app-sidebar-link{% if item.active %} is-active{% endif %}{% if item.admin_only %} admin-only{% endif %}" href="{{ item.href }}"
+                <a class="app-sidebar-link{% if item.active %} is-active{% endif %}{% if item.admin_only %} admin-only{% endif %}" href="{{ item.href }}" aria-label="{{ item.label }}"
+                    {% if item.module %}data-modulo="{{ item.module }}"{% endif %}
                     {% if item.admin_only %}data-admin-only="true"{% endif %}
                     {% if item.active %}aria-current="page"{% endif %}>
                     <i class="bi {{ item.icon }}" aria-hidden="true"></i>
-                    <span>{{ item.label }}</span>
+                    <span{% if item.mobile_label %} data-mobile-label="{{ item.mobile_label }}"{% endif %}>{{ item.label }}</span>
                 </a>
                 {% elif item.tab_group %}
                 <button class="app-sidebar-link{% if item.active %} is-active{% endif %}" type="button"
