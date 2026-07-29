@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Suíte Escolar</title>
+    {% set page_styles = ["css/pages/auth.css"] %}
     {% include "includes/style_bundle.html" %}
 </head>
 
@@ -12,7 +13,9 @@
     <main class="auth-page">
         <section class="auth-card">
             <header class="auth-header">
-                <img class="logo-escola" src="static/img/logo_escola.PNG" alt="Logo Escola" class="auth-logo">
+                <img class="logo-escola auth-logo"
+                    src="{{ request.url_for('static', path='img/logo_escola-256.webp') }}"
+                    alt="Logo da escola" width="150" height="150">
                 <p class="auth-badge">Portal Escolar</p>
                 <h3>Escola Estadual Padre José Daniel</h3>
                 <p>Faça login para continuar.</p>

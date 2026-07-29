@@ -5481,29 +5481,9 @@ def listar_professores_admin(mes: str = None):
 
 
 def listar_professores_agendamento():
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.scheduling.repository import list_scheduling_teachers
 
-    cursor.execute(
-        f"""
-        SELECT id, nome, email
-        FROM usuarios
-        WHERE (
-                UPPER(COALESCE(cargo, '')) = ?
-                OR (
-                TRIM(COALESCE(cargo, '')) = ''
-                AND LOWER(COALESCE(perfil, '')) = 'professor'
-                )
-              )
-          AND {_clausula_usuario_ativo()}
-        ORDER BY nome COLLATE NOCASE ASC
-    """,
-        (CARGO_PROFESSOR,),
-    )
-
-    rows = cursor.fetchall()
-    conn.close()
-    return [dict(row) for row in rows]
+    return list_scheduling_teachers()
 
 
 def listar_cargas_professores_por_usuario_ids(usuario_ids: list[int]):
@@ -6150,249 +6130,10 @@ def seed_recursos_padrao():
     conn.close()
 
 
-def _faixa_global_por_turno_e_aula_horario(turno: str, aula_numero: int) -> int:
-    aula = int(aula_numero or 0)
-    if aula <= 0:
-        return 0
-    return aula
-
-
-def _expressao_sql_faixa_global_horario(alias_horario: str = "he", alias_turma: str = "t") -> str:
-    aula_expr = f"CAST(COALESCE({alias_horario}.aula_numero, 0) AS INTEGER)"
-    return f"""
-        COALESCE(
-            NULLIF({alias_horario}.faixa_global, 0),
-            {aula_expr}
-        )
-    """
-
-
-def _resolver_faixa_global_registro_horario(
-    cursor,
-    *,
-    turma_id: int,
-    aula_numero: int,
-    faixa_global: int | None = None,
-) -> int:
-    faixa_informada = int(faixa_global or 0)
-    if faixa_informada > 0:
-        return faixa_informada
-
-    cursor.execute(
-        """
-        SELECT turno
-        FROM turmas
-        WHERE id = ?
-        """,
-        (int(turma_id),),
-    )
-    row = cursor.fetchone()
-    turno = row["turno"] if row else ""
-    return _faixa_global_por_turno_e_aula_horario(turno, aula_numero)
-
-
-def _buscar_horario_escolar_conflito_professor_cursor(
-    cursor,
-    *,
-    ano_letivo: int,
-    professor_usuario_id: int,
-    dia_semana: str,
-    faixa_global: int,
-    ignorar_registro_id: int | None = None,
-):
-    filtros = [
-        "he.ano_letivo = ?",
-        "he.professor_usuario_id = ?",
-        "UPPER(he.dia_semana) = ?",
-        f"{_expressao_sql_faixa_global_horario('he', 't')} = ?",
-    ]
-    params = [
-        int(ano_letivo),
-        int(professor_usuario_id),
-        str(dia_semana or "").strip().upper(),
-        int(faixa_global or 0),
-    ]
-    if ignorar_registro_id is not None:
-        filtros.append("he.id <> ?")
-        params.append(int(ignorar_registro_id))
-
-    cursor.execute(
-        f"""
-        SELECT he.id
-        FROM horarios_escolares he
-        INNER JOIN turmas t ON t.id = he.turma_id
-        WHERE {' AND '.join(filtros)}
-        ORDER BY he.id ASC
-        LIMIT 1
-        """,
-        params,
-    )
-    row = cursor.fetchone()
-    return int(row["id"]) if row else None
-
-
-def _buscar_aula_atividade_conflito_professor_cursor(
-    cursor,
-    *,
-    ano_letivo: int,
-    professor_usuario_id: int,
-    dia_semana: str,
-    faixa_global: int,
-    ignorar_registro_id: int | None = None,
-):
-    filtros = [
-        "ano_letivo = ?",
-        "professor_usuario_id = ?",
-        "UPPER(dia_semana) = ?",
-        "faixa_global = ?",
-    ]
-    params = [
-        int(ano_letivo),
-        int(professor_usuario_id),
-        str(dia_semana or "").strip().upper(),
-        int(faixa_global or 0),
-    ]
-    if ignorar_registro_id is not None:
-        filtros.append("id <> ?")
-        params.append(int(ignorar_registro_id))
-    cursor.execute(
-        f"""
-        SELECT id
-        FROM aulas_atividade_professores
-        WHERE {' AND '.join(filtros)}
-        ORDER BY id ASC
-        LIMIT 1
-        """,
-        params,
-    )
-    row = cursor.fetchone()
-    return int(row["id"]) if row else None
-
-
-def _validar_conflito_total_professor_cursor(
-    cursor,
-    *,
-    ano_letivo: int,
-    professor_usuario_id: int,
-    dia_semana: str,
-    faixa_global: int,
-    ignorar_horario_id: int | None = None,
-    ignorar_aula_atividade_id: int | None = None,
-) -> None:
-    if _buscar_horario_escolar_conflito_professor_cursor(
-        cursor,
-        ano_letivo=ano_letivo,
-        professor_usuario_id=professor_usuario_id,
-        dia_semana=dia_semana,
-        faixa_global=faixa_global,
-        ignorar_registro_id=ignorar_horario_id,
-    ):
-        raise sqlite3.IntegrityError("idx_horarios_escolares_professor_faixa_slot")
-    if _buscar_aula_atividade_conflito_professor_cursor(
-        cursor,
-        ano_letivo=ano_letivo,
-        professor_usuario_id=professor_usuario_id,
-        dia_semana=dia_semana,
-        faixa_global=faixa_global,
-        ignorar_registro_id=ignorar_aula_atividade_id,
-    ):
-        raise sqlite3.IntegrityError("idx_aulas_atividade_professor_slot")
-
-
-def _recalcular_faixa_global_horarios_turma(cursor, turma_id: int, turno: str) -> None:
-    cursor.execute(
-        """
-        UPDATE horarios_escolares
-        SET faixa_global = CAST(COALESCE(aula_numero, 0) AS INTEGER)
-        WHERE turma_id = ?
-        """,
-        (int(turma_id),),
-    )
-
-
-def _mapear_horario_escolar(row) -> dict:
-    item = dict(row)
-    return {
-        "id": int(item["id"]),
-        "ano_letivo": int(item["ano_letivo"]),
-        "turma_id": int(item["turma_id"]),
-        "turma_nome": item.get("turma_nome", "") or "",
-        "turno": item.get("turno", "") or "",
-        "disciplina_id": int(item["disciplina_id"]),
-        "disciplina_nome": item.get("disciplina_nome", "") or "",
-        "tem_apc": bool(int(item.get("disciplina_tem_apc", 0) or 0)),
-        "tem_prova_bimestral": bool(
-            int(item.get("disciplina_tem_prova_bimestral", 0) or 0)
-        ),
-        "professor_id": int(item["professor_usuario_id"]),
-        "professor_nome": item.get("professor_nome", "") or "",
-        "professor_email": item.get("professor_email", "") or "",
-        "dia_semana": item.get("dia_semana", "") or "",
-        "aula_numero": int(item.get("aula_numero") or 0),
-        "faixa_global": int(item.get("faixa_global") or 0),
-        "criado_em": item.get("criado_em", "") or "",
-        "atualizado_em": item.get("atualizado_em", "") or "",
-    }
-
-
-def _consultar_horarios_escolares(cursor, *, filtros_sql=None, params=None):
-    where = list(filtros_sql or [])
-    parametros = list(params or [])
-    clausula_where = f"WHERE {' AND '.join(where)}" if where else ""
-
-    cursor.execute(
-        f"""
-        SELECT
-            he.id,
-            he.ano_letivo,
-            he.turma_id,
-            he.disciplina_id,
-            he.professor_usuario_id,
-            he.dia_semana,
-            he.aula_numero,
-            {_expressao_sql_faixa_global_horario('he', 't')} AS faixa_global,
-            he.criado_em,
-            he.atualizado_em,
-            COALESCE(t.nome, '') AS turma_nome,
-            COALESCE(t.turno, '') AS turno,
-            COALESCE(d.nome, '') AS disciplina_nome,
-            COALESCE(d.tem_apc, 0) AS disciplina_tem_apc,
-            COALESCE(d.tem_prova_bimestral, 0) AS disciplina_tem_prova_bimestral,
-            COALESCE(u.nome, '') AS professor_nome,
-            COALESCE(u.email, '') AS professor_email
-        FROM horarios_escolares he
-        INNER JOIN turmas t ON t.id = he.turma_id
-        INNER JOIN disciplinas d ON d.id = he.disciplina_id
-        INNER JOIN usuarios u ON u.id = he.professor_usuario_id
-        {clausula_where}
-        ORDER BY
-            he.ano_letivo DESC,
-            t.nome COLLATE NOCASE ASC,
-            he.dia_semana ASC,
-            faixa_global ASC,
-            he.aula_numero ASC,
-            d.nome COLLATE NOCASE ASC,
-            u.nome COLLATE NOCASE ASC,
-            he.id ASC
-        """,
-        parametros,
-    )
-    return [_mapear_horario_escolar(row) for row in cursor.fetchall()]
-
-
 def listar_anos_letivos_horario_escolar():
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT DISTINCT ano_letivo
-        FROM horarios_escolares
-        ORDER BY ano_letivo ASC
-        """
-    )
-    anos = [int(row[0]) for row in cursor.fetchall() if int(row[0] or 0) > 0]
-    conn.close()
-    return anos
+    from modules.scheduling.school_schedule_repository import list_school_years
+
+    return list_school_years()
 
 
 def listar_horarios_escolares(
@@ -6403,226 +6144,21 @@ def listar_horarios_escolares(
     professor_id: int | None = None,
     dia_semana: str | None = None,
 ):
-    conn = get_connection()
-    cursor = conn.cursor()
-    filtros = []
-    params = []
+    from modules.scheduling.school_schedule_repository import list_school_schedules
 
-    if ano_letivo is not None:
-        filtros.append("he.ano_letivo = ?")
-        params.append(int(ano_letivo))
-    if turma_id is not None:
-        filtros.append("he.turma_id = ?")
-        params.append(int(turma_id))
-    if disciplina_id is not None:
-        filtros.append("he.disciplina_id = ?")
-        params.append(int(disciplina_id))
-    if professor_id is not None:
-        filtros.append("he.professor_usuario_id = ?")
-        params.append(int(professor_id))
-    if str(dia_semana or "").strip():
-        filtros.append("UPPER(he.dia_semana) = ?")
-        params.append(str(dia_semana).strip().upper())
-
-    itens = _consultar_horarios_escolares(cursor, filtros_sql=filtros, params=params)
-    conn.close()
-    return itens
-
-
-def _mapear_aula_atividade_professor(row) -> dict:
-    item = dict(row)
-    return {
-        "id": int(item["id"]),
-        "ano_letivo": int(item["ano_letivo"]),
-        "professor_id": int(item["professor_usuario_id"]),
-        "professor_nome": item.get("professor_nome", "") or "",
-        "professor_email": item.get("professor_email", "") or "",
-        "dia_semana": item.get("dia_semana", "") or "",
-        "aula_numero": int(item.get("aula_numero") or 0),
-        "faixa_global": int(item.get("faixa_global") or 0),
-        "criado_em": item.get("criado_em", "") or "",
-        "atualizado_em": item.get("atualizado_em", "") or "",
-    }
-
-
-def listar_aulas_atividade_professores(
-    *,
-    ano_letivo: int | None = None,
-    professor_id: int | None = None,
-    dia_semana: str | None = None,
-):
-    conn = get_connection()
-    cursor = conn.cursor()
-    filtros = []
-    params = []
-    if ano_letivo is not None:
-        filtros.append("aa.ano_letivo = ?")
-        params.append(int(ano_letivo))
-    if professor_id is not None:
-        filtros.append("aa.professor_usuario_id = ?")
-        params.append(int(professor_id))
-    if str(dia_semana or "").strip():
-        filtros.append("(UPPER(aa.dia_semana) = ? OR aa.dia_semana IS NULL)")
-        params.append(str(dia_semana).strip().upper())
-    clausula_where = f"WHERE {' AND '.join(filtros)}" if filtros else ""
-    cursor.execute(
-        f"""
-        SELECT
-            aa.id,
-            aa.ano_letivo,
-            aa.professor_usuario_id,
-            aa.dia_semana,
-            aa.aula_numero,
-            aa.faixa_global,
-            aa.criado_em,
-            aa.atualizado_em,
-            COALESCE(u.nome, '') AS professor_nome,
-            COALESCE(u.email, '') AS professor_email
-        FROM aulas_atividade_professores aa
-        INNER JOIN usuarios u ON u.id = aa.professor_usuario_id
-        {clausula_where}
-        ORDER BY
-            aa.ano_letivo DESC,
-            u.nome COLLATE NOCASE ASC,
-            aa.dia_semana IS NULL DESC,
-            aa.dia_semana ASC,
-            aa.faixa_global ASC,
-            aa.id ASC
-        """,
-        params,
+    return list_school_schedules(
+        ano_letivo=ano_letivo,
+        turma_id=turma_id,
+        disciplina_id=disciplina_id,
+        professor_id=professor_id,
+        dia_semana=dia_semana,
     )
-    itens = [_mapear_aula_atividade_professor(row) for row in cursor.fetchall()]
-    conn.close()
-    return itens
-
-
-def buscar_aula_atividade_professor_por_id(registro_id: int):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT
-            aa.id,
-            aa.ano_letivo,
-            aa.professor_usuario_id,
-            aa.dia_semana,
-            aa.aula_numero,
-            aa.faixa_global,
-            aa.criado_em,
-            aa.atualizado_em,
-            COALESCE(u.nome, '') AS professor_nome,
-            COALESCE(u.email, '') AS professor_email
-        FROM aulas_atividade_professores aa
-        INNER JOIN usuarios u ON u.id = aa.professor_usuario_id
-        WHERE aa.id = ?
-        """,
-        (int(registro_id),),
-    )
-    row = cursor.fetchone()
-    conn.close()
-    return _mapear_aula_atividade_professor(row) if row else None
-
-
-def criar_aula_atividade_professor(*, ano_letivo: int, professor_usuario_id: int):
-    conn = get_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            INSERT INTO aulas_atividade_professores (
-                ano_letivo,
-                professor_usuario_id,
-                dia_semana,
-                aula_numero,
-                faixa_global,
-                criado_em,
-                atualizado_em
-            )
-            VALUES (?, ?, NULL, NULL, NULL, datetime('now'), datetime('now'))
-            """,
-            (int(ano_letivo), int(professor_usuario_id)),
-        )
-        registro_id = int(cursor.lastrowid)
-        conn.commit()
-    finally:
-        conn.close()
-    return buscar_aula_atividade_professor_por_id(registro_id)
-
-
-def atualizar_aula_atividade_professor(
-    *,
-    registro_id: int,
-    dia_semana: str | None,
-    aula_numero: int | None,
-    faixa_global: int | None,
-):
-    conn = get_connection()
-    try:
-        cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT id, ano_letivo, professor_usuario_id
-            FROM aulas_atividade_professores
-            WHERE id = ?
-            """,
-            (int(registro_id),),
-        )
-        atual = cursor.fetchone()
-        if not atual:
-            return None
-
-        dia_normalizado = str(dia_semana or "").strip().upper() or None
-        aula_valor = int(aula_numero or 0) or None
-        faixa_valor = int(faixa_global or 0) or None
-        if dia_normalizado:
-            _validar_conflito_total_professor_cursor(
-                cursor,
-                ano_letivo=int(atual["ano_letivo"]),
-                professor_usuario_id=int(atual["professor_usuario_id"]),
-                dia_semana=dia_normalizado,
-                faixa_global=int(faixa_valor or 0),
-                ignorar_aula_atividade_id=int(registro_id),
-            )
-        cursor.execute(
-            """
-            UPDATE aulas_atividade_professores
-            SET dia_semana = ?,
-                aula_numero = ?,
-                faixa_global = ?,
-                atualizado_em = datetime('now')
-            WHERE id = ?
-            """,
-            (dia_normalizado, aula_valor, faixa_valor, int(registro_id)),
-        )
-        conn.commit()
-    finally:
-        conn.close()
-    return buscar_aula_atividade_professor_por_id(registro_id)
-
-
-def excluir_aula_atividade_professor(registro_id: int):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        "DELETE FROM aulas_atividade_professores WHERE id = ?",
-        (int(registro_id),),
-    )
-    alterado = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
-    return alterado
 
 
 def buscar_horario_escolar_por_id(registro_id: int):
-    conn = get_connection()
-    cursor = conn.cursor()
-    itens = _consultar_horarios_escolares(
-        cursor,
-        filtros_sql=["he.id = ?"],
-        params=[int(registro_id)],
-    )
-    conn.close()
-    return itens[0] if itens else None
+    from modules.scheduling.school_schedule_repository import get_school_schedule
+
+    return get_school_schedule(registro_id)
 
 
 def criar_horario_escolar(
@@ -6635,54 +6171,17 @@ def criar_horario_escolar(
     aula_numero: int,
     faixa_global: int | None = None,
 ):
-    conn = get_connection()
-    try:
-        cursor = conn.cursor()
-        dia_semana_normalizado = str(dia_semana or "").strip().upper()
-        faixa_global_resolvida = _resolver_faixa_global_registro_horario(
-            cursor,
-            turma_id=int(turma_id),
-            aula_numero=int(aula_numero),
-            faixa_global=faixa_global,
-        )
-        _validar_conflito_total_professor_cursor(
-            cursor,
-            ano_letivo=int(ano_letivo),
-            professor_usuario_id=int(professor_usuario_id),
-            dia_semana=dia_semana_normalizado,
-            faixa_global=faixa_global_resolvida,
-        )
+    from modules.scheduling.school_schedule_repository import create_school_schedule
 
-        cursor.execute(
-            """
-            INSERT INTO horarios_escolares (
-                ano_letivo,
-                turma_id,
-                disciplina_id,
-                professor_usuario_id,
-                dia_semana,
-                aula_numero,
-                faixa_global,
-                criado_em,
-                atualizado_em
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-            """,
-            (
-                int(ano_letivo),
-                int(turma_id),
-                int(disciplina_id),
-                int(professor_usuario_id),
-                dia_semana_normalizado,
-                int(aula_numero),
-                faixa_global_resolvida,
-            ),
-        )
-        registro_id = int(cursor.lastrowid)
-        conn.commit()
-    finally:
-        conn.close()
-    return buscar_horario_escolar_por_id(registro_id)
+    return create_school_schedule(
+        ano_letivo=ano_letivo,
+        turma_id=turma_id,
+        disciplina_id=disciplina_id,
+        professor_usuario_id=professor_usuario_id,
+        dia_semana=dia_semana,
+        aula_numero=aula_numero,
+        faixa_global=faixa_global,
+    )
 
 
 def atualizar_horario_escolar(
@@ -6696,72 +6195,24 @@ def atualizar_horario_escolar(
     aula_numero: int,
     faixa_global: int | None = None,
 ):
-    conn = get_connection()
-    try:
-        cursor = conn.cursor()
-        dia_semana_normalizado = str(dia_semana or "").strip().upper()
-        faixa_global_resolvida = _resolver_faixa_global_registro_horario(
-            cursor,
-            turma_id=int(turma_id),
-            aula_numero=int(aula_numero),
-            faixa_global=faixa_global,
-        )
-        _validar_conflito_total_professor_cursor(
-            cursor,
-            ano_letivo=int(ano_letivo),
-            professor_usuario_id=int(professor_usuario_id),
-            dia_semana=dia_semana_normalizado,
-            faixa_global=faixa_global_resolvida,
-            ignorar_horario_id=int(registro_id),
-        )
+    from modules.scheduling.school_schedule_repository import update_school_schedule
 
-        cursor.execute(
-            """
-            UPDATE horarios_escolares
-            SET ano_letivo = ?,
-                turma_id = ?,
-                disciplina_id = ?,
-                professor_usuario_id = ?,
-                dia_semana = ?,
-                aula_numero = ?,
-                faixa_global = ?,
-                atualizado_em = datetime('now')
-            WHERE id = ?
-            """,
-            (
-                int(ano_letivo),
-                int(turma_id),
-                int(disciplina_id),
-                int(professor_usuario_id),
-                dia_semana_normalizado,
-                int(aula_numero),
-                faixa_global_resolvida,
-                int(registro_id),
-            ),
-        )
-        alterado = cursor.rowcount > 0
-        conn.commit()
-    finally:
-        conn.close()
-    if not alterado:
-        return None
-    return buscar_horario_escolar_por_id(registro_id)
+    return update_school_schedule(
+        registro_id=registro_id,
+        ano_letivo=ano_letivo,
+        turma_id=turma_id,
+        disciplina_id=disciplina_id,
+        professor_usuario_id=professor_usuario_id,
+        dia_semana=dia_semana,
+        aula_numero=aula_numero,
+        faixa_global=faixa_global,
+    )
 
 
 def excluir_horario_escolar(registro_id: int):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        DELETE FROM horarios_escolares
-        WHERE id = ?
-        """,
-        (int(registro_id),),
-    )
-    alterado = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
-    return alterado
+    from modules.scheduling.school_schedule_repository import delete_school_schedule
+
+    return delete_school_schedule(registro_id)
 
 
 def _mapear_apc_periodo(row) -> dict:
@@ -7126,6 +6577,7 @@ def _mapear_apc_envio(row) -> dict:
             else None
         ),
         "reviewed_by_name": str(row["reviewed_by_name"] or "").strip(),
+        "reviewed_by_cargo": str(row["reviewed_by_cargo"] or "").strip().upper(),
         "reviewed_at": str(row["reviewed_at"] or "").strip(),
     }
 
@@ -7158,6 +6610,7 @@ def _consultar_apc_envios(cursor, *, filtros_sql=None, params=None):
             COALESCE(u.nome, '') AS professor_nome,
             COALESCE(u.email, '') AS professor_email,
             COALESCE(reviewer.nome, '') AS reviewed_by_name,
+            COALESCE(reviewer.cargo, '') AS reviewed_by_cargo,
             COALESCE(t.nome, '') AS turma_nome,
             COALESCE(d.nome, '') AS disciplina_nome
         FROM apc_envios ae
@@ -7674,71 +7127,27 @@ def falhar_apc_preview_job(job_id: int, erro_mensagem: str):
 
 
 def listar_turmas(incluir_inativas: bool = False):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.classes.repository import listar_turmas as listar
 
-    query = """
-        SELECT id, nome, turno, aula_inicial, aula_final, quantidade_estudantes, ativo, criado_em
-        FROM turmas
-    """
-    params = []
-
-    if not incluir_inativas:
-        query += " WHERE ativo = 1"
-
-    query += " ORDER BY nome COLLATE NOCASE ASC"
-
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
-    conn.close()
-
-    return [dict(row) for row in rows]
+    return listar(incluir_inativas=incluir_inativas)
 
 
 def listar_turmas_ativas():
-    return listar_turmas(incluir_inativas=False)
+    from modules.admin.classes.repository import listar_turmas_ativas as listar
+
+    return listar()
 
 
 def buscar_turma_por_id(turma_id: int):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.classes.repository import buscar_turma_por_id as buscar
 
-    cursor.execute(
-        """
-        SELECT id, nome, turno, aula_inicial, aula_final, quantidade_estudantes, ativo, criado_em
-        FROM turmas
-        WHERE id = ?
-    """,
-        (int(turma_id),),
-    )
-
-    row = cursor.fetchone()
-    conn.close()
-    return dict(row) if row else None
+    return buscar(turma_id)
 
 
 def buscar_turma_por_nome(nome: str, incluir_inativas: bool = True):
-    nome_limpo = _normalizar_nome_catalogo(nome)
-    if not nome_limpo:
-        return None
+    from modules.admin.classes.repository import buscar_turma_por_nome as buscar
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    query = """
-        SELECT id, nome, turno, aula_inicial, aula_final, quantidade_estudantes, ativo, criado_em
-        FROM turmas
-        WHERE nome = ? COLLATE NOCASE
-    """
-    params = [nome_limpo]
-    if not incluir_inativas:
-        query += " AND ativo = 1"
-    query += " ORDER BY id ASC LIMIT 1"
-
-    cursor.execute(query, params)
-    row = cursor.fetchone()
-    conn.close()
-    return dict(row) if row else None
+    return buscar(nome, incluir_inativas=incluir_inativas)
 
 
 def criar_turma(
@@ -7748,48 +7157,9 @@ def criar_turma(
     aula_inicial: int | None = None,
     aula_final: int | None = None,
 ):
-    nome_limpo = _normalizar_nome_catalogo(nome)
-    if not nome_limpo:
-        raise ValueError("Nome da turma é obrigatório.")
-    turno_limpo = str(turno or "").strip().upper()
-    inicio_padrao, fim_padrao = _janela_aulas_padrao_por_turno(turno_limpo)
-    aula_inicial_valor = int(aula_inicial or 0) if aula_inicial is not None else inicio_padrao
-    aula_final_valor = int(aula_final or 0) if aula_final is not None else fim_padrao
-    if aula_inicial_valor <= 0 or aula_final_valor < aula_inicial_valor:
-        raise ValueError("Janela de aulas da turma é inválida.")
-    quantidade_estudantes_valor = int(quantidade_estudantes or 0)
-    if quantidade_estudantes_valor < 0:
-        raise ValueError("Quantidade de estudantes não pode ser negativa.")
+    from modules.admin.classes.repository import criar_turma as criar
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute(
-        """
-        INSERT INTO turmas (
-            nome,
-            turno,
-            aula_inicial,
-            aula_final,
-            quantidade_estudantes,
-            ativo,
-            criado_em
-        )
-        VALUES (?, ?, ?, ?, ?, 1, datetime('now'))
-    """,
-        (
-            nome_limpo,
-            turno_limpo,
-            aula_inicial_valor,
-            aula_final_valor,
-            quantidade_estudantes_valor,
-        ),
-    )
-
-    turma_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
-    return turma_id
+    return criar(nome, turno, quantidade_estudantes, aula_inicial, aula_final)
 
 
 def atualizar_turma_dados(
@@ -7799,131 +7169,27 @@ def atualizar_turma_dados(
     aula_inicial: int | None = None,
     aula_final: int | None = None,
 ):
-    turno_limpo = str(turno or "").strip().upper()
-    inicio_padrao, fim_padrao = _janela_aulas_padrao_por_turno(turno_limpo)
-    aula_inicial_valor = int(aula_inicial or 0) if aula_inicial is not None else inicio_padrao
-    aula_final_valor = int(aula_final or 0) if aula_final is not None else fim_padrao
-    if aula_inicial_valor <= 0 or aula_final_valor < aula_inicial_valor:
-        raise ValueError("Janela de aulas da turma é inválida.")
-    quantidade_estudantes_valor = int(quantidade_estudantes or 0)
-    if quantidade_estudantes_valor < 0:
-        raise ValueError("Quantidade de estudantes não pode ser negativa.")
+    from modules.admin.classes.repository import atualizar_turma_dados as atualizar
 
-    conn = get_connection()
-    cursor = conn.cursor()
-
-    cursor.execute(
-        """
-        UPDATE turmas
-        SET turno = ?, aula_inicial = ?, aula_final = ?, quantidade_estudantes = ?
-        WHERE id = ?
-    """,
-        (
-            turno_limpo,
-            aula_inicial_valor,
-            aula_final_valor,
-            quantidade_estudantes_valor,
-            turma_id,
-        ),
-    )
-
-    alterado = cursor.rowcount > 0
-    if alterado:
-        _recalcular_faixa_global_horarios_turma(cursor, int(turma_id), turno_limpo)
-    conn.commit()
-    conn.close()
-    return alterado
+    return atualizar(turma_id, turno, quantidade_estudantes, aula_inicial, aula_final)
 
 
 def atualizar_status_turma(turma_id: int, ativo: bool):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.classes.repository import atualizar_status_turma as atualizar
 
-    cursor.execute(
-        """
-        UPDATE turmas
-        SET ativo = ?
-        WHERE id = ?
-    """,
-        (1 if ativo else 0, turma_id),
-    )
-
-    alterado = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
-    return alterado
-
-
-def _mapear_configuracao_aula(row) -> dict:
-    item = dict(row)
-    aula_numero = item.get("aula_numero")
-    return {
-        "id": int(item["id"]),
-        "ordem_visual": int(item.get("ordem_visual") or 0),
-        "tipo": str(item.get("tipo") or TIPO_CONFIGURACAO_AULA).strip().upper(),
-        "aula_numero": int(aula_numero) if aula_numero not in (None, "") else None,
-        "nome": str(item.get("nome") or "").strip(),
-        "horario_inicio": str(item.get("horario_inicio") or "").strip(),
-        "horario_fim": str(item.get("horario_fim") or "").strip(),
-        "ativo": bool(int(item.get("ativo", 1) or 0)),
-        "criado_em": str(item.get("criado_em") or "").strip(),
-        "atualizado_em": str(item.get("atualizado_em") or "").strip(),
-    }
+    return atualizar(turma_id, ativo)
 
 
 def listar_configuracoes_aulas(incluir_inativas: bool = False):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.scheduling.repository import list_lesson_configurations
 
-    query = """
-        SELECT
-            id,
-            ordem_visual,
-            tipo,
-            aula_numero,
-            nome,
-            horario_inicio,
-            horario_fim,
-            ativo,
-            criado_em,
-            atualizado_em
-        FROM configuracao_aulas
-    """
-    params = []
-    if not incluir_inativas:
-        query += " WHERE ativo = 1"
-    query += " ORDER BY ordem_visual ASC, id ASC"
-
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
-    conn.close()
-    return [_mapear_configuracao_aula(row) for row in rows]
+    return list_lesson_configurations(include_inactive=incluir_inativas)
 
 
 def buscar_configuracao_aula_por_id(configuracao_id: int):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        SELECT
-            id,
-            ordem_visual,
-            tipo,
-            aula_numero,
-            nome,
-            horario_inicio,
-            horario_fim,
-            ativo,
-            criado_em,
-            atualizado_em
-        FROM configuracao_aulas
-        WHERE id = ?
-        """,
-        (int(configuracao_id),),
-    )
-    row = cursor.fetchone()
-    conn.close()
-    return _mapear_configuracao_aula(row) if row else None
+    from modules.scheduling.repository import get_lesson_configuration
+
+    return get_lesson_configuration(configuracao_id)
 
 
 def criar_configuracao_aula(
@@ -7936,37 +7202,17 @@ def criar_configuracao_aula(
     horario_fim: str,
     ativo: bool = True,
 ):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        INSERT INTO configuracao_aulas (
-            ordem_visual,
-            tipo,
-            aula_numero,
-            nome,
-            horario_inicio,
-            horario_fim,
-            ativo,
-            criado_em,
-            atualizado_em
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-        """,
-        (
-            int(ordem_visual),
-            str(tipo).strip().upper(),
-            int(aula_numero) if aula_numero not in (None, "") else None,
-            str(nome or "").strip(),
-            str(horario_inicio or "").strip(),
-            str(horario_fim or "").strip(),
-            1 if ativo else 0,
-        ),
+    from modules.scheduling.repository import create_lesson_configuration
+
+    return create_lesson_configuration(
+        visual_order=ordem_visual,
+        entry_type=tipo,
+        lesson_number=aula_numero,
+        name=nome,
+        start_time=horario_inicio,
+        end_time=horario_fim,
+        active=ativo,
     )
-    configuracao_id = int(cursor.lastrowid)
-    conn.commit()
-    conn.close()
-    return buscar_configuracao_aula_por_id(configuracao_id)
 
 
 def atualizar_configuracao_aula(
@@ -7980,39 +7226,18 @@ def atualizar_configuracao_aula(
     horario_fim: str,
     ativo: bool,
 ):
-    conn = get_connection()
-    cursor = conn.cursor()
-    cursor.execute(
-        """
-        UPDATE configuracao_aulas
-        SET
-            ordem_visual = ?,
-            tipo = ?,
-            aula_numero = ?,
-            nome = ?,
-            horario_inicio = ?,
-            horario_fim = ?,
-            ativo = ?,
-            atualizado_em = datetime('now')
-        WHERE id = ?
-        """,
-        (
-            int(ordem_visual),
-            str(tipo).strip().upper(),
-            int(aula_numero) if aula_numero not in (None, "") else None,
-            str(nome or "").strip(),
-            str(horario_inicio or "").strip(),
-            str(horario_fim or "").strip(),
-            1 if ativo else 0,
-            int(configuracao_id),
-        ),
+    from modules.scheduling.repository import update_lesson_configuration
+
+    return update_lesson_configuration(
+        configuration_id=configuracao_id,
+        visual_order=ordem_visual,
+        entry_type=tipo,
+        lesson_number=aula_numero,
+        name=nome,
+        start_time=horario_inicio,
+        end_time=horario_fim,
+        active=ativo,
     )
-    alterado = cursor.rowcount > 0
-    conn.commit()
-    conn.close()
-    if not alterado:
-        return None
-    return buscar_configuracao_aula_por_id(configuracao_id)
 
 
 def _mapear_disciplina(row) -> dict:
@@ -9580,34 +8805,15 @@ def gerar_relatorio_uso_recursos_por_professor(data_inicio: str = None, data_fim
 
 
 def listar_recursos_ativos():
-    return listar_recursos(incluir_inativos=False)
+    from modules.admin.resources.repository import listar_recursos_ativos as listar
+
+    return listar()
 
 
 def listar_recursos(incluir_inativos: bool = False):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.resources.repository import listar_recursos as listar
 
-    query = """
-        SELECT
-            id,
-            nome,
-            tipo,
-            COALESCE(descricao, '') AS descricao,
-            CASE WHEN COALESCE(quantidade_itens, 1) < 1 THEN 1 ELSE quantidade_itens END AS quantidade_itens,
-            COALESCE(imagem_capa, '') AS imagem_capa,
-            ativo
-        FROM recursos
-    """
-    params = []
-    if not incluir_inativos:
-        query += " WHERE ativo = 1"
-    query += " ORDER BY nome ASC"
-
-    cursor.execute(query, params)
-
-    rows = cursor.fetchall()
-    conn.close()
-    return [dict(row) for row in rows]
+    return listar(incluir_inativos=incluir_inativos)
 
 
 def criar_recurso(
@@ -9617,22 +8823,9 @@ def criar_recurso(
     quantidade_itens: int = 1,
     imagem_capa: str = "",
 ):
-    quantidade_itens_valor = max(int(quantidade_itens or 0), 1)
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.resources.repository import criar_recurso as criar
 
-    cursor.execute(
-        """
-        INSERT INTO recursos (nome, tipo, descricao, quantidade_itens, imagem_capa, ativo)
-        VALUES (?, ?, ?, ?, ?, 1)
-    """,
-        (nome, tipo, descricao, quantidade_itens_valor, imagem_capa),
-    )
-
-    recurso_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
-    return recurso_id
+    return criar(nome, tipo, descricao, quantidade_itens, imagem_capa)
 
 
 def atualizar_recurso_dados(
@@ -9643,87 +8836,27 @@ def atualizar_recurso_dados(
     quantidade_itens: int = 1,
     imagem_capa: str = "",
 ):
-    quantidade_itens_valor = max(int(quantidade_itens or 0), 1)
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.resources.repository import atualizar_recurso_dados as atualizar
 
-    cursor.execute(
-        """
-        UPDATE recursos
-        SET nome = ?, tipo = ?, descricao = ?, quantidade_itens = ?, imagem_capa = ?
-        WHERE id = ?
-    """,
-        (nome, tipo, descricao, quantidade_itens_valor, imagem_capa, recurso_id),
-    )
-
-    alterados = cursor.rowcount
-    conn.commit()
-    conn.close()
-    return alterados > 0
+    return atualizar(recurso_id, nome, tipo, descricao, quantidade_itens, imagem_capa)
 
 
 def atualizar_recurso_quantidade_itens(recurso_id: int, quantidade_itens: int):
-    quantidade_itens_valor = max(int(quantidade_itens or 0), 1)
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.resources.repository import atualizar_recurso_quantidade_itens as atualizar
 
-    cursor.execute(
-        """
-        UPDATE recursos
-        SET quantidade_itens = ?
-        WHERE id = ?
-    """,
-        (quantidade_itens_valor, recurso_id),
-    )
-
-    alterados = cursor.rowcount
-    conn.commit()
-    conn.close()
-    return alterados > 0
+    return atualizar(recurso_id, quantidade_itens)
 
 
 def atualizar_status_recurso(recurso_id: int, ativo: bool):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.resources.repository import atualizar_status_recurso as atualizar
 
-    cursor.execute(
-        """
-        UPDATE recursos
-        SET ativo = ?
-        WHERE id = ?
-    """,
-        (1 if ativo else 0, recurso_id),
-    )
-
-    alterados = cursor.rowcount
-    conn.commit()
-    conn.close()
-    return alterados > 0
+    return atualizar(recurso_id, ativo)
 
 
 def buscar_recurso_por_id(recurso_id: int):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.admin.resources.repository import buscar_recurso_por_id as buscar
 
-    cursor.execute(
-        """
-        SELECT
-            id,
-            nome,
-            tipo,
-            COALESCE(descricao, '') AS descricao,
-            CASE WHEN COALESCE(quantidade_itens, 1) < 1 THEN 1 ELSE quantidade_itens END AS quantidade_itens,
-            COALESCE(imagem_capa, '') AS imagem_capa,
-            ativo
-        FROM recursos
-        WHERE id = ?
-    """,
-        (recurso_id,),
-    )
-
-    row = cursor.fetchone()
-    conn.close()
-    return dict(row) if row else None
+    return buscar(recurso_id)
 
 
 def listar_regimento_itens(incluir_inativos: bool = True):
@@ -11482,24 +10615,9 @@ def remover_ocorrencia(ocorrencia_id: int):
 
 
 def contar_agendamentos_ativos_faixa(recurso_id: int, data: str, faixa_global: int):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.scheduling.repository import count_active_reservations_in_slot
 
-    cursor.execute(
-        """
-        SELECT COUNT(*) AS total
-        FROM agendamentos
-        WHERE recurso_id = ?
-          AND data = ?
-          AND faixa_global = ?
-          AND status = ?
-    """,
-        (recurso_id, data, int(faixa_global), STATUS_AGENDAMENTO_ATIVO),
-    )
-
-    row = cursor.fetchone()
-    conn.close()
-    return int(row["total"] if row else 0)
+    return count_active_reservations_in_slot(recurso_id, data, faixa_global)
 
 
 def buscar_agendamento_conflito(recurso_id: int, data: str, faixa_global: int):
@@ -11535,34 +10653,19 @@ def criar_agendamento(
     tema_aula: str,
     observacao: str = "",
 ):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.scheduling.repository import create_reservation
 
-    cursor.execute(
-        """
-        INSERT INTO agendamentos (
-            recurso_id, usuario_id, data, turno, aula, faixa_global, turma, tema_aula, observacao, status, criado_em
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
-    """,
-        (
-            recurso_id,
-            usuario_id,
-            data,
-            turno,
-            aula,
-            int(faixa_global),
-            turma,
-            tema_aula,
-            observacao,
-            STATUS_AGENDAMENTO_ATIVO,
-        ),
+    return create_reservation(
+        recurso_id=recurso_id,
+        usuario_id=usuario_id,
+        data=data,
+        turno=turno,
+        aula=aula,
+        faixa_global=faixa_global,
+        turma=turma,
+        tema_aula=tema_aula,
+        observacao=observacao,
     )
-
-    agendamento_id = cursor.lastrowid
-    conn.commit()
-    conn.close()
-    return agendamento_id
 
 
 def listar_agendamentos(
@@ -11572,108 +10675,31 @@ def listar_agendamentos(
     usuario_id: int = None,
     incluir_cancelados: bool = False,
 ):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.scheduling.repository import list_reservations
 
-    query = """
-        SELECT
-            a.id,
-            a.recurso_id,
-            r.nome AS recurso_nome,
-            r.tipo AS recurso_tipo,
-            a.usuario_id,
-            u.nome AS professor_nome,
-            a.data,
-            a.turno,
-            a.aula,
-            a.faixa_global,
-            a.turma,
-            COALESCE(a.tema_aula, '') AS tema_aula,
-            COALESCE(a.observacao, '') AS observacao,
-            a.status,
-            a.criado_em,
-            a.cancelado_em
-        FROM agendamentos a
-        JOIN recursos r ON r.id = a.recurso_id
-        JOIN usuarios u ON u.id = a.usuario_id
-        WHERE 1 = 1
-    """
-
-    params = []
-
-    if not incluir_cancelados:
-        query += " AND a.status = ?"
-        params.append(STATUS_AGENDAMENTO_ATIVO)
-
-    if data_inicio:
-        query += " AND a.data >= ?"
-        params.append(data_inicio)
-
-    if data_fim:
-        query += " AND a.data <= ?"
-        params.append(data_fim)
-
-    if recurso_id:
-        query += " AND a.recurso_id = ?"
-        params.append(recurso_id)
-
-    if usuario_id:
-        query += " AND a.usuario_id = ?"
-        params.append(usuario_id)
-
-    query += """
-        ORDER BY
-            a.data ASC,
-            CAST(a.faixa_global AS INTEGER) ASC,
-            r.nome ASC
-    """
-
-    cursor.execute(query, params)
-    rows = cursor.fetchall()
-    conn.close()
-    return [dict(row) for row in rows]
+    return [
+        item.to_dict()
+        for item in list_reservations(
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            recurso_id=recurso_id,
+            usuario_id=usuario_id,
+            incluir_cancelados=incluir_cancelados,
+        )
+    ]
 
 
 def buscar_agendamento_por_id(agendamento_id: int):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.scheduling.repository import get_reservation
 
-    cursor.execute(
-        """
-        SELECT *
-        FROM agendamentos
-        WHERE id = ?
-    """,
-        (agendamento_id,),
-    )
-
-    row = cursor.fetchone()
-    conn.close()
-    return dict(row) if row else None
+    item = get_reservation(agendamento_id)
+    return item.to_dict() if item else None
 
 
 def cancelar_agendamento(agendamento_id: int):
-    conn = get_connection()
-    cursor = conn.cursor()
+    from modules.scheduling.repository import cancel_reservation
 
-    cursor.execute(
-        """
-        UPDATE agendamentos
-        SET status = ?, cancelado_em = datetime('now')
-        WHERE id = ?
-          AND status = ?
-    """,
-        (
-            STATUS_AGENDAMENTO_CANCELADO,
-            agendamento_id,
-            STATUS_AGENDAMENTO_ATIVO,
-        ),
-    )
-
-    alterados = cursor.rowcount
-    conn.commit()
-    conn.close()
-    return alterados > 0
+    return cancel_reservation(agendamento_id)
 
 
 def criar_registro_pcpi_manual(

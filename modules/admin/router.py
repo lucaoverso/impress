@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Request
-from fastapi.responses import RedirectResponse
 
 from routers.config import ASSET_VERSION, render_template_response
 
@@ -17,21 +16,21 @@ PAGE_TITLES = {
 }
 
 DEDICATED_TEMPLATES = {
+    "professores": "admin/professores.html",
+    "atribuicoes": "admin/atribuicoes.html",
+    "turmas": "admin/turmas.html",
     "aulas": "admin/aulas.html",
     "impressao": "admin/impressao.html",
     "recursos": "admin/recursos.html",
+    "relatorios": "admin/relatorios.html",
+    "auditoria": "admin/auditoria.html",
 }
-
-
-@router.get("/admin")
-def admin_page():
-    return RedirectResponse(url="/admin/professores", status_code=302)
 
 
 def _render_admin_page(request: Request, active_tab: str):
     return render_template_response(
         request,
-        DEDICATED_TEMPLATES.get(active_tab, "admin/index.html"),
+        DEDICATED_TEMPLATES[active_tab],
         {
             "asset_version": ASSET_VERSION,
             "admin_active_tab": active_tab,

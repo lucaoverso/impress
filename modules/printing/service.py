@@ -1,3 +1,5 @@
+import re
+import sqlite3
 import uuid
 from pathlib import Path
 
@@ -28,6 +30,14 @@ from modules.printing.policies import (
     validate_print_parameters,
     validate_required_tags,
 )
+
+
+class PrinterConflictError(Exception):
+    pass
+
+
+class PrinterNotFoundError(Exception):
+    pass
 
 
 def prepare_uploaded_file_for_print(
@@ -163,6 +173,38 @@ def list_serialized_jobs_for_user(usuario_id: int, spool_dir: Path | None = None
     ]
 
 
+def list_combined_serialized_jobs(
+    usuario_atual: dict,
+    usuario_consulta: dict,
+    spool_dir: Path | None = None,
+):
+    fontes = [
+        (usuario_atual, "proprio"),
+        (usuario_consulta, "professor"),
+    ]
+    jobs_por_id = {}
+
+    for usuario_fonte, origem in fontes:
+        usuario_id = int(usuario_fonte["id"])
+        for job in list_serialized_jobs_for_user(usuario_id, spool_dir=spool_dir):
+            job_id = int(job["id"])
+            if job_id in jobs_por_id:
+                continue
+            job["origem_historico"] = origem
+            job["origem_nome"] = str(
+                usuario_fonte.get("nome")
+                or usuario_fonte.get("email")
+                or "Usuário"
+            )
+            jobs_por_id[job_id] = job
+
+    return sorted(
+        jobs_por_id.values(),
+        key=lambda job: (str(job.get("criado_em") or ""), int(job.get("id") or 0)),
+        reverse=True,
+    )
+
+
 def get_print_quota_response(usuario_consulta: dict, obter_cota_atual, usuario_tem_cota_ilimitada):
     if usuario_tem_cota_ilimitada(usuario_consulta):
         return {
@@ -175,3 +217,58 @@ def get_print_quota_response(usuario_consulta: dict, obter_cota_atual, usuario_t
     cota = obter_cota_atual(usuario_consulta["id"])
     cota["ilimitada"] = False
     return cota
+
+
+def normalize_printer_name(name: str) -> str:
+    normalized = str(name or "").strip()
+    if not normalized:
+        raise HTTPException(400, "Informe o nome exato da impressora no CUPS.")
+    if len(normalized) > 128 or not re.fullmatch(r"[A-Za-z0-9._-]+", normalized):
+        raise HTTPException(400, "Nome CUPS inválido. Use letras, números, ponto, hífen ou sublinhado.")
+    return normalized
+
+
+def list_registered_printers(*, include_inactive: bool = False):
+    return repository.list_printers(include_inactive=include_inactive)
+
+
+def create_registered_printer(name: str):
+    try:
+        return repository.create_printer(normalize_printer_name(name))
+    except sqlite3.IntegrityError as exc:
+        raise PrinterConflictError("Essa impressora já está cadastrada.") from exc
+
+
+def update_registered_printer_status(printer_id: int, active: bool) -> None:
+    if not repository.update_printer_status(printer_id, active):
+        raise PrinterNotFoundError("Impressora não encontrada.")
+
+
+def delete_registered_printer(printer_id: int) -> None:
+    if not repository.delete_printer(printer_id):
+        raise PrinterNotFoundError("Impressora não encontrada.")
+
+
+def list_available_printers(default_printer_name: str = ""):
+    printers = repository.list_printers()
+    fallback = str(default_printer_name or "").strip()
+    if not printers and fallback:
+        return [{"id": 0, "name": fallback, "active": 1, "source": "environment"}]
+    return printers
+
+
+def resolve_active_printer(name: str, default_printer_name: str = "") -> str:
+    requested = str(name or "").strip()
+    active_printers = repository.list_printers()
+    if active_printers:
+        selected = next(
+            (item for item in active_printers if item["name"].casefold() == requested.casefold()),
+            None,
+        )
+        if not selected:
+            raise HTTPException(400, "Selecione uma impressora ativa cadastrada.")
+        return selected["name"]
+    fallback = str(default_printer_name or "").strip()
+    if fallback and (not requested or requested.casefold() == fallback.casefold()):
+        return fallback
+    raise HTTPException(503, "Nenhuma impressora ativa foi cadastrada.")

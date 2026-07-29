@@ -1,35 +1,90 @@
+from modules.scheduling.repository import (
+    create_lesson_configuration,
+    get_lesson_configuration,
+    list_lesson_configurations,
+    update_lesson_configuration,
+)
+from modules.scheduling.school_activity_repository import (
+    create_teacher_activity,
+    delete_teacher_activity,
+    get_teacher_activity,
+    list_teacher_activities,
+    update_teacher_activity,
+)
+from modules.scheduling.school_schedule_repository import (
+    create_school_schedule,
+    delete_school_schedule,
+    get_school_schedule,
+    list_school_schedules,
+    list_school_years,
+    update_school_schedule,
+)
+
 from ._proxy import proxy
 
-atualizar_configuracao_aula = proxy("atualizar_configuracao_aula")
-atualizar_aula_atividade_professor = proxy("atualizar_aula_atividade_professor")
-buscar_horario_escolar_por_id = proxy("buscar_horario_escolar_por_id")
-buscar_aula_atividade_professor_por_id = proxy("buscar_aula_atividade_professor_por_id")
-buscar_configuracao_aula_por_id = proxy("buscar_configuracao_aula_por_id")
-criar_aula_atividade_professor = proxy("criar_aula_atividade_professor")
-criar_horario_escolar = proxy("criar_horario_escolar")
-criar_configuracao_aula = proxy("criar_configuracao_aula")
-excluir_aula_atividade_professor = proxy("excluir_aula_atividade_professor")
-excluir_horario_escolar = proxy("excluir_horario_escolar")
-listar_anos_letivos_horario_escolar = proxy("listar_anos_letivos_horario_escolar")
-listar_aulas_atividade_professores = proxy("listar_aulas_atividade_professores")
-listar_configuracoes_aulas = proxy("listar_configuracoes_aulas")
-listar_horarios_escolares = proxy("listar_horarios_escolares")
-atualizar_horario_escolar = proxy("atualizar_horario_escolar")
+buscar_horario_escolar_por_id = get_school_schedule
+criar_horario_escolar = create_school_schedule
+excluir_horario_escolar = delete_school_schedule
+listar_anos_letivos_horario_escolar = list_school_years
+listar_horarios_escolares = list_school_schedules
+atualizar_horario_escolar = update_school_schedule
+atualizar_aula_atividade_professor = update_teacher_activity
+buscar_aula_atividade_professor_por_id = get_teacher_activity
+criar_aula_atividade_professor = create_teacher_activity
+excluir_aula_atividade_professor = delete_teacher_activity
+listar_aulas_atividade_professores = list_teacher_activities
+
+
+def listar_configuracoes_aulas(incluir_inativas: bool = False):
+    return list_lesson_configurations(include_inactive=incluir_inativas)
+
+
+def buscar_configuracao_aula_por_id(configuracao_id: int):
+    return get_lesson_configuration(configuracao_id)
+
+
+def criar_configuracao_aula(
+    *, ordem_visual, tipo, aula_numero, nome, horario_inicio, horario_fim, ativo=True
+):
+    return create_lesson_configuration(
+        visual_order=ordem_visual,
+        entry_type=tipo,
+        lesson_number=aula_numero,
+        name=nome,
+        start_time=horario_inicio,
+        end_time=horario_fim,
+        active=ativo,
+    )
+
+
+def atualizar_configuracao_aula(
+    *, configuracao_id, ordem_visual, tipo, aula_numero, nome, horario_inicio, horario_fim, ativo
+):
+    return update_lesson_configuration(
+        configuration_id=configuracao_id,
+        visual_order=ordem_visual,
+        entry_type=tipo,
+        lesson_number=aula_numero,
+        name=nome,
+        start_time=horario_inicio,
+        end_time=horario_fim,
+        active=ativo,
+    )
 
 __all__ = [
     "atualizar_configuracao_aula",
     "atualizar_aula_atividade_professor",
-    "buscar_horario_escolar_por_id",
     "buscar_aula_atividade_professor_por_id",
+    "buscar_horario_escolar_por_id",
     "buscar_configuracao_aula_por_id",
-    "criar_aula_atividade_professor",
     "criar_horario_escolar",
+    "criar_aula_atividade_professor",
     "criar_configuracao_aula",
-    "excluir_aula_atividade_professor",
     "excluir_horario_escolar",
+    "excluir_aula_atividade_professor",
     "listar_anos_letivos_horario_escolar",
-    "listar_aulas_atividade_professores",
     "listar_configuracoes_aulas",
     "listar_horarios_escolares",
+    "listar_aulas_atividade_professores",
     "atualizar_horario_escolar",
 ]

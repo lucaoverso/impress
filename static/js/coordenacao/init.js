@@ -53,6 +53,21 @@ function registrarEventosOcorrencias() {
     el("formOcorrencia").addEventListener("change", atualizarPreviewOcorrencia);
     registrarEventosEditorDescricao();
     el("btnLimparFiltros").addEventListener("click", limparFiltrosOcorrencias);
+    el("btnAbrirFiltrosOcorrencias").addEventListener("click", () => {
+        alternarFiltrosOcorrencias(true);
+    });
+    el("btnFecharFiltrosOcorrencias").addEventListener("click", () => {
+        alternarFiltrosOcorrencias(false);
+    });
+    el("backdropFiltrosOcorrencias").addEventListener("click", () => {
+        alternarFiltrosOcorrencias(false);
+    });
+    el("btnFecharDetalhesOcorrencia").addEventListener("click", () => {
+        selecionarOcorrencia(null);
+    });
+    el("backdropDetalhesOcorrencia").addEventListener("click", () => {
+        selecionarOcorrencia(null);
+    });
     el("btnNovaOcorrencia").addEventListener("click", () => {
         limparFormularioOcorrencia({ manterAberto: true });
         el("ocorrenciaBuscaEstudante").focus();
@@ -89,9 +104,12 @@ function registrarEventosOcorrencias() {
         }
     });
     document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape" && painelFormularioOcorrenciaAberto()) {
-            limparFormularioOcorrencia();
+        if (event.key !== "Escape") return;
+        if (painelFormularioOcorrenciaAberto()) return limparFormularioOcorrencia();
+        if (el("formFiltrosOcorrencias").classList.contains("is-open")) {
+            return alternarFiltrosOcorrencias(false);
         }
+        if (!el("painelDetalhesOcorrencia").hidden) selecionarOcorrencia(null);
     });
 
     el("ocorrenciaBuscaEstudante").addEventListener("input", () => {

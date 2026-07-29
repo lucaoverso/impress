@@ -8,7 +8,7 @@ function aplicarModoFormularioRecurso(edicao = false) {
 
     titulo.innerText = edicao ? "Editar recurso" : "Cadastrar recurso";
     btnSalvar.innerText = edicao ? "Salvar alterações" : "Cadastrar recurso";
-    btnCancelar.style.display = edicao ? "inline-block" : "none";
+    btnCancelar.hidden = !edicao;
 }
 
 function atualizarPreviewImagemRecurso(caminhoImagem = "") {
@@ -52,13 +52,13 @@ async function carregarRecursos() {
 
     recursos.forEach((recurso) => {
         const item = document.createElement("li");
-        item.className = "admin-list-item";
+        item.className = "admin-list-item list-item";
 
         const titulo = document.createElement("p");
         titulo.innerText = `${recurso.nome} (${recurso.tipo})`;
 
         const detalhe = document.createElement("p");
-        detalhe.className = "booking-detail";
+        detalhe.className = "booking-detail item-meta";
         detalhe.innerText = `${recurso.descricao || "Sem descrição"} | Quantidade: ${recurso.quantidade_itens ?? 1} | Status: ${recurso.ativo ? "Ativo" : "Inativo"} | ${recurso.imagem_capa ? "Com capa" : "Sem capa"}`;
 
         if (recurso.imagem_capa) {
@@ -77,6 +77,7 @@ async function carregarRecursos() {
 
         const salvarQuantidade = document.createElement("button");
         salvarQuantidade.type = "button";
+        salvarQuantidade.className = "button";
         salvarQuantidade.innerText = "Salvar quantidade";
         salvarQuantidade.addEventListener("click", async () => {
             try {
@@ -100,11 +101,13 @@ async function carregarRecursos() {
 
         const editar = document.createElement("button");
         editar.type = "button";
+        editar.className = "button";
         editar.innerText = "Editar cadastro";
         editar.addEventListener("click", () => iniciarEdicaoRecurso(recurso));
 
         const status = document.createElement("button");
         status.type = "button";
+        status.className = recurso.ativo ? "button button--danger" : "button";
         status.innerText = recurso.ativo ? "Desativar" : "Ativar";
         status.addEventListener("click", async () => {
             try {
@@ -120,7 +123,7 @@ async function carregarRecursos() {
         });
 
         const acoes = document.createElement("div");
-        acoes.className = "admin-inline";
+        acoes.className = "admin-inline action-group action-group--compact";
         acoes.append(quantidade, salvarQuantidade, editar, status);
         item.append(titulo, detalhe, acoes);
         lista.appendChild(item);

@@ -146,7 +146,7 @@ Os templates HTML estao em [templates/](/Users/lucassbaraini/sistema-impress/tem
 
 - autenticacao: `login.html`, `cadastro_professor.html`
 - hub: `servicos.html`
-- modulos: `professor.html`, `agendamento.html`, `admin.html`, `coordenacao.html`, `pcpi.html`, `preconselho.html`
+- modulos: `printing/index.html`, `scheduling/index.html`, `scheduling/my_bookings.html`, `scheduling/calendar.html`, `preconselho/index.html`, `admin.html`, `coordenacao.html`, `pcpi.html`
 - compartilhado: [templates/includes/style_bundle.html](/Users/lucassbaraini/sistema-impress/templates/includes/style_bundle.html:1)
 
 O carregamento do CSS foi centralizado no include compartilhado, reduzindo repeticao nos `head` das paginas.
@@ -175,6 +175,8 @@ E a logica foi distribuida em modulos por contexto:
 O CSS foi dividido em:
 
 - [static/css/base.css](/Users/lucassbaraini/sistema-impress/static/css/base.css:1)
+- [static/css/design-system.css](/Users/lucassbaraini/sistema-impress/static/css/design-system.css:1): classes canônicas de página e componentes
+- [docs/09-frontend/design-system-classes.md](/Users/lucassbaraini/sistema-impress/docs/09-frontend/design-system-classes.md:1): referência de uso das classes compartilhadas
 - [static/css/pages/auth.css](/Users/lucassbaraini/sistema-impress/static/css/pages/auth.css:1)
 - [static/css/pages/professor.css](/Users/lucassbaraini/sistema-impress/static/css/pages/professor.css:1)
 - [static/css/pages/services-scheduler.css](/Users/lucassbaraini/sistema-impress/static/css/pages/services-scheduler.css:1)

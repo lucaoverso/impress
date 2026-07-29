@@ -14,7 +14,8 @@ venv/
 *.ps1
 
 # Environment variables
-.env
+*.env
+stich_api_key.md
 
 # SQLite
 *.db
@@ -23,8 +24,12 @@ impressao.db
 
 # Dados locais
 data/
+!static/data/
+static/data/*
+!static/data/help-contexts.json
 spool/
 operacional/
+/graphify-out/
 
 # IDE
 .vscode/

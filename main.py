@@ -6,6 +6,7 @@ from datetime import datetime, UTC
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
+from starlette.middleware.gzip import GZipMiddleware
 
 from app_logging import setup_logging
 from auth import router as auth_router
@@ -16,6 +17,11 @@ import modules.preconselho.router as preconselho_router_module
 import modules.occurrences.router as occurrences_router_module
 import modules.audit.router as audit_router_module
 import modules.teacher_followup.router as teacher_followup_router_module
+import modules.users.router as users_router_module
+import modules.notifications.router as notifications_router_module
+import modules.admin.resources.router as admin_resources_router_module
+import modules.admin.classes.router as admin_classes_router_module
+import modules.admin.router as admin_pages_router_module
 import routers.admin_router as admin_router_module
 import modules.scheduling.router as scheduling_router_module
 import routers.common as common_module
@@ -23,7 +29,7 @@ import routers.config as config_module
 import modules.printing.router as impressao_router_module
 import routers.relatorios_router as relatorios_router_module
 import routers.download_router as download_router_module
-import routers.horario_escolar_router as horario_escolar_router_module
+import modules.scheduling.school_schedule_router as horario_escolar_router_module
 import routers.apc_router as apc_router_module
 import routers.pages_router as pages_router_module
 import routers.professores_common as professores_common_module
@@ -51,6 +57,9 @@ common_module = _reload_or_import(common_module)
 professores_common_module = _reload_or_import(professores_common_module)
 system_router_module = _reload_or_import(system_router_module)
 pages_router_module = _reload_or_import(pages_router_module)
+admin_resources_router_module = _reload_or_import(admin_resources_router_module)
+admin_classes_router_module = _reload_or_import(admin_classes_router_module)
+admin_pages_router_module = _reload_or_import(admin_pages_router_module)
 impressao_router_module = _reload_or_import(impressao_router_module)
 relatorios_router_module = _reload_or_import(relatorios_router_module)
 download_router_module = _reload_or_import(download_router_module)
@@ -62,12 +71,17 @@ admin_router_module = _reload_or_import(admin_router_module)
 preconselho_router_module = _reload_or_import(preconselho_router_module)
 audit_router_module = _reload_or_import(audit_router_module)
 teacher_followup_router_module = _reload_or_import(teacher_followup_router_module)
+users_router_module = _reload_or_import(users_router_module)
+notifications_router_module = _reload_or_import(notifications_router_module)
 
 ENABLE_EMBEDDED_WORKER = config_module.ENABLE_EMBEDDED_WORKER
 STATIC_DIR = config_module.STATIC_DIR
 
 system_router = system_router_module.router
 pages_router = pages_router_module.router
+admin_resources_router = admin_resources_router_module.router
+admin_classes_router = admin_classes_router_module.router
+admin_pages_router = admin_pages_router_module.router
 impressao_router = impressao_router_module.router
 relatorios_router = relatorios_router_module.router
 download_router = download_router_module.router
@@ -80,6 +94,8 @@ preconselho_router = preconselho_router_module.router
 occurrences_router = occurrences_router_module.router
 audit_router = audit_router_module.router
 teacher_followup_router = teacher_followup_router_module.router
+users_router = users_router_module.router
+notifications_router = notifications_router_module.router
 
 root = system_router_module.root
 health = system_router_module.health
@@ -95,7 +111,6 @@ relatorios_page = pages_router_module.relatorios_page
 download_page = pages_router_module.download_page
 download_details_page = pages_router_module.download_details_page
 pcpi_page = pages_router_module.pcpi_page
-preconselho_page = pages_router_module.preconselho_page
 cadastro_professor_page = pages_router_module.cadastro_professor_page
 admin_page = pages_router_module.admin_page
 coordenacao_page = pages_router_module.coordenacao_page
@@ -188,10 +203,14 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Suite de Servicos Escolares", lifespan=lifespan)
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 app.include_router(auth_router)
 app.include_router(system_router)
 app.include_router(pages_router)
+app.include_router(admin_pages_router)
+app.include_router(admin_resources_router)
+app.include_router(admin_classes_router)
 app.include_router(impressao_router)
 app.include_router(relatorios_router)
 app.include_router(download_router)
@@ -206,5 +225,7 @@ app.include_router(pcpi_router)
 app.include_router(preconselho_router)
 app.include_router(audit_router)
 app.include_router(teacher_followup_router)
+app.include_router(users_router)
+app.include_router(notifications_router)
 
 app.mount("/static", CachedStaticFiles(directory=str(STATIC_DIR)), name="static")

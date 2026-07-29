@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Central de Anexos</title>
+    {% set page_styles = ["css/apc/index.css", "css/apc/dialogs.css"] %}
+    {% include "includes/style_bundle.html" %}
+</head>
+
+<body>
+    {% set navbar_context = "Central de anexos" %}
+    {% set navbar_current = "apc" %}
+    {% include "includes/app_navbar.html" %}
+    {% include "includes/app_sidebar_config.html" %}
+    <main class="apc-page page-shell page-shell--wide">
+        <section class="apc-workspace">
+            <header class="apc-page-header page-header page-header--flush">
+                <div class="apc-page-header-copy page-header-main">
+                    <h1 class="page-title">Central de Anexos</h1>
+                    <p class="apc-page-lead page-lead">
+                        Consulte entregas, envie arquivos e acompanhe solicitações em um único lugar.
+                    </p>
+                </div>
+                <div id="apcGestaoActions" class="apc-page-actions" hidden>
+                    <button id="btnAlternarFiltrosApc" class="apc-mobile-filter-toggle" type="button"
+                        aria-controls="apcGestaoFiltros" aria-expanded="false">
+                        <i class="bi bi-funnel" aria-hidden="true"></i>
+                        Filtros
+                    </button>
+                    <button id="btnAbrirNovaApc" class="btn-destaque" type="button">
+                        <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                        Nova solicitação
+                    </button>
+                    <button id="btnAbrirEditarApc" type="button" hidden>Editar selecionada</button>
+                </div>
+                <p id="apcUsuario" class="apc-topbar-user"></p>
+            </header>
+
+            <section class="apc-content apc-flow-surface">
+                <p id="msgApc" class="apc-toolbar-message" role="status" aria-live="polite"></p>
+
+                <section class="apc-detail-card">
+                    <section id="apcGestaoFiltros" class="apc-gestao-filtros" hidden
+                        aria-label="Filtros das demandas">
+                        <header class="apc-filter-header">
+                            <div>
+                                <h2>Filtrar solicitações</h2>
+                                <p>Encontre uma demanda por título, professor, disciplina, turma ou situação.</p>
+                            </div>
+                            <button id="btnLimparFiltrosApc" class="apc-clear-filters" type="button">
+                                Limpar filtros
+                            </button>
+                        </header>
+                        <div class="apc-field apc-gestao-busca">
+                            <label for="apcFiltroBusca">Buscar demanda</label>
+                            <input id="apcFiltroBusca" type="search"
+                                placeholder="Título, professor, disciplina ou turma">
+                        </div>
+                        <div class="apc-field">
+                            <label for="apcFiltroProfessor">Professor</label>
+                            <select id="apcFiltroProfessor">
+                                <option value="">Todos</option>
+                            </select>
+                        </div>
+                        <div class="apc-field">
+                            <label for="apcFiltroDisciplina">Disciplina</label>
+                            <select id="apcFiltroDisciplina">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                        <div class="apc-field">
+                            <label for="apcFiltroTurma">Turma</label>
+                            <select id="apcFiltroTurma">
+                                <option value="">Todas</option>
+                            </select>
+                        </div>
+                        <div class="apc-field">
+                            <label for="apcFiltroStatus">Status</label>
+                            <select id="apcFiltroStatus">
+                                <option value="">Todos</option>
+                                <option value="pendente">Com pendências</option>
+                                <option value="concluida">Concluídas</option>
+                                <option value="atrasada">Prazo encerrado</option>
+                            </select>
+                        </div>
+                        <div class="apc-field">
+                            <label for="apcOrdenacaoGestao">Ordenar por</label>
+                            <select id="apcOrdenacaoGestao">
+                                <option value="prazo">Prazo mais próximo</option>
+                                <option value="recentes">Demandas mais recentes</option>
+                                <option value="antigas">Demandas mais antigas</option>
+                                <option value="envios_recentes">Envios mais recentes</option>
+                                <option value="envios_antigos">Envios mais antigos</option>
+                                <option value="pendencias">Mais pendências</option>
+                            </select>
+                        </div>
+                    </section>
+
+                    <div class="apc-docente-workspace">
+                        <section class="apc-solicitacoes-column" aria-labelledby="apcSolicitacoesTitulo">
+                            <header class="apc-column-header">
+                                <div>
+                                    <h2 id="apcSolicitacoesTitulo">Solicitações</h2>
+                                    <p id="apcSolicitacoesDescricao">
+                                        Pendências aparecem primeiro; a mais urgente já fica aberta.
+                                    </p>
+                                </div>
+                            </header>
+
+                            <div id="apcSolicitacoesData" class="apc-solicitacoes-data">
+                                <div class="booking-empty">Carregando solicitações...</div>
+                            </div>
+                        </section>
+
+                        <aside id="apcDocenteDetalhe" class="apc-docente-detalhe" aria-live="polite"
+                            aria-label="Detalhes da solicitação selecionada">
+                            <div class="booking-empty">
+                                Carregando os anexos da demanda mais urgente...
+                            </div>
+                        </aside>
+
+                        <aside id="apcGestaoDetalhe" class="apc-gestao-detalhe" hidden aria-live="polite"
+                            aria-labelledby="apcGestaoDetalheTitulo">
+                            <header class="apc-gestao-detalhe-header">
+                                <div>
+                                    <h2 id="apcGestaoDetalheTitulo">Selecione uma demanda</h2>
+                                    <p id="apcGestaoDetalheDescricao">
+                                        Os professores e anexos da solicitação aparecerão aqui.
+                                    </p>
+                                </div>
+                            </header>
+                            <div id="apcListaPainel" class="apc-lista-painel">
+                                <div class="booking-empty">Nenhuma solicitacao selecionada.</div>
+                            </div>
+                        </aside>
+                    </div>
+
+                </section>
+            </section>
+        </section>
+    </main>
+
+    <div id="apcModalBackdrop" class="apc-modal-backdrop" hidden>
+        <section class="apc-modal" role="dialog" aria-modal="true" aria-labelledby="apcModalTitulo"
+            aria-describedby="apcModalDescricao">
+            <header class="apc-modal-header">
+                <div>
+                    <h2 id="apcModalTitulo">Nova solicitação de entrega</h2>
+                    <p id="apcModalDescricao">Defina o documento, o prazo e quem deve realizar a entrega.</p>
+                </div>
+                <button id="btnFecharModalApc" class="apc-modal-close" type="button" aria-label="Fechar modal">
+                    Fechar
+                </button>
+            </header>
+
+            <form id="formApcPeriodo" class="apc-form apc-modal-form">
+                <section class="apc-form-section" aria-labelledby="apcModalDadosTitulo">
+                    <div class="apc-form-section-copy">
+                        <h3 id="apcModalDadosTitulo">Dados da solicitação</h3>
+                        <p>Informe a referência, o prazo e o público responsável pelo envio.</p>
+                    </div>
+
+                    <div class="apc-modal-field-grid apc-modal-field-grid--two">
+                        <div class="apc-field">
+                            <label for="apcDataReferencia">Data de referência</label>
+                            <input id="apcDataReferencia" type="date" required>
+                        </div>
+                        <div class="apc-field">
+                            <label for="apcPrazoEnvio">Prazo de envio</label>
+                            <input id="apcPrazoEnvio" type="datetime-local" required>
+                        </div>
+                    </div>
+
+                    <div class="apc-modal-field-grid apc-modal-field-grid--three">
+                        <div class="apc-field">
+                            <label for="apcTitulo">Documento solicitado</label>
+                            <input id="apcTitulo" type="text" maxlength="80" value="Documento">
+                        </div>
+                        <div class="apc-field">
+                            <label for="apcPublicoAlvo">Quem deve enviar</label>
+                            <select id="apcPublicoAlvo"></select>
+                        </div>
+                        <div class="apc-field">
+                            <label for="apcTipoEntrega">Tipo da solicitação</label>
+                            <select id="apcTipoEntrega"></select>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="apcDestinatariosWrap" class="apc-destinatarios-wrap" hidden>
+                    <div class="apc-destinatarios-header">
+                        <div>
+                            <h3>Professores selecionados</h3>
+                            <p>Marque as combinações de turma e disciplina que devem enviar este anexo.</p>
+                        </div>
+                        <div class="apc-inline-actions">
+                            <button id="btnApcDestinatariosTodos" type="button">Marcar tudo</button>
+                            <button id="btnApcDestinatariosLimpar" type="button">Limpar</button>
+                        </div>
+                    </div>
+                    <p id="apcDestinatariosResumo" class="apc-inline-hint"></p>
+                    <div id="apcDestinatariosLista" class="apc-destinatarios-lista">
+                        <div class="booking-empty">Selecione um ano letivo para carregar os professores.</div>
+                    </div>
+                </section>
+
+                <section class="apc-form-section" aria-labelledby="apcModalObservacaoTitulo">
+                    <div class="apc-form-section-copy">
+                        <h3 id="apcModalObservacaoTitulo">Orientações adicionais</h3>
+                        <p>Explique o que deve ser enviado ou como o material será analisado.</p>
+                    </div>
+
+                    <div class="apc-field">
+                        <label for="apcObservacao">Observação</label>
+                        <textarea id="apcObservacao" rows="3"
+                            placeholder="Ex.: atividade pedagógica, prova bimestral, roteiro, plano ou outro material."></textarea>
+                    </div>
+                </section>
+
+                <div class="apc-modal-footer">
+                    <div class="apc-inline-actions">
+                        <button class="btn-destaque" type="submit">Salvar solicitação</button>
+                        <button id="btnCancelarApc" type="button">Cancelar</button>
+                        <button id="btnExcluirApc" class="btn-perigo" type="button" hidden>Excluir</button>
+                    </div>
+                </div>
+            </form>
+        </section>
+    </div>
+
+    <div id="apcActivityModal" class="apc-fullscreen-modal apc-activity-modal" hidden>
+        <section id="apcActivityModalPanel" class="apc-split-modal apc-activity-modal-panel" role="dialog" aria-modal="true"
+            aria-labelledby="apcActivityModalTitle" aria-describedby="apcActivityModalDescription" tabindex="-1">
+            <header class="apc-split-modal-header apc-activity-modal-header">
+                <div class="apc-split-modal-title">
+                    <button id="btnFecharActivityModalApc" class="apc-split-modal-close" type="button"
+                        aria-label="Fechar geração de atividades"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+                    <div>
+                        <h2 id="apcActivityModalTitle">Geração de Atividades</h2>
+                        <p id="apcActivityModalDescription" class="sr-only">Preencha o documento e acompanhe o PDF pronto para impressão.</p>
+                    </div>
+                </div>
+                <span class="apc-activity-auto-state"><i class="bi bi-arrow-repeat" aria-hidden="true"></i> Prévia automática</span>
+            </header>
+
+            <main class="apc-split-modal-body apc-activity-modal-body">
+                <section id="apcActivityFormSlot" class="apc-split-modal-form apc-activity-form-side"
+                    aria-label="Formulário da atividade"></section>
+                <aside class="apc-split-modal-preview apc-activity-preview-side" aria-label="Visualização em tempo real">
+                    <header class="apc-activity-preview-header">
+                        <h3>Visualização em tempo real</h3>
+                        <div class="apc-activity-preview-nav" aria-label="Navegação das páginas do preview">
+                            <button id="btnApcActivityPreviewAnterior" type="button" aria-label="Página anterior" disabled>
+                                <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                            </button>
+                            <span id="apcActivityPageCount" class="apc-activity-page-count">Página 1 de 1 · A4</span>
+                            <button id="btnApcActivityPreviewProxima" type="button" aria-label="Próxima página" disabled>
+                                <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </header>
+                    <div id="apcActivityPreviewViewport" class="apc-activity-preview-viewport">
+                        <p id="apcActivityPreviewState" class="apc-activity-preview-state" role="status" aria-live="polite">
+                            Preparando a folha da atividade...
+                        </p>
+                        <div id="apcActivityPreviewPages" class="apc-activity-preview-pages"></div>
+                    </div>
+                </aside>
+            </main>
+
+            <footer class="apc-split-modal-footer apc-activity-modal-footer">
+                <p id="apcActivityModalMessage" role="status" aria-live="polite"></p>
+                <div class="apc-inline-actions">
+                    <button id="btnCancelarActivityModalApc" type="button">Cancelar</button>
+                    <button id="btnSalvarActivityModalApc" class="btn-destaque" type="button">
+                        <i class="bi bi-stars" aria-hidden="true"></i> Gerar e anexar atividade
+                    </button>
+                </div>
+            </footer>
+        </section>
+    </div>
+
+    <div id="apcArquivoPreviewModal" class="apc-fullscreen-modal apc-file-preview-modal" hidden>
+        <section id="apcArquivoPreviewPanel" class="apc-split-modal apc-file-preview-panel" role="dialog" aria-modal="true"
+            aria-labelledby="apcArquivoPreviewTitulo" tabindex="-1">
+            <header class="apc-split-modal-header apc-file-preview-topbar">
+                <div class="apc-split-modal-title">
+                    <button id="btnFecharPreviewApc" class="apc-split-modal-close" type="button"
+                        aria-label="Fechar revisão do envio"><i class="bi bi-x-lg" aria-hidden="true"></i></button>
+                    <div>
+                    <h2 id="apcArquivoPreviewTopbarTitle">Revisar envio</h2>
+                    <p id="apcArquivoPreviewContext">Disciplina · Turma</p>
+                    </div>
+                </div>
+                <span id="apcArquivoPreviewTopbarStatus" class="apc-status is-pending">Aguardando análise</span>
+            </header>
+
+            <main class="apc-split-modal-body apc-review-modal-body">
+                <aside class="apc-split-modal-form apc-file-preview-header" aria-label="Decisão da coordenação">
+                    <section class="apc-review-section">
+                        <h3><i class="bi bi-paperclip" aria-hidden="true"></i> Arquivo para análise</h3>
+                        <div class="apc-review-file-card">
+                            <span class="apc-review-file-icon"><i class="bi bi-file-earmark-pdf" aria-hidden="true"></i></span>
+                            <div id="apcArquivoPreviewMeta" class="apc-arquivo-preview-meta">
+                                <h2 id="apcArquivoPreviewTitulo">Arquivo enviado</h2>
+                            </div>
+                        </div>
+                    </section>
+                    <section class="apc-review-section">
+                        <h3><i class="bi bi-clock-history" aria-hidden="true"></i> Histórico do envio</h3>
+                        <div id="apcReviewHistory" class="apc-review-history"></div>
+                    </section>
+                    <section id="apcReviewPanel" class="apc-review-panel" hidden>
+                        <h3><i class="bi bi-check2-square" aria-hidden="true"></i> Decisão da Coordenação</h3>
+                        <div id="apcReviewSummary" class="apc-review-summary"></div>
+                        <form id="formApcReview" class="apc-review-form" hidden>
+                            <select id="apcReviewStatus" class="sr-only" required aria-label="Decisão">
+                                <option value="PENDENTE">Aguardando análise</option>
+                                <option value="APROVADO">Aprovado</option>
+                                <option value="IMPRESSO">Impresso</option>
+                                <option value="AJUSTE_SOLICITADO">Realizar ajuste</option>
+                            </select>
+                            <div class="apc-review-decision-list" role="radiogroup" aria-label="Decisão da coordenação">
+                                <label class="apc-review-decision-card">
+                                    <input type="radio" name="apcReviewDecision" value="APROVADO">
+                                    <span><i class="bi bi-check-circle" aria-hidden="true"></i><strong>Aprovar envio</strong><small>O documento atende aos requisitos e será liberado para a turma.</small></span>
+                                </label>
+                                <label class="apc-review-decision-card is-adjustment">
+                                    <input type="radio" name="apcReviewDecision" value="AJUSTE_SOLICITADO">
+                                    <span><i class="bi bi-flag" aria-hidden="true"></i><strong>Solicitar ajuste</strong><small>Devolver ao remetente com orientações para as correções necessárias.</small></span>
+                                </label>
+                            </div>
+                            <label id="apcReviewMessageLabel" for="apcReviewMessage">Orientação para o professor</label>
+                            <textarea id="apcReviewMessage" rows="5" maxlength="1200"
+                                placeholder="Descreva o que precisa ser ajustado..."></textarea>
+                            <small id="apcReviewMessageHint">Obrigatório caso selecione “Solicitar ajuste”.</small>
+                        </form>
+                        <p id="apcReviewMessageState" class="apc-toolbar-message" role="status" aria-live="polite"></p>
+                    </section>
+                </aside>
+
+                <section class="apc-split-modal-preview apc-file-preview-content" aria-label="Visualização do documento">
+                    <header class="apc-file-preview-toolbar">
+                        <strong><i class="bi bi-file-earmark-text" aria-hidden="true"></i> Documento enviado</strong>
+                        <div class="apc-inline-actions">
+                            <button id="btnApcImprimirArquivo" type="button" hidden><i class="bi bi-printer" aria-hidden="true"></i> Imprimir</button>
+                            <button id="btnApcBaixarArquivo" type="button" hidden><i class="bi bi-download" aria-hidden="true"></i> Download</button>
+                        </div>
+                    </header>
+                    <div class="apc-file-preview-viewer">
+                        <div id="apcArquivoPreviewState" class="apc-arquivo-preview-state">
+                            <div class="booking-empty">Carregando arquivo...</div>
+                        </div>
+                        <iframe id="apcArquivoPreviewFrame" class="apc-arquivo-preview-frame"
+                            title="Visualização do arquivo enviado" hidden></iframe>
+                        <img id="apcArquivoPreviewImage" class="apc-arquivo-preview-image"
+                            alt="Visualização do arquivo enviado" hidden>
+                        <pre id="apcArquivoPreviewText" class="apc-arquivo-preview-text" hidden></pre>
+                    </div>
+                </section>
+            </main>
+
+            <footer class="apc-split-modal-footer apc-review-modal-footer">
+                <button type="button" data-apc-preview-close="true">Cancelar</button>
+                <button id="btnSalvarReviewApc" class="btn-destaque" type="submit" form="formApcReview" hidden>
+                    <i class="bi bi-patch-check" aria-hidden="true"></i> Aprovar envio
+                </button>
+            </footer>
+        </section>
+    </div>
+
+    <div id="apcPrintWizardModal" class="apc-print-wizard-modal" hidden>
+        <section id="apcPrintWizardPanel" class="apc-print-wizard-panel" role="dialog" aria-modal="true"
+            aria-labelledby="apcPrintWizardTitle" tabindex="-1">
+            <header class="apc-print-wizard-header">
+                <div>
+                    <h2 id="apcPrintWizardTitle">Configurar impressão</h2>
+                    <p id="apcPrintWizardArquivo">Arquivo selecionado</p>
+                </div>
+                <button id="btnFecharPrintWizardApc" type="button">Fechar</button>
+            </header>
+
+            <ol class="apc-print-stepper" aria-label="Etapas da impressão">
+                <li data-apc-print-stepper="1" class="is-current">1. Dados</li>
+                <li data-apc-print-stepper="2">2. Impressão</li>
+                <li data-apc-print-stepper="3">3. Conferir</li>
+            </ol>
+
+            <form id="formApcImpressao" class="apc-print-wizard-form">
+                <div class="apc-print-wizard-layout">
+                    <div class="apc-print-wizard-fields">
+                        <section data-apc-print-step="1" class="apc-print-step">
+                            <header>
+                                <h3>Dados da solicitação</h3>
+                                <p>Escolha a turma para preencher as copias automaticamente.</p>
+                            </header>
+                            <div class="apc-print-config-grid">
+                                <div class="apc-field">
+                                    <label for="apcPrintTurma">Turma</label>
+                                    <select id="apcPrintTurma">
+                                        <option value="">Carregando turmas...</option>
+                                    </select>
+                                    <p id="apcPrintTurmaResumo" class="apc-inline-hint">
+                                        Selecione uma turma para preencher as copias.
+                                    </p>
+                                </div>
+                                <div class="apc-field">
+                                    <label for="apcPrintCopias">Copias</label>
+                                    <input id="apcPrintCopias" type="number" min="1" max="999" value="1" required>
+                                    <p class="apc-inline-hint">Você pode ajustar manualmente se necessário.</p>
+                                </div>
+                            </div>
+                        </section>
+
+                        <section data-apc-print-step="2" class="apc-print-step" hidden>
+                            <header>
+                                <h3>Configurações de impressão</h3>
+                                <p>Escolha páginas, layout, orientação e tipo de material.</p>
+                            </header>
+
+                            <label for="apcPrintIntervalo">Páginas</label>
+                            <input id="apcPrintIntervalo" type="text" placeholder="Todas ou ex.: 1-5, 8">
+                            <p id="apcPrintIntervaloInfo" class="apc-inline-hint">Deixe vazio para imprimir todas as páginas.</p>
+
+                            <div class="apc-print-config-grid">
+                                <div class="apc-field">
+                                    <label for="apcPrintPaginasFolha">Layout</label>
+                                    <select id="apcPrintPaginasFolha">
+                                        <option value="1">1 página por folha</option>
+                                        <option value="2">2 páginas por folha</option>
+                                        <option value="4">4 páginas por folha</option>
+                                    </select>
+                                </div>
+                                <div class="apc-field">
+                                    <label for="apcPrintOrientacao">Orientacao</label>
+                                    <select id="apcPrintOrientacao">
+                                        <option value="retrato">Retrato</option>
+                                        <option value="paisagem">Paisagem</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <label class="apc-print-checkbox">
+                                <input id="apcPrintDuplex" type="checkbox">
+                                <span>Imprimir frente e verso</span>
+                            </label>
+
+                            <fieldset class="apc-print-tags-fieldset">
+                                <legend>Tipo de material</legend>
+                                <div id="apcPrintTags" class="apc-print-tags-grid"></div>
+                            </fieldset>
+                        </section>
+
+                        <section data-apc-print-step="3" class="apc-print-step" hidden>
+                            <header>
+                                <h3>Conferir impressão</h3>
+                                <p>Revise as configuracoes antes de enviar para a fila.</p>
+                            </header>
+                            <dl id="apcPrintResumo" class="apc-print-summary"></dl>
+                        </section>
+                    </div>
+
+                    <aside class="apc-print-preview-side" aria-label="Prévia da impressão">
+                        <header class="apc-print-preview-header">
+                            <div>
+                                <h3>Preview</h3>
+                                <p>Confira como as páginas serão agrupadas.</p>
+                            </div>
+                            <div class="apc-print-preview-nav" role="group" aria-label="Navegacao do preview">
+                                <button id="btnApcPrintPreviewAnterior" type="button" aria-label="Folha anterior">&#9664;</button>
+                                <span id="apcPrintPreviewContador"></span>
+                                <button id="btnApcPrintPreviewProxima" type="button" aria-label="Próxima folha">&#9654;</button>
+                            </div>
+                        </header>
+                        <div id="apcPrintPreviewState" class="apc-print-preview-state">
+                            Preparando preview...
+                        </div>
+                        <div id="apcPrintPreviewContainer" class="apc-print-preview-container"></div>
+                    </aside>
+                </div>
+
+                <p id="apcPrintMensagem" class="apc-toolbar-message" role="status" aria-live="polite"></p>
+
+                <footer class="apc-print-wizard-actions">
+                    <button id="btnApcPrintVoltar" type="button" hidden>Voltar</button>
+                    <button id="btnApcPrintContinuar" class="btn-destaque" type="button">Continuar</button>
+                    <button id="btnApcPrintConfirmar" class="btn-destaque" type="submit" hidden>
+                        Confirmar impressão
+                    </button>
+                </footer>
+            </form>
+        </section>
+        <div class="apc-print-wizard-backdrop" data-apc-print-close="true"></div>
+    </div>
+
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='vendor/pdfjs/pdf.min.js') }}?v=3.11.174"></script>
+    <script>
+        if (window.pdfjsLib) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc =
+                "{{ request.url_for('static', path='vendor/pdfjs/pdf.worker.min.js') }}?v=3.11.174";
+        }
+    </script>
+    <script src="{{ request.url_for('static', path='js/apc.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+
+</html>

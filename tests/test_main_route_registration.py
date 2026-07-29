@@ -1,0 +1,58 @@
+import unittest
+from collections import Counter
+
+import main
+
+
+def _registered_routes(routes, prefix=""):
+    registered = []
+    for route in routes:
+        included_router = getattr(route, "original_router", None)
+        if included_router is not None:
+            context = getattr(route, "include_context", None)
+            included_prefix = getattr(context, "prefix", "")
+            registered.extend(
+                _registered_routes(included_router.routes, prefix + included_prefix)
+            )
+            continue
+
+        path = getattr(route, "path", None)
+        if path is not None:
+            registered.extend(
+                (method, prefix + path)
+                for method in getattr(route, "methods", set())
+            )
+    return registered
+
+
+class MainRouteRegistrationTest(unittest.TestCase):
+    def test_registra_modulos_recuperados_sem_rotas_duplicadas(self):
+        routes = _registered_routes(main.app.routes)
+        registered = set(routes)
+
+        self.assertIn(("GET", "/admin"), registered)
+        self.assertIn(("GET", "/admin/turmas"), registered)
+        self.assertIn(("GET", "/admin/recursos"), registered)
+        self.assertIn(("PATCH", "/me/profile"), registered)
+        self.assertIn(("GET", "/me/profile/overview"), registered)
+        self.assertIn(("GET", "/me/profile/students"), registered)
+        self.assertIn(("GET", "/meu-perfil"), registered)
+        self.assertIn(("GET", "/notifications"), registered)
+        self.assertIn(("GET", "/notificacoes"), registered)
+        self.assertIn(("GET", "/notificacoes/gestao"), registered)
+        self.assertIn(("GET", "/service-worker.js"), registered)
+        self.assertIn(("GET", "/impressao/impressoras"), registered)
+        self.assertIn(("GET", "/impressao/historico"), registered)
+        self.assertIn(("GET", "/agendamento/meus-agendamentos"), registered)
+        self.assertIn(("GET", "/agendamento/calendario"), registered)
+        self.assertIn(("GET", "/agendamento/catalogo"), registered)
+        self.assertIn(("GET", "/preconselho/consolidacao"), registered)
+        self.assertIn(("GET", "/preconselho/reavaliacao"), registered)
+        self.assertIn(("GET", "/preconselho/relatorios"), registered)
+        self.assertIn(("GET", "/preconselho/rav"), registered)
+        self.assertIn(("GET", "/preconselho/configuracoes"), registered)
+        self.assertFalse([route for route, count in Counter(routes).items() if count > 1])
+
+
+if __name__ == "__main__":
+    unittest.main()

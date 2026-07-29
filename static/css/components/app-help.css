@@ -1,0 +1,162 @@
+.app-help-close {
+    display: inline-grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    flex: 0 0 40px;
+    padding: 0;
+    border: 1px solid var(--line, #d8dee8);
+    border-radius: 50%;
+    background: var(--surface-0, #fff);
+    color: var(--text-main, #1f2a37);
+}
+.app-help-close:hover { background: var(--surface-2, #eef3f8); }
+.app-help-close:focus-visible,
+.app-help-retry:focus-visible {
+    outline: 3px solid color-mix(in srgb, var(--brand, #0f766e) 28%, transparent);
+    outline-offset: 2px;
+    border-color: var(--brand, #0f766e);
+}
+
+.app-help-dialog {
+    position: fixed;
+    inset: 0 0 0 auto;
+    width: min(420px, 100vw);
+    max-width: none;
+    height: 100dvh;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 0;
+    border-left: 1px solid var(--line, #d8dee8);
+    background: var(--surface-0, #fff);
+    color: var(--text-main, #1f2a37);
+    box-shadow: var(--shadow-floating, 0 16px 40px rgba(15, 23, 42, .14));
+}
+.app-help-dialog[open] {
+    display: flex;
+    flex-direction: column;
+    animation: app-help-enter 220ms cubic-bezier(.22, 1, .36, 1);
+}
+.app-help-dialog.is-closing { animation: app-help-exit 180ms ease-in forwards; }
+.app-help-dialog::backdrop {
+    background: var(--overlay-scrim, rgba(15, 23, 42, .52));
+    animation: app-help-backdrop-enter 180ms ease-out;
+}
+.app-help-dialog.is-closing::backdrop { animation: app-help-backdrop-exit 180ms ease-in forwards; }
+body.app-help-open { overflow: hidden; }
+
+.app-help-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--line, #d8dee8);
+}
+.app-help-header span {
+    display: block;
+    margin-bottom: 3px;
+    color: var(--text-muted, #4b5563);
+    font-size: 13px;
+}
+.app-help-header h2 { margin: 0; font-size: 1.35rem; line-height: 1.2; }
+.app-help-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px;
+    overscroll-behavior: contain;
+}
+.app-help-body > * { max-width: 70ch; }
+.app-help-objective {
+    margin: 0;
+    color: var(--text-muted, #4b5563);
+    line-height: 1.6;
+}
+.app-help-section {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--line-soft, #d8e1ec);
+}
+.app-help-section h3 { margin: 0 0 12px; font-size: 1rem; }
+.app-help-section ul,
+.app-help-section ol {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding-left: 22px;
+}
+.app-help-section li { padding-left: 3px; line-height: 1.5; }
+.app-help-section li::marker { color: var(--brand, #0f766e); font-weight: 800; }
+.app-help-cautions {
+    padding: 16px;
+    border: 1px solid var(--state-danger-border, #fecaca);
+    border-radius: var(--radius-md, 12px);
+    background: var(--state-danger-bg, #fff5f5);
+}
+.app-help-cautions h3 { color: var(--state-danger-text, #991b1b); }
+.app-help-state { display: grid; gap: 14px; color: var(--text-muted, #4b5563); }
+.app-help-state p { margin: 0; }
+.app-help-retry { justify-self: start; }
+.app-help-skeleton { display: grid; gap: 12px; }
+.app-help-skeleton span {
+    display: block;
+    height: 14px;
+    border-radius: 999px;
+    background: var(--surface-2, #eef3f8);
+    animation: app-help-pulse 1.2s ease-in-out infinite alternate;
+}
+.app-help-skeleton span:nth-child(2) { width: 84%; }
+.app-help-skeleton span:nth-child(3) { width: 68%; }
+
+@keyframes app-help-enter {
+    from { opacity: 0; transform: translateX(32px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+@keyframes app-help-exit {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(24px); }
+}
+@keyframes app-help-backdrop-enter {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+@keyframes app-help-backdrop-exit {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+@keyframes app-help-pulse {
+    from { opacity: .55; }
+    to { opacity: 1; }
+}
+
+@media (max-width: 760px) {
+    .app-help-dialog {
+        inset: auto 0 0;
+        width: 100%;
+        height: auto;
+        max-height: 88dvh;
+        border: 0;
+        border-top: 1px solid var(--line, #d8dee8);
+        border-radius: 16px 16px 0 0;
+    }
+    .app-help-dialog[open] { animation-name: app-help-enter-mobile; }
+    .app-help-dialog.is-closing { animation-name: app-help-exit-mobile; }
+    .app-help-header { padding-top: 16px; }
+    .app-help-body { padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+    @keyframes app-help-enter-mobile {
+        from { opacity: 0; transform: translateY(32px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes app-help-exit-mobile {
+        from { opacity: 1; transform: translateY(0); }
+        to { opacity: 0; transform: translateY(24px); }
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-help-dialog,
+    .app-help-dialog::backdrop,
+    .app-help-skeleton span { animation: none !important; }
+}

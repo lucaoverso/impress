@@ -21,7 +21,6 @@ def _raise_http_error(exc: Exception):
     raise HTTPException(400, str(exc)) from exc
 
 
-@router.get("/admin/recursos")
 @router.get("/admin/recursos/dados")
 def listar_recursos_admin_api(
     incluir_inativos: bool = True,

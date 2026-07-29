@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>Meu perfil</title>
+    {% set page_styles = ["css/pages/user-profile.css"] %}
+    {% include "includes/style_bundle.html" %}
+</head>
+
+<body class="user-profile-page app-utility-page">
+    <a class="profile-skip-link" href="#profileMain">Ir para o conteúdo</a>
+    {% set navbar_context = "Área pessoal" %}
+    {% set navbar_current = "perfil" %}
+    {% include "includes/app_navbar.html" %}
+
+    <main id="profileMain" class="profile-shell app-utility-shell page-shell page-shell--medium" tabindex="-1">
+        <section id="profileLoading" class="profile-loading" aria-label="Carregando seu perfil">
+            <div class="profile-skeleton profile-skeleton--hero"></div>
+            <div class="profile-skeleton profile-skeleton--support"></div>
+            <div class="profile-skeleton profile-skeleton--schedule"></div>
+        </section>
+
+        <section id="profileError" class="profile-page-error" role="alert" hidden>
+            <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
+            <div>
+                <h1 class="page-title">Não foi possível abrir seu perfil</h1>
+                <p id="profileErrorMessage">Tente novamente em alguns instantes.</p>
+            </div>
+            <button id="profileRetry" class="button button--primary" type="button">
+                <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                Tentar novamente
+            </button>
+        </section>
+
+        <div id="profileContent" class="profile-content" hidden>
+            <header class="profile-hero">
+                <div id="profileAvatar" class="profile-avatar" aria-hidden="true">...</div>
+                <div class="profile-identity">
+                    <span id="profileRole" class="profile-role">Perfil do usuário</span>
+                    <h1 id="profileName" class="page-title">Seu perfil</h1>
+                    <p id="profileEmail" class="profile-email"></p>
+                    <div id="profileChips" class="profile-chips" aria-label="Vínculos escolares"></div>
+                </div>
+                <button id="profileEditToggle" class="button button--primary profile-edit-toggle" type="button"
+                    aria-expanded="false" aria-controls="profileEditPanel">
+                    <i class="bi bi-pencil" aria-hidden="true"></i>
+                    Editar perfil
+                </button>
+            </header>
+
+            <section id="profileEditPanel" class="profile-edit-panel" aria-labelledby="profileEditTitle" hidden>
+                <div class="section-header">
+                    <div class="section-header-main">
+                        <h2 id="profileEditTitle" class="section-title">Dados pessoais</h2>
+                        <p class="section-copy">Atualize seus dados de acesso. Cargo e data de nascimento são administrados pela escola.</p>
+                    </div>
+                </div>
+                <form id="profileForm" class="profile-form">
+                    <label class="profile-field" for="profileFormName">
+                        <span>Nome</span>
+                        <input id="profileFormName" name="nome" maxlength="120" required autocomplete="name">
+                    </label>
+                    <label class="profile-field" for="profileFormEmail">
+                        <span>E-mail</span>
+                        <input id="profileFormEmail" name="email" type="email" maxlength="254" required autocomplete="email">
+                    </label>
+                    <label class="profile-field" for="profileFormRole">
+                        <span>Cargo</span>
+                        <input id="profileFormRole" readonly aria-readonly="true">
+                    </label>
+                    <label class="profile-field" for="profileFormBirthDate">
+                        <span>Data de nascimento</span>
+                        <input id="profileFormBirthDate" readonly aria-readonly="true">
+                    </label>
+                    <label class="profile-field profile-field--wide" for="profileFormPassword">
+                        <span>Nova senha <small>(opcional)</small></span>
+                        <input id="profileFormPassword" name="nova_senha" type="password" minlength="8"
+                            autocomplete="new-password" aria-describedby="profilePasswordHint">
+                        <small id="profilePasswordHint">Use maiúscula, minúscula, número e caractere especial.</small>
+                    </label>
+                    <p id="profileFormFeedback" class="profile-form-feedback" role="status" aria-live="polite" hidden></p>
+                    <div class="profile-form-actions">
+                        <button id="profileEditCancel" class="button" type="button">Cancelar edição</button>
+                        <button id="profileSubmit" class="button button--primary" type="submit">Salvar alterações</button>
+                    </div>
+                </form>
+            </section>
+
+            <section id="profileNonTeacher" class="profile-non-teacher" hidden>
+                <i class="bi bi-person-check" aria-hidden="true"></i>
+                <div>
+                    <h2>Seus dados estão organizados</h2>
+                    <p>O resumo de horário, atividades e estudantes é exibido somente para perfis docentes.</p>
+                </div>
+            </section>
+
+            <div id="profileTeacherDashboard" class="profile-teacher-dashboard" hidden>
+                <section class="profile-support-section" aria-labelledby="profileSupportTitle">
+                    <div class="section-header">
+                        <div class="profile-support-title">
+                            <i class="bi bi-person-arms-up" aria-hidden="true"></i>
+                            <h2 id="profileSupportTitle">Estudantes que precisam de apoio</h2>
+                        </div>
+                        <button id="profileStudentsToggle" class="profile-text-button" type="button"
+                            aria-expanded="false" aria-controls="profileStudentsFull" hidden>
+                            Ver todos
+                        </button>
+                    </div>
+                    <p class="profile-section-intro">Atenção pedagógica nas turmas vinculadas ao seu horário e às suas atribuições.</p>
+                    <div id="profileStudentsPreview" class="profile-student-preview"></div>
+                    <div id="profileStudentsFull" class="profile-student-full" hidden></div>
+                </section>
+
+                <section class="profile-schedule-section" aria-labelledby="profileScheduleTitle">
+                    <div class="section-header">
+                        <div class="section-header-main">
+                            <h2 id="profileScheduleTitle" class="profile-section-title">Grade de horários semanais</h2>
+                            <p id="profileScheduleYear" class="section-copy"></p>
+                        </div>
+                        <div class="profile-schedule-actions">
+                            <span><i class="bi bi-clock" aria-hidden="true"></i> Aula atual</span>
+                            <span><i class="bi bi-person-heart" aria-hidden="true"></i> Turma com apoio</span>
+                            <a href="/horario-escolar">Abrir horário</a>
+                        </div>
+                    </div>
+                    <div id="profileScheduleEmpty" class="profile-empty" hidden>
+                        <p>Seu horário ainda não foi cadastrado para este ano letivo.</p>
+                        <a class="button" href="/horario-escolar">Consultar horário escolar</a>
+                    </div>
+                    <div id="profileScheduleDesktop" class="profile-schedule-table-wrap">
+                        <table class="profile-schedule-table">
+                            <thead>
+                                <tr id="profileScheduleHead">
+                                    <th scope="col">Horário</th>
+                                </tr>
+                            </thead>
+                            <tbody id="profileScheduleBody"></tbody>
+                        </table>
+                    </div>
+                    <div id="profileScheduleMobile" class="profile-schedule-mobile" hidden>
+                        <div id="profileDayTabs" class="profile-day-tabs" role="tablist" aria-label="Dias da semana"></div>
+                        <div id="profileDayLessons" class="profile-day-lessons" role="tabpanel"></div>
+                    </div>
+                </section>
+
+                <section class="profile-activity-grid" aria-label="Atividade recente">
+                    <article class="profile-activity-panel">
+                        <header>
+                            <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+                            <h2>Envios de atividades</h2>
+                        </header>
+                        <ul id="profileSubmissions" class="profile-activity-list"></ul>
+                        <footer><a class="button" href="/apc">Ver envios da APC</a></footer>
+                    </article>
+
+                    <article class="profile-activity-panel">
+                        <header>
+                            <i class="bi bi-printer" aria-hidden="true"></i>
+                            <h2>Solicitações de impressão</h2>
+                        </header>
+                        <ul id="profilePrintJobs" class="profile-activity-list"></ul>
+                        <footer>
+                            <a class="button" href="/impressao/historico">Ver histórico</a>
+                            <a class="button button--primary" href="/impressao">Nova impressão</a>
+                        </footer>
+                    </article>
+
+                    <article class="profile-activity-panel">
+                        <header>
+                            <i class="bi bi-calendar-event" aria-hidden="true"></i>
+                            <h2>Próximos agendamentos</h2>
+                        </header>
+                        <ul id="profileBookings" class="profile-activity-list"></ul>
+                        <footer>
+                            <a class="button" href="/agendamento/meus-agendamentos">Ver agendamentos</a>
+                            <a class="button button--primary" href="/agendamento">Novo agendamento</a>
+                        </footer>
+                    </article>
+                </section>
+            </div>
+        </div>
+    </main>
+
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version }}"></script>
+    <script src="{{ request.url_for('static', path='js/users/profile_renderers.js') }}?v={{ asset_version }}"></script>
+    <script src="{{ request.url_for('static', path='js/users/profile.js') }}?v={{ asset_version }}"></script>
+</body>
+
+</html>

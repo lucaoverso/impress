@@ -1,0 +1,56 @@
+<aside id="painelDetalhesReservaAgendamento" class="scheduler-side-drawer" aria-hidden="true" inert>
+    <div class="scheduler-side-backdrop" data-close-scheduler-drawer="true"></div>
+    <section class="scheduler-side-panel" role="dialog" aria-modal="true"
+        aria-labelledby="tituloDetalhesReserva" tabindex="-1">
+        <header class="scheduler-side-header">
+            <div>
+                <p class="auth-badge">Detalhes da reserva</p>
+                <h2 id="tituloDetalhesReserva">Agendamento confirmado</h2>
+                <p>Consulte os dados da reserva e, se permitido, cancele com confirmação.</p>
+            </div>
+            <button id="btnFecharDetalhesReserva" class="print-secondary-btn button" type="button">Fechar</button>
+        </header>
+        <article class="calendar-card scheduler-booking-details-card">
+            <dl class="scheduler-booking-details-list">
+                <div><dt>Recurso</dt><dd id="detalheReservaRecurso">-</dd></div>
+                <div><dt>Data</dt><dd id="detalheReservaData">-</dd></div>
+                <div><dt>Aula</dt><dd id="detalheReservaAula">-</dd></div>
+                <div><dt>Turma</dt><dd id="detalheReservaTurma">-</dd></div>
+                <div><dt>Professor</dt><dd id="detalheReservaProfessor">-</dd></div>
+                <div><dt>Tema</dt><dd id="detalheReservaTema">-</dd></div>
+                <div><dt>Observação</dt><dd id="detalheReservaObservacao">Sem observação.</dd></div>
+                <div><dt>Criado por</dt><dd id="detalheReservaCriadoPor">Não informado</dd></div>
+                <div><dt>Status</dt><dd id="detalheReservaStatus">Ativo</dd></div>
+            </dl>
+            <div class="scheduler-booking-details-actions action-group">
+                <button id="btnAbrirConfirmacaoCancelamento" class="scheduler-danger-link button button--danger" type="button" hidden>
+                    Cancelar agendamento
+                </button>
+            </div>
+            <section id="detalheReservaRecursosSecao" class="scheduler-booking-resource-detail-section" hidden>
+                <div class="scheduler-booking-resource-detail-header">
+                    <h3>Recursos deste agendamento</h3>
+                    <p>Os cancelamentos continuam individuais por recurso.</p>
+                </div>
+                <div id="detalheReservaRecursosLista" class="scheduler-booking-resource-detail-list"></div>
+            </section>
+        </article>
+    </section>
+</aside>
+
+<div id="dialogCancelarReservaAgendamento" class="scheduler-confirm-dialog" hidden>
+    <div class="scheduler-confirm-dialog-backdrop"></div>
+    <section class="scheduler-confirm-dialog-panel" role="dialog" aria-modal="true"
+        aria-labelledby="tituloDialogCancelarReserva">
+        <div class="scheduler-confirm-dialog-copy">
+            <h2 id="tituloDialogCancelarReserva">Cancelar agendamento?</h2>
+            <p>Você está prestes a cancelar esta reserva. Essa ação não poderá ser desfeita.</p>
+        </div>
+        <div class="scheduler-confirm-dialog-actions action-group">
+            <button id="btnFecharConfirmacaoCancelamento" class="print-secondary-btn button" type="button">Voltar</button>
+            <button id="btnConfirmarCancelamentoReserva" class="btn-destaque scheduler-danger-solid button button--danger-solid" type="button">
+                Cancelar agendamento
+            </button>
+        </div>
+    </section>
+</div>

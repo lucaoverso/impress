@@ -28,7 +28,7 @@ Evidencias: `AGENTS.md` descreve a aplicacao escolar com modulos de impressao, a
 
 | Area | Necessidades atendidas | Evidencia | Classificacao |
 | --- | --- | --- | --- |
-| Sala dos professores/docencia | Impressao, agendamento de recursos, envio de documentos, pre-conselho. | `templates/professor.html`; `modules/printing/*`; `modules/scheduling/*`; `modules/preconselho/*`. | Confirmada pelo codigo |
+| Sala dos professores/docencia | Impressao, agendamento de recursos, envio de documentos, pre-conselho. | `templates/printing/index.html`; `modules/printing/*`; `modules/scheduling/*`; `modules/preconselho/*`. | Confirmada pelo codigo |
 | Coordenacao pedagogica | Ocorrencias, PCPI, relatorios, APC, acompanhamento de professores/turmas. | `templates/coordenacao.html`; `routers/apc_router.py`; `services/pcpi_service.py`; `modules/occurrences/*`; `routers/relatorios_router.py`. | Confirmada pelo codigo |
 | Secretaria/gestao escolar | Cadastros, usuarios, turmas, disciplinas, estudantes e atribuicoes docentes. | `routers/admin_router.py`; `services/csv_import_service.py`; `services/atribuicoes_docentes_import_service.py`; `database.py`: tabelas academicas. | Inferida |
 | TI/operacao | Deploy, worker, CUPS, banco SQLite, logs, healthcheck, Nginx e systemd. | `.env.example`; `routers/system_router.py`; `deploy/systemd`; `deploy/nginx`; `docs/08-operacao/*`. | Confirmada pelo codigo |
@@ -39,7 +39,7 @@ Evidencias: `AGENTS.md` descreve a aplicacao escolar com modulos de impressao, a
 | --- | --- | --- | --- |
 | Autenticacao e perfis | Login, token, cargos/perfis e autorizacao por modulo. | `auth.py`; `services/auth_service.py`; `routers/common.py`. | Confirmada pelo codigo |
 | Impressao | Upload/preview, criacao de jobs, fila, cancelamento, prioridade, cota, status operacional, historico e reimpressao. | `modules/printing/router.py`; `modules/printing/job_creation.py`; `services/worker.py`; `services/printer.py`; `tests/test_impressao_reuso_historico.py`. | Confirmada pelo codigo |
-| Agendamento | Listagem de recursos, opcoes, professores, reservas, criacao e cancelamento. | `modules/scheduling/router.py`; `modules/scheduling/service.py`; `templates/agendamento.html`; `tests/test_scheduling_router.py`. | Confirmada pelo codigo |
+| Agendamento | Listagem de recursos, opcoes, professores, reservas, criacao e cancelamento. | `modules/scheduling/router.py`; `modules/scheduling/service.py`; `templates/scheduling/*`; `tests/test_scheduling_router.py`. | Confirmada pelo codigo |
 | Recursos escolares | Cadastro/uso de recursos reservaveis com capacidade e status ativo. | `database.py`: `recursos`; `modules/scheduling/models.py`: `SchedulingResource`; `docs/03-modulos/agendamento.md`. | Confirmada pelo codigo |
 | APC/anexos | Periodos, publico alvo, envio de arquivos por professor, revisao, historico, preview e impressao de anexos. | `routers/apc_router.py`; `services/apc_service.py`; `modules/apc_review/*`; migrations APC; `tests/test_apc_router.py`. | Confirmada pelo codigo |
 | Ocorrencias | Registro/consulta de ocorrencias, base legal/regimento, PDF e pre-registros. | `database.py`: `ocorrencias`; `modules/occurrences/*`; `services/ocorrencia_pdf_service.py`; `tests/test_ocorrencias_router.py`. | Confirmada pelo codigo |

@@ -9,11 +9,11 @@
     --scheduler-text: var(--text-main);
     --scheduler-muted: var(--text-muted);
     --scheduler-border: var(--line);
-    --scheduler-focus-ring: rgba(15, 118, 110, 0.28);
+    --scheduler-focus-ring: var(--brand-outline);
     --scheduler-transition: var(--motion-fast);
     display: block;
     max-width: 1080px;
-    padding: 28px 24px 48px;
+    padding: 24px 24px 40px;
     color: var(--scheduler-text);
 }
 
@@ -38,7 +38,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     align-items: flex-start;
     justify-content: space-between;
     gap: 24px;
-    padding: 28px 32px 20px;
+    padding: 22px 24px 16px;
     border: 0;
     border-bottom: 1px solid var(--scheduler-border);
     border-radius: 0;
@@ -50,71 +50,9 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     gap: 4px;
 }
 
-.scheduler-flow-page .scheduler-page-header h1 {
-    margin: 0;
-    font-size: 26px;
-    line-height: 1.15;
-    letter-spacing: -0.025em;
-    color: var(--scheduler-text);
-}
-
-.scheduler-flow-page .scheduler-page-lead {
-    margin: 0;
-    font-size: 14px;
-    color: var(--scheduler-muted);
-}
-
-.scheduler-header-calendar-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    width: auto;
-    min-height: 44px;
-    padding: 0 14px;
-    border-color: var(--scheduler-primary);
-    border-radius: 8px;
-    color: var(--scheduler-primary-strong);
-    transition:
-        border-color var(--scheduler-transition),
-        background-color var(--scheduler-transition),
-        color var(--scheduler-transition);
-}
-
-.scheduler-header-calendar-btn:hover:not(:disabled) {
-    border-color: var(--scheduler-primary-strong);
-    background: var(--scheduler-primary-soft);
-}
-
-.scheduler-calendar-icon {
-    position: relative;
-    width: 15px;
-    height: 14px;
-    flex: 0 0 15px;
-    border: 1.5px solid currentColor;
-    border-radius: 3px;
-}
-
-.scheduler-calendar-icon::before {
-    content: "";
-    position: absolute;
-    inset: 3px -1.5px auto;
-    border-top: 1.5px solid currentColor;
-}
-
-.scheduler-calendar-icon::after {
-    content: "";
-    position: absolute;
-    top: -3px;
-    left: 3px;
-    width: 6px;
-    height: 4px;
-    border-right: 1.5px solid currentColor;
-    border-left: 1.5px solid currentColor;
-}
-
 .scheduler-flow-stepper {
     overflow-x: auto;
-    padding: 18px 32px;
+    padding: 14px 24px;
     border-bottom: 1px solid var(--scheduler-border);
     scrollbar-width: none;
 }
@@ -206,7 +144,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     grid-template-columns: minmax(0, 1fr) 1px minmax(280px, 0.9fr);
     gap: 28px;
     align-items: center;
-    padding: 16px 32px;
+    padding: 14px 24px;
     border-left: 0;
     background: var(--scheduler-primary-soft);
 }
@@ -305,7 +243,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-flow-surface {
     position: relative;
-    padding: 28px 32px 32px;
+    padding: 24px;
     border: 0;
     border-radius: 0;
     background: var(--scheduler-surface);
@@ -318,7 +256,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 .scheduler-flow-step,
 .scheduler-resource-stage-card,
 .scheduler-lesson-stage {
-    gap: 22px;
+    gap: 18px;
 }
 
 #schedulerLessonStage > .scheduler-flow-heading {
@@ -344,10 +282,10 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-flow-page .scheduler-resource-stage-grid {
     display: flex;
-    gap: 10px;
+    gap: 8px;
     overflow-x: auto;
     overflow-y: hidden;
-    padding: 3px 2px 10px;
+    padding: 2px 1px 7px;
     scrollbar-width: none;
     scroll-snap-type: x proximity;
     -webkit-overflow-scrolling: touch;
@@ -361,13 +299,13 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-flow-page .scheduler-resource-stage-button {
     display: grid;
-    grid-template-columns: 44px minmax(0, 1fr);
+    grid-template-columns: 36px minmax(0, 1fr);
     align-items: center;
     gap: 10px;
-    flex: 0 0 196px;
-    width: 196px;
-    min-height: 84px;
-    padding: 11px;
+    flex: 0 0 176px;
+    width: 176px;
+    min-height: 68px;
+    padding: 9px 10px;
     border: 1px solid var(--scheduler-border);
     border-radius: var(--radius-md);
     background: var(--scheduler-surface);
@@ -391,10 +329,10 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-flow-page .scheduler-resource-stage-icon {
     display: grid;
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     place-items: center;
-    border-radius: 10px;
+    border-radius: var(--radius-sm);
     background-color: var(--scheduler-primary-soft);
     color: var(--scheduler-primary-strong);
     transition:
@@ -403,7 +341,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 }
 
 .scheduler-flow-page .scheduler-resource-stage-icon .bi {
-    font-size: 23px;
+    font-size: 19px;
     line-height: 1;
 }
 
@@ -426,7 +364,6 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     white-space: nowrap;
 }
 
-.scheduler-flow-page .scheduler-resource-stage-kicker,
 .scheduler-flow-page .scheduler-resource-stage-capacity {
     font-size: 11px;
     line-height: 1.25;
@@ -434,9 +371,9 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-day-overview {
     display: grid;
-    gap: 14px;
-    margin-top: 10px;
-    padding-top: 24px;
+    gap: 12px;
+    margin-top: 6px;
+    padding-top: 20px;
     border-top: 1px solid var(--scheduler-border);
 }
 
@@ -585,12 +522,25 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-day-overview-period-title {
     width: fit-content;
-    border-radius: 999px;
-    background: var(--scheduler-primary-soft);
-    padding: 5px 9px;
-    color: var(--scheduler-primary-strong);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0;
+    color: var(--scheduler-text);
     font-size: 12px;
     line-height: 1.2;
+}
+
+.scheduler-day-overview-period-title i {
+    font-size: 15px;
+}
+
+.scheduler-day-overview-period[data-period="matutino"] .scheduler-day-overview-period-title i {
+    color: var(--warning);
+}
+
+.scheduler-day-overview-period[data-period="vespertino"] .scheduler-day-overview-period-title i {
+    color: var(--info);
 }
 
 .scheduler-day-overview-rows {
@@ -602,8 +552,8 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-day-overview-row {
     display: block;
-    min-height: 58px;
-    padding: 10px 14px;
+    min-height: 52px;
+    padding: 8px 12px;
 }
 
 .scheduler-day-overview-row + .scheduler-day-overview-row {
@@ -642,49 +592,6 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     color: var(--scheduler-primary-strong);
 }
 
-.scheduler-mobile-resource-hero {
-    position: relative;
-    display: block;
-    overflow: hidden;
-    min-height: 180px;
-    border-radius: 12px;
-    background: var(--scheduler-primary-soft);
-}
-
-.scheduler-mobile-resource-cover {
-    position: absolute;
-    inset: 0;
-    background:
-        linear-gradient(145deg, rgba(15, 118, 110, 0.16), rgba(15, 118, 110, 0.03)),
-        var(--scheduler-primary-soft);
-    background-position: center;
-    background-size: cover;
-}
-
-.scheduler-mobile-resource-overlay {
-    position: absolute;
-    inset: auto 0 0;
-    display: flex;
-    align-items: end;
-    justify-content: space-between;
-    gap: 16px;
-    padding: 48px 16px 16px;
-    background: linear-gradient(to top, rgba(10, 22, 21, 0.78), transparent);
-    color: #ffffff;
-}
-
-.scheduler-mobile-resource-overlay strong {
-    max-width: 70%;
-    font-size: 17px;
-}
-
-.scheduler-mobile-resource-overlay span {
-    max-width: 30%;
-    font-size: 13px;
-    font-weight: 700;
-    text-align: right;
-}
-
 .scheduler-week-section,
 .scheduler-day-lessons-section,
 .scheduler-repeat-section,
@@ -695,35 +602,50 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 }
 
 .scheduler-week-section {
-    padding-bottom: 22px;
+    display: grid;
+    gap: 14px;
+    padding: 16px;
     border-bottom: 1px solid var(--scheduler-border);
+    border-radius: 10px;
+    background: var(--scheduler-canvas);
 }
 
 .scheduler-flow-page .scheduler-week-header {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    align-items: end;
+    align-items: center;
     gap: 20px;
+}
+
+.scheduler-week-heading {
+    display: grid;
+    gap: 4px;
 }
 
 .scheduler-flow-page .scheduler-week-header h3,
 .scheduler-day-lessons-section h3,
 .scheduler-summary-section h3 {
-    font-size: 15px;
+    font-size: 16px;
 }
 
 .scheduler-flow-page .scheduler-week-nav {
     display: grid;
-    grid-template-columns: 40px minmax(190px, auto) 40px auto;
+    grid-template-columns: 44px minmax(190px, auto) 44px auto;
     gap: 6px;
+    padding: 5px;
+    border: 1px solid var(--scheduler-border);
+    border-radius: 10px;
+    background: var(--scheduler-surface);
 }
 
 .scheduler-flow-page .scheduler-week-nav button {
-    min-width: 40px;
-    min-height: 38px;
-    height: 38px;
+    min-width: 44px;
+    min-height: 44px;
+    height: 44px;
     padding: 0 10px;
-    border-radius: 6px;
+    border-color: transparent;
+    border-radius: 8px;
+    background: transparent;
     transition:
         border-color var(--scheduler-transition),
         background-color var(--scheduler-transition),
@@ -733,19 +655,28 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 .scheduler-flow-page .scheduler-week-nav h3 {
     align-self: center;
     min-width: 0;
-    font-size: 13px;
+    font-size: 14px;
+    text-align: center;
 }
 
 .scheduler-flow-page .scheduler-week-strip {
-    gap: 6px;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 8px;
 }
 
 .scheduler-flow-page .scheduler-week-day {
-    min-height: 60px;
-    padding: 8px 10px;
-    border-color: transparent;
-    border-radius: 6px;
-    background: transparent;
+    min-height: 78px;
+    padding: 9px 6px;
+    display: grid;
+    place-items: center;
+    align-content: center;
+    gap: 3px;
+    border-color: var(--scheduler-border);
+    border-radius: 9px;
+    background: var(--scheduler-surface);
+    color: var(--scheduler-text);
+    text-align: center;
     transition:
         border-color var(--scheduler-transition),
         background-color var(--scheduler-transition),
@@ -753,23 +684,44 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 }
 
 .scheduler-flow-page .scheduler-week-day:hover {
-    border-color: var(--scheduler-border);
-    background: var(--scheduler-canvas);
+    border-color: var(--scheduler-primary);
+    background: var(--scheduler-primary-soft);
 }
 
 .scheduler-flow-page .scheduler-week-day.is-selected {
     border-color: var(--scheduler-primary);
-    background: var(--scheduler-primary);
-    color: #ffffff;
-    box-shadow: none;
+    background: var(--scheduler-primary-soft);
+    color: var(--scheduler-primary-strong);
+    box-shadow: inset 0 0 0 1px var(--scheduler-primary);
 }
 
 .scheduler-flow-page .scheduler-week-day.is-selected span {
-    color: #ffffff;
+    color: var(--scheduler-primary-strong);
+}
+
+.scheduler-flow-page .scheduler-week-day.is-selected .scheduler-week-day-number,
+.scheduler-flow-page .scheduler-week-day.is-selected .scheduler-week-day-state {
+    color: var(--scheduler-primary-strong);
+}
+
+.scheduler-flow-page .scheduler-week-day:focus-visible {
+    outline: 3px solid var(--scheduler-focus-ring);
+    outline-offset: 2px;
+}
+
+.scheduler-flow-page .scheduler-week-day.is-today:not(.is-selected) .scheduler-week-day-number {
+    color: var(--scheduler-primary-strong);
 }
 
 .scheduler-flow-page .scheduler-week-day-number {
-    font-size: 15px;
+    font-size: 16px;
+}
+
+.scheduler-flow-page .scheduler-week-day-state {
+    color: var(--scheduler-primary-strong);
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.1;
 }
 
 .scheduler-day-lessons-header {
@@ -1053,24 +1005,12 @@ html[data-scheduler-current-step] .scheduler-flow-page {
         gap: 12px;
     }
 
-    .scheduler-flow-page .scheduler-page-header h1 {
-        font-size: 20px;
-    }
-
     .scheduler-flow-page .scheduler-page-lead {
         display: none;
     }
 
     html[data-scheduler-current-step="2"] .scheduler-flow-page .scheduler-page-header {
         display: none;
-    }
-
-    .scheduler-header-calendar-btn {
-        min-height: 44px;
-        width: 100%;
-        padding: 0 10px;
-        font-size: 13px;
-        justify-content: center;
     }
 
     .scheduler-flow-stepper {
@@ -1081,7 +1021,7 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     .scheduler-flow-stepper ol {
         min-width: 0;
         width: 100%;
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-template-columns: repeat(5, minmax(0, 1fr));
         gap: 6px;
     }
 
@@ -1133,32 +1073,32 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     }
 
     .scheduler-flow-page .scheduler-resource-stage-grid {
-        gap: 12px;
+        gap: 8px;
         scroll-snap-type: x mandatory;
         padding-bottom: 8px;
     }
 
     .scheduler-flow-page .scheduler-resource-stage-grid .scheduler-resource-stage-button {
-        flex-basis: min(210px, calc(100vw - 64px));
-        width: min(210px, calc(100vw - 64px));
-        min-width: min(210px, calc(100vw - 64px));
-        min-height: 88px;
+        flex-basis: min(184px, calc(100vw - 64px));
+        width: min(184px, calc(100vw - 64px));
+        min-width: min(184px, calc(100vw - 64px));
+        min-height: 72px;
         scroll-snap-align: start;
     }
 
     .scheduler-flow-page .scheduler-resource-stage-icon {
-        width: 44px;
-        height: 44px;
+        width: 36px;
+        height: 36px;
     }
 
     .scheduler-flow-page .scheduler-resource-stage-icon .bi {
-        font-size: 23px;
+        font-size: 19px;
     }
 
     .scheduler-day-overview {
-        gap: 16px;
+        gap: 12px;
         margin-top: 4px;
-        padding-top: 20px;
+        padding-top: 16px;
     }
 
     .scheduler-day-overview-header h3 {
@@ -1205,28 +1145,11 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     }
 
     .scheduler-flow-page .scheduler-week-header > div:first-child {
-        display: none;
-    }
-
-    .scheduler-mobile-resource-hero {
-        min-height: 168px;
-        border-radius: var(--radius-md);
-    }
-
-    .scheduler-mobile-resource-overlay strong {
-        max-width: 65%;
-        font-size: 15px;
-    }
-
-    .scheduler-mobile-resource-overlay span {
-        max-width: 35%;
-        font-size: 12px;
-        font-weight: 700;
-        text-align: right;
+        display: grid;
     }
 
     .scheduler-flow-page .scheduler-week-nav {
-        grid-template-columns: 40px minmax(0, 1fr) 40px;
+        grid-template-columns: 44px minmax(0, 1fr) 44px;
     }
 
     .scheduler-flow-page #btnSemanaHoje {
@@ -1238,9 +1161,9 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     }
 
     .scheduler-flow-page .scheduler-week-day {
-        min-width: 76px;
-        flex: 0 0 76px;
-        min-height: 64px;
+        min-width: 84px;
+        flex: 0 0 84px;
+        min-height: 74px;
     }
 
     .scheduler-lesson-list-columns {

@@ -136,6 +136,13 @@ class ApcRouterTest(unittest.TestCase):
                     disciplinas=["Matematica"],
                 )
             )
+            coordenador_id = int(
+                database.criar_coordenador(
+                    nome="Marvely",
+                    email="marvely@escola.local",
+                    senha_hash=database.hash_senha("Senha@123"),
+                )
+            )
 
             database.criar_ou_atualizar_turma_disciplina(
                 turma_id=turma_id,
@@ -272,9 +279,12 @@ class ApcRouterTest(unittest.TestCase):
                     status="AJUSTE_SOLICITADO",
                     mensagem="Inclua a identificacao da turma na primeira pagina.",
                 ),
-                usuario=self._usuario_coord(),
+                usuario=self._usuario_coord(coordenador_id),
             )
             self.assertEqual(revisado["review_status"], "AJUSTE_SOLICITADO")
+            self.assertEqual(revisado["reviewed_by_name"], "Marvely")
+            self.assertEqual(revisado["reviewed_by_cargo"], "COORDENADOR")
+            self.assertTrue(revisado["reviewed_at"])
             self.assertEqual(
                 revisado["review_message"],
                 "Inclua a identificacao da turma na primeira pagina.",

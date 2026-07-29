@@ -398,6 +398,7 @@ async function filtrarOcorrencias(event) {
     event.preventDefault();
     try {
         await carregarOcorrencias();
+        alternarFiltrosOcorrencias(false);
     } catch (err) {
         setMensagemOcorrencias(err.message, true);
     }
@@ -407,6 +408,7 @@ async function limparFiltrosOcorrencias() {
     el("formFiltrosOcorrencias").reset();
     try {
         await carregarOcorrencias();
+        alternarFiltrosOcorrencias(false);
     } catch (err) {
         setMensagemOcorrencias(err.message, true);
     }

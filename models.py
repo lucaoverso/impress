@@ -1,6 +1,9 @@
 from typing import Literal
 from pydantic import BaseModel, Field
 
+from modules.admin.resources.schemas import RecursoCreateIn, RecursoStatusIn, RecursoUpdateIn
+from modules.admin.classes.schemas import TurmaCreateIn, TurmaUpdateIn
+
 
 class JobCreate(BaseModel):
     copias: int
@@ -818,22 +821,8 @@ class ApcEnvioOut(BaseModel):
     review_message: str = ""
     reviewed_by_user_id: int | None = None
     reviewed_by_name: str = ""
+    reviewed_by_cargo: str = ""
     reviewed_at: str = ""
-
-
-class TurmaCreateIn(BaseModel):
-    nome: str
-    turno: str
-    aula_inicial: int | None = None
-    aula_final: int | None = None
-    quantidade_estudantes: int = 0
-
-
-class TurmaUpdateIn(BaseModel):
-    turno: str
-    aula_inicial: int | None = None
-    aula_final: int | None = None
-    quantidade_estudantes: int
 
 
 class DisciplinaCreateIn(BaseModel):
@@ -847,26 +836,6 @@ class DisciplinaUpdateIn(BaseModel):
     aulas_semanais: int
     tem_apc: bool = False
     tem_prova_bimestral: bool = False
-
-
-class RecursoCreateIn(BaseModel):
-    nome: str
-    tipo: str
-    descricao: str = ""
-    quantidade_itens: int = 1
-    imagem_capa: str = ""
-
-
-class RecursoUpdateIn(BaseModel):
-    nome: str
-    tipo: str
-    descricao: str = ""
-    quantidade_itens: int = 1
-    imagem_capa: str = ""
-
-
-class RecursoStatusIn(BaseModel):
-    ativo: bool
 
 
 class RegrasCotaIn(BaseModel):

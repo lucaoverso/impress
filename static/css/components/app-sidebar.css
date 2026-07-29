@@ -1,14 +1,40 @@
 :root {
     --app-sidebar-width: 252px;
-    --app-navbar-height: 74px;
+    --app-navbar-height: 81px;
 }
 
 body.has-app-sidebar > main {
-    width: auto;
+    width: min(
+        var(--app-main-max-width, var(--page-width)),
+        calc(100vw - var(--app-sidebar-width) - 24px)
+    );
     max-width: calc(100vw - var(--app-sidebar-width) - 24px);
     box-sizing: border-box;
     margin-left: calc(var(--app-sidebar-width) + 24px);
     margin-right: auto;
+}
+
+body.has-app-sidebar > main.page-shell {
+    gap: var(--flow-gap);
+    padding: var(--page-padding-start) var(--page-gutter) var(--page-padding-end);
+}
+
+body.has-app-sidebar > main.page-shell h1.page-title {
+    font-size: 2.125rem;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+body.has-app-sidebar > main.page-shell--wide {
+    --app-main-max-width: var(--page-width-wide);
+}
+
+body.has-app-sidebar > main.page-shell--medium {
+    --app-main-max-width: 1180px;
+}
+
+body.has-app-sidebar > main.page-shell--compact {
+    --app-main-max-width: var(--page-width-compact);
 }
 
 .app-sidebar {
@@ -16,21 +42,21 @@ body.has-app-sidebar > main {
     top: var(--app-navbar-height);
     bottom: 0;
     left: 0;
-    z-index: 12;
+    z-index: var(--z-sidebar);
     width: var(--app-sidebar-width);
-    background: var(--surface-0, #fff);
-    border-right: 1px solid var(--line, #d8dee8);
+    background: var(--surface-sidebar);
+    border-right: 1px solid var(--line);
 }
 
 .app-sidebar-panel {
     height: 100%;
     overflow: hidden;
-    background: var(--surface-0, #fff);
+    background: var(--surface-sidebar);
 }
 
-.app-sidebar-header { padding: 18px 18px 14px; border-bottom: 1px solid var(--line, #d8dee8); }
+.app-sidebar-header { padding: 18px 18px 14px; border-bottom: 1px solid var(--line); }
 .app-sidebar-header > * { display: block; }
-.app-sidebar-header small { margin-bottom: 3px; color: var(--text-soft, #4b5563); font-size: 12px; }
+.app-sidebar-header small { margin-bottom: 3px; color: var(--text-muted); font-size: 12px; }
 .app-sidebar-header strong { font-size: 18px; }
 .app-sidebar nav { display: grid; gap: 4px; padding: 8px; }
 
@@ -44,42 +70,48 @@ body.has-app-sidebar > main {
     border: 0;
     border-radius: 10px;
     background: transparent;
-    color: var(--text-main, #1f2a37);
+    color: var(--text-main);
     font: inherit;
     font-weight: 700;
     text-align: left;
     text-decoration: none;
     cursor: pointer;
 }
-.app-sidebar-link > i { width: 20px; color: var(--text-soft, #4b5563); font-size: 17px; text-align: center; }
-.app-sidebar-link:hover { background: var(--surface-muted, #eef3f8); }
-.app-sidebar-link.is-active { background: var(--brand-soft, #d6f2ef); color: var(--brand-strong, #0b5b55); }
-.app-sidebar-link.is-active > i { color: var(--brand, #0f766e); }
+.app-sidebar-link[hidden] { display: none; }
+.app-sidebar-link > i { width: 20px; color: var(--text-muted); font-size: 17px; text-align: center; }
+.app-sidebar-link:hover { background: var(--surface-1); }
+.app-sidebar-link.is-active { background: var(--brand-soft); color: var(--brand-strong); }
+.app-sidebar-link.is-active > i { color: var(--brand); }
 .app-sidebar-link:focus-visible,
 .app-sidebar-mobile-toggle:focus-visible {
-    outline: 3px solid color-mix(in srgb, var(--brand, #0f766e) 28%, transparent);
+    outline: 3px solid var(--brand-outline);
     outline-offset: 2px;
 }
-.app-sidebar-link.is-disabled { color: #6b7280; cursor: not-allowed; }
+.app-sidebar-link.is-disabled { color: var(--text-disabled); cursor: not-allowed; }
 .app-sidebar-link.is-disabled:hover { background: transparent; }
-.app-sidebar-link.is-disabled small { display: block; margin-top: 2px; color: #6b7280; font-size: 11px; font-weight: 600; }
+.app-sidebar-link.is-disabled small { display: block; margin-top: 2px; color: var(--text-disabled); font-size: 11px; font-weight: 600; }
 .app-sidebar-mobile-toggle { display: none; }
 .app-sidebar-replaced { display: none !important; }
 body.has-app-sidebar .admin-section-layout { display: block; }
 body.has-app-sidebar .admin-section-content { min-width: 0; }
 
 @media (max-width: 900px) {
-    body.has-app-sidebar > main { margin-left: auto; margin-right: auto; }
+    body.has-app-sidebar > main {
+        width: 100%;
+        max-width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+    }
     .app-sidebar {
         position: relative;
         top: auto;
         bottom: auto;
         left: auto;
-        z-index: 13;
+        z-index: var(--z-sidebar-mobile);
         width: auto;
         margin: 0;
         border-right: 0;
-        border-bottom: 1px solid var(--line, #d8dee8);
+        border-bottom: 1px solid var(--line);
     }
     .app-sidebar-mobile-toggle {
         width: 100%;
@@ -88,15 +120,15 @@ body.has-app-sidebar .admin-section-content { min-width: 0; }
         align-items: center;
         justify-content: space-between;
         padding: 8px 14px;
-        border: 1px solid var(--line, #d8dee8);
+        border: 1px solid var(--line);
         border: 0;
         border-radius: 0;
-        background: var(--surface-0, #fff);
-        color: var(--text-main, #1f2a37);
+        background: var(--surface-sidebar);
+        color: var(--text-main);
         text-align: left;
     }
     .app-sidebar-mobile-toggle span > * { display: block; }
-    .app-sidebar-mobile-toggle small { margin-bottom: 2px; color: var(--text-soft, #4b5563); }
+    .app-sidebar-mobile-toggle small { margin-bottom: 2px; color: var(--text-muted); }
     .app-sidebar-mobile-toggle i { transition: transform 180ms ease-out; }
     .app-sidebar-mobile-toggle[aria-expanded="true"] i { transform: rotate(180deg); }
     .app-sidebar-panel {
@@ -105,10 +137,19 @@ body.has-app-sidebar .admin-section-content { min-width: 0; }
         left: 0;
         right: 0;
         height: auto;
-        border-bottom: 1px solid var(--line, #d8dee8);
-        box-shadow: 0 16px 40px rgba(15, 23, 42, .14);
+        border-bottom: 1px solid var(--line);
+        box-shadow: var(--shadow-floating);
     }
     .app-sidebar:not(.is-open) .app-sidebar-panel { display: none; }
+}
+
+@media (max-width: 760px) {
+    :root { --app-navbar-height: 70px; }
+
+    body.has-app-sidebar > main.page-shell h1.page-title {
+        font-size: 1.5rem;
+        line-height: 1.15;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

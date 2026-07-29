@@ -12,12 +12,6 @@ const token = garantirToken();
 const headers = criarHeadersAuth(token);
 const headersJson = criarHeadersJsonAuth(token);
 
-const nomesMeses = [
-    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
-];
-
-const nomesDiasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
 const nomesDiasSemanaAgenda = ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"];
 
 const OPCAO_TURNOS_FALLBACK = [
@@ -48,15 +42,6 @@ let dataSelecionada = paraIso(new Date());
 let semanaVisivelInicio = null;
 let reservaDetalheAtual = null;
 let reservaCancelamentoPendenteId = 0;
-const PREFERENCIAS_ORDENACAO_STORAGE_KEY = "agendamento_sort_preferences_v1";
-const CAMPOS_ORDENACAO_VALIDOS = {
-    dia: new Set(["aula", "turno", "recurso"]),
-    minhas: new Set(["data", "aula", "turno", "recurso"])
-};
-const configuracaoOrdenacao = {
-    dia: { campo: "aula", direcao: "asc", agruparPorRecurso: false },
-    minhas: { campo: "data", direcao: "asc", agruparPorRecurso: false }
-};
 const configuracaoAgendaDia = {
     filtroRecursoId: 0,
     agruparPorRecurso: false
@@ -197,6 +182,18 @@ function aulaLabel(aula) {
         return aulaConfig.label_curta;
     }
     return `${aula}ª aula`;
+}
+
+function aulaLabelComHorario(aula, faixaGlobal = aula) {
+    const numeroAula = Number(aula || 0);
+    const rotulo = numeroAula > 0 ? `${numeroAula}ª aula` : aulaLabel(aula);
+    const aulaConfig = obterAulaGlobalPorNumero(faixaGlobal);
+    const horarioInicio = String(aulaConfig?.horario_inicio || "").trim();
+    const horarioFim = String(aulaConfig?.horario_fim || "").trim();
+
+    return horarioInicio && horarioFim
+        ? `${rotulo}: ${horarioInicio} - ${horarioFim}`
+        : rotulo;
 }
 
 function aulaExibicaoPorFaixa(faixaGlobal) {
@@ -418,17 +415,6 @@ function sincronizarFiltroRecursoAgendaComSelecao(recursoIdPreferencial = 0) {
     configuracaoAgendaDia.filtroRecursoId = idsSelecionados[idsSelecionados.length - 1];
 }
 
-function filtrarReservasPorRecursoEmFoco(listaReservas = []) {
-    const filtroRecursoId = Number(configuracaoAgendaDia.filtroRecursoId || 0);
-    if (filtroRecursoId <= 0) {
-        return Array.isArray(listaReservas) ? listaReservas : [];
-    }
-
-    return (Array.isArray(listaReservas) ? listaReservas : []).filter(
-        (reserva) => Number(reserva?.recurso_id || 0) === filtroRecursoId
-    );
-}
-
 function obterResumoCapacidadeRecurso(recurso = {}) {
     const quantidadeItens = Math.max(Number(recurso?.quantidade_itens || 0), 0);
     if (quantidadeItens <= 0) {
@@ -561,6 +547,11 @@ function renderRecursosEtapaInicial() {
         const iconWrap = document.createElement("span");
         iconWrap.className = "scheduler-resource-stage-icon";
         iconWrap.setAttribute("aria-hidden", "true");
+        const imagemCapa = String(recurso.imagem_capa || "").trim();
+        if (imagemCapa) {
+            iconWrap.style.backgroundImage = `url("${imagemCapa.replace(/["\\]/g, "")}")`;
+            iconWrap.classList.add("has-image");
+        }
 
         const icon = document.createElement("i");
         icon.className = `bi ${obterClasseIconeRecurso(recurso)}`;
@@ -570,24 +561,30 @@ function renderRecursosEtapaInicial() {
         const copy = document.createElement("div");
         copy.className = "scheduler-resource-stage-copy";
 
-        const kicker = document.createElement("p");
-        kicker.className = "scheduler-resource-stage-kicker";
-        kicker.innerText = textoPadraoDetalheReserva(recurso?.tipo, "Recurso");
-
         const titulo = document.createElement("strong");
         titulo.className = "scheduler-resource-stage-title";
         titulo.innerText = textoPadraoDetalheReserva(recurso?.nome, "Recurso sem nome");
 
-       
+        const tipo = document.createElement("span");
+        tipo.className = "scheduler-resource-stage-type";
+        tipo.innerText = textoPadraoDetalheReserva(recurso?.tipo, "Equipamento");
 
         const capacidade = document.createElement("p");
         capacidade.className = "scheduler-resource-stage-capacity";
         capacidade.innerText = obterResumoCapacidadeRecurso(recurso);
 
-        copy.appendChild(kicker);
         copy.appendChild(titulo);
+        copy.appendChild(tipo);
         copy.appendChild(capacidade);
         botao.appendChild(copy);
+
+        const check = document.createElement("span");
+        check.className = "scheduler-resource-stage-check";
+        check.setAttribute("aria-hidden", "true");
+        const checkIcon = document.createElement("i");
+        checkIcon.className = "bi bi-check-lg";
+        check.appendChild(checkIcon);
+        botao.appendChild(check);
 
         botao.addEventListener("click", () => alternarSelecaoRecursoAgendamento(recurso.id));
         container.appendChild(botao);
@@ -601,24 +598,51 @@ function renderRecursosEtapaInicial() {
     registrarCarrosselRecursosEtapaInicial();
 
     if (recursosSelecionadosAgendamento.size === 0) {
-        resumo.innerText = "Escolha um recurso para consultar sua agenda por aula.";
+        resumo.innerText = "Escolha ao menos um recurso para consultar a agenda por aula.";
         return;
     }
 
     const resumoRecursos = formatarResumoRecursosSelecionados();
-    resumo.innerText = `Recurso selecionado: ${resumoRecursos}.`;
+    const quantidade = recursosSelecionadosAgendamento.size;
+    resumo.innerText = quantidade === 1
+        ? `1 recurso selecionado: ${resumoRecursos}.`
+        : `${quantidade} recursos selecionados: ${resumoRecursos}.`;
 }
 
 function atualizarEtapaPrimariaAgendamento(state = null) {
     const estado = state || obterEstadoWizardAgendamento();
+    const layout = document.querySelector(".scheduler-booking-layout");
+    const primarySlot = el("schedulerPrimarySlot");
+    const secondarySlot = el("schedulerSecondarySlot");
+    const resourceSurface = el("schedulerResourceSurface");
     const etapaRecursos = el("etapaAgendamentoRecursos");
     const etapaAula = el("schedulerLessonStage");
     const etapaRepeticao = el("etapaAgendamentoRepeticao");
+    const agendaOverview = el("schedulerAgendaOverview");
+    const sideWizard = el("schedulerSideWizard");
+    const wizardAtivo = Number(estado?.currentStep || 1) > 1;
 
     renderRecursosEtapaInicial();
 
+    layout?.classList.toggle("is-flow-active", wizardAtivo);
+    if (wizardAtivo) {
+        if (primarySlot && sideWizard && sideWizard.parentElement !== primarySlot) {
+            primarySlot.appendChild(sideWizard);
+        }
+        if (secondarySlot && resourceSurface && resourceSurface.parentElement !== secondarySlot) {
+            secondarySlot.appendChild(resourceSurface);
+        }
+    } else {
+        if (primarySlot && resourceSurface && resourceSurface.parentElement !== primarySlot) {
+            primarySlot.appendChild(resourceSurface);
+        }
+        if (secondarySlot && sideWizard && sideWizard.parentElement !== secondarySlot) {
+            secondarySlot.appendChild(sideWizard);
+        }
+    }
+
     if (etapaRecursos) {
-        etapaRecursos.hidden = estado?.currentStep !== 1;
+        etapaRecursos.hidden = false;
     }
     if (etapaAula) {
         etapaAula.hidden = estado?.currentStep !== 2;
@@ -626,41 +650,23 @@ function atualizarEtapaPrimariaAgendamento(state = null) {
     if (etapaRepeticao) {
         etapaRepeticao.hidden = !estado?.selectionReady || estado?.currentStep !== 3;
     }
+    if (agendaOverview) {
+        agendaOverview.hidden = wizardAtivo;
+    }
+    if (sideWizard) {
+        sideWizard.hidden = !wizardAtivo;
+    }
 }
 
 function atualizarContextoRecursoAgendamento(state) {
-    const recurso = obterRecursosSelecionadosAgendamento()[0] || null;
-    const mobileCover = el("schedulerMobileResourceCover");
-    const mobileName = el("schedulerMobileResourceName");
-    const mobileAvailability = el("schedulerMobileResourceAvailability");
-    const imagem = String(recurso?.imagem_capa || "").trim();
+    const recursosSelecionados = obterRecursosSelecionadosAgendamento();
+    const recurso = recursosSelecionados[0] || null;
     const tituloEtapa = el("schedulerLessonStageTitle");
     const copyEtapa = el("schedulerLessonStageCopy");
-    if (mobileCover) {
-        mobileCover.style.backgroundImage = imagem ? `url("${imagem}")` : "";
-        mobileCover.classList.toggle("has-image", Boolean(imagem));
-    }
-    if (mobileName) {
-        const dataLocal = criarDataLocalPorIso(dataSelecionada);
-        const diaSemana = dataLocal ? formatarDiaSemanaAgenda(dataLocal) : "";
-        mobileName.innerText = [paraDataBr(dataSelecionada), diaSemana].filter(Boolean).join(" · ");
-    }
-    if (mobileAvailability) {
-        const aulasDisponiveis = (Array.isArray(aulasProfessorDia) ? aulasProfessorDia : [])
-            .filter((item) => (
-                aulaSuportaRecursosSelecionados(item, recurso ? [recurso] : [])
-                && (
-                    usuarioEhAdmin()
-                    || Number(item.professor_id || 0) === Number(usuarioAtual?.id || 0)
-                )
-            ))
-            .length;
-        mobileAvailability.innerText = aulasDisponiveis === 1
-            ? "1 aula disponível"
-            : `${aulasDisponiveis} aulas disponíveis`;
-    }
     if (tituloEtapa) {
-        tituloEtapa.innerText = recurso?.nome || "Escolha a aula principal";
+        tituloEtapa.innerText = recursosSelecionados.length > 1
+            ? `${recursosSelecionados.length} recursos selecionados`
+            : recurso?.nome || "Escolha a aula principal";
     }
     if (copyEtapa) {
         const total = obterAulasSelecionadasAgendamento().length;
@@ -723,15 +729,6 @@ function somarDiasDataLocal(dataRef, dias) {
     const data = clonarDataLocal(dataRef);
     data.setDate(data.getDate() + Number(dias || 0));
     return data;
-}
-
-function deslocarMesDataLocal(dataRef, meses) {
-    const base = clonarDataLocal(dataRef);
-    const anoDestino = base.getFullYear();
-    const mesDestino = base.getMonth() + Number(meses || 0);
-    const ultimoDiaMesDestino = new Date(anoDestino, mesDestino + 1, 0, 12, 0, 0).getDate();
-    const dia = Math.min(base.getDate(), ultimoDiaMesDestino);
-    return new Date(anoDestino, mesDestino, dia, 12, 0, 0);
 }
 
 function obterInicioSemanaDataLocal(dataRef) {
@@ -956,17 +953,40 @@ function alternarSelecaoRecursoAgendamento(recursoId) {
         return;
     }
 
-    recursosSelecionadosAgendamento.clear();
-    recursosSelecionadosAgendamento.add(id);
-    limparSelecaoAulaAgendamento({ manterFormulario: false, limparRecursos: false });
-    agendamentoWizard.currentStep = 2;
-    sincronizarFiltroRecursoAgendaComSelecao(id);
+    const selecionado = recursosSelecionadosAgendamento.has(id);
+    const primeiraSelecao = recursosSelecionadosAgendamento.size === 0;
+    const aulasSelecionadas = obterAulasSelecionadasAgendamento();
+    const recurso = recursos.find((item) => Number(item.id) === id);
+
+    if (!selecionado && aulasSelecionadas.some((aula) => obterVagasRestantesRecurso(recurso, aula) <= 0)) {
+        setMensagem(`${recurso?.nome || "O recurso"} não está disponível em todas as aulas selecionadas.`, "erro");
+        return;
+    }
+
+    if (selecionado) {
+        recursosSelecionadosAgendamento.delete(id);
+    } else {
+        recursosSelecionadosAgendamento.add(id);
+    }
+
+    setMensagem("");
+    if (recursosSelecionadosAgendamento.size === 0) {
+        limparSelecaoAulaAgendamento({ manterFormulario: false, limparRecursos: false });
+        sincronizarWizardAgendamento({ scroll: true });
+        renderAgendaDiaAulas();
+        return;
+    }
+
+    if (primeiraSelecao) {
+        limparSelecaoAulaAgendamento({ manterFormulario: false, limparRecursos: false });
+        agendamentoWizard.currentStep = 2;
+    }
+
+    sincronizarFiltroRecursoAgendaComSelecao(primeiraSelecao ? id : 0);
     renderRecursosEtapaInicial();
     atualizarOpcoesRecursoPorSelecao();
-    renderCalendario();
-    renderReservasDia();
     renderAgendaDiaAulas();
-    sincronizarWizardAgendamento({ scroll: true });
+    sincronizarWizardAgendamento({ scroll: primeiraSelecao });
 }
 
 function atualizarOpcoesRecursoPorSelecao() {
@@ -1335,14 +1355,17 @@ function animarEtapaAgendamento(card) {
 }
 
 function rolarParaInicioAgendamento() {
-    const anchor = el("schedulerWizardStartAnchor");
-    if (!anchor) {
+    const sideWizard = el("schedulerSideWizard");
+    const target = sideWizard && !sideWizard.hidden
+        ? sideWizard
+        : el("etapaAgendamentoRecursos");
+    if (!target) {
         return;
     }
 
     window.requestAnimationFrame(() => {
-        anchor.scrollIntoView({
-            behavior: "smooth",
+        target.scrollIntoView({
+            behavior: "auto",
             block: "start",
             inline: "nearest"
         });
@@ -1475,13 +1498,15 @@ function atualizarResumoWizardAgendamento(state) {
 }
 
 function atualizarStepperAgendamento(state) {
-    [
-        ["stepperAgendamentoRecursos", 1],
-        ["stepperAgendamentoAula", 2],
-        ["stepperAgendamentoDetalhes", 3],
-        ["stepperAgendamentoResumo", 4],
-        ["stepperAgendamentoRepetir", 5]
-    ].forEach(([id, step]) => {
+    const steps = [
+        ["stepperAgendamentoRecursos", 1, "Recursos"],
+        ["stepperAgendamentoAula", 2, "Aula"],
+        ["stepperAgendamentoDetalhes", 3, "Detalhes"],
+        ["stepperAgendamentoResumo", 4, "Resumo"],
+        ["stepperAgendamentoRepetir", 5, "Repetir"]
+    ];
+
+    steps.forEach(([id, step]) => {
         const item = el(id);
         if (!item) {
             return;
@@ -1500,6 +1525,16 @@ function atualizarStepperAgendamento(state) {
             item.removeAttribute("aria-current");
         }
     });
+
+    const currentStep = steps.find(([, step]) => step === state.currentStep) || steps[0];
+    const progress = el("schedulerStepperProgress");
+    const currentLabel = el("schedulerStepperCurrentLabel");
+    if (progress) {
+        progress.innerText = `Etapa ${currentStep[1]} de ${steps.length}`;
+    }
+    if (currentLabel) {
+        currentLabel.innerText = currentStep[2];
+    }
 }
 
 function renderEtapaAtualAgendamento(state) {
@@ -1681,51 +1716,6 @@ function reservaPodeSerCancelada(reserva) {
     return usuarioEhAdmin() || reserva.usuario_id === usuarioAtual.id;
 }
 
-function salvarPreferenciasOrdenacao() {
-    try {
-        localStorage.setItem(
-            PREFERENCIAS_ORDENACAO_STORAGE_KEY,
-            JSON.stringify(configuracaoOrdenacao)
-        );
-    } catch (_err) {
-        // Persistência local indisponível (quota, privacidade, etc).
-    }
-}
-
-function carregarPreferenciasOrdenacao() {
-    let bruto = "";
-    try {
-        bruto = localStorage.getItem(PREFERENCIAS_ORDENACAO_STORAGE_KEY) || "";
-    } catch (_err) {
-        return;
-    }
-
-    if (!bruto) {
-        return;
-    }
-
-    try {
-        const preferencias = JSON.parse(bruto);
-        ["dia", "minhas"].forEach((alvo) => {
-            const atual = configuracaoOrdenacao[alvo];
-            const salvo = preferencias?.[alvo];
-            if (!atual || !salvo || typeof salvo !== "object") {
-                return;
-            }
-
-            const campoSalvo = String(salvo.campo || "").toLowerCase();
-            if (CAMPOS_ORDENACAO_VALIDOS[alvo]?.has(campoSalvo)) {
-                atual.campo = campoSalvo;
-            }
-
-            atual.direcao = salvo.direcao === "desc" ? "desc" : "asc";
-            atual.agruparPorRecurso = Boolean(salvo.agruparPorRecurso);
-        });
-    } catch (_err) {
-        // Se o payload estiver inválido, mantém padrão.
-    }
-}
-
 function ordemTurno(turnoId) {
     const idTurno = normalizarTurnoId(turnoId);
     if (!idTurno) {
@@ -1779,28 +1769,6 @@ function compararReservas(a, b, campoOrdenacao) {
     }
 
     return Number(a.id || 0) - Number(b.id || 0);
-}
-
-function ordenarReservas(listaReservas, configOrdenacao) {
-    const lista = Array.isArray(listaReservas) ? [...listaReservas] : [];
-    const config = configOrdenacao || {};
-    const campo = String(config.campo || "aula");
-    const direcao = config.direcao === "desc" ? -1 : 1;
-
-    lista.sort((a, b) => compararReservas(a, b, campo) * direcao);
-    return lista;
-}
-
-function agruparReservasPorRecurso(listaReservasOrdenada) {
-    const grupos = new Map();
-    (listaReservasOrdenada || []).forEach((reserva) => {
-        const nomeRecurso = String(reserva?.recurso_nome || "Recurso não informado");
-        if (!grupos.has(nomeRecurso)) {
-            grupos.set(nomeRecurso, []);
-        }
-        grupos.get(nomeRecurso).push(reserva);
-    });
-    return Array.from(grupos.entries());
 }
 
 function renderBotoesFiltroAgendaDia() {
@@ -1876,87 +1844,6 @@ function registrarControlesAgendaDia() {
     atualizarEstadoBotaoAgruparAgendaDia();
 }
 
-function atualizarEstadoControlesOrdenacao(alvo) {
-    const config = configuracaoOrdenacao[alvo];
-    if (!config) {
-        return;
-    }
-
-    const campoAtivo = String(config.campo || "");
-    document
-        .querySelectorAll(`.booking-sort-field[data-sort-target="${alvo}"]`)
-        .forEach((btn) => {
-            btn.classList.toggle("is-active", btn.dataset.sortField === campoAtivo);
-        });
-
-    const btnOrdem = document.querySelector(`.booking-sort-order[data-sort-target="${alvo}"]`);
-    if (btnOrdem) {
-        btnOrdem.innerText = config.direcao === "desc" ? "Último → 1º" : "1º → último";
-    }
-
-    const btnGrupo = document.querySelector(`.booking-sort-group[data-sort-target="${alvo}"]`);
-    if (btnGrupo) {
-        btnGrupo.classList.toggle("is-active", Boolean(config.agruparPorRecurso));
-        btnGrupo.innerText = config.agruparPorRecurso ? "Agrupado por recurso" : "Agrupar por recurso";
-    }
-}
-
-function atualizarListaPorOrdenacao(alvo) {
-    if (alvo === "dia") {
-        renderReservasDia();
-        return;
-    }
-    if (alvo === "minhas") {
-        renderMinhasReservas();
-    }
-}
-
-function registrarControlesOrdenacao() {
-    document.querySelectorAll(".booking-sort-field").forEach((btn) => {
-        btn.addEventListener("click", () => {
-            const alvo = btn.dataset.sortTarget;
-            const campo = btn.dataset.sortField;
-            if (!configuracaoOrdenacao[alvo] || !campo) {
-                return;
-            }
-            configuracaoOrdenacao[alvo].campo = campo;
-            salvarPreferenciasOrdenacao();
-            atualizarEstadoControlesOrdenacao(alvo);
-            atualizarListaPorOrdenacao(alvo);
-        });
-    });
-
-    document.querySelectorAll(".booking-sort-order").forEach((btn) => {
-        btn.addEventListener("click", () => {
-            const alvo = btn.dataset.sortTarget;
-            if (!configuracaoOrdenacao[alvo]) {
-                return;
-            }
-            configuracaoOrdenacao[alvo].direcao =
-                configuracaoOrdenacao[alvo].direcao === "asc" ? "desc" : "asc";
-            salvarPreferenciasOrdenacao();
-            atualizarEstadoControlesOrdenacao(alvo);
-            atualizarListaPorOrdenacao(alvo);
-        });
-    });
-
-    document.querySelectorAll(".booking-sort-group").forEach((btn) => {
-        btn.addEventListener("click", () => {
-            const alvo = btn.dataset.sortTarget;
-            if (!configuracaoOrdenacao[alvo]) {
-                return;
-            }
-            configuracaoOrdenacao[alvo].agruparPorRecurso = !configuracaoOrdenacao[alvo].agruparPorRecurso;
-            salvarPreferenciasOrdenacao();
-            atualizarEstadoControlesOrdenacao(alvo);
-            atualizarListaPorOrdenacao(alvo);
-        });
-    });
-
-    atualizarEstadoControlesOrdenacao("dia");
-    atualizarEstadoControlesOrdenacao("minhas");
-}
-
 async function carregarUsuario() {
     const res = await fetchComAuth("/me", { headers });
     if (!res.ok) {
@@ -2023,6 +1910,12 @@ async function carregarRecursos() {
     }
 
     recursos = await res.json();
+    const recursoInicialId = Number(new URLSearchParams(window.location.search).get("recurso_id") || 0);
+    if (recursoInicialId > 0 && recursos.some((recurso) => Number(recurso.id) === recursoInicialId)) {
+        recursosSelecionadosAgendamento.clear();
+        recursosSelecionadosAgendamento.add(recursoInicialId);
+        agendamentoWizard.currentStep = 2;
+    }
     sincronizarFiltroRecursoAgendaComSelecao();
     renderRecursosEtapaInicial();
     atualizarOpcoesRecursoPorSelecao();
@@ -2564,7 +2457,7 @@ function criarCardAulaAgendaDia(aula, reservasHorario = []) {
 
     const btnSelecionar = document.createElement("button");
     btnSelecionar.type = "button";
-    btnSelecionar.className = "btn-destaque";
+    btnSelecionar.className = "btn-destaque button button--primary";
     btnSelecionar.disabled = !podeSelecionar;
     btnSelecionar.innerText = selecionada ? "Aula selecionada" : "Selecionar aula";
     btnSelecionar.addEventListener("click", (event) => {
@@ -2647,7 +2540,7 @@ function criarAcaoAgendamentoAgendaDia({
 
     const botao = document.createElement("button");
     botao.type = "button";
-    botao.className = "btn-destaque";
+    botao.className = "btn-destaque button button--primary";
     botao.disabled = !podeSelecionar;
     botao.innerText = selecionada ? "Horário escolhido" : "Reservar neste horário";
     botao.addEventListener("click", () => {
@@ -2926,7 +2819,7 @@ function criarTagStatusAgenda({
 function criarBotaoReservarAgenda(aulaPrincipal, { selecionada = false, podeSelecionar = false } = {}) {
     const botao = document.createElement("button");
     botao.type = "button";
-    botao.className = "print-secondary-btn scheduler-outline-action";
+    botao.className = "print-secondary-btn scheduler-outline-action button";
     botao.disabled = !podeSelecionar;
     botao.innerText = selecionada ? "Aula selecionada" : "Escolher aula";
     botao.addEventListener("click", () => {
@@ -2963,7 +2856,7 @@ function criarCardReservaAgendaDia(reservaOuGrupo) {
     titulo.innerText = formatarTituloRecursosGrupo(grupoReservas);
 
     const contexto = document.createElement("p");
-    contexto.className = "scheduler-booking-card-meta";
+    contexto.className = "scheduler-booking-card-meta item-meta";
     contexto.innerText = [
         textoPadraoDetalheReserva(reserva.turma, "Turma não informada"),
         textoPadraoDetalheReserva(`${reserva.professor_nome.split(" ")[0]}`, "Professor não informado")
@@ -2975,11 +2868,11 @@ function criarCardReservaAgendaDia(reservaOuGrupo) {
     card.appendChild(conteudoPrincipal);
 
     const acoes = document.createElement("div");
-    acoes.className = "scheduler-booking-card-actions";
+    acoes.className = "scheduler-booking-card-actions action-group action-group--compact";
 
     const botaoDetalhes = document.createElement("button");
     botaoDetalhes.type = "button";
-    botaoDetalhes.className = "print-secondary-btn scheduler-inline-details-btn";
+    botaoDetalhes.className = "print-secondary-btn scheduler-inline-details-btn button";
     botaoDetalhes.innerText = "Ver detalhes";
     botaoDetalhes.addEventListener("click", () => abrirDetalhesReserva(grupoReservas));
 
@@ -3286,70 +3179,6 @@ function renderAgendaDiaAulas() {
     }
 }
 
-function criarItemReserva(
-    reserva,
-    {
-        permitirCancelar = false,
-        exibirProfessor = true,
-        exibirData = false
-    } = {}
-) {
-    const li = document.createElement("li");
-    li.className = "booking-item";
-
-    const aulaExibicao = numeroAulaReserva(reserva);
-    const titulo = document.createElement("p");
-    titulo.innerText = `${textoPadraoDetalheReserva(reserva.recurso_nome, "Recurso não informado")} | ${aulaLabel(aulaExibicao || reserva.aula)}`;
-    li.appendChild(titulo);
-
-    if (exibirProfessor) {
-        const professor = document.createElement("p");
-        professor.className = "booking-professor";
-        professor.innerText = `Professor(a): ${textoPadraoDetalheReserva(reserva.professor_nome, "Não informado")}`;
-        li.appendChild(professor);
-    }
-
-    const detalheTurma = document.createElement("p");
-    detalheTurma.className = "booking-detail";
-    detalheTurma.innerText = `Turma: ${textoPadraoDetalheReserva(reserva.turma, "Não informada")} | ${nomeTurno(reserva.turno) || "Turno não informado"}`;
-    li.appendChild(detalheTurma);
-
-    const temaAula = String(reserva.tema_aula || "").trim();
-    if (temaAula) {
-        const detalheTema = document.createElement("p");
-        detalheTema.className = "booking-theme";
-        detalheTema.innerText = `Tema: ${temaAula}`;
-        li.appendChild(detalheTema);
-    }
-
-    if (exibirData) {
-        const detalheData = document.createElement("p");
-        detalheData.className = "booking-detail";
-        detalheData.innerText = `Data: ${paraDataBr(reserva.data)}`;
-        li.appendChild(detalheData);
-    }
-
-    const acoes = document.createElement("div");
-    acoes.className = "booking-item-actions";
-
-    const btnDetalhes = document.createElement("button");
-    btnDetalhes.type = "button";
-    btnDetalhes.className = "print-secondary-btn booking-details-btn";
-    btnDetalhes.innerText = "Ver detalhes";
-    btnDetalhes.addEventListener("click", () => abrirDetalhesReserva(reserva));
-    acoes.appendChild(btnDetalhes);
-
-    if (permitirCancelar) {
-        const nota = document.createElement("span");
-        nota.className = "booking-item-action-note";
-        nota.innerText = "Cancelamento disponível nos detalhes.";
-        acoes.appendChild(nota);
-    }
-
-    li.appendChild(acoes);
-    return li;
-}
-
 async function cancelarReserva(idReserva = 0) {
     const id = Number(idReserva || reservaCancelamentoPendenteId || 0);
     if (!id) {
@@ -3374,7 +3203,7 @@ async function cancelarReserva(idReserva = 0) {
     await atualizarTelaAgendamento();
 }
 
-async function selecionarDataAgendamento(dataIso, { fecharCalendarioAoFinal = false } = {}) {
+async function selecionarDataAgendamento(dataIso) {
     const dataTexto = String(dataIso || "").trim();
     if (!dataTexto) {
         return;
@@ -3400,15 +3229,8 @@ async function selecionarDataAgendamento(dataIso, { fecharCalendarioAoFinal = fa
     renderVisaoGeralAgendamentosDia();
     renderVisaoProximosAgendamentos();
     renderSemanaAgendamento();
-    renderCalendario();
-    renderReservasDia();
     renderAgendaDiaAulas();
-    renderMinhasReservas();
     sincronizarWizardAgendamento();
-
-    if (fecharCalendarioAoFinal) {
-        fecharPainelLateralAgendamento("painelCalendarioAgendamento");
-    }
 }
 
 function renderSemanaAgendamento() {
@@ -3434,6 +3256,7 @@ function renderSemanaAgendamento() {
         const botao = document.createElement("button");
         botao.type = "button";
         botao.className = "scheduler-week-day";
+        botao.setAttribute("aria-pressed", dataIso === dataSelecionada ? "true" : "false");
 
         if (dataIso === dataSelecionada) {
             botao.classList.add("is-selected");
@@ -3455,8 +3278,24 @@ function renderSemanaAgendamento() {
             day: "2-digit",
             month: "2-digit"
         });
+
+        const rotuloData = dataDia.toLocaleDateString("pt-BR", {
+            weekday: "long",
+            day: "numeric",
+            month: "long"
+        });
+        botao.setAttribute("aria-label", dataIso === hojeIso ? `${rotuloData}, hoje` : rotuloData);
+
         botao.appendChild(diaSemana);
         botao.appendChild(numero);
+        if (dataIso === hojeIso || dataIso === dataSelecionada) {
+            const estado = document.createElement("small");
+            estado.className = "scheduler-week-day-state";
+            estado.innerText = dataIso === hojeIso
+                ? "Hoje"
+                : "Escolhido";
+            botao.appendChild(estado);
+        }
         botao.addEventListener("click", async () => {
             try {
                 await selecionarDataAgendamento(dataIso);
@@ -3469,218 +3308,6 @@ function renderSemanaAgendamento() {
     }
 }
 
-function renderCalendario() {
-    const ano = mesAtual.getFullYear();
-    const mes = mesAtual.getMonth();
-    if (el("mesAtual")) {
-        el("mesAtual").innerText = `${nomesMeses[mes]} ${ano}`;
-    }
-
-    const grid = el("calendarioGrid");
-    if (!grid) {
-        return;
-    }
-    grid.innerHTML = "";
-
-    nomesDiasSemana.forEach((dia) => {
-        const celula = document.createElement("div");
-        celula.className = "calendar-weekday";
-        celula.innerText = dia;
-        grid.appendChild(celula);
-    });
-
-    const primeiroDiaSemana = new Date(ano, mes, 1).getDay();
-    const totalDias = new Date(ano, mes + 1, 0).getDate();
-
-    for (let i = 0; i < primeiroDiaSemana; i++) {
-        const vazio = document.createElement("div");
-        vazio.className = "calendar-empty";
-        grid.appendChild(vazio);
-    }
-
-    const hojeIso = paraIso(new Date());
-
-    for (let dia = 1; dia <= totalDias; dia++) {
-        const dataIso = paraIso(new Date(ano, mes, dia));
-        const reservasDia = filtrarReservasPorRecursoEmFoco(
-            reservasMes.filter((item) => item.data === dataIso)
-        );
-
-        const btnDia = document.createElement("button");
-        btnDia.type = "button";
-        btnDia.className = "calendar-day";
-        if (dataIso === dataSelecionada) btnDia.classList.add("is-selected");
-        if (dataIso === hojeIso) btnDia.classList.add("is-today");
-
-        const numero = document.createElement("span");
-        numero.className = "calendar-number";
-        numero.innerText = String(dia);
-
-        const resumo = document.createElement("small");
-        resumo.className = "calendar-count";
-        resumo.innerText = reservasDia.length > 0
-            ? `.`
-            : "Livre";
-
-        btnDia.appendChild(numero);
-        btnDia.appendChild(resumo);
-        btnDia.addEventListener("click", async () => {
-            try {
-                await selecionarDataAgendamento(dataIso, { fecharCalendarioAoFinal: true });
-            } catch (err) {
-                setMensagem(err.message || "Não foi possível carregar a data selecionada.", "erro");
-            }
-        });
-
-        grid.appendChild(btnDia);
-    }
-}
-
-function criarItemReserva(
-    reserva,
-    {
-        permitirCancelar = false,
-        exibirProfessor = true,
-        exibirData = false
-    } = {}
-) {
-    const li = document.createElement("li");
-    li.className = "booking-item";
-
-    const aulaExibicao = numeroAulaReserva(reserva);
-    const titulo = document.createElement("p");
-    titulo.innerText = `${reserva.recurso_nome} | ${aulaLabel(aulaExibicao || reserva.aula)}`;
-
-    const professor = document.createElement("p");
-    professor.className = "booking-professor";
-    professor.innerText = `Professor(a): ${reserva.professor_nome || "Não informado"}`;
-
-    const detalheTurma = document.createElement("p");
-    detalheTurma.className = "booking-detail";
-    const turmaTexto = reserva.turma || "Não informada";
-    detalheTurma.innerText = `Turma: ${turmaTexto}`;
-    const periodoTexto = nomeTurno(reserva.turno) || "Turno não informado"; 
-    detalheTurma.innerText += ` | ${periodoTexto}`;
-
-    li.appendChild(titulo);
-    if (exibirProfessor) {
-        li.appendChild(professor);
-    }
-    li.appendChild(detalheTurma);
-
-    const temaAula = String(reserva.tema_aula || "").trim();
-    if (temaAula) {
-        const detalheTema = document.createElement("p");
-        detalheTema.className = "booking-theme";
-        detalheTema.innerText = `Tema: ${temaAula}`;
-        li.appendChild(detalheTema);
-    }
-
-    if (exibirData) {
-        const detalheData = document.createElement("p");
-        detalheData.className = "booking-detail";
-        detalheData.innerText = `Data: ${paraDataBr(reserva.data)}`;
-        li.appendChild(detalheData);
-    }
-
-    if (permitirCancelar) {
-        const btnCancelar = document.createElement("button");
-        btnCancelar.type = "button";
-        btnCancelar.innerText = "Cancelar";
-        btnCancelar.addEventListener("click", () => cancelarReserva(reserva.id));
-        li.appendChild(btnCancelar);
-    }
-
-    return li;
-}
-
-function renderListaReservasComConfig(
-    listaEl,
-    reservasBase,
-    configOrdenacao,
-    opcoesItem,
-    textoVazio
-) {
-    listaEl.innerHTML = "";
-
-    if (!Array.isArray(reservasBase) || reservasBase.length === 0) {
-        const vazio = document.createElement("li");
-        vazio.className = "booking-empty";
-        vazio.innerText = textoVazio;
-        listaEl.appendChild(vazio);
-        return;
-    }
-
-    const reservasOrdenadas = ordenarReservas(reservasBase, configOrdenacao);
-    const agruparPorRecurso = Boolean(configOrdenacao?.agruparPorRecurso);
-
-    if (!agruparPorRecurso) {
-        reservasOrdenadas.forEach((reserva) => {
-            listaEl.appendChild(criarItemReserva(reserva, opcoesItem(reserva)));
-        });
-        return;
-    }
-
-    const grupos = agruparReservasPorRecurso(reservasOrdenadas);
-    grupos.forEach(([nomeRecurso, reservasGrupo]) => {
-        const tituloGrupo = document.createElement("li");
-        tituloGrupo.className = "booking-group-heading";
-        tituloGrupo.innerText = `${nomeRecurso} (${reservasGrupo.length})`;
-        listaEl.appendChild(tituloGrupo);
-
-        reservasGrupo.forEach((reserva) => {
-            listaEl.appendChild(criarItemReserva(reserva, opcoesItem(reserva)));
-        });
-    });
-}
-
-function renderReservasDia() {
-    const recursoEmFoco = obterRecursoEmFocoAgenda();
-    el("tituloDia").innerText = recursoEmFoco
-        ? `Reservas de ${paraDataBr(dataSelecionada)} | ${textoPadraoDetalheReserva(recursoEmFoco.nome, "Recurso")}`
-        : `Reservas de ${paraDataBr(dataSelecionada)}`;
-
-    const lista = el("listaReservasDia");
-    const reservasDia = filtrarReservasPorRecursoEmFoco(
-        reservasMes.filter((item) => item.data === dataSelecionada)
-    );
-
-    renderListaReservasComConfig(
-        lista,
-        reservasDia,
-        configuracaoOrdenacao.dia,
-        (reserva) => {
-            return {
-                permitirCancelar: reservaPodeSerCancelada(reserva),
-                exibirProfessor: true,
-                exibirData: false
-            };
-        },
-        recursoEmFoco
-            ? `Sem reservas desse recurso em ${paraDataBr(dataSelecionada)}.`
-            : "Sem reservas nessa data."
-    );
-}
-
-function renderMinhasReservas() {
-    const lista = el("listaMinhasReservas");
-    const hojeIso = obterHojeIso();
-    const minhas = reservasMes
-        .filter((item) => usuarioAtual && item.usuario_id === usuarioAtual.id && item.data >= hojeIso);
-
-    renderListaReservasComConfig(
-        lista,
-        minhas,
-        configuracaoOrdenacao.minhas,
-        (reserva) => ({
-            permitirCancelar: reservaPodeSerCancelada(reserva),
-            exibirProfessor: false,
-            exibirData: true
-        }),
-        "Você não tem reservas neste mês."
-    );
-}
-
 async function atualizarTelaAgendamento() {
     await carregarReservasMes();
     await carregarReservasProximosDias();
@@ -3689,27 +3316,8 @@ async function atualizarTelaAgendamento() {
     renderVisaoProximosAgendamentos();
     sincronizarSemanaVisivelComDataSelecionada();
     renderSemanaAgendamento();
-    renderCalendario();
-    renderReservasDia();
     renderAgendaDiaAulas();
-    renderMinhasReservas();
     sincronizarWizardAgendamento();
-}
-
-async function cancelarReserva(idReserva) {
-    const res = await fetchComAuth(`/agendamento/reservas/${idReserva}/cancelar`, {
-        method: "POST",
-        headers
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-        setMensagem(data.detail || "Não foi possível cancelar.", "erro");
-        return;
-    }
-
-    setMensagem("Reserva cancelada com sucesso.");
-    await atualizarTelaAgendamento();
 }
 
 async function agendarRecurso() {
@@ -3892,21 +3500,6 @@ function registrarEventos() {
         });
     }
 
-    el("btnAbrirCalendarioGeralNavbar")?.addEventListener("click", () => {
-        abrirPainelLateralAgendamento("painelCalendarioAgendamento");
-    });
-    el("btnAbrirCalendarioGeralPagina")?.addEventListener("click", () => {
-        abrirPainelLateralAgendamento("painelCalendarioAgendamento");
-    });
-    el("btnAbrirMeusAgendamentosNavbar")?.addEventListener("click", () => {
-        abrirPainelLateralAgendamento("painelMinhasReservasAgendamento");
-    });
-    el("btnFecharCalendarioGeral")?.addEventListener("click", () => {
-        fecharPainelLateralAgendamento("painelCalendarioAgendamento");
-    });
-    el("btnFecharMinhasReservas")?.addEventListener("click", () => {
-        fecharPainelLateralAgendamento("painelMinhasReservasAgendamento");
-    });
     el("btnFecharDetalhesReserva")?.addEventListener("click", () => {
         fecharPainelLateralAgendamento("painelDetalhesReservaAgendamento");
     });
@@ -3927,32 +3520,6 @@ function registrarEventos() {
     el("dialogCancelarReservaAgendamento")?.addEventListener("click", (event) => {
         if (event.target === el("dialogCancelarReservaAgendamento") || event.target === el("dialogCancelarReservaAgendamento")?.firstElementChild) {
             fecharConfirmacaoCancelamentoReserva();
-        }
-    });
-
-    el("btnMesAnterior").addEventListener("click", async () => {
-        try {
-            const dataBase = criarDataLocalPorIso(dataSelecionada) || new Date();
-            await selecionarDataAgendamento(paraIso(deslocarMesDataLocal(dataBase, -1)));
-        } catch (err) {
-            setMensagem(err.message || "Não foi possível atualizar o mês selecionado.", "erro");
-        }
-    });
-
-    el("btnMesProximo").addEventListener("click", async () => {
-        try {
-            const dataBase = criarDataLocalPorIso(dataSelecionada) || new Date();
-            await selecionarDataAgendamento(paraIso(deslocarMesDataLocal(dataBase, 1)));
-        } catch (err) {
-            setMensagem(err.message || "Não foi possível atualizar o mês selecionado.", "erro");
-        }
-    });
-
-    el("btnMesHoje").addEventListener("click", async () => {
-        try {
-            await selecionarDataAgendamento(paraIso(new Date()));
-        } catch (err) {
-            setMensagem(err.message || "Não foi possível carregar a agenda de hoje.", "erro");
         }
     });
 
@@ -4020,7 +3587,6 @@ function registrarEventos() {
     });
     el("btnVoltarAgendamentoRepetir").addEventListener("click", () => irParaEtapaAgendamento(4));
 
-    registrarControlesOrdenacao();
     el("btnAgendar").addEventListener("click", agendarRecurso);
 
     window.addEventListener("keydown", (event) => {
@@ -4049,101 +3615,12 @@ function registrarEventos() {
     });
 }
 
-function criarItemReserva(
-    reserva,
-    {
-        permitirCancelar = false,
-        exibirProfessor = true,
-        exibirData = false
-    } = {}
-) {
-    const li = document.createElement("li");
-    li.className = "booking-item";
-
-    const aulaExibicao = numeroAulaReserva(reserva);
-    const titulo = document.createElement("p");
-    titulo.innerText = `${textoPadraoDetalheReserva(reserva.recurso_nome, "Recurso não informado")} | ${aulaLabel(aulaExibicao || reserva.aula)}`;
-    li.appendChild(titulo);
-
-    if (exibirProfessor) {
-        const professor = document.createElement("p");
-        professor.className = "booking-professor";
-        professor.innerText = `Professor(a): ${textoPadraoDetalheReserva(reserva.professor_nome, "Não informado")}`;
-        li.appendChild(professor);
-    }
-
-    const detalheTurma = document.createElement("p");
-    detalheTurma.className = "booking-detail";
-    detalheTurma.innerText = `Turma: ${textoPadraoDetalheReserva(reserva.turma, "Não informada")} | ${nomeTurno(reserva.turno) || "Turno não informado"}`;
-    li.appendChild(detalheTurma);
-
-    const temaAula = String(reserva.tema_aula || "").trim();
-    if (temaAula) {
-        const detalheTema = document.createElement("p");
-        detalheTema.className = "booking-theme";
-        detalheTema.innerText = `Tema: ${temaAula}`;
-        li.appendChild(detalheTema);
-    }
-
-    if (exibirData) {
-        const detalheData = document.createElement("p");
-        detalheData.className = "booking-detail";
-        detalheData.innerText = `Data: ${paraDataBr(reserva.data)}`;
-        li.appendChild(detalheData);
-    }
-
-    const acoes = document.createElement("div");
-    acoes.className = "booking-item-actions";
-
-    const btnDetalhes = document.createElement("button");
-    btnDetalhes.type = "button";
-    btnDetalhes.className = "print-secondary-btn booking-details-btn";
-    btnDetalhes.innerText = "Ver detalhes";
-    btnDetalhes.addEventListener("click", () => abrirDetalhesReserva(reserva));
-    acoes.appendChild(btnDetalhes);
-
-    if (permitirCancelar) {
-        const nota = document.createElement("span");
-        nota.className = "booking-item-action-note";
-        nota.innerText = "Cancelamento disponível nos detalhes.";
-        acoes.appendChild(nota);
-    }
-
-    li.appendChild(acoes);
-    return li;
-}
-
-async function cancelarReserva(idReserva = 0) {
-    const id = Number(idReserva || reservaCancelamentoPendenteId || 0);
-    if (!id) {
-        return;
-    }
-
-    const res = await fetchComAuth(`/agendamento/reservas/${id}/cancelar`, {
-        method: "POST",
-        headers
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-        setMensagem(data.detail || "Não foi possível cancelar.", "erro");
-        return;
-    }
-
-    fecharConfirmacaoCancelamentoReserva();
-    fecharPainelLateralAgendamento("painelDetalhesReservaAgendamento");
-    reservaDetalheAtual = null;
-    setMensagem("Reserva cancelada com sucesso.");
-    await atualizarTelaAgendamento();
-}
-
 async function init() {
     try {
         dataSelecionada = paraIso(new Date());
         el("dataReserva").value = dataSelecionada;
         sincronizarSemanaVisivelComDataSelecionada();
 
-        carregarPreferenciasOrdenacao();
         registrarEventos();
         sincronizarWizardAgendamento();
         await carregarUsuario();

@@ -70,7 +70,7 @@ Status: mapa inicial extraido do backend e frontend.
 | `static/js/core/auth.js` | Calcula cargo, acesso de coordenacao, modulos permitidos e permissao de gerir impressoes no cliente. | `/me` retorna flags calculadas no backend; routers revalidam operacoes criticas. | Medio: fallback frontend nao deve ser usado como fonte de verdade. |
 | `static/js/professor.js` | Mostra/esconde selecao de professor para impressao e bloqueia etapas quando pendente. | `modules/printing/router.py` revalida `professor_id` via `resolve_print_teacher`. | Baixo. |
 | `static/js/relatorios.js` | Decide visualmente se usuario pode acessar relatorios. | `routers/relatorios_router.py` bloqueia com `_exigir_acesso_relatorios`. | Baixo. |
-| `static/js/preconselho.js` | Mostra botoes/admin/visoes conforme usuario/contexto. | `modules/preconselho/service.py` valida acesso e escopo. | Baixo, pendente revisar todos os endpoints do modulo. |
+| `static/js/preconselho/*` | Mostra botoes/admin/visoes conforme usuario/contexto. | `modules/preconselho/service.py` valida acesso e escopo. | Baixo, pendente revisar todos os endpoints do modulo. |
 | `static/js/horario_escolar.js` | Alterna interface gestor/professor e evita filtros de professor na interface docente. | `routers/horario_escolar_router.py` valida visualizacao/gestao no backend. | Baixo. |
 | `routers/pages_router.py` + templates | Páginas HTML sao servidas sem autenticação backend. | JS chama `garantirToken()`/APIs protegidas; dados sensiveis vêm das APIs. | Medio: pagina pode abrir sem token, embora dados/acoes sejam protegidos pelas APIs. |
 

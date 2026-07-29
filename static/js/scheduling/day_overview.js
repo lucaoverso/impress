@@ -141,7 +141,16 @@ function criarBlocoAulasPorPeriodo(reservas = []) {
 
         const tituloPeriodo = document.createElement("strong");
         tituloPeriodo.className = "scheduler-day-overview-period-title";
-        tituloPeriodo.innerText = nomePeriodoAgendamento(periodo);
+
+        const iconePeriodo = document.createElement("i");
+        iconePeriodo.className = periodo === "MATUTINO"
+            ? "bi bi-sun-fill"
+            : "bi bi-sunset-fill";
+        iconePeriodo.setAttribute("aria-hidden", "true");
+
+        const textoPeriodo = document.createElement("span");
+        textoPeriodo.innerText = nomePeriodoAgendamento(periodo);
+        tituloPeriodo.append(iconePeriodo, textoPeriodo);
         blocoPeriodo.appendChild(tituloPeriodo);
 
         const aulasPeriodo = document.createElement("div");
@@ -152,7 +161,10 @@ function criarBlocoAulasPorPeriodo(reservas = []) {
             grupo.className = "scheduler-day-overview-shift";
 
             const titulo = document.createElement("h4");
-            titulo.innerText = aulaLabel(grupoAula.aulaNumero);
+            titulo.innerText = aulaLabelComHorario(
+                grupoAula.aulaNumero,
+                grupoAula.faixa
+            );
             grupo.appendChild(titulo);
 
             const lista = document.createElement("div");

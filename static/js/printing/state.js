@@ -25,6 +25,10 @@
             selected: [],
             valid: false,
         },
+        destination: {
+            printerName: "",
+            valid: false,
+        },
         preview: {
             loading: false,
             ready: false,

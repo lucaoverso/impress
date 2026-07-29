@@ -3,7 +3,6 @@ const {
     garantirToken,
     criarHeadersAuth,
     encerrarSessao,
-    usuarioPodeGerirImpressoes,
 } = window.AppAuth;
 const { fetchComAuth, obterMensagemErroResposta, lerJsonResposta } = window.AppApi;
 
@@ -24,6 +23,7 @@ let filaPollingTimer = null;
 let usuarioAtual = null;
 let professoresImpressao = [];
 let turmasImpressao = [];
+let indiceOpcaoTurmaImpressaoAtiva = -1;
 let tagsImpressaoDisponiveis = [];
 let arquivoSelecionadoAtual = null;
 let jobHistoricoSelecionadoAtual = null;
@@ -44,10 +44,10 @@ const FILA_POLLING_MS = 6000;
 const LIMITE_ALERTA_IMPRESSAO_PAGINAS = 30;
 const LIMIAR_RE_RENDER_PREVIEW_MOBILE_PX = 24;
 const EXTENSOES_SUPORTADAS = new Set(["pdf", "doc", "docx", "png", "jpg", "jpeg"]);
-const IDS_LISTAS_JOBS_IMPRESSAO = ["lista-jobs", "lista-jobs-etapa-arquivo"];
-const IDS_ESPELHOS_COTA_IMPRESSAO = ["cotaPainelEspelho", "cotaPainelEtapaArquivo"];
-const IDS_TITULOS_COTA_IMPRESSAO = ["tituloCota", "tituloCotaEtapaArquivo"];
-const IDS_TITULOS_JOBS_IMPRESSAO = ["tituloJobs", "tituloJobsEtapaArquivo"];
+const IDS_LISTAS_JOBS_IMPRESSAO = [];
+const IDS_ESPELHOS_COTA_IMPRESSAO = ["cotaPainelEtapaArquivo"];
+const IDS_TITULOS_COTA_IMPRESSAO = ["tituloCotaEtapaArquivo"];
+const IDS_TITULOS_JOBS_IMPRESSAO = [];
 const STATUS_JOB_LABEL = {
     PENDENTE: "Na fila",
     IMPRIMINDO: "Imprimindo",
@@ -84,6 +84,7 @@ function aplicarBloqueioSemPapelNosCampos() {
         "arquivoDropzone",
         "professorSolicitante",
         "turmaImpressao",
+        "turmaImpressaoBusca",
         "copias",
         "intervaloPaginas",
         "paginasPorFolha",
@@ -197,7 +198,7 @@ function usuarioEhGestor() {
 }
 
 function usuarioPodeSelecionarProfessorImpressao() {
-    return Boolean(usuarioAtual) && usuarioPodeGerirImpressoes(usuarioAtual);
+    return usuarioEhGestor();
 }
 
 function obterProfessorSolicitanteSelecionadoId() {
@@ -233,13 +234,38 @@ function atualizarEspelhosCotaImpressao(texto) {
     });
 }
 
-function montarUrlConsultaImpressao(urlBase) {
+function atualizarProgressoCotaImpressao(usadas, limite) {
+    const medidor = el("printQuotaMeter");
+    const percentualTexto = el("printQuotaPercent");
+    if (!medidor || !percentualTexto) return;
+
+    const possuiLimite = Number.isFinite(Number(limite)) && Number(limite) > 0;
+    if (!possuiLimite) {
+        medidor.hidden = true;
+        percentualTexto.hidden = true;
+        medidor.removeAttribute("aria-valuenow");
+        medidor.style.removeProperty("--print-quota-progress");
+        return;
+    }
+
+    const percentual = Math.min(100, Math.max(0, Math.round((Number(usadas) / Number(limite)) * 100)));
+    medidor.hidden = false;
+    percentualTexto.hidden = false;
+    medidor.setAttribute("aria-valuenow", String(percentual));
+    medidor.style.setProperty("--print-quota-progress", `${percentual}%`);
+    percentualTexto.innerText = `${percentual}% utilizado`;
+}
+
+function montarUrlConsultaImpressao(urlBase, { incluirProprios = false } = {}) {
     const professorId = obterProfessorSolicitanteSelecionadoId();
     if (!(usuarioPodeSelecionarProfessorImpressao() && professorId > 0)) {
         return urlBase;
     }
 
     const params = new URLSearchParams({ professor_id: String(professorId) });
+    if (incluirProprios) {
+        params.set("incluir_proprios", "true");
+    }
     return `${urlBase}?${params.toString()}`;
 }
 
@@ -247,7 +273,7 @@ function atualizarTitulosContextoImpressao() {
     const contexto = el("contextoProfessorImpressao");
 
     if (!usuarioPodeSelecionarProfessorImpressao()) {
-        IDS_TITULOS_COTA_IMPRESSAO.forEach((id) => definirTexto(id, "Sua cota"));
+        IDS_TITULOS_COTA_IMPRESSAO.forEach((id) => definirTexto(id, "Cota mensal"));
         IDS_TITULOS_JOBS_IMPRESSAO.forEach((id) => definirTexto(id, "Seus pedidos"));
         if (contexto) {
             contexto.innerText = "";
@@ -257,7 +283,7 @@ function atualizarTitulosContextoImpressao() {
 
     const professor = obterProfessorSelecionado();
     if (!professor) {
-        IDS_TITULOS_COTA_IMPRESSAO.forEach((id) => definirTexto(id, "Sua cota"));
+        IDS_TITULOS_COTA_IMPRESSAO.forEach((id) => definirTexto(id, "Cota mensal"));
         IDS_TITULOS_JOBS_IMPRESSAO.forEach((id) => definirTexto(id, "Seus pedidos"));
         if (contexto) {
             contexto.innerText = obterMensagemSelecaoProfessorImpressao();
@@ -265,7 +291,7 @@ function atualizarTitulosContextoImpressao() {
         return;
     }
 
-    IDS_TITULOS_COTA_IMPRESSAO.forEach((id) => definirTexto(id, `Cota de ${professor.nome}`));
+    IDS_TITULOS_COTA_IMPRESSAO.forEach((id) => definirTexto(id, `Cota mensal de ${professor.nome}`));
     IDS_TITULOS_JOBS_IMPRESSAO.forEach((id) => definirTexto(id, `Pedidos de ${professor.nome}`));
     if (contexto) {
         contexto.innerText = `A impressao sera contabilizada para ${professor.nome}.`;
@@ -304,7 +330,7 @@ function renderFilaVazia(texto) {
     obterListasJobsImpressao().forEach((ul) => {
         ul.innerHTML = "";
         const li = document.createElement("li");
-        li.classList.add("print-job-empty");
+        li.classList.add("print-job-empty", "empty-state");
         li.innerText = texto;
         ul.appendChild(li);
     });
@@ -395,6 +421,10 @@ async function carregarProfessoresImpressaoAdmin() {
         select.appendChild(option);
     });
     select.disabled = false;
+    const professorUrlId = Number(new URLSearchParams(window.location.search).get("professor_id") || 0);
+    if (professorUrlId > 0 && professoresImpressao.some((professor) => Number(professor.id) === professorUrlId)) {
+        select.value = String(professorUrlId);
+    }
     select.dataset.previousProfessorId = String(obterProfessorSolicitanteSelecionadoId() || 0);
     atualizarTitulosContextoImpressao();
     window.PrintingUI?.ui?.syncFromLegacyDom?.();
@@ -415,6 +445,145 @@ function obterQuantidadeCopiasTurma(turma) {
         return 0;
     }
     return Math.floor(quantidade);
+}
+
+function obterTextoTurmaImpressao(turma) {
+    const quantidade = obterQuantidadeCopiasTurma(turma);
+    return quantidade > 0
+        ? `${turma.nome} (${quantidade} estudante(s))`
+        : `${turma.nome} (sem quantidade)`;
+}
+
+function encontrarOpcaoTurmaPeloTexto(texto) {
+    const textoNormalizado = String(texto || "").trim().toLocaleLowerCase("pt-BR");
+    if (!textoNormalizado) return null;
+
+    return Array.from(el("turmaImpressao")?.options || []).find((option) => (
+        option.value
+        && option.textContent.trim().toLocaleLowerCase("pt-BR") === textoNormalizado
+    )) || null;
+}
+
+function fecharListaTurmasImpressao() {
+    const input = el("turmaImpressaoBusca");
+    const lista = el("turmasImpressaoLista");
+    if (lista) lista.hidden = true;
+    input?.setAttribute("aria-expanded", "false");
+    input?.removeAttribute("aria-activedescendant");
+    indiceOpcaoTurmaImpressaoAtiva = -1;
+}
+
+function selecionarTurmaImpressaoPeloId(turmaId) {
+    const input = el("turmaImpressaoBusca");
+    const select = el("turmaImpressao");
+    const option = Array.from(select?.options || []).find(
+        (item) => item.value === String(turmaId)
+    );
+    if (!input || !select || !option) return;
+
+    select.value = option.value;
+    input.value = option.textContent;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+    fecharListaTurmasImpressao();
+    input.focus();
+}
+
+function renderizarListaTurmasImpressao() {
+    const input = el("turmaImpressaoBusca");
+    const select = el("turmaImpressao");
+    const lista = el("turmasImpressaoLista");
+    if (!input || !select || !lista || input.disabled) {
+        fecharListaTurmasImpressao();
+        return;
+    }
+
+    const textoSelecionado = select.value
+        ? (select.selectedOptions[0]?.textContent || "")
+        : "";
+    const termoDigitado = input.value.trim().toLocaleLowerCase("pt-BR");
+    const termo = input.value === textoSelecionado ? "" : termoDigitado;
+    const turmasFiltradas = turmasImpressao.filter((turma) => (
+        obterTextoTurmaImpressao(turma).toLocaleLowerCase("pt-BR").includes(termo)
+    ));
+
+    lista.replaceChildren();
+    turmasFiltradas.forEach((turma) => {
+        const quantidade = obterQuantidadeCopiasTurma(turma);
+        const option = document.createElement("button");
+        const titulo = document.createElement("strong");
+        const detalhe = document.createElement("small");
+        option.type = "button";
+        option.id = `turmaImpressaoOpcao-${turma.id}`;
+        option.className = "print-class-search-option";
+        option.role = "option";
+        option.tabIndex = -1;
+        option.dataset.turmaId = String(turma.id);
+        option.setAttribute("aria-selected", String(select.value === String(turma.id)));
+        titulo.textContent = turma.nome;
+        detalhe.textContent = quantidade > 0
+            ? `${quantidade} estudante(s)`
+            : "Quantidade não cadastrada";
+        option.append(titulo, detalhe);
+        option.addEventListener("mousedown", (event) => event.preventDefault());
+        option.addEventListener("click", () => selecionarTurmaImpressaoPeloId(turma.id));
+        lista.appendChild(option);
+    });
+
+    if (turmasFiltradas.length === 0) {
+        const vazio = document.createElement("p");
+        vazio.className = "print-class-search-empty";
+        vazio.textContent = "Nenhuma turma encontrada.";
+        lista.appendChild(vazio);
+    }
+
+    lista.hidden = false;
+    input.setAttribute("aria-expanded", "true");
+    indiceOpcaoTurmaImpressaoAtiva = -1;
+}
+
+function moverSelecaoListaTurmasImpressao(direcao) {
+    const input = el("turmaImpressaoBusca");
+    const lista = el("turmasImpressaoLista");
+    if (!input || !lista) return;
+    if (lista.hidden) renderizarListaTurmasImpressao();
+
+    const options = Array.from(lista.querySelectorAll(".print-class-search-option"));
+    if (options.length === 0) return;
+    indiceOpcaoTurmaImpressaoAtiva = (
+        indiceOpcaoTurmaImpressaoAtiva + direcao + options.length
+    ) % options.length;
+    options.forEach((option, index) => {
+        option.classList.toggle("is-active", index === indiceOpcaoTurmaImpressaoAtiva);
+    });
+    const optionAtiva = options[indiceOpcaoTurmaImpressaoAtiva];
+    input.setAttribute("aria-activedescendant", optionAtiva.id);
+    optionAtiva.scrollIntoView({ block: "nearest" });
+}
+
+function atualizarBuscaTurmaImpressao() {
+    const input = el("turmaImpressaoBusca");
+    const select = el("turmaImpressao");
+    const lista = el("turmasImpressaoLista");
+    if (!input || !select || !lista) return;
+
+    fecharListaTurmasImpressao();
+    input.disabled = select.disabled;
+    input.value = select.value ? (select.selectedOptions[0]?.textContent || "") : "";
+}
+
+function sincronizarTurmaImpressaoPelaBusca() {
+    const input = el("turmaImpressaoBusca");
+    const select = el("turmaImpressao");
+    if (!input || !select) return false;
+
+    const option = encontrarOpcaoTurmaPeloTexto(input.value);
+    const proximoValor = option?.value || "";
+    if (select.value !== proximoValor) {
+        select.value = proximoValor;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+    if (option) input.value = option.textContent;
+    return Boolean(option);
 }
 
 function atualizarResumoTurmaImpressao() {
@@ -472,6 +641,12 @@ async function carregarTurmasImpressao() {
     select.disabled = true;
     select.innerHTML = "";
     turmasImpressao = [];
+    const buscaTurma = el("turmaImpressaoBusca");
+    if (buscaTurma) {
+        buscaTurma.disabled = true;
+        buscaTurma.value = "";
+        buscaTurma.placeholder = "Carregando turmas...";
+    }
 
     const optionCarregando = document.createElement("option");
     optionCarregando.value = "";
@@ -493,22 +668,21 @@ async function carregarTurmasImpressao() {
     const placeholder = document.createElement("option");
     placeholder.value = "";
     placeholder.innerText = turmasImpressao.length > 0
-        ? "Selecione uma turma"
+        ? "Escolha uma turma..."
         : "Nenhuma turma ativa cadastrada";
     placeholder.selected = true;
     select.appendChild(placeholder);
 
     turmasImpressao.forEach((turma) => {
         const option = document.createElement("option");
-        const quantidade = obterQuantidadeCopiasTurma(turma);
         option.value = String(turma.id);
-        option.innerText = quantidade > 0
-            ? `${turma.nome} (${quantidade} estudante(s))`
-            : `${turma.nome} (sem quantidade)`;
+        option.innerText = obterTextoTurmaImpressao(turma);
         select.appendChild(option);
     });
 
     select.disabled = turmasImpressao.length === 0;
+    if (buscaTurma) buscaTurma.placeholder = "Busque pelo nome da turma";
+    atualizarBuscaTurmaImpressao();
     if (turmasImpressao.length === 0 && resumo) {
         resumo.innerText = "Nenhuma turma ativa cadastrada para preenchimento automático.";
         return;
@@ -595,6 +769,45 @@ async function carregarTagsImpressao() {
     const data = await lerJsonResposta(res, "NÃ£o foi possÃ­vel carregar as tags de impressÃ£o.");
     tagsImpressaoDisponiveis = Array.isArray(data) ? data : [];
     renderTagsImpressao();
+}
+
+async function carregarImpressorasImpressao() {
+    const input = el("printerName");
+    const container = el("printerOptions");
+    if (!input || !container) return;
+    const res = await fetchComAuth("/impressao/impressoras", { headers });
+    const printers = await lerJsonResposta(res, "Não foi possível carregar as impressoras.");
+    if (!res.ok) {
+        container.innerHTML = '<p class="print-file-hint">Não foi possível carregar as impressoras. Reinicie o servidor para aplicar a nova rota e a migração.</p>';
+        throw new Error(printers.detail || "Não foi possível carregar as impressoras.");
+    }
+    const available = Array.isArray(printers) ? printers : [];
+    container.innerHTML = "";
+    available.forEach((printer, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "print-printer-option";
+        button.dataset.printerName = printer.name;
+        button.setAttribute("role", "radio");
+        button.setAttribute("aria-checked", "false");
+        button.innerHTML = '<span class="print-printer-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M7 8V3h10v5M7 17H5a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M7 14h10v7H7z"/><path d="M17 11h1"/></svg></span><span></span>';
+        button.lastElementChild.textContent = printer.name;
+        button.addEventListener("click", () => {
+            input.value = printer.name;
+            container.querySelectorAll(".print-printer-option").forEach((item) => {
+                const selected = item === button;
+                item.classList.toggle("is-selected", selected);
+                item.setAttribute("aria-checked", String(selected));
+            });
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+        container.appendChild(button);
+        if (available.length === 1 && index === 0) button.click();
+    });
+    if (available.length === 0) {
+        container.innerHTML = '<p class="print-file-hint">Nenhuma impressora disponível.</p>';
+    }
+    window.PrintingUI?.ui?.syncFromLegacyDom?.();
 }
 
 function obterExtensaoArquivo(nomeArquivo) {
@@ -887,12 +1100,6 @@ function obterDimensoesMiniatura(tamanhoFolha, isMobile) {
     return ajustarDimensoesProporcionais(tamanhoFolha, larguraAlvo, alturaDisponivel);
 }
 
-function obterDimensoesMiniaturaDesktop(tamanhoFolha, larguraTrilha) {
-    const larguraDisponivel = Math.max(58, larguraTrilha - 18);
-    const alturaMaxima = 128;
-    return ajustarDimensoesProporcionais(tamanhoFolha, larguraDisponivel, alturaMaxima);
-}
-
 function obterPaginasPreview() {
     if (!pdfDoc) {
         return [];
@@ -908,10 +1115,9 @@ function obterPaginasPreview() {
 function mostrarPreviewVazio(texto = obterMensagemPreviewVazio()) {
     const container = el("previewContainer");
     container.innerHTML = "";
-    const isMobile = isPreviewMobile();
-    container.classList.toggle("is-carousel", isMobile);
-    container.classList.toggle("is-desktop-focus", !isMobile);
-    atualizarModoNavegacaoPreview(isMobile);
+    container.classList.add("is-carousel");
+    container.classList.remove("is-desktop-focus");
+    atualizarModoNavegacaoPreview(true);
 
     const msg = document.createElement("p");
     msg.className = "preview-empty";
@@ -930,10 +1136,6 @@ function atualizarDestaqueFolha() {
 function centralizarFolhaAtiva(suave = true) {
     const folhaAtiva = document.querySelector(`#previewContainer .print-sheet-thumb[data-folha="${folhaAtual}"]`);
     if (!folhaAtiva) {
-        return;
-    }
-    const isMobile = isPreviewMobile();
-    if (!isMobile) {
         return;
     }
     const previewPane = document.querySelector(".print-preview-pane");
@@ -1060,7 +1262,9 @@ function aplicarEstadoSelecaoWrapper(wrapper, paginaSelecionada, numeroPagina) {
 
     wrapper.classList.toggle("is-selected", paginaSelecionada);
     wrapper.classList.toggle("is-unchecked", !paginaSelecionada);
-    wrapper.dataset.pageLabel = `Pg ${numeroPagina}`;
+    wrapper.dataset.pageLabel = paginaSelecionada
+        ? `✓ Página ${numeroPagina}`
+        : `Página ${numeroPagina} removida`;
     wrapper.setAttribute("role", "checkbox");
     wrapper.setAttribute("tabindex", "0");
     wrapper.setAttribute("aria-checked", paginaSelecionada ? "true" : "false");
@@ -1557,6 +1761,7 @@ async function enviarImpressao(confirmadoAlertaConsumo = false) {
     const orientacao = obterOrientacaoPreview();
     const intervaloPaginas = el("intervaloPaginas").value.trim();
     const tagsSelecionadas = obterTagsImpressaoSelecionadas();
+    const printerName = String(el("printerName")?.value || "").trim();
     const professorSolicitanteId = obterProfessorSolicitanteSelecionadoId();
     const usaHistorico = jobHistoricoId > 0;
 
@@ -1577,6 +1782,11 @@ async function enviarImpressao(confirmadoAlertaConsumo = false) {
 
     if (tagsSelecionadas.length === 0) {
         el("msg").innerText = "Selecione ao menos uma tag antes de imprimir.";
+        return;
+    }
+
+    if (!printerName) {
+        el("msg").innerText = "Selecione a impressora de destino.";
         return;
     }
 
@@ -1630,6 +1840,7 @@ async function enviarImpressao(confirmadoAlertaConsumo = false) {
         formData.append("paginas_por_folha", paginasPorFolha);
         formData.append("duplex", duplex);
         formData.append("orientacao", orientacao);
+        formData.append("printer_name", printerName);
         if (!usaHistorico) {
             formData.append("arquivo", arquivo);
         }
@@ -1687,21 +1898,30 @@ async function carregarCota() {
     atualizarTitulosContextoImpressao();
 
     if (professorSolicitantePendente()) {
-        el("cota").innerText = "Selecione um professor para consultar a cota.";
+        el("cota").innerText = "Selecione um professor";
+        atualizarProgressoCotaImpressao();
         return;
     }
 
+    const professorConsultaId = obterProfessorSolicitanteSelecionadoId();
     const res = await fetchComAuth(montarUrlConsultaImpressao("/minha-cota"), { headers });
+    if (professorConsultaId !== obterProfessorSolicitanteSelecionadoId()) {
+        return;
+    }
     if (!res.ok) {
+        el("cota").innerText = "Indisponível";
+        atualizarProgressoCotaImpressao();
         throw new Error(await obterMensagemErroResposta(res, "Não foi possível carregar a cota."));
     }
 
     const data = await lerJsonResposta(res, "Não foi possível carregar a cota.");
     if (data.ilimitada) {
-        el("cota").innerText = "Cota ilimitada";
+        el("cota").innerText = "Uso ilimitado";
+        atualizarProgressoCotaImpressao();
         return;
     }
-    el("cota").innerText = `Cota restante: ${data.restante} páginas`;
+    el("cota").innerText = `${data.usadas} de ${data.limite} páginas`;
+    atualizarProgressoCotaImpressao(data.usadas, data.limite);
 }
 
 async function cancelarJobProfessor(jobId, botaoCancelar) {
@@ -1872,7 +2092,7 @@ async function carregarJobHistoricoNoPreview(job) {
 
 function preencherItemJob(li, job, { allowReuse = true } = {}) {
     li.replaceChildren();
-    li.className = "print-job-item";
+    li.className = "print-job-item list-item";
     li.dataset.jobId = String(job?.id || "");
     li.classList.toggle("is-selected-source", allowReuse && jobHistoricoEstaSelecionado(job));
     li.removeAttribute("role");
@@ -1895,7 +2115,7 @@ function preencherItemJob(li, job, { allowReuse = true } = {}) {
     topo.appendChild(status);
 
     const meta = document.createElement("p");
-    meta.classList.add("print-job-meta");
+    meta.classList.add("print-job-meta", "item-meta");
     const copias = Number(job?.copias || 1);
     const paginasTotais = Number(job?.paginas_totais || 0);
     meta.innerText = `#${job?.id || "-"} • ${copias} cópia(s) • ${paginasTotais} página(s)`;
@@ -1968,12 +2188,12 @@ function preencherItemJob(li, job, { allowReuse = true } = {}) {
 
     if (podeReutilizar || jobPodeSerCancelado(job)) {
         const acoes = document.createElement("div");
-        acoes.classList.add("print-job-actions");
+        acoes.classList.add("print-job-actions", "action-group", "action-group--compact");
 
         if (podeReutilizar) {
             const btnReutilizar = document.createElement("button");
             btnReutilizar.type = "button";
-            btnReutilizar.classList.add("print-job-reuse-btn");
+            btnReutilizar.classList.add("print-job-reuse-btn", "button");
             btnReutilizar.innerText = jobHistoricoEstaSelecionado(job) ? "No preview" : "Usar novamente";
             btnReutilizar.addEventListener("click", (event) => {
                 event.stopPropagation();
@@ -1987,7 +2207,7 @@ function preencherItemJob(li, job, { allowReuse = true } = {}) {
         if (jobPodeSerCancelado(job)) {
             const btnCancelar = document.createElement("button");
             btnCancelar.type = "button";
-            btnCancelar.classList.add("print-job-cancel-btn");
+            btnCancelar.classList.add("print-job-cancel-btn", "button", "button--danger");
             btnCancelar.innerText = "Cancelar";
             btnCancelar.addEventListener("click", (event) => {
                 event.stopPropagation();
@@ -2017,6 +2237,24 @@ function renderizarJobsHistorico(jobs = []) {
     });
 }
 
+async function carregarJobHistoricoDaUrl(jobs = []) {
+    const jobId = Number(new URLSearchParams(window.location.search).get("reutilizar") || 0);
+    if (jobId <= 0) return;
+
+    const job = jobs.find((item) => Number(item?.id || 0) === jobId);
+    if (!job) {
+        el("msg").innerText = "Este pedido não foi encontrado no seu histórico.";
+        return;
+    }
+    if (!jobPodeSerReutilizado(job)) {
+        el("msg").innerText = job?.motivo_reuso_indisponivel || "Este pedido não pode ser reutilizado.";
+        return;
+    }
+
+    window.history.replaceState({}, "", window.location.pathname);
+    await carregarJobHistoricoNoPreview(job);
+}
+
 async function carregarFila() {
     atualizarTitulosContextoImpressao();
 
@@ -2026,7 +2264,14 @@ async function carregarFila() {
         return [];
     }
 
-    const res = await fetchComAuth(montarUrlConsultaImpressao("/meus-jobs"), { headers });
+    const professorConsultaId = obterProfessorSolicitanteSelecionadoId();
+    const res = await fetchComAuth(
+        montarUrlConsultaImpressao("/meus-jobs", { incluirProprios: true }),
+        { headers },
+    );
+    if (professorConsultaId !== obterProfessorSolicitanteSelecionadoId()) {
+        return [];
+    }
     if (!res.ok) {
         throw new Error(await obterMensagemErroResposta(res, "Não foi possível carregar os pedidos de impressão."));
     }
@@ -2210,7 +2455,7 @@ function atualizarContador() {
     if (folhaAtual > total) {
         folhaAtual = total;
     }
-    el("contadorFolha").innerText = `Página ${folhaAtual} de ${total}`;
+    el("contadorFolha").innerText = `Folha ${folhaAtual} de ${total}`;
 }
 
 function irParaFolha(indiceFolha) {
@@ -2227,10 +2472,6 @@ function irParaFolha(indiceFolha) {
     }
 
     folhaAtual = destino;
-    if (!isPreviewMobile()) {
-        renderFolha();
-        return;
-    }
     atualizarContador();
     atualizarDestaqueFolha();
     centralizarFolhaAtiva();
@@ -2248,7 +2489,7 @@ function atualizarFolhaAtualPorScroll() {
     }
 
     const paneRect = pane.getBoundingClientRect();
-    const mobile = isPreviewMobile();
+    const horizontal = el("previewContainer")?.classList.contains("is-carousel");
     let folhaDetectada = folhaAtual;
     let menorDistancia = Number.POSITIVE_INFINITY;
 
@@ -2256,7 +2497,7 @@ function atualizarFolhaAtualPorScroll() {
         const rect = thumb.getBoundingClientRect();
         let distancia = Number.POSITIVE_INFINITY;
 
-        if (mobile) {
+        if (horizontal) {
             if (rect.right < paneRect.left || rect.left > paneRect.right) {
                 return;
             }
@@ -2300,10 +2541,9 @@ function reagirScrollPreview() {
 async function renderFolha() {
     const container = el("previewContainer");
     container.innerHTML = "";
-    const isMobile = isPreviewMobile();
-    container.classList.toggle("is-carousel", isMobile);
-    container.classList.toggle("is-desktop-focus", !isMobile);
-    atualizarModoNavegacaoPreview(isMobile);
+    container.classList.add("is-carousel");
+    container.classList.remove("is-desktop-focus");
+    atualizarModoNavegacaoPreview(true);
 
     if (!pdfDoc) {
         mostrarPreviewVazio(obterMensagemPreviewVazio());
@@ -2332,45 +2572,14 @@ async function renderFolha() {
     }
 
     const folhasParaRenderizar = Array.from({ length: totalFolhas }, (_, i) => i + 1);
-    let tamanhoMiniatura = obterDimensoesMiniatura(tamanhoFolha, isMobile);
-    const previewPane = document.querySelector(".print-preview-pane");
-    let tamanhoPrincipal = tamanhoMiniatura;
-
-    if (!isMobile) {
-        const larguraPane = Math.max(320, previewPane?.clientWidth || 640);
-        const alturaPane = Math.max(320, previewPane?.clientHeight || 640);
-        const larguraTrilha = Math.min(110, Math.max(76, Math.round(larguraPane * 0.14)));
-        tamanhoMiniatura = obterDimensoesMiniaturaDesktop(tamanhoFolha, larguraTrilha);
-        const larguraPrincipalDisponivel = Math.max(260, larguraPane - larguraTrilha - 22);
-        const alturaPrincipalDisponivel = Math.max(340, alturaPane - 8);
-        tamanhoPrincipal = ajustarDimensoesProporcionais(
-            tamanhoFolha,
-            larguraPrincipalDisponivel,
-            alturaPrincipalDisponivel
-        );
-    }
+    const tamanhoMiniatura = obterDimensoesMiniatura(tamanhoFolha, true);
 
     const areaLargura = tamanhoMiniatura.largura - (FOLHA_PADDING * 2) - (FOLHA_GAP * (configLayout.colunas - 1));
     const areaAltura = tamanhoMiniatura.altura - (FOLHA_PADDING * 2) - (FOLHA_GAP * (configLayout.linhas - 1));
     const larguraCelula = areaLargura / configLayout.colunas;
     const alturaCelula = areaAltura / configLayout.linhas;
-    const areaPrincipalLargura = tamanhoPrincipal.largura - (FOLHA_PADDING * 2) - (FOLHA_GAP * (configLayout.colunas - 1));
-    const areaPrincipalAltura = tamanhoPrincipal.altura - (FOLHA_PADDING * 2) - (FOLHA_GAP * (configLayout.linhas - 1));
-    const larguraCelulaPrincipal = areaPrincipalLargura / configLayout.colunas;
-    const alturaCelulaPrincipal = areaPrincipalAltura / configLayout.linhas;
     const dpr = Math.min(window.devicePixelRatio || 1, QUALIDADE_MAX_DPR);
     const token = ++renderTokenAtual;
-    let faixaMiniaturas = null;
-    let painelPrincipal = null;
-
-    if (!isMobile) {
-        painelPrincipal = document.createElement("section");
-        painelPrincipal.classList.add("print-preview-featured");
-        faixaMiniaturas = document.createElement("section");
-        faixaMiniaturas.classList.add("print-preview-thumbs");
-        container.appendChild(painelPrincipal);
-        container.appendChild(faixaMiniaturas);
-    }
 
     for (const indiceFolha of folhasParaRenderizar) {
         if (token !== renderTokenAtual) {
@@ -2408,23 +2617,14 @@ async function renderFolha() {
         folha.style.display = "grid";
         folha.style.gap = `${FOLHA_GAP}px`;
         folha.style.padding = `${FOLHA_PADDING}px`;
-        const tamanhoBase = !isMobile && indiceFolha === folhaAtual ? tamanhoPrincipal : tamanhoMiniatura;
-        const larguraCelulaAtual = !isMobile && indiceFolha === folhaAtual ? larguraCelulaPrincipal : larguraCelula;
-        const alturaCelulaAtual = !isMobile && indiceFolha === folhaAtual ? alturaCelulaPrincipal : alturaCelula;
-        folha.style.width = `${tamanhoBase.largura}px`;
-        folha.style.height = `${tamanhoBase.altura}px`;
+        folha.style.width = `${tamanhoMiniatura.largura}px`;
+        folha.style.height = `${tamanhoMiniatura.altura}px`;
         folha.style.gridTemplateColumns = `repeat(${configLayout.colunas}, minmax(0, 1fr))`;
         folha.style.gridTemplateRows = `repeat(${configLayout.linhas}, minmax(0, 1fr))`;
 
         thumb.appendChild(folha);
 
-        if (isMobile) {
-            container.appendChild(thumb);
-        } else if (indiceFolha === folhaAtual) {
-            painelPrincipal.appendChild(thumb);
-        } else {
-            faixaMiniaturas.appendChild(thumb);
-        }
+        container.appendChild(thumb);
 
         for (const numeroPagina of paginasDaFolha) {
             if (token !== renderTokenAtual) {
@@ -2434,8 +2634,8 @@ async function renderFolha() {
             const page = await pdfDoc.getPage(numeroPagina);
             const viewportBase = page.getViewport({ scale: 1 });
             const escalaAjuste = Math.min(
-                larguraCelulaAtual / viewportBase.width,
-                alturaCelulaAtual / viewportBase.height
+                larguraCelula / viewportBase.width,
+                alturaCelula / viewportBase.height
             );
             const escalaRender = escalaAjuste * dpr;
             const viewport = page.getViewport({ scale: escalaRender });
@@ -2491,9 +2691,7 @@ async function renderFolha() {
 
     atualizarContador();
     atualizarDestaqueFolha();
-    if (isMobile) {
-        centralizarFolhaAtiva(false);
-    }
+    centralizarFolhaAtiva(false);
 }
 
 function proximaFolha() {
@@ -2661,6 +2859,45 @@ function registrarEventos() {
         calcularConsumo();
     });
     el("turmaImpressao").addEventListener("change", aplicarTurmaImpressaoSelecionada);
+    const buscaTurmaImpressao = el("turmaImpressaoBusca");
+    buscaTurmaImpressao?.addEventListener("focus", renderizarListaTurmasImpressao);
+    buscaTurmaImpressao?.addEventListener("click", renderizarListaTurmasImpressao);
+    buscaTurmaImpressao?.addEventListener("input", () => {
+        sincronizarTurmaImpressaoPelaBusca();
+        renderizarListaTurmasImpressao();
+    });
+    buscaTurmaImpressao?.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            event.preventDefault();
+            moverSelecaoListaTurmasImpressao(event.key === "ArrowDown" ? 1 : -1);
+            return;
+        }
+        if (event.key === "Enter" && indiceOpcaoTurmaImpressaoAtiva >= 0) {
+            event.preventDefault();
+            const options = el("turmasImpressaoLista")?.querySelectorAll(
+                ".print-class-search-option"
+            ) || [];
+            const optionAtiva = options[indiceOpcaoTurmaImpressaoAtiva];
+            if (optionAtiva) selecionarTurmaImpressaoPeloId(optionAtiva.dataset.turmaId);
+            return;
+        }
+        if (event.key === "Escape") fecharListaTurmasImpressao();
+    });
+    buscaTurmaImpressao?.addEventListener("blur", () => {
+        window.setTimeout(() => {
+            if (document.activeElement?.closest(".print-class-search-control")) return;
+            if (!sincronizarTurmaImpressaoPelaBusca()) buscaTurmaImpressao.value = "";
+            fecharListaTurmasImpressao();
+        }, 0);
+    });
+    document.addEventListener("click", (event) => {
+        if (event.target.closest(".print-class-search-control")) return;
+        if (!sincronizarTurmaImpressaoPelaBusca() && buscaTurmaImpressao) {
+            buscaTurmaImpressao.value = "";
+        }
+        fecharListaTurmasImpressao();
+    });
+    el("printerName")?.addEventListener("change", atualizarEstadoFluxoImpressao);
     el("duplex").addEventListener("change", atualizarPreview);
     el("paginasPorFolha").addEventListener("change", () => {
         folhaAtual = 1;
@@ -2745,19 +2982,12 @@ function registrarEventos() {
     const professorSolicitante = el("professorSolicitante");
     if (professorSolicitante) {
         professorSolicitante.addEventListener("change", async () => {
-            const professorAnteriorId = Number(professorSolicitante.dataset.previousProfessorId || 0);
             const professorAtualId = obterProfessorSolicitanteSelecionadoId();
             professorSolicitante.dataset.previousProfessorId = String(professorAtualId || 0);
             atualizarTitulosContextoImpressao();
             el("msg").innerText = "";
 
             try {
-                if (
-                    professorAnteriorId !== professorAtualId
-                    && Number(jobHistoricoSelecionadoAtual?.id || 0) > 0
-                ) {
-                    await carregarPreview(null);
-                }
                 await carregarCota();
                 await carregarFila();
             } catch (err) {
@@ -2804,6 +3034,7 @@ function definirTextoResumoPadrao() {
     definirTexto("resumoOrientacao", "Retrato");
     definirTexto("resumoDuplex", "Nao");
     definirTexto("resumoTags", "Nenhum tipo selecionado");
+    definirTexto("resumoImpressora", "Não selecionada");
     definirTexto("resumoArquivoBarra", "Arquivo: -");
 }
 
@@ -2863,6 +3094,7 @@ function obterEstadoValidacaoImpressao() {
     const usaHistorico = Number(jobHistoricoSelecionadoAtual?.id || 0) > 0;
     const copias = Number(el("copias")?.value || 0);
     const tagsSelecionadas = obterTagsImpressaoSelecionadas();
+    const printerName = String(el("printerName")?.value || "").trim();
 
     if (professorSolicitantePendente()) {
         return { valido: false, mensagem: "Selecione o professor solicitante para liberar as proximas etapas." };
@@ -2886,6 +3118,10 @@ function obterEstadoValidacaoImpressao() {
 
     if (tagsSelecionadas.length === 0) {
         return { valido: false, mensagem: "Selecione ao menos uma tag para liberar o envio." };
+    }
+
+    if (!printerName) {
+        return { valido: false, mensagem: "Selecione a impressora de destino." };
     }
 
     if (pdfDoc) {
@@ -2932,6 +3168,7 @@ function atualizarResumoImpressaoPainel(resumoImpressao = calcularResumoImpressa
         (el("orientacao")?.value || "retrato") === "paisagem" ? "Paisagem" : "Retrato"
     );
     definirTexto("resumoDuplex", el("duplex")?.checked ? "Sim" : "Não");
+    definirTexto("resumoImpressora", el("printerName")?.value || "Não selecionada");
     const tagsSelecionadas = obterTagsImpressaoSelecionadas();
     definirTexto(
         "resumoTags",
@@ -3003,6 +3240,7 @@ function sincronizarEstadoAcaoEnvio(mensagem = "") {
 function atualizarEstadoFluxoImpressao() {
     const resumoImpressao = calcularResumoImpressao();
     atualizarResumoImpressaoPainel(resumoImpressao);
+    atualizarResumoPreviewImpressao(resumoImpressao);
     sincronizarEstadoAcaoEnvio(envioEmAndamento ? "Enviando..." : "");
     const btnAbrirPreviewMobile = el("btnAbrirPreviewMobile");
     if (btnAbrirPreviewMobile) {
@@ -3038,6 +3276,27 @@ function atualizarEstadoFluxoImpressao() {
             }
             : undefined,
     });
+}
+
+function atualizarResumoPreviewImpressao(resumoImpressao) {
+    const arquivo = el("printPreviewFile");
+    const resumo = el("printPreviewSummary");
+    if (!arquivo || !resumo) {
+        return;
+    }
+
+    arquivo.innerText = obterArquivoSelecionado()?.name || "Aguardando arquivo";
+    if (!resumoImpressao) {
+        resumo.innerText = "A prévia será exibida após o envio do arquivo.";
+        return;
+    }
+
+    const { paginasSelecionadas, copias, consumo } = resumoImpressao;
+    resumo.innerText = [
+        `${paginasSelecionadas} ${paginasSelecionadas === 1 ? "página" : "páginas"}`,
+        `${copias} ${copias === 1 ? "cópia" : "cópias"}`,
+        `${consumo} ${consumo === 1 ? "folha" : "folhas"}`,
+    ].join(" · ");
 }
 
 function abrirPainelHistorico() {
@@ -3199,13 +3458,18 @@ carregarJobHistoricoNoPreview = async function carregarJobHistoricoNoPreviewRefa
 
 const carregarCotaOriginal = carregarCota;
 carregarCota = async function carregarCotaRefatorado() {
-    await carregarCotaOriginal();
-    atualizarEspelhosCotaImpressao(el("cota")?.innerText || "Carregando...");
-    atualizarEstadoFluxoImpressao();
+    try {
+        await carregarCotaOriginal();
+    } finally {
+        atualizarEspelhosCotaImpressao(el("cota")?.innerText || "Carregando...");
+        atualizarEstadoFluxoImpressao();
+    }
 };
 
 atualizarEstadoEnvio = function atualizarEstadoEnvioRefatorado(ativo, mensagem = "") {
     envioEmAndamento = Boolean(ativo);
+    const loadingScreen = el("printLoadingScreen");
+    if (loadingScreen) loadingScreen.hidden = !envioEmAndamento;
     sincronizarEstadoAcaoEnvio(mensagem);
 };
 
@@ -3213,19 +3477,9 @@ const registrarEventosOriginal = registrarEventos;
 registrarEventos = function registrarEventosRefatorado() {
     registrarEventosOriginal();
 
-    [
-        "btnAbrirHistorico",
-        "btnAbrirHistoricoTopbar",
-        "btnAbrirHistoricoMobile",
-        "btnAbrirHistoricoResumo",
-    ].forEach((id) => {
-        el(id)?.addEventListener("click", abrirPainelHistorico);
-    });
-
-    el("btnFecharHistorico")?.addEventListener("click", fecharPainelHistorico);
-    document.querySelector("[data-close-history='true']")?.addEventListener("click", fecharPainelHistorico);
     el("btnAbrirPreviewMobile")?.addEventListener("click", abrirPreviewMobile);
     el("btnFecharPreviewMobile")?.addEventListener("click", fecharPreviewMobile);
+    el("btnVoltarAjustesPreview")?.addEventListener("click", fecharPreviewMobile);
     el("btnImprimirOutroArquivo")?.addEventListener("click", () => {
         imprimirOutroArquivo().catch((err) => {
             el("msg").innerText = err?.message || "Falha ao reiniciar o fluxo de impressao.";
@@ -3269,9 +3523,11 @@ async function inicializarPagina() {
         atualizarTopbarUsuario();
         await carregarProfessoresImpressaoAdmin();
         await carregarTurmasImpressao();
+        await carregarImpressorasImpressao();
         await carregarTagsImpressao();
         await carregarCota();
-        await carregarFila();
+        const jobs = await carregarFila();
+        await carregarJobHistoricoDaUrl(jobs || []);
     } catch (err) {
         el("msg").innerText = err?.message || "Falha ao carregar os dados da impressao.";
     }

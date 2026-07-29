@@ -30,7 +30,9 @@ Arquivos relacionados:
 - `db/horario_escolar.py`
 - `db/usuarios.py`
 - `database.py`
-- `templates/agendamento.html`
+- `templates/scheduling/index.html`
+- `templates/scheduling/my_bookings.html`
+- `templates/scheduling/calendar.html`
 - `templates/includes/scheduling_repeat_step.html`
 - `static/js/agendamento.js`
 - `static/js/scheduling/day_overview.js`
@@ -86,6 +88,8 @@ flowchart TD
 | Metodo | Rota | Funcao | Responsabilidade | Classificacao |
 | --- | --- | --- | --- | --- |
 | GET | `/agendamento` | `routers/pages_router.py`: `agendamento_page` | Renderiza a tela HTML do agendamento | Confirmada pelo codigo |
+| GET | `/agendamento/meus-agendamentos` | `modules/scheduling/router.py`: `my_scheduling_page` | Renderiza os agendamentos do usuario | Confirmada pelo codigo |
+| GET | `/agendamento/calendario` | `modules/scheduling/router.py`: `scheduling_calendar_page` | Renderiza o calendario geral | Confirmada pelo codigo |
 | GET | `/agendamento/recursos` | `modules/scheduling/router.py`: `recursos_agendamento` | Lista recursos ativos | Confirmada pelo codigo |
 | GET | `/agendamento/opcoes` | `modules/scheduling/router.py`: `opcoes_agendamento` | Retorna turnos, grade, aulas globais e turmas | Confirmada pelo codigo |
 | GET | `/agendamento/professores` | `modules/scheduling/router.py`: `professores_agendamento` | Lista professores disponiveis para agendamento | Confirmada pelo codigo |
@@ -179,7 +183,7 @@ Classificacao: Confirmada pelo codigo.
 | Auditoria | Registra tentativa de criacao de reserva | `modules/scheduling/router.py`: `criar_reserva_agendamento` | Confirmada pelo codigo |
 | Catalogos | Busca recursos e turmas | `modules/scheduling/repository.py`: `list_active_resources`, `list_active_classes` | Confirmada pelo codigo |
 | Configuracao de aulas | Define aulas disponiveis por turma | `modules/scheduling/repository.py`: `list_lesson_configurations` | Confirmada pelo codigo |
-| Frontend | Executa fluxo visual de selecao, resumo, repeticao e cancelamento | `templates/agendamento.html`; `static/js/agendamento.js`; `static/js/scheduling/*.js` | Confirmada pelo codigo |
+| Frontend | Executa fluxo visual de selecao, resumo, repeticao, consulta e cancelamento | `templates/scheduling/*`; `static/js/agendamento.js`; `static/js/scheduling/*.js` | Confirmada pelo codigo |
 
 ## Testes
 
@@ -209,4 +213,3 @@ Classificacao: Confirmada pelo codigo.
 | Coordenador deve poder criar reserva para outro professor ou apenas listar professores? | `professores_agendamento` aceita gestor, mas `resolver_usuario_professor_selecionado` exige admin para `professor_id` | Pendente de validacao |
 | `configuracao_turnos_segmentos` deve ser consumida em runtime? | Migration cria tabela, mas runtime usa constantes em `modules/scheduling/config.py` | Pendente de validacao |
 | Recursos devem virar modulo proprio? | Agendamento usa recursos via catalogos; nao existe `modules/resources` | Pendente de validacao |
-

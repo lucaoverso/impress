@@ -4,29 +4,30 @@ from sqlite3 import IntegrityError
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from auth import get_usuario_logado
-from db.catalogos import (
-    buscar_disciplina_por_id,
-    buscar_turma_por_id,
-    listar_disciplinas_ativas,
-    listar_turmas_ativas,
-)
-from db.docencia import listar_atribuicoes_docentes, listar_turmas_disciplinas_admin
-from db.horario_escolar import (
-    listar_configuracoes_aulas,
+from modules.scheduling.school_schedule_data_service import (
+    atualizar_aula_atividade_professor,
+    atualizar_horario_escolar,
+    buscar_aula_atividade_professor_por_id,
     buscar_horario_escolar_por_id,
+    buscar_turma_por_id,
+    criar_aula_atividade_professor,
     criar_horario_escolar,
+    excluir_aula_atividade_professor,
     excluir_horario_escolar,
     listar_anos_letivos_horario_escolar,
+    listar_aulas_atividade_professores,
+    listar_configuracoes_aulas,
+    listar_disciplinas_ativas,
     listar_horarios_escolares,
-    atualizar_horario_escolar,
-)
-from db.usuarios import (
-    buscar_usuario_por_id,
-    listar_cargas_professores_por_usuario_ids,
     listar_professores_agendamento,
+    listar_turmas_ativas,
+    listar_turmas_disciplinas_admin,
 )
 from modules.scheduling.lesson_config import normalize_schedule_entries
 from models import (
+    AulaAtividadeProfessorCreateIn,
+    AulaAtividadeProfessorOut,
+    AulaAtividadeProfessorUpdateIn,
     HorarioEscolarRegistroIn,
     HorarioEscolarRegistroOut,
     HorarioEscolarRegistroUpdateIn,
@@ -36,6 +37,7 @@ from modules.scheduling.school_schedule_service import (
     agrupar_horarios_por_turma,
     anos_letivos_sugeridos,
     dia_semana_por_data,
+    enriquecer_aula_atividade_professor,
     enriquecer_horario_escolar,
     listar_aulas_turma_horario,
     listar_grade_turma_horario_com_registros,
@@ -48,25 +50,23 @@ from modules.scheduling.school_schedule_service import (
     validar_aula_numero,
     validar_ano_letivo,
 )
+from modules.scheduling.school_schedule_validation_service import (
+    translate_integrity_error,
+    validate_active_teacher,
+    validate_iso_date,
+    validate_school_schedule_payload,
+)
+from modules.scheduling.teacher_dashboard_service import (
+    listar_proximas_aulas_professor,
+)
 
 from routers.common import (
-    CARGO_PROFESSOR,
     exigir_gestor,
-    normalizar_cargo_usuario,
     usuario_eh_gestor,
     usuario_eh_professor,
 )
 
 router = APIRouter()
-
-
-def _usuario_professor_ativo(professor_id: int) -> dict:
-    professor = buscar_usuario_por_id(int(professor_id))
-    if not professor or normalizar_cargo_usuario(professor) != CARGO_PROFESSOR:
-        raise HTTPException(404, "Professor não encontrado.")
-    if not bool(int(professor.get("ativo", 1) or 0)):
-        raise HTTPException(400, "Professor selecionado esta inativo.")
-    return professor
 
 
 def _serializar_contexto_professores(professores: list[dict]) -> list[dict]:
@@ -115,117 +115,6 @@ def _enriquecer_itens_para_usuario(itens: list[dict], usuario: dict) -> list[dic
     ]
 
 
-def _validar_data_iso(valor: str, campo: str = "Data") -> str:
-    texto = str(valor or "").strip()
-    if not texto:
-        raise HTTPException(400, f"{campo} inválida. Use o formato YYYY-MM-DD.")
-    try:
-        return datetime.strptime(texto, "%Y-%m-%d").date().isoformat()
-    except ValueError as exc:
-        raise HTTPException(400, f"{campo} inválida. Use o formato YYYY-MM-DD.") from exc
-
-
-def _traduzir_erro_integridade(exc: IntegrityError) -> str:
-    texto = str(exc).lower()
-    if "idx_horarios_escolares_professor_faixa_slot" in texto:
-        return "O professor já possui aula cadastrada nessa faixa e nesse dia."
-    if "idx_horarios_escolares_professor_slot" in texto:
-        return "O professor já possui aula cadastrada nesse dia e horário."
-    if "idx_horarios_escolares_turma_slot" in texto:
-        return "Já existe aula cadastrada para essa turma nesse dia e horário."
-    if "professor_usuario_id" in texto and "dia_semana" in texto and "aula_numero" in texto:
-        return "O professor já possui aula cadastrada nesse dia e horário."
-    if "turma_id" in texto and "dia_semana" in texto and "aula_numero" in texto:
-        return "Já existe aula cadastrada para essa turma nesse dia e horário."
-    return "Conflito ao salvar o horário escolar."
-
-
-def _validar_vinculo_docente(professor: dict, turma: dict, disciplina: dict):
-    professor_id = int(professor["id"])
-    turma_id = int(turma["id"])
-    disciplina_id = int(disciplina["id"])
-
-    atribuicoes = listar_atribuicoes_docentes(
-        professor_id=professor_id,
-        turma_id=turma_id,
-        disciplina_id=disciplina_id,
-        incluir_inativos=False,
-    )
-    if atribuicoes:
-        return
-
-    vinculos_turma_disciplina = listar_turmas_disciplinas_admin(
-        turma_id=turma_id,
-        disciplina_id=disciplina_id,
-        professor_id=professor_id,
-        incluir_inativos=False,
-    )
-    if vinculos_turma_disciplina:
-        return
-
-    carga = listar_cargas_professores_por_usuario_ids([professor_id]).get(professor_id, {})
-    turma_nome = str(turma.get("nome") or "").strip().casefold()
-    disciplina_nome = str(disciplina.get("nome") or "").strip().casefold()
-    turmas_carga = {
-        str(item or "").strip().casefold()
-        for item in (carga.get("turmas") or [])
-        if str(item or "").strip()
-    }
-    disciplinas_carga = {
-        str(item or "").strip().casefold()
-        for item in (carga.get("disciplinas") or [])
-        if str(item or "").strip()
-    }
-    if turma_nome in turmas_carga and disciplina_nome in disciplinas_carga:
-        return
-
-    raise HTTPException(
-        400,
-        "O professor selecionado não possui vínculo com a turma e disciplina informadas.",
-    )
-
-
-def _validar_payload_horario(
-    payload: HorarioEscolarRegistroIn | HorarioEscolarRegistroUpdateIn,
-) -> dict:
-    configuracoes_aulas = listar_configuracoes_aulas(incluir_inativas=False)
-    try:
-        ano_letivo = validar_ano_letivo(payload.ano_letivo)
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
-
-    turma = buscar_turma_por_id(int(payload.turma_id))
-    if not turma:
-        raise HTTPException(404, "Turma não encontrada.")
-
-    disciplina = buscar_disciplina_por_id(int(payload.disciplina_id))
-    if not disciplina:
-        raise HTTPException(404, "Disciplina não encontrada.")
-
-    professor = _usuario_professor_ativo(int(payload.professor_id))
-
-    try:
-        dia_semana = normalizar_dia_semana(payload.dia_semana)
-        aula_numero = validar_aula_numero(
-            payload.aula_numero,
-            turma,
-            configuracoes_aulas=configuracoes_aulas,
-        )
-    except ValueError as exc:
-        raise HTTPException(400, str(exc)) from exc
-
-    _validar_vinculo_docente(professor, turma, disciplina)
-
-    return {
-        "ano_letivo": ano_letivo,
-        "turma_id": int(turma["id"]),
-        "disciplina_id": int(disciplina["id"]),
-        "professor_id": int(professor["id"]),
-        "dia_semana": dia_semana,
-        "aula_numero": aula_numero,
-    }
-
-
 @router.get("/horario-escolar/contexto")
 def obter_contexto_horario_escolar_api(usuario=Depends(get_usuario_logado)):
     _exigir_visualizacao_horario(usuario)
@@ -250,6 +139,14 @@ def obter_contexto_horario_escolar_api(usuario=Depends(get_usuario_logado)):
     }
 
 
+@router.get("/horario-escolar/minhas-proximas-aulas")
+def obter_proximas_aulas_professor_api(usuario=Depends(get_usuario_logado)):
+    professor_id = _id_professor_logado(usuario)
+    if not professor_id:
+        raise HTTPException(403, "A visão de próximas aulas é exclusiva para professores.")
+    return listar_proximas_aulas_professor(professor_id)
+
+
 @router.get("/horario-escolar/registros")
 def listar_horarios_escolares_api(
     ano_letivo: int | None = None,
@@ -257,6 +154,7 @@ def listar_horarios_escolares_api(
     professor_id: int | None = None,
     disciplina_id: int | None = None,
     dia_semana: str | None = None,
+    incluir_aulas_atividade: bool = False,
     usuario=Depends(get_usuario_logado),
 ):
     _exigir_visualizacao_horario(usuario)
@@ -287,14 +185,118 @@ def listar_horarios_escolares_api(
         configuracoes_aulas=configuracoes_aulas,
     )
     itens = _enriquecer_itens_para_usuario(itens, usuario)
+    aulas_atividade = []
+    if incluir_aulas_atividade or (turma_id is None and disciplina_id is None):
+        professor_logado_id = _id_professor_logado(usuario)
+        aulas_atividade = [
+            {
+                **enriquecer_aula_atividade_professor(
+                    item,
+                    configuracoes_aulas=configuracoes_aulas,
+                ),
+                "eh_do_professor_logado": bool(
+                    professor_logado_id
+                    and int(item.get("professor_id") or 0) == professor_logado_id
+                ),
+            }
+            for item in listar_aulas_atividade_professores(
+                ano_letivo=ano_letivo_valor,
+                professor_id=professor_id,
+                dia_semana=dia_semana_valor,
+            )
+        ]
     return {
         "total_registros": len(itens),
+        "total_aulas_atividade": len(aulas_atividade),
         "itens": itens,
+        "aulas_atividade": aulas_atividade,
         "grupos_turma": agrupar_horarios_por_turma(itens),
         "grupos_professor": agrupar_horarios_por_professor(itens),
         "modo_interface": "gestor" if usuario_eh_gestor(usuario) else "professor",
         "professor_logado_id": _id_professor_logado(usuario),
     }
+
+
+@router.post(
+    "/horario-escolar/aulas-atividade",
+    response_model=AulaAtividadeProfessorOut,
+)
+def criar_aula_atividade_professor_api(
+    payload: AulaAtividadeProfessorCreateIn,
+    usuario=Depends(get_usuario_logado),
+):
+    exigir_gestor(usuario)
+    try:
+        ano_letivo = validar_ano_letivo(payload.ano_letivo)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    professor = validate_active_teacher(payload.professor_id)
+    item = criar_aula_atividade_professor(
+        ano_letivo=ano_letivo,
+        professor_usuario_id=int(professor["id"]),
+    )
+    return enriquecer_aula_atividade_professor(
+        item,
+        configuracoes_aulas=listar_configuracoes_aulas(incluir_inativas=False),
+    )
+
+
+@router.put(
+    "/horario-escolar/aulas-atividade/{registro_id}",
+    response_model=AulaAtividadeProfessorOut,
+)
+def atualizar_aula_atividade_professor_api(
+    registro_id: int,
+    payload: AulaAtividadeProfessorUpdateIn,
+    usuario=Depends(get_usuario_logado),
+):
+    exigir_gestor(usuario)
+    if not buscar_aula_atividade_professor_por_id(registro_id):
+        raise HTTPException(404, "Aula atividade não encontrada.")
+
+    dia_informado = bool(str(payload.dia_semana or "").strip())
+    aula_informada = payload.aula_numero is not None
+    if dia_informado != aula_informada:
+        raise HTTPException(400, "Informe o dia e a aula para fazer a alocação.")
+
+    dia_semana = None
+    aula_numero = None
+    if dia_informado:
+        try:
+            dia_semana = normalizar_dia_semana(payload.dia_semana)
+            aula_numero = validar_aula_numero(
+                payload.aula_numero,
+                configuracoes_aulas=listar_configuracoes_aulas(incluir_inativas=False),
+            )
+        except ValueError as exc:
+            raise HTTPException(400, str(exc)) from exc
+
+    try:
+        item = atualizar_aula_atividade_professor(
+            registro_id=registro_id,
+            dia_semana=dia_semana,
+            aula_numero=aula_numero,
+            faixa_global=aula_numero,
+        )
+    except IntegrityError as exc:
+        raise HTTPException(409, translate_integrity_error(exc)) from exc
+    if not item:
+        raise HTTPException(404, "Aula atividade não encontrada.")
+    return enriquecer_aula_atividade_professor(
+        item,
+        configuracoes_aulas=listar_configuracoes_aulas(incluir_inativas=False),
+    )
+
+
+@router.delete("/horario-escolar/aulas-atividade/{registro_id}")
+def excluir_aula_atividade_professor_api(
+    registro_id: int,
+    usuario=Depends(get_usuario_logado),
+):
+    exigir_gestor(usuario)
+    if not excluir_aula_atividade_professor(registro_id):
+        raise HTTPException(404, "Aula atividade não encontrada.")
+    return {"mensagem": "Aula atividade excluída com sucesso."}
 
 
 @router.get("/horario-escolar/turmas/{turma_id}/matriz")
@@ -356,7 +358,7 @@ def criar_horario_escolar_api(
     usuario=Depends(get_usuario_logado),
 ):
     exigir_gestor(usuario)
-    dados = _validar_payload_horario(payload)
+    dados = validate_school_schedule_payload(payload)
     try:
         item = criar_horario_escolar(
             ano_letivo=dados["ano_letivo"],
@@ -367,7 +369,7 @@ def criar_horario_escolar_api(
             aula_numero=dados["aula_numero"],
         )
     except IntegrityError as exc:
-        raise HTTPException(409, _traduzir_erro_integridade(exc)) from exc
+        raise HTTPException(409, translate_integrity_error(exc)) from exc
     return enriquecer_horario_escolar(
         item,
         configuracoes_aulas=listar_configuracoes_aulas(incluir_inativas=False),
@@ -383,7 +385,7 @@ def atualizar_horario_escolar_api(
     exigir_gestor(usuario)
     if not buscar_horario_escolar_por_id(registro_id):
         raise HTTPException(404, "Registro do horário escolar não encontrado.")
-    dados = _validar_payload_horario(payload)
+    dados = validate_school_schedule_payload(payload)
     try:
         item = atualizar_horario_escolar(
             registro_id=registro_id,
@@ -395,7 +397,7 @@ def atualizar_horario_escolar_api(
             aula_numero=dados["aula_numero"],
         )
     except IntegrityError as exc:
-        raise HTTPException(409, _traduzir_erro_integridade(exc)) from exc
+        raise HTTPException(409, translate_integrity_error(exc)) from exc
     if not item:
         raise HTTPException(404, "Registro do horário escolar não encontrado.")
     return enriquecer_horario_escolar(
@@ -422,7 +424,7 @@ def listar_professores_do_dia_api(
     usuario=Depends(get_usuario_logado),
 ):
     exigir_gestor(usuario)
-    data_iso = _validar_data_iso(data)
+    data_iso = validate_iso_date(data)
     try:
         dia_semana = dia_semana_por_data(data_iso)
     except ValueError as exc:

@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Horário Escolar</title>
+    {% set page_styles = ["css/pages/horario-escolar.css"] %}
     {% include "includes/style_bundle.html" %}
 </head>
 
@@ -13,14 +14,15 @@
     {% set navbar_context_id = "horarioTopbarContext" %}
     {% set navbar_current = "horario" %}
     {% set navbar_extra_actions = [
-        {"id": "btnIrAdmin", "label": "Painel de gestao", "hidden": true}
+        {"id": "btnIrAdmin", "label": "Painel de gestão", "hidden": true}
     ] %}
     {% include "includes/app_navbar.html" %}
-    <main class="horario-page">
-        <header class="admin-header admin-header-shell">
-            <div class="admin-header-main">
-                <h1>Horário escolar</h1>
-                <p id="horarioHeaderDescricao">Organize a grade por turma e acompanhe uma leitura complementar por professor para preparar os próximos módulos operacionais.</p>
+    {% include "includes/app_sidebar_config.html" %}
+    <main class="horario-page page-shell page-shell--wide">
+        <header class="admin-header admin-header-shell page-header">
+            <div class="admin-header-main page-header-main">
+                <h1 class="page-title">Horário escolar</h1>
+                <p id="horarioHeaderDescricao" class="page-lead">Organize a grade por turma e acompanhe uma leitura complementar por professor para preparar os próximos módulos operacionais.</p>
             </div>
         </header>
 

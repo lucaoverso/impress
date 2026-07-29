@@ -1,0 +1,640 @@
+/* Final responsive layer for the professor printing flow, based on the Stitch proposal. */
+.professor-page .print-wizard-shell {
+    width: min(1180px, 100%);
+    padding: var(--page-padding-start) var(--page-gutter) var(--page-padding-end);
+}
+.professor-page .print-workspace {
+    overflow: visible;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+.professor-page .print-page-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    gap: var(--space-8);
+    margin-bottom: var(--space-6);
+    padding: 0;
+    border: 0;
+}
+.professor-page .print-page-quota {
+    display: grid;
+    gap: var(--space-2);
+    width: 298px;
+    min-width: 0;
+    padding: var(--space-4) var(--space-6);
+    border: 1px solid var(--print-color-border);
+    border-radius: var(--radius-lg);
+    background: var(--print-color-surface);
+    color: var(--print-color-text-muted);
+    box-shadow: var(--shadow-low);
+    text-align: left;
+}
+.professor-page .print-page-quota-copy {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--space-2);
+}
+.professor-page .print-page-quota span {
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+.professor-page .print-page-quota strong {
+    color: var(--print-color-text);
+    font-size: 0.9375rem;
+    text-align: right;
+}
+.professor-page .print-quota-meter {
+    width: 100%;
+    height: 8px;
+    overflow: hidden;
+    border-radius: 999px;
+    background: var(--print-color-surface-muted);
+}
+.professor-page .print-quota-meter span {
+    display: block;
+    width: var(--print-quota-progress, 0%);
+    height: 100%;
+    border-radius: inherit;
+    background: var(--print-color-primary);
+    transition: width var(--print-transition);
+}
+.professor-page .print-page-quota small {
+    color: var(--print-color-text-muted);
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+.professor-page .print-flow-stepper[hidden] {
+    display: none;
+}
+.professor-page .print-flow-stepper ol {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.professor-page .print-request-owner {
+    display: grid;
+}
+.professor-page .print-request-owner[hidden] {
+    display: none;
+}
+html[data-printing-current-step="1"] body.professor-page .print-upload-dropzone {
+    min-height: 320px;
+    padding: var(--space-8) var(--space-6);
+    border-color: color-mix(in srgb, var(--print-color-primary) 42%, var(--print-color-border));
+    border-radius: 0;
+    background: var(--print-color-surface);
+}
+html[data-printing-current-step="1"] body.professor-page .print-wizard-stage {
+    border: 1px solid var(--print-color-border);
+    background: var(--print-color-surface);
+    box-shadow: var(--shadow-low);
+}
+html[data-printing-current-step="1"] body.professor-page .print-wizard-left {
+    padding: var(--space-8);
+}
+html[data-printing-current-step="1"] body.professor-page #etapaArquivo {
+    gap: var(--space-6);
+    justify-items: stretch;
+    text-align: left;
+}
+html[data-printing-current-step="1"] body.professor-page #etapaArquivo .print-step-header {
+    display: none;
+}
+html[data-printing-current-step="1"] body.professor-page #etapaArquivo > .print-field-group,
+html[data-printing-current-step="1"] body.professor-page #grupoProfessorSolicitante {
+    width: min(100%, 360px);
+}
+html[data-printing-current-step="1"] body.professor-page #etapaArquivo select,
+html[data-printing-current-step="1"] body.professor-page #turmaImpressaoBusca {
+    min-height: var(--field-height);
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-control {
+    position: relative;
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-icon,
+html[data-printing-current-step="1"] body.professor-page .print-class-search-chevron {
+    position: absolute;
+    top: 50%;
+    z-index: 1;
+    width: 20px;
+    height: 20px;
+    fill: none;
+    stroke: var(--print-color-text-muted);
+    stroke-linecap: round;
+    stroke-width: 1.8;
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-icon {
+    left: var(--space-4);
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-chevron {
+    right: var(--space-4);
+    transition: transform var(--print-transition);
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-control:has(
+    #turmaImpressaoBusca[aria-expanded="true"]
+) .print-class-search-chevron {
+    transform: translateY(-50%) rotate(180deg);
+}
+html[data-printing-current-step="1"] body.professor-page #turmaImpressaoBusca {
+    width: 100%;
+    padding-right: 44px;
+    padding-left: 44px;
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-list {
+    position: absolute;
+    top: calc(100% + var(--space-2));
+    right: 0;
+    left: 0;
+    z-index: var(--z-dropdown);
+    max-height: 240px;
+    padding: var(--space-2);
+    overflow-y: auto;
+    border: 1px solid var(--print-color-border);
+    border-radius: var(--print-radius-control);
+    background: var(--print-color-surface);
+    box-shadow: var(--shadow-floating);
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-list[hidden] {
+    display: none;
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-option {
+    display: block;
+    width: 100%;
+    padding: 10px 12px;
+    border: 0;
+    border-radius: calc(var(--print-radius-control) - 4px);
+    background: transparent;
+    color: var(--print-color-text);
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-option:hover,
+html[data-printing-current-step="1"] body.professor-page .print-class-search-option.is-active,
+html[data-printing-current-step="1"] body.professor-page .print-class-search-option[aria-selected="true"] {
+    background: var(--print-color-primary-light);
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-option strong,
+html[data-printing-current-step="1"] body.professor-page .print-class-search-option small {
+    display: block;
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-option small {
+    margin-top: 2px;
+    color: var(--print-color-text-muted);
+}
+html[data-printing-current-step="1"] body.professor-page .print-class-search-empty {
+    margin: 0;
+    padding: 12px;
+    color: var(--print-color-text-muted);
+}
+html[data-printing-current-step="1"] body.professor-page #etapaArquivo .print-file-hint {
+    margin: 0;
+    text-align: left;
+}
+html[data-printing-current-step="1"] body.professor-page #resumoTurmaImpressao {
+    display: none;
+}
+html[data-printing-current-step="1"] body.professor-page .print-upload-icon {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: var(--print-color-primary-light);
+    color: var(--print-color-primary);
+}
+html[data-printing-current-step="1"] body.professor-page .print-upload-icon svg {
+    width: 44px;
+    height: 44px;
+}
+html[data-printing-current-step="1"] body.professor-page .print-upload-title {
+    margin-top: var(--space-2);
+    font-size: 1.25rem;
+    font-weight: 800;
+}
+html[data-printing-current-step="1"] body.professor-page .print-upload-subtitle {
+    color: var(--print-color-text-muted);
+    font-size: 0.9375rem;
+}
+html[data-printing-current-step="1"] body.professor-page .print-upload-subtitle strong {
+    color: var(--print-color-primary);
+}
+.professor-page .print-upload-formats {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: var(--space-2);
+    margin-top: var(--space-3);
+}
+.professor-page .print-upload-formats > span {
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--print-color-surface-muted);
+    color: var(--print-color-text-muted);
+    font-size: 0.8125rem;
+    font-weight: 700;
+}
+html[data-printing-current-step="1"] body.professor-page .print-upload-file {
+    display: none;
+}
+html[data-printing-current-step="1"] body.professor-page .print-upload-dropzone.has-file .print-upload-file {
+    display: block;
+    max-width: min(100%, 60ch);
+    color: var(--print-color-primary);
+    font-weight: 800;
+}
+html[data-printing-current-step="1"] body.professor-page #etapaArquivo .print-step-actions {
+    justify-content: flex-end;
+    padding-top: var(--space-4);
+    border: 0;
+}
+html[data-printing-current-step="1"] body.professor-page #btnContinuarArquivo {
+    display: inline-flex;
+    min-width: 230px;
+    min-height: 56px;
+    gap: var(--space-3);
+    font-size: 1rem;
+}
+html[data-printing-current-step="1"] body.professor-page #btnContinuarArquivo svg {
+    width: 22px;
+    height: 22px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
+}
+.professor-page .print-entry-benefits {
+    display: none;
+}
+html[data-printing-current-step="1"] body.professor-page .print-entry-benefits {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--space-8);
+    padding: var(--space-8) var(--space-2);
+}
+.professor-page .print-entry-benefits article {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-3);
+}
+.professor-page .print-entry-benefits svg {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    fill: none;
+    stroke: var(--print-color-primary);
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.8;
+}
+.professor-page .print-entry-benefits strong {
+    display: block;
+    margin-bottom: 2px;
+    color: var(--print-color-text);
+    font-size: 0.875rem;
+}
+.professor-page .print-entry-benefits p {
+    max-width: 34ch;
+    margin: 0;
+    color: var(--print-color-text-muted);
+    font-size: 0.875rem;
+    line-height: 1.55;
+}
+.professor-page .print-wizard-stage {
+    grid-template-columns: minmax(390px, 0.9fr) minmax(500px, 1.1fr);
+}
+.professor-page .print-wizard-left {
+    padding: var(--space-6) var(--space-8) var(--space-8);
+}
+.professor-page .print-wizard-right {
+    top: calc(var(--app-navbar-height) + var(--space-3));
+    min-height: 640px;
+    padding: var(--space-6) var(--space-6) var(--space-6) 0;
+}
+.professor-page .print-preview-stage {
+    height: min(720px, calc(100svh - var(--app-navbar-height) - 48px));
+    min-height: 600px;
+    grid-template-rows: auto auto minmax(0, 1fr) auto;
+    padding: 0;
+    border: 1px solid var(--print-color-border);
+    border-radius: var(--radius-lg);
+    background: var(--print-color-surface);
+    box-shadow: var(--shadow-low);
+}
+.professor-page .print-preview-header {
+    min-height: 64px;
+    align-items: center;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--print-color-border);
+}
+.professor-page .print-preview-header > .print-preview-title {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+}
+.professor-page .print-preview-title h2 {
+    font-size: 1.125rem;
+}
+.professor-page .print-preview-document {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    min-width: 0;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--print-color-border);
+    background: var(--print-color-surface-muted);
+}
+.professor-page .print-preview-document > div {
+    display: grid;
+    gap: 2px;
+    min-width: 0;
+}
+.professor-page .print-preview-document span {
+    color: var(--print-color-text-muted);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+.professor-page .print-preview-document strong {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.professor-page .print-preview-document p {
+    margin: 0;
+    color: var(--print-color-text-muted);
+    font-size: 0.8125rem;
+    text-align: right;
+}
+.professor-page .print-preview-pane {
+    min-height: 0;
+    padding: var(--space-4);
+    border: 0;
+    border-radius: 0;
+    background: var(--print-color-surface-muted);
+}
+.professor-page .print-preview-footer {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: var(--space-3);
+    min-height: 60px;
+    padding: var(--space-2) var(--space-4);
+    border-top: 1px solid var(--print-color-border);
+}
+.professor-page .print-pagination {
+    grid-column: 2;
+    grid-template-columns: 40px minmax(112px, 1fr) 40px;
+    min-width: 208px;
+    padding: 2px;
+    border: 0;
+    background: transparent;
+}
+.professor-page .print-pagination button {
+    display: inline-flex;
+    width: 40px;
+    height: 40px;
+    min-height: 40px;
+    border-color: var(--print-color-border-strong);
+    background: var(--print-color-surface);
+    color: var(--print-color-primary);
+}
+.professor-page .print-preview-selection-help,
+.professor-page .print-preview-back-btn,
+.professor-page .print-preview-close-btn {
+    display: none;
+}
+.professor-page #previewContainer .preview-cell::before {
+    max-width: calc(100% - 12px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+@media (max-width: 1100px) and (min-width: 981px) {
+    .professor-page .print-wizard-stage {
+        grid-template-columns: minmax(350px, 0.95fr) minmax(430px, 1.05fr);
+    }
+    .professor-page .print-wizard-left {
+        padding-inline: var(--space-6);
+    }
+}
+@media (min-width: 981px) {
+    html:not([data-printing-current-step="1"]) body.professor-page .print-wizard-right > .print-preview-stage {
+        height: min(720px, calc(100svh - var(--app-navbar-height) - 48px));
+        min-height: 600px;
+        max-height: 720px;
+    }
+}
+@media (max-width: 980px) {
+    .professor-page .print-workspace {
+        overflow: clip;
+    }
+    .professor-page .print-page-header {
+        grid-template-columns: 1fr;
+        align-items: stretch;
+        gap: var(--space-4);
+        margin-bottom: var(--space-4);
+        padding: 0;
+    }
+    .professor-page .print-page-quota {
+        width: 100%;
+        text-align: left;
+    }
+    html[data-printing-current-step="1"] body.professor-page .print-upload-dropzone {
+        min-height: 240px;
+        padding: var(--space-6);
+    }
+    html[data-printing-current-step="1"] body.professor-page .print-wizard-stage {
+        margin-inline: var(--space-2);
+    }
+    html[data-printing-current-step="1"] body.professor-page .print-wizard-left {
+        padding: var(--space-6);
+    }
+    html[data-printing-current-step="1"] body.professor-page .print-entry-benefits {
+        grid-template-columns: 1fr;
+        gap: var(--space-6);
+        padding: var(--space-6) var(--space-4);
+    }
+    .professor-page .print-selection-context {
+        position: sticky;
+        top: var(--app-navbar-height);
+        z-index: var(--z-sticky);
+        box-shadow: 0 1px 0 var(--print-color-border);
+    }
+    .professor-page .print-wizard-stage {
+        display: block;
+    }
+    .professor-page .print-wizard-left {
+        padding: var(--space-6) var(--space-4);
+    }
+    body.professor-page.print-preview-modal-open .print-wizard-right {
+        position: fixed;
+        inset: 0;
+        z-index: var(--z-mobile-overlay);
+        display: block;
+        width: 100%;
+        height: 100dvh;
+        min-height: 100svh;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+        background: var(--print-color-surface);
+    }
+    body.professor-page.print-preview-modal-open #painelPreview,
+    body.professor-page.print-preview-modal-open #painelPreview[hidden] {
+        position: relative;
+        display: grid !important;
+        width: 100%;
+        max-width: none;
+        height: 100dvh;
+        min-height: 100svh;
+        margin: 0;
+        padding: 0;
+        grid-template-rows: auto auto minmax(0, 1fr) auto;
+        border: 0;
+        border-radius: 0;
+        background: var(--print-color-surface);
+        box-shadow: none;
+    }
+    .professor-page .print-preview-header {
+        flex-direction: row;
+        justify-content: flex-start;
+        min-height: calc(60px + env(safe-area-inset-top));
+        padding: max(var(--space-3), env(safe-area-inset-top)) var(--space-4) var(--space-3);
+    }
+    .professor-page .print-preview-title {
+        flex: 1 1 auto;
+    }
+    .professor-page .print-preview-header-actions {
+        order: -1;
+        width: auto;
+        flex: 0 0 auto;
+    }
+    .professor-page .print-preview-close-btn {
+        display: inline-flex;
+        width: 44px;
+        min-width: 44px;
+        min-height: 44px;
+        padding: 0;
+    }
+    .professor-page .print-preview-close-btn span:last-child {
+        display: none;
+    }
+    .professor-page .print-preview-document {
+        align-items: flex-start;
+        padding: var(--space-3) var(--space-4);
+    }
+    .professor-page .print-preview-document p {
+        max-width: 48%;
+    }
+    .professor-page .print-preview-pane {
+        min-height: 0;
+        height: auto;
+        padding: var(--space-3);
+        overflow-x: auto;
+        overflow-y: hidden;
+        scroll-padding-inline: var(--space-3);
+        scroll-snap-type: x mandatory;
+        touch-action: pan-x pan-y pinch-zoom;
+    }
+    .professor-page #previewContainer.is-carousel {
+        min-width: 100%;
+        height: 100%;
+        align-items: center;
+    }
+    .professor-page #previewContainer.is-carousel .print-sheet-thumb {
+        scroll-snap-align: center;
+    }
+    .professor-page .print-preview-footer {
+        grid-template-columns: 1fr;
+        gap: var(--space-2);
+        padding: var(--space-3) var(--space-4) max(var(--space-3), env(safe-area-inset-bottom));
+        background: var(--print-color-surface);
+        box-shadow: 0 -4px 16px rgba(15, 23, 42, 0.08);
+    }
+    .professor-page .print-pagination {
+        grid-column: 1;
+        width: 100%;
+        min-width: 0;
+        grid-template-columns: 44px minmax(0, 1fr) 44px;
+    }
+    .professor-page .print-pagination button {
+        display: inline-flex;
+        width: 44px;
+        height: 44px;
+        min-height: 44px;
+        font-size: 1.5rem;
+    }
+    .professor-page .print-preview-selection-help {
+        display: block;
+        margin: 0;
+        color: var(--print-color-text-muted);
+        font-size: 0.8125rem;
+        text-align: center;
+    }
+    .professor-page .print-preview-back-btn {
+        display: inline-flex;
+        width: 100%;
+        min-height: 48px;
+    }
+}
+@media (max-width: 640px) {
+    html[data-printing-current-step="1"] body.professor-page .print-upload-dropzone {
+        min-height: 220px;
+        padding: var(--space-6);
+    }
+    html[data-printing-current-step="1"] body.professor-page .print-wizard-left {
+        padding: var(--space-6) var(--space-4);
+    }
+    html[data-printing-current-step="1"] body.professor-page .print-upload-icon {
+        width: 72px;
+        height: 72px;
+    }
+    html[data-printing-current-step="1"] body.professor-page .print-upload-icon svg {
+        width: 36px;
+        height: 36px;
+    }
+    html[data-printing-current-step="1"] body.professor-page .print-upload-title {
+        font-size: 1.0625rem;
+    }
+    html[data-printing-current-step="1"] body.professor-page #btnContinuarArquivo {
+        width: 100%;
+        min-width: 0;
+    }
+    .professor-page .print-preview-document {
+        display: grid;
+        gap: var(--space-1);
+    }
+    .professor-page .print-preview-document p {
+        max-width: none;
+        text-align: left;
+    }
+}
+@media (max-width: 980px) and (max-height: 600px) and (orientation: landscape) {
+    .professor-page .print-preview-document {
+        display: flex;
+        padding-block: var(--space-2);
+    }
+    .professor-page .print-preview-pane {
+        padding: var(--space-2);
+    }
+    .professor-page .print-preview-footer {
+        padding-block: var(--space-2);
+    }
+    .professor-page .print-preview-selection-help,
+    .professor-page .print-preview-back-btn {
+        display: none;
+    }
+}
+@media (prefers-reduced-motion: reduce) {
+    .professor-page .print-class-search-chevron {
+        transition: none;
+    }
+    .professor-page .print-preview-pane {
+        scroll-behavior: auto;
+    }
+}

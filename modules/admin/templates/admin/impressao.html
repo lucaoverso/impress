@@ -4,19 +4,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestão de impressão - Administração</title>
+    {% set page_styles = ["css/pages/admin.css"] %}
     {% include "includes/style_bundle.html" %}
 </head>
 <body data-admin-active-tab="impressao">
-    {% set navbar_context = "Painel de gestao" %}
+    {% set navbar_context = "Painel de gestão" %}
     {% set navbar_current = "gestao" %}
     {% include "includes/app_navbar.html" %}
     {% set admin_active_tab = "impressao" %}
     {% include "includes/app_sidebar_config.html" %}
 
-    <main class="admin-page">
-        <header class="admin-header admin-header-shell">
-            <div class="admin-header-main">
-                <h1>Gestão de impressão</h1>
+    <main class="admin-page page-shell page-shell--wide">
+        <header class="admin-header admin-header-shell page-header">
+            <div class="admin-header-main page-header-main">
+                <h1 class="page-title">Gestão de impressão</h1>
                 <p>Controle a disponibilidade, as impressoras cadastradas e os pedidos enviados.</p>
             </div>
         </header>
@@ -79,7 +80,7 @@
     <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/admin/core.js') }}?v={{ asset_version | default('1') }}"></script>
-    <script src="{{ request.url_for('static', path='js/admin/operacao.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/impressao.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/admin/impressao-page.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>
 </html>

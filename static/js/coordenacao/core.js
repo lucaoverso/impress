@@ -158,7 +158,7 @@ function setMensagemOcorrencias(texto, erro = false) {
     const target = el("msgOcorrencias");
     if (!target) return;
     target.innerText = texto || "";
-    target.style.color = erro ? "#b42318" : "#0f766e";
+    target.dataset.variant = erro ? "error" : "success";
 }
 
 function setMensagemEstudantes(texto, erro = false) {

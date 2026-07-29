@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Suíte Escolar - Download YouTube</title>
+    {% set page_styles = ["css/pages/services-scheduler.css"] %}
     {% include "includes/style_bundle.html" %}
 </head>
 
@@ -12,12 +13,13 @@
     {% set navbar_context = "Area docente" %}
     {% set navbar_current = "download" %}
     {% include "includes/app_navbar.html" %}
-    <main class="download-page">
-        <header class="download-header">
-            <div>
+    {% include "includes/app_sidebar_config.html" %}
+    <main class="download-page page-shell page-shell--compact">
+        <header class="download-header page-header">
+            <div class="page-header-main">
                 <p class="auth-badge">Mídias para aula</p>
-                <h1>Baixar vídeo ou música do YouTube</h1>
-                <p>Cole o link, confira os dados do vídeo e salve em MP4 ou MP3.</p>
+                <h1 class="page-title">Baixar vídeo ou música do YouTube</h1>
+                <p class="page-lead">Cole o link, confira os dados do vídeo e salve em MP4 ou MP3.</p>
             </div>
         </header>
 
@@ -42,7 +44,8 @@
         <section id="secaoDetalhes" class="download-details" hidden>
             <article class="download-details-card">
                 <div class="download-details-summary">
-                    <img id="previewMiniatura" class="download-thumb" alt="Miniatura do vídeo">
+                    <img id="previewMiniatura" class="download-thumb" src="/static/img/download-videos.webp"
+                        alt="Miniatura do vídeo" width="320" height="180" loading="lazy" decoding="async" hidden>
                     <div class="download-preview-copy">
                         <p class="download-eyebrow">Prévia do download</p>
                         <h3 id="previewTitulo">Carregando...</h3>

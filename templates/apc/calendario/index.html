@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendário mensal | Central de Anexos</title>
+    {% set page_styles = ["css/apc/calendario.css"] %}
+    {% include "includes/style_bundle.html" %}
+</head>
+
+<body>
+    {% set navbar_context = "Central de anexos" %}
+    {% set navbar_current = "apc" %}
+    {% set apc_page = "calendar" %}
+    {% include "includes/app_navbar.html" %}
+    {% include "includes/app_sidebar_config.html" %}
+
+    <main class="apc-calendar-page page-shell page-shell--wide">
+        <header class="apc-calendar-page-header page-header">
+            <div class="page-header-main">
+                <p class="apc-calendar-eyebrow">Central de Anexos</p>
+                <h1 class="page-title">Calendário mensal</h1>
+                <p class="page-lead">Acompanhe os prazos e o andamento das entregas ao longo do mês.</p>
+            </div>
+            <a class="print-secondary-btn button" href="/apc">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                Voltar às entregas
+            </a>
+        </header>
+
+        <section class="apc-calendar-toolbar" aria-label="Controles do calendário">
+            <div class="apc-calendar-field">
+                <label for="apcCalendarioAnoLetivo">Ano letivo</label>
+                <select id="apcCalendarioAnoLetivo"></select>
+            </div>
+            <div class="apc-calendar-month-nav" role="group" aria-label="Navegar entre os meses">
+                <button id="btnApcCalendarioAnterior" type="button" aria-label="Mês anterior">
+                    <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                </button>
+                <h2 id="apcCalendarioMesAtual" aria-live="polite"></h2>
+                <button id="btnApcCalendarioProximo" type="button" aria-label="Próximo mês">
+                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </button>
+            </div>
+            <button id="btnApcCalendarioHoje" class="print-secondary-btn button" type="button">Hoje</button>
+        </section>
+
+        <p id="apcCalendarioMensagem" class="apc-calendar-message" role="status" aria-live="polite"></p>
+
+        <section class="apc-calendar-workspace">
+            <article class="apc-calendar-card" aria-labelledby="apcCalendarioMesAtual">
+                <div class="apc-calendar-legend" aria-label="Legenda">
+                    <span><i class="is-pending"></i> Pendente</span>
+                    <span><i class="is-complete"></i> Concluído</span>
+                    <span><i class="is-today"></i> Hoje</span>
+                </div>
+                <div id="apcCalendarioGrid" class="apc-calendar-grid"></div>
+            </article>
+
+            <aside class="apc-calendar-agenda" aria-labelledby="apcAgendaTitulo">
+                <header>
+                    <p class="apc-calendar-eyebrow">Agenda do dia</p>
+                    <h2 id="apcAgendaTitulo">Selecione uma data</h2>
+                    <p id="apcAgendaResumo">Clique em um dia para consultar as entregas previstas.</p>
+                </header>
+                <div id="apcAgendaLista" class="apc-calendar-agenda-list"></div>
+                <a class="btn-destaque button button--primary apc-calendar-open-central" href="/apc">Abrir Central de Anexos</a>
+            </aside>
+        </section>
+    </main>
+
+    <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/apc/calendario.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+
+</html>

@@ -1,0 +1,194 @@
+/* Guided occurrence editor adapted from the Stitch split workspace. */
+
+.coordenacao-occurrence-modal {
+    padding: 16px;
+}
+
+.coordenacao-occurrence-modal-backdrop {
+    background: rgba(24, 28, 28, .58);
+}
+
+.coordenacao-occurrence-modal-panel {
+    width: min(1500px, calc(100vw - 32px));
+    height: min(960px, calc(100vh - 32px));
+}
+
+.coordenacao-ocorrencia-workspace {
+    grid-template-columns: minmax(500px, .9fr) minmax(560px, 1.1fr);
+}
+
+.coordenacao-ocorrencia-main-panel {
+    gap: 14px;
+    padding: 20px 24px 0;
+    background: var(--surface-1);
+}
+
+.coordenacao-editor-header {
+    min-height: 54px;
+}
+
+.coordenacao-editor-header h2 {
+    font-size: 22px;
+}
+
+.coordenacao-editor-header p {
+    max-width: 62ch;
+    font-size: 13px;
+}
+
+.coordenacao-form-steps {
+    padding: 4px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-md);
+    background: var(--surface-0);
+}
+
+.coordenacao-form-step {
+    min-height: 44px;
+    padding-inline: 8px;
+    border-radius: 9px;
+}
+
+.coordenacao-form-step:not(:last-child)::after {
+    display: none;
+}
+
+.coordenacao-form-step span {
+    width: 28px;
+    height: 28px;
+}
+
+.coordenacao-form-step strong {
+    padding: 0;
+    background: transparent;
+}
+
+.coordenacao-form-step.is-active {
+    background: var(--brand-soft);
+}
+
+.coordenacao-ocorrencia-form-panel {
+    margin-inline: -4px;
+    padding: 0 4px;
+}
+
+.coordenacao-form-step-panel {
+    gap: 14px;
+}
+
+.coordenacao-stage-intro {
+    display: none;
+}
+
+.coordenacao-form-section {
+    padding: 18px;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-md);
+    background: var(--surface-0);
+}
+
+.coordenacao-form-section + .coordenacao-form-section {
+    margin-top: 2px;
+}
+
+.coordenacao-form-section-header h3 {
+    font-size: 17px;
+}
+
+.coordenacao-flow-note {
+    padding: 12px 14px;
+    border: 0;
+    border-radius: var(--radius-md);
+    background: var(--brand-soft);
+}
+
+.coordenacao-rich-editor {
+    border-color: var(--line-strong);
+}
+
+.coordenacao-rich-editor-toolbar {
+    background: var(--surface-2);
+}
+
+.coordenacao-description-stage .coordenacao-rich-editor-area {
+    min-height: clamp(260px, 40vh, 440px);
+}
+
+.coordenacao-form-navigation {
+    position: sticky;
+    bottom: 0;
+    z-index: var(--z-sticky);
+    margin: 18px -4px 0;
+    padding: 14px 4px;
+    border-top: 1px solid var(--line-soft);
+    background: var(--surface-overlay);
+}
+
+.coordenacao-preview-shell {
+    padding: 18px 22px;
+    background: var(--surface-2);
+}
+
+.coordenacao-preview-header h3 {
+    color: var(--text-main);
+}
+
+.coordenacao-preview-header p {
+    color: var(--text-muted);
+}
+
+.coordenacao-preview-badge {
+    background: var(--brand-soft);
+    color: var(--brand-strong);
+}
+
+.coordenacao-preview-canvas {
+    background: var(--surface-2);
+}
+
+@media (max-width: 1100px) {
+    .coordenacao-ocorrencia-workspace {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 640px) {
+    .coordenacao-occurrence-modal {
+        padding: 0;
+    }
+
+    .coordenacao-occurrence-modal-panel {
+        width: 100vw;
+        height: 100dvh;
+        border: 0;
+        border-radius: 0;
+    }
+
+    .coordenacao-ocorrencia-main-panel {
+        padding: 14px 16px 0;
+    }
+
+    .coordenacao-editor-header p {
+        display: none;
+    }
+
+    .coordenacao-form-steps {
+        grid-template-columns: repeat(3, minmax(44px, 1fr));
+    }
+
+    .coordenacao-form-step {
+        justify-content: center;
+    }
+
+    .coordenacao-form-step strong {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+    }
+
+    .coordenacao-form-section {
+        padding: 16px;
+    }
+}

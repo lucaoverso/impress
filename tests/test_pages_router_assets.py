@@ -86,7 +86,8 @@ class PagesRouterAssetsTest(unittest.TestCase):
 
         self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
         self.assertIn("css/base.css?v=build-cadastro-456", html)
-        self.assertIn("css/pages/professor.css?v=build-cadastro-456", html)
+        self.assertIn("css/pages/auth.css?v=build-cadastro-456", html)
+        self.assertNotIn("css/pages/professor.css?v=build-cadastro-456", html)
         self.assertIn("js/cadastro-professor.js?v=build-cadastro-456", html)
 
     def test_impressao_renderiza_fluxo_guiado_e_revisao_completa(self):
@@ -101,12 +102,113 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn("css/pages/professor.css?v=build-print-789", html)
         self.assertIn("js/printing/index.js?v=build-print-789", html)
         self.assertIn('id="printStepperCard"', html)
+        self.assertIn('id="printStepperCard" class="print-flow-stepper" aria-label="Progresso da solicitação de impressão" hidden', html)
+        self.assertNotIn('id="stepperArquivo"', html)
+        self.assertIn('id="printStepperProgress">Etapa 1 de 4', html)
+        self.assertIn('id="tituloCotaEtapaArquivo">Cota mensal', html)
+        self.assertIn('id="printQuotaMeter"', html)
+        self.assertIn('class="print-upload-formats"', html)
+        self.assertIn('class="print-entry-benefits"', html)
+        self.assertIn('id="turmaImpressaoBusca" type="text" role="combobox"', html)
+        self.assertIn('aria-controls="turmasImpressaoLista"', html)
+        self.assertIn('id="turmasImpressaoLista" class="print-class-search-list"', html)
+        self.assertIn('role="listbox" aria-label="Turmas disponíveis"', html)
+        self.assertIn('id="turmaImpressao" class="print-hidden-select"', html)
+        self.assertLess(html.index('id="cotaPainelEtapaArquivo"'), html.index('id="printStepperCard"'))
         self.assertIn('id="printSelectionContext"', html)
         self.assertIn('id="resumoDuplex"', html)
         self.assertIn('id="resumoTags"', html)
         self.assertIn('id="printFeedbackVisible"', html)
         self.assertIn('role="dialog"', html)
         self.assertLess(html.index('id="tagsConferencia"'), html.index('id="etapaConferencia"'))
+
+    def test_historico_impressao_tem_pagina_e_assets_proprios(self):
+        config, _pages_router = _reload_modulos("build-print-history-321")
+        printing_router = importlib.import_module("modules.printing.router")
+        app = FastAPI()
+        app.mount("/static", StaticFiles(directory=str(config.STATIC_DIR)), name="static")
+
+        with patch.object(printing_router, "render_template_response", config.render_template_response):
+            resposta = printing_router.print_history_page(_criar_request(app, "/impressao/historico"))
+        html = resposta.body.decode("utf-8")
+
+        self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
+        self.assertIn("Meu histórico", html)
+        self.assertIn('href="/impressao/historico"', html)
+        self.assertIn('aria-current="page"', html)
+        self.assertIn("css/printing/history.css?v=build-print-history-321", html)
+        self.assertIn("js/printing/history.js?v=build-print-history-321", html)
+        self.assertIn('id="printHistoryProfessor"', html)
+        self.assertNotIn('id="printStepperCard"', html)
+
+    def test_paginas_de_consulta_agendamento_tem_rotas_e_assets_proprios(self):
+        config, _pages_router = _reload_modulos("build-scheduling-pages-456")
+        scheduling_router = importlib.import_module("modules.scheduling.router")
+        app = FastAPI()
+        app.mount("/static", StaticFiles(directory=str(config.STATIC_DIR)), name="static")
+
+        with patch.object(scheduling_router, "render_template_response", config.render_template_response):
+            minhas = scheduling_router.my_scheduling_page(
+                _criar_request(app, "/agendamento/meus-agendamentos")
+            )
+            calendario = scheduling_router.scheduling_calendar_page(
+                _criar_request(app, "/agendamento/calendario")
+            )
+            catalogo = scheduling_router.scheduling_catalog_page(
+                _criar_request(app, "/agendamento/catalogo")
+            )
+
+        html_minhas = minhas.body.decode("utf-8")
+        html_calendario = calendario.body.decode("utf-8")
+        html_catalogo = catalogo.body.decode("utf-8")
+        self.assertEqual(minhas.headers.get("Cache-Control"), "no-store")
+        self.assertEqual(calendario.headers.get("Cache-Control"), "no-store")
+        self.assertEqual(catalogo.headers.get("Cache-Control"), "no-store")
+        self.assertIn('id="listaMinhasReservas"', html_minhas)
+        self.assertIn('id="bookingSearch"', html_minhas)
+        self.assertIn('href="/agendamento/meus-agendamentos"', html_minhas)
+        self.assertIn('id="calendarioGrid"', html_calendario)
+        self.assertIn('id="calendarResourceFilter"', html_calendario)
+        self.assertIn('id="listaReservasDia"', html_calendario)
+        self.assertIn('id="catalogGrid"', html_catalogo)
+        self.assertIn('href="/agendamento/catalogo"', html_catalogo)
+        self.assertIn("css/pages/scheduling-pages.css?v=build-scheduling-pages-456", html_minhas)
+        self.assertIn("js/scheduling/bookings_pages.js?v=build-scheduling-pages-456", html_calendario)
+        self.assertIn("css/pages/scheduling-catalog.css?v=build-scheduling-pages-456", html_catalogo)
+        self.assertIn("js/scheduling/resource_catalog.js?v=build-scheduling-pages-456", html_catalogo)
+        self.assertNotIn('class="scheduler-flow-stepper"', html_minhas)
+        self.assertNotIn('class="scheduler-flow-stepper"', html_calendario)
+        self.assertNotIn('class="scheduler-flow-stepper"', html_catalogo)
+
+    def test_paginas_preconselho_definem_contexto_e_navegacao_proprios(self):
+        config, _pages_router = _reload_modulos("build-preconselho-pages-654")
+        sys.modules.pop("modules.preconselho.pages", None)
+        preconselho_pages = importlib.import_module("modules.preconselho.pages")
+        app = FastAPI()
+        app.mount("/static", StaticFiles(directory=str(config.STATIC_DIR)), name="static")
+
+        paginas = {
+            "consolidacao": preconselho_pages.preconselho_consolidation_page,
+            "reavaliacao": preconselho_pages.preconselho_review_page,
+            "relatorios": preconselho_pages.preconselho_report_page,
+            "rav": preconselho_pages.preconselho_rav_page,
+            "configuracoes": preconselho_pages.preconselho_settings_page,
+        }
+
+        for slug, pagina in paginas.items():
+            resposta = pagina(_criar_request(app, f"/preconselho/{slug}"))
+            html = resposta.body.decode("utf-8")
+            self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
+            contexto = "relatorio" if slug == "relatorios" else slug
+            self.assertIn(f'data-preconselho-page="{contexto}"', html)
+            self.assertIn(f'href="/preconselho/{slug}"', html)
+            self.assertIn('aria-current="page"', html)
+            self.assertIn("js/preconselho/shared.js?v=build-preconselho-pages-654", html)
+            self.assertIn("js/preconselho/init.js?v=build-preconselho-pages-654", html)
+            self.assertLess(
+                html.index("js/preconselho/shared.js"),
+                html.index("js/preconselho/init.js"),
+            )
 
     def test_horario_escolar_injeta_asset_version_e_no_store(self):
         config, pages_router = _reload_modulos("build-horario-789")
@@ -134,15 +236,21 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
         self.assertIn("charset=utf-8", resposta.headers.get("content-type", "").lower())
         self.assertIn("css/base.css?v=build-apc-321", html)
-        self.assertIn("css/pages/apc.css?v=build-apc-321", html)
+        self.assertIn("css/apc/index.css?v=build-apc-321", html)
+        self.assertIn("css/apc/dialogs.css?v=build-apc-321", html)
+        self.assertNotIn("stitch", html)
         self.assertIn("js/apc.js?v=build-apc-321", html)
         self.assertIn('id="btnVoltarServicos"', html)
         self.assertIn("Serviços", html)
         self.assertIn('id="apcUsuario"', html)
-        self.assertIn("<h1>Central de Anexos</h1>", html)
+        self.assertIn('<h1 class="page-title">Central de Anexos</h1>', html)
         self.assertNotIn('id="apcModeTabs"', html)
-        self.assertIn('id="btnAlternarCalendarioApc"', html)
-        self.assertIn('id="apcCalendarDrawer"', html)
+        self.assertIn("Solicitações", html)
+        self.assertNotIn("apc-calendar-toggle", html)
+        self.assertNotIn('id="apcAnoLetivo"', html)
+        self.assertNotIn('id="apcResumoMes"', html)
+        self.assertNotIn('id="btnAlternarCalendarioApc"', html)
+        self.assertNotIn('id="apcCalendarDrawer"', html)
         self.assertIn('id="apcDocenteDetalhe"', html)
         self.assertIn('id="apcArquivoPreviewModal"', html)
         self.assertIn('id="apcArquivoPreviewFrame"', html)
@@ -150,9 +258,18 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn('id="apcPrintWizardModal"', html)
         self.assertIn('id="formApcImpressao"', html)
         self.assertIn('id="apcActivityModal"', html)
+        self.assertIn('class="apc-fullscreen-modal apc-activity-modal"', html)
+        self.assertIn('class="apc-split-modal apc-activity-modal-panel"', html)
         self.assertIn('id="apcActivityFormSlot"', html)
         self.assertIn('id="apcActivityPreviewPages"', html)
+        self.assertIn('id="btnApcActivityPreviewAnterior"', html)
+        self.assertIn('id="btnApcActivityPreviewProxima"', html)
         self.assertIn('id="btnSalvarActivityModalApc"', html)
+        self.assertIn('class="apc-fullscreen-modal apc-file-preview-modal"', html)
+        self.assertIn('class="apc-split-modal apc-file-preview-panel"', html)
+        self.assertIn('name="apcReviewDecision"', html)
+        self.assertNotIn("apc-activity-modal-backdrop", html)
+        self.assertNotIn("apc-file-preview-backdrop", html)
         self.assertIn('id="btnAbrirNovaApc"', html)
         self.assertIn('id="apcGestaoFiltros"', html)
         self.assertIn('id="apcFiltroProfessor"', html)
@@ -162,6 +279,25 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn('id="apcGestaoDetalhe"', html)
         self.assertNotIn('id="apcTabBtnArquivos"', html)
         self.assertNotIn('id="apcArquivosLista"', html)
+
+    def test_apc_calendario_possui_rota_propria_sem_drawer(self):
+        config, pages_router = _reload_modulos("build-apc-calendar-654")
+        app = FastAPI()
+        app.mount("/static", StaticFiles(directory=str(config.STATIC_DIR)), name="static")
+
+        resposta = pages_router.apc_calendario_page(
+            _criar_request(app, "/apc/calendario/")
+        )
+        html = resposta.body.decode("utf-8")
+
+        self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
+        self.assertIn('<h1 class="page-title">Calendário mensal</h1>', html)
+        self.assertIn('id="apcCalendarioGrid"', html)
+        self.assertIn('id="apcAgendaLista"', html)
+        self.assertIn('href="/apc/calendario/"', html)
+        self.assertIn("css/apc/calendario.css?v=build-apc-calendar-654", html)
+        self.assertIn("js/apc/calendario.js?v=build-apc-calendar-654", html)
+        self.assertNotIn("drawer", html.lower())
 
     def test_relatorios_injeta_asset_version_e_no_store(self):
         config, pages_router = _reload_modulos("build-relatorios-654")
@@ -176,10 +312,11 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn("css/base.css?v=build-relatorios-654", html)
         self.assertIn("css/pages/relatorios.css?v=build-relatorios-654", html)
         self.assertIn("js/relatorios.js?v=build-relatorios-654", html)
-        self.assertIn("cdn.jsdelivr.net/npm/chart.js", html)
+        self.assertIn("static/vendor/chartjs/chart.umd.min.js?v=4.4.3", html)
+        self.assertNotIn("cdn.jsdelivr.net/npm/chart.js", html)
         self.assertIn('id="relatoriosCards"', html)
         self.assertIn('id="anexosResumo"', html)
-        self.assertIn("Insights da Gestao", html)
+        self.assertIn("Insights da gestão", html)
 
     def test_login_page_gera_asset_version_dinamico_quando_configurado(self):
         config, pages_router = _reload_modulos("dynamic")

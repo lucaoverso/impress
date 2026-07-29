@@ -70,6 +70,12 @@
     box-shadow: 0 0 0 2px rgba(0, 67, 61, 0.16), var(--print-shadow-sm);
 }
 
+.professor-page #previewContainer .preview-cell,
+.professor-page #previewContainer .preview-cell.is-selected {
+    border-color: transparent;
+    box-shadow: none;
+}
+
 .professor-page #previewContainer .preview-cell::before,
 .professor-page #previewContainer .print-sheet-thumb::after {
     border-color: var(--print-color-border);

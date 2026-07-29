@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from auth import get_usuario_logado
+from routers.config import render_template_response
 from routers.common import (
     modulos_por_usuario,
     normalizar_cargo_usuario,
@@ -11,10 +12,29 @@ from routers.common import (
     usuario_tem_acesso_coordenacao,
 )
 
-from .schemas import ProfileUpdateIn
-from .service import update_own_profile
+from .schemas import ProfileOverviewOut, ProfileStudentsOut, ProfileUpdateIn
+from .service import get_own_profile_overview, list_own_profile_students, update_own_profile
 
 router = APIRouter()
+
+
+@router.get("/meu-perfil")
+def profile_page(request: Request):
+    return render_template_response(
+        request,
+        "users/profile.html",
+        cache_control="no-store",
+    )
+
+
+@router.get("/me/profile/overview", response_model=ProfileOverviewOut)
+def profile_overview(user=Depends(get_usuario_logado)):
+    return get_own_profile_overview(user)
+
+
+@router.get("/me/profile/students", response_model=ProfileStudentsOut)
+def profile_students(user=Depends(get_usuario_logado)):
+    return list_own_profile_students(user)
 
 
 @router.patch("/me/profile")

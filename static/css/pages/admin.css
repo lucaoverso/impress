@@ -249,9 +249,15 @@
 .admin-form input,
 .admin-form select,
 .admin-form button {
-    height: 40px;
-    padding: 0 10px;
-    border-radius: var(--radius-md);
+    height: var(--field-height);
+    padding: 0 14px;
+    border-radius: var(--radius-control);
+}
+
+.admin-form button {
+    min-height: var(--control-height);
+    height: auto;
+    padding-inline: var(--space-4);
 }
 
 .admin-inline {
@@ -263,9 +269,14 @@
 
 .admin-inline input,
 .admin-inline button {
-    height: 36px;
-    padding: 0 10px;
-    border-radius: var(--radius-sm);
+    min-height: var(--control-height);
+    height: auto;
+    padding: 0 12px;
+    border-radius: var(--radius-control);
+}
+
+.admin-inline input {
+    height: var(--field-height);
 }
 
 .admin-list {

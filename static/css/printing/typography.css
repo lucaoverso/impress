@@ -1,0 +1,47 @@
+/* Hierarquia tipografica compartilhada pelo fluxo e pelo historico de impressao. */
+.professor-page .print-page-header .page-title,
+.professor-page .print-history-page-header .page-title {
+    font-size: 2.125rem;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+.professor-page .print-step-header .section-title {
+    font-size: 1.5rem;
+    line-height: 1.15;
+    letter-spacing: -0.015em;
+}
+
+.professor-page .print-config-section > h3,
+.professor-page .print-config-title,
+.professor-page .print-preview-title h2,
+.professor-page .print-history-list-heading .section-title {
+    margin: 0;
+    font-size: 1.125rem;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+}
+
+.professor-page .print-loading-content h2,
+.professor-page .print-alert-modal-header h2 {
+    margin: 0;
+    font-size: 1.25rem;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+}
+
+.professor-page .print-page-header .page-lead,
+.professor-page .print-step-header .section-copy {
+    line-height: 1.5;
+}
+
+@media (max-width: 640px) {
+    .professor-page .print-page-header .page-title,
+    .professor-page .print-history-page-header .page-title {
+        font-size: 1.5rem;
+    }
+
+    .professor-page .print-step-header .section-title {
+        font-size: 1.375rem;
+    }
+}

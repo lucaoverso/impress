@@ -1,0 +1,89 @@
+.scheduling-filter-bar,
+.scheduling-calendar-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--line);
+    background: var(--surface-1);
+}
+
+.scheduling-search-field {
+    position: relative;
+    display: flex;
+    align-items: center;
+    min-width: min(360px, 100%);
+    min-height: 44px;
+    padding: 0;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    color: var(--text-muted);
+}
+
+.scheduling-search-field > i { position: absolute; z-index: 1; left: 14px; pointer-events: none; }
+.scheduling-bookings-page .scheduling-search-field input {
+    width: 100%;
+    min-height: 46px;
+    padding: 8px 12px 8px 40px !important;
+    border: 1px solid var(--line) !important;
+    border-radius: 10px;
+    outline: 0;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: var(--text-main);
+    font: inherit;
+}
+.scheduling-bookings-page .scheduling-search-field:focus-within input { border-color: var(--brand) !important; }
+
+.scheduling-filter-chips { display: flex; gap: 6px; overflow-x: auto; }
+.scheduling-filter-chip {
+    min-height: var(--control-height);
+    padding: 7px 12px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface-0);
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 14px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.scheduling-filter-chip.is-active { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-strong); }
+
+.scheduling-calendar-toolbar {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+}
+
+.scheduling-calendar-toolbar > label { font-size: 13px; font-weight: 800; }
+.scheduling-calendar-toolbar select {
+    min-width: 220px;
+    min-height: 44px;
+    padding: 8px 36px 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface-0);
+    color: var(--text-main);
+    font: inherit;
+}
+
+.scheduling-calendar-legend { display: flex; gap: 14px; margin-left: auto; color: var(--text-muted); font-size: 12px; }
+.scheduling-calendar-legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.scheduling-calendar-legend i { width: 10px; height: 10px; border: 1px solid var(--line); border-radius: 3px; background: var(--surface-1); }
+.scheduling-calendar-legend i.has-bookings { border-color: var(--brand); background: var(--brand-soft); }
+.scheduling-calendar-legend i.is-selected { border-color: var(--brand); background: var(--brand); }
+
+@media (max-width: 700px) {
+    .scheduling-filter-bar,
+    .scheduling-calendar-toolbar { align-items: stretch; flex-direction: column; padding: 14px; }
+    .scheduling-search-field { min-width: 0; width: 100%; }
+    .scheduling-filter-chips { width: 100%; }
+    .scheduling-calendar-toolbar select { width: 100%; min-width: 0; }
+    .scheduling-calendar-legend { width: 100%; margin-left: 0; overflow-x: auto; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .scheduling-filter-chip { transition: none !important; }
+}

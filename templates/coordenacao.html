@@ -5,6 +5,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Coordenação - Central de Registros</title>
+    {% set page_styles = [
+        "css/pages/coordenacao.css",
+        "css/coordenacao/ocorrencias.css",
+        "css/coordenacao/ocorrencias-editor.css"
+    ] %}
     {% include "includes/style_bundle.html" %}
 </head>
 
@@ -12,15 +17,16 @@
     {% set navbar_context = "Gestão escolar" %}
     {% set navbar_current = "coordenacao" %}
     {% include "includes/app_navbar.html" %}
-    <main class="coordenacao-page">
-        <section class="coordenacao-workspace">
-            <header class="admin-header admin-header-shell coordenacao-page-header">
-                <div class="admin-header-main">
-                    <h1>Central de registros da coordenação</h1>
-                    <p>Centralize pendências, acompanhe históricos e mantenha a base legal pronta para cada registro.</p>
-                </div>
-            </header>
+    {% include "includes/app_sidebar_config.html" %}
+    <main class="coordenacao-page page-shell page-shell--wide">
+        <header class="admin-header admin-header-shell coordenacao-page-header page-header page-header--flush">
+            <div class="admin-header-main page-header-main">
+                <h1 class="page-title">Central de registros da coordenação</h1>
+                <p class="page-lead">Centralize pendências, acompanhe históricos e mantenha a base legal pronta para cada registro.</p>
+            </div>
+        </header>
 
+        <section class="coordenacao-workspace">
             <section id="painelProfessorPreRegistro" class="coordenacao-professor-pre-page" hidden>
                 <article class="coordenacao-card coordenacao-pre-registration-card">
                     <div class="coordenacao-panel-header">
@@ -74,7 +80,7 @@
             </section>
 
             <div class="coordenacao-tabs-shell">
-                <nav class="admin-tabs coordenacao-tabs" aria-label="Abas do módulo de coordenação">
+                <nav class="admin-tabs coordenacao-tabs app-sidebar-replaced" aria-label="Abas do módulo de coordenação">
                     <button class="admin-tab-btn is-active" data-coord-tab-trigger="ocorrencias"
                         aria-controls="coord-tab-ocorrencias" aria-selected="true" type="button">
                         Ocorrências
@@ -111,57 +117,61 @@
                 <section id="coord-tab-ocorrencias" class="coordenacao-tab-panel is-active"
                     data-coord-tab-panel="ocorrencias">
                     <section class="coordenacao-stack coordenacao-ocorrencias-stack">
-                    <article class="coordenacao-card coordenacao-ocorrencias-hub">
+                    <article class="coordenacao-ocorrencias-hub">
                         <div class="coordenacao-ocorrencias-hub-main">
                             <div class="coordenacao-ocorrencias-copy">
-                                <h2>Histórico e acompanhamento</h2>
-                                <p>Acompanhe os registros já tratados, filtre ocorrências e revise cada documento.</p>
+                                <h2>Ocorrências</h2>
+                                <p>Gerencie registros disciplinares, acompanhe tratativas e mantenha os documentos organizados.</p>
                             </div>
                             <div class="coordenacao-ocorrencias-hub-side">
                                 <button id="btnNovaOcorrencia" class="btn-destaque" type="button"
                                     aria-controls="painelFormOcorrencia" aria-expanded="false">
-                                    Novo registro manual
+                                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                                    Novo registro
                                 </button>
-                                <p class="coordenacao-field-hint">Use este atalho quando o caso começar diretamente na coordenação.</p>
-                                <p id="msgOcorrencias" class="coordenacao-status-copy"></p>
+                                <p id="msgOcorrencias" class="coordenacao-status-copy" role="status"
+                                    aria-live="polite"></p>
                             </div>
                         </div>
 
                         <div class="coordenacao-ocorrencias-summary">
-                            <article class="coordenacao-ocorrencias-summary-card is-primary">
-                                <span class="coordenacao-ocorrencias-summary-label">Total no painel</span>
+                            <article class="coordenacao-ocorrencias-summary-card">
+                                <span class="coordenacao-ocorrencias-summary-label">Total</span>
                                 <strong id="resumoOcorrenciasTotal"
                                     class="coordenacao-ocorrencias-summary-value">0</strong>
-                                <span id="resumoOcorrenciasPeriodo" class="coordenacao-ocorrencias-summary-meta">Sem
-                                    filtro aplicado.</span>
                             </article>
                             <article class="coordenacao-ocorrencias-summary-card">
                                 <span class="coordenacao-ocorrencias-summary-label">Em acompanhamento</span>
                                 <strong id="resumoOcorrenciasAcompanhamento"
                                     class="coordenacao-ocorrencias-summary-value">0</strong>
-                                <span class="coordenacao-ocorrencias-summary-meta">Casos que seguem em tratativa.</span>
                             </article>
                             <article class="coordenacao-ocorrencias-summary-card">
                                 <span class="coordenacao-ocorrencias-summary-label">Aguardando responsável</span>
                                 <strong id="resumoOcorrenciasAguardando"
                                     class="coordenacao-ocorrencias-summary-value">0</strong>
-                                <span class="coordenacao-ocorrencias-summary-meta">Dependem de retorno externo.</span>
                             </article>
                             <article class="coordenacao-ocorrencias-summary-card">
                                 <span class="coordenacao-ocorrencias-summary-label">Resolvidas</span>
                                 <strong id="resumoOcorrenciasResolvido"
                                     class="coordenacao-ocorrencias-summary-value">0</strong>
-                                <span class="coordenacao-ocorrencias-summary-meta">Registros finalizados.</span>
                             </article>
                         </div>
+                        <p id="resumoOcorrenciasPeriodo" class="coordenacao-ocorrencias-summary-meta">Sem filtro aplicado.</p>
                     </article>
 
-                    <aside class="coordenacao-card coordenacao-ocorrencias-detail-card">
-                        <div class="coordenacao-section-header">
+                    <div id="backdropDetalhesOcorrencia" class="coordenacao-occurrence-drawer-backdrop" hidden
+                        data-fechar-detalhes-ocorrencia></div>
+                    <aside id="painelDetalhesOcorrencia" class="coordenacao-ocorrencias-detail-card coordenacao-occurrence-drawer" role="dialog"
+                        aria-modal="true" aria-labelledby="tituloDetalhesOcorrencia" tabindex="-1" hidden>
+                        <div class="coordenacao-occurrence-drawer-header">
                             <div>
-                                <h2>Registro selecionado</h2>
-                                <p>Revise contexto, base legal e documento antes de editar.</p>
+                                <span class="coordenacao-drawer-context">Ocorrências</span>
+                                <h2 id="tituloDetalhesOcorrencia">Detalhes da ocorrência</h2>
                             </div>
+                            <button id="btnFecharDetalhesOcorrencia" class="coordenacao-icon-button" type="button"
+                                aria-label="Fechar detalhes">
+                                <i class="bi bi-x-lg" aria-hidden="true"></i>
+                            </button>
                         </div>
                         <div id="detalhesOcorrencia" class="coordenacao-details">
                             Selecione um registro para visualizar os detalhes.
@@ -169,18 +179,36 @@
                     </aside>
 
                     <section class="coordenacao-ocorrencias-board">
-                        <article class="coordenacao-card coordenacao-ocorrencias-list-card">
+                        <article class="coordenacao-ocorrencias-list-card">
                             <div class="coordenacao-panel-header">
                                 <div>
                                     <h2>Histórico de ocorrências</h2>
-                                    <p>Use os filtros para localizar registros por estudante, professor, período ou status.</p>
+                                    <p>Localize registros por estudante, professor, turma, período ou status.</p>
                                 </div>
+                                <button id="btnAbrirFiltrosOcorrencias" class="coordenacao-filter-trigger" type="button"
+                                    aria-controls="formFiltrosOcorrencias" aria-expanded="false">
+                                    <i class="bi bi-funnel" aria-hidden="true"></i>
+                                    Filtros
+                                </button>
                             </div>
 
+                            <div id="backdropFiltrosOcorrencias" class="coordenacao-filter-backdrop" hidden
+                                data-fechar-filtros-ocorrencias></div>
                             <form id="formFiltrosOcorrencias" class="coordenacao-filter-grid">
+                                <div class="coordenacao-filter-mobile-header">
+                                    <strong>Filtros</strong>
+                                    <button id="btnFecharFiltrosOcorrencias" class="coordenacao-icon-button" type="button"
+                                        aria-label="Fechar filtros">
+                                        <i class="bi bi-x-lg" aria-hidden="true"></i>
+                                    </button>
+                                </div>
                                 <label class="coordenacao-field" for="filtroNomeEstudante">
                                     <span>Referência</span>
-                                    <input id="filtroNomeEstudante" type="text" placeholder="Estudante, professor ou título">
+                                    <div class="coordenacao-filter-search">
+                                        <i class="bi bi-search" aria-hidden="true"></i>
+                                        <input id="filtroNomeEstudante" type="search"
+                                            placeholder="Estudante, professor ou título">
+                                    </div>
                                 </label>
                                 <label class="coordenacao-field" for="filtroTipoRegistro">
                                     <span>Tipo</span>
@@ -203,7 +231,10 @@
                                     <input id="filtroDataFinal" type="date">
                                 </label>
                                 <div class="coordenacao-filter-actions">
-                                    <button class="btn-destaque" type="submit">Filtrar</button>
+                                    <button class="btn-destaque" type="submit">
+                                        <i class="bi bi-funnel" aria-hidden="true"></i>
+                                        Filtrar
+                                    </button>
                                     <button id="btnLimparFiltros" type="button">Limpar</button>
                                 </div>
                             </form>
@@ -521,8 +552,8 @@
                                                     <p class="coordenacao-preview-subtitle">COORDENAÇÃO PEDAGÓGICA</p>
 
                                                     <img class="coordenacao-preview-logo"
-                                                        src="{{ request.url_for('static', path='img/logo_escola.PNG') }}"
-                                                        alt="Logo da escola">
+                                                        src="{{ request.url_for('static', path='img/logo_escola-256.webp') }}"
+                                                        alt="Logo da escola" width="72" height="72">
                                                     <p id="previewTituloDocumento" class="coordenacao-preview-title">
                                                         REGISTRO DE OCORRÊNCIAS DISCIPLINARES
                                                     </p>
