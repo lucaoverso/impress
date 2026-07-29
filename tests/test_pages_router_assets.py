@@ -97,6 +97,8 @@ class PagesRouterAssetsTest(unittest.TestCase):
 
         resposta = pages_router.impressao_page(_criar_request(app, "/impressao"))
         html = resposta.body.decode("utf-8")
+        workflow = (config.STATIC_DIR / "js/printing/workflow.js").read_text(encoding="utf-8")
+        printing_ui = (config.STATIC_DIR / "js/printing/index.js").read_text(encoding="utf-8")
 
         self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
         self.assertIn("css/pages/professor.css?v=build-print-789", html)
@@ -114,6 +116,11 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn('id="turmasImpressaoLista" class="print-class-search-list"', html)
         self.assertIn('role="listbox" aria-label="Turmas disponíveis"', html)
         self.assertIn('id="turmaImpressao" class="print-hidden-select"', html)
+        self.assertNotIn('id="btnContinuarArquivo"', html)
+        self.assertIn('id="tituloEtapaSolicitacao"', html)
+        self.assertIn("canAdvanceFromInitialStep", workflow)
+        self.assertIn('state?.upload?.source === "history"', workflow)
+        self.assertIn("advanceInitialStepIfReady", printing_ui)
         self.assertLess(html.index('id="cotaPainelEtapaArquivo"'), html.index('id="printStepperCard"'))
         self.assertIn('id="printSelectionContext"', html)
         self.assertIn('id="resumoDuplex"', html)

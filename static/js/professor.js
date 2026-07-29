@@ -3407,8 +3407,8 @@ selecionarArquivoParaImpressao = async function selecionarArquivoParaImpressaoRe
     window.PrintingUI?.ui?.setForcedStep?.(null);
     const resultado = await selecionarArquivoParaImpressaoOriginal(file, mensagemSucesso);
     atualizarEstadoFluxoImpressao();
-    if (resultado && isPreviewMobile()) {
-        window.PrintingUI?.ui?.goToStep?.(2);
+    if (resultado) {
+        window.PrintingUI?.ui?.advanceInitialStepIfReady?.();
     }
     return resultado;
 };

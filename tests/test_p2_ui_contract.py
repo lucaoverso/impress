@@ -24,6 +24,10 @@ class P2UiContractTest(unittest.TestCase):
         self.assertIn("minimum_size=1000", main)
         for template in templates:
             self.assertNotRegex(template.read_text(encoding="utf-8"), r'<script[^>]+src="https?://')
+        for template in templates[1:]:
+            content = template.read_text(encoding="utf-8")
+            self.assertIn('src="/static/vendor/pdfjs/pdf.min.js?v=3.11.174"', content)
+            self.assertIn('"/static/vendor/pdfjs/pdf.worker.min.js?v=3.11.174"', content)
         for asset in vendor_assets:
             self.assertTrue(asset.is_file())
             self.assertGreater(asset.stat().st_size, 10_000)

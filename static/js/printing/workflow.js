@@ -2,7 +2,10 @@
     function computeVisibility(state) {
         const uploadValid = Boolean(state?.upload?.valid);
         const ownerValid = Boolean(state?.request?.ownerValid ?? true);
-        const requestValid = Boolean(state?.request?.valid);
+        const requestValid = Boolean(
+            state?.request?.valid
+            || state?.upload?.source === "history"
+        );
         const settingsValid = Boolean(state?.settings?.valid);
         const destinationValid = Boolean(state?.destination?.valid);
         const submitted = Boolean(state?.submit?.submitted);
@@ -18,16 +21,32 @@
 
     function canSubmit(state) {
         const visibility = computeVisibility(state);
+        const requestValid = Boolean(
+            state?.request?.valid
+            || state?.upload?.source === "history"
+        );
         return Boolean(
             visibility.step4
             && state?.upload?.valid
-            && state?.request?.valid
+            && requestValid
             && state?.settings?.valid
             && state?.destination?.valid
             && state?.tags?.valid
             && !state?.upload?.loading
             && !state?.preview?.loading
             && !state?.submit?.sending
+        );
+    }
+
+    function canAdvanceFromInitialStep(state) {
+        return Boolean(
+            state?.upload?.valid
+            && !state?.upload?.loading
+            && (state?.request?.ownerValid ?? true)
+            && (
+                state?.request?.valid
+                || state?.upload?.source === "history"
+            )
         );
     }
 
@@ -65,6 +84,7 @@
     window.PrintingUI.workflow = {
         computeVisibility,
         canSubmit,
+        canAdvanceFromInitialStep,
         applyWorkflowState,
         resolveCurrentStep,
     };

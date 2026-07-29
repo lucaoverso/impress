@@ -178,21 +178,12 @@
                         </span>
                         <span id="arquivoSelecionadoNome" class="print-upload-file">Nenhum arquivo selecionado.</span>
                     </button>
-
-                    <div class="print-step-actions action-group">
-                        <button id="btnContinuarArquivo" class="btn-destaque button button--primary" type="button">
-                            <span>Próximo passo</span>
-                            <svg viewBox="0 0 24 24" aria-hidden="true">
-                                <path d="m9 5 7 7-7 7"></path>
-                            </svg>
-                        </button>
-                    </div>
                 </article>
 
                 <article id="etapaSolicitacao" class="print-step-card page-section" hidden>
                     <header class="print-step-header section-header">
                         <div>
-                            <h2 class="section-title">Configure a impressão</h2>
+                            <h2 id="tituloEtapaSolicitacao" class="section-title" tabindex="-1">Configure a impressão</h2>
                             <p class="section-copy">Ajuste cópias, páginas, orientação e aproveitamento da folha.</p>
                         </div>
                     </header>
@@ -514,10 +505,10 @@
         </article>
     </section>
 
-    <script src="{{ request.url_for('static', path='vendor/pdfjs/pdf.min.js') }}?v=3.11.174"></script>
+    <script src="/static/vendor/pdfjs/pdf.min.js?v=3.11.174"></script>
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc =
-            "{{ request.url_for('static', path='vendor/pdfjs/pdf.worker.min.js') }}?v=3.11.174";
+            "/static/vendor/pdfjs/pdf.worker.min.js?v=3.11.174";
     </script>
     <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>

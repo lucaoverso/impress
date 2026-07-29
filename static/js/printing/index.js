@@ -406,6 +406,22 @@
         }
     }
 
+    function advanceInitialStepIfReady() {
+        const state = syncFromLegacyDom();
+        if (
+            Number(state?.wizard?.currentStep || 1) !== 1
+            || !window.PrintingUI.workflow.canAdvanceFromInitialStep(state)
+        ) {
+            return false;
+        }
+
+        goToStep(2);
+        window.requestAnimationFrame(() => {
+            document.getElementById("tituloEtapaSolicitacao")?.focus({ preventScroll: true });
+        });
+        return true;
+    }
+
     function registerDomBindings() {
         updateIntervalGroupVisibility();
 
@@ -458,6 +474,7 @@
         });
 
         document.getElementById("tagsImpressao")?.addEventListener("change", () => syncFromLegacyDom());
+        document.getElementById("turmaImpressao")?.addEventListener("change", advanceInitialStepIfReady);
 
         document.querySelectorAll("[data-copy-change]").forEach((button) => {
             button.addEventListener("click", () => {
@@ -468,7 +485,6 @@
             });
         });
 
-        document.getElementById("btnContinuarArquivo")?.addEventListener("click", () => goToStep(2));
         document.getElementById("btnVoltarSolicitacao")?.addEventListener("click", () => goToStep(1));
         document.getElementById("btnContinuarSolicitacao")?.addEventListener("click", () => goToStep(3));
         document.getElementById("btnVoltarConfiguracoes")?.addEventListener("click", () => goToStep(2));
@@ -497,6 +513,7 @@
         setForcedStep,
         renderProgressiveFlow,
         goToStep,
+        advanceInitialStepIfReady,
         isMobileWizardLayout,
     };
 
