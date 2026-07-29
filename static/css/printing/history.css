@@ -6,19 +6,17 @@
 .print-history-shell {
     display: grid;
     gap: 24px;
-    max-width: 1120px;
-    padding: 32px 28px 48px;
 }
 
 .print-history-page-header {
     display: flex;
-    align-items: flex-end;
+    align-items: flex-start;
     justify-content: space-between;
     gap: 24px;
 }
 
 .print-history-page-header h1 {
-    margin: 0 0 6px;
+    margin: 0;
     color: var(--print-color-text);
     font-size: 34px;
     line-height: 1.1;
@@ -254,7 +252,6 @@
 }
 
 @media (max-width: 700px) {
-    .print-history-shell { padding: 24px 16px 40px; }
     .print-history-page-header,
     .print-history-summary { align-items: stretch; flex-direction: column; }
     .print-history-owner { grid-template-columns: 1fr; }

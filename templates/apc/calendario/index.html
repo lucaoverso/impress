@@ -16,14 +16,14 @@
     {% include "includes/app_navbar.html" %}
     {% include "includes/app_sidebar_config.html" %}
 
-    <main class="apc-calendar-page">
-        <header class="apc-calendar-page-header">
-            <div>
+    <main class="apc-calendar-page page-shell page-shell--wide">
+        <header class="apc-calendar-page-header page-header">
+            <div class="page-header-main">
                 <p class="apc-calendar-eyebrow">Central de Anexos</p>
-                <h1>Calendário mensal</h1>
-                <p>Acompanhe os prazos e o andamento das entregas ao longo do mês.</p>
+                <h1 class="page-title">Calendário mensal</h1>
+                <p class="page-lead">Acompanhe os prazos e o andamento das entregas ao longo do mês.</p>
             </div>
-            <a class="print-secondary-btn" href="/apc">
+            <a class="print-secondary-btn button" href="/apc">
                 <i class="bi bi-arrow-left" aria-hidden="true"></i>
                 Voltar às entregas
             </a>
@@ -43,7 +43,7 @@
                     <i class="bi bi-chevron-right" aria-hidden="true"></i>
                 </button>
             </div>
-            <button id="btnApcCalendarioHoje" class="print-secondary-btn" type="button">Hoje</button>
+            <button id="btnApcCalendarioHoje" class="print-secondary-btn button" type="button">Hoje</button>
         </section>
 
         <p id="apcCalendarioMensagem" class="apc-calendar-message" role="status" aria-live="polite"></p>
@@ -65,7 +65,7 @@
                     <p id="apcAgendaResumo">Clique em um dia para consultar as entregas previstas.</p>
                 </header>
                 <div id="apcAgendaLista" class="apc-calendar-agenda-list"></div>
-                <a class="btn-destaque apc-calendar-open-central" href="/apc">Abrir Central de Anexos</a>
+                <a class="btn-destaque button button--primary apc-calendar-open-central" href="/apc">Abrir Central de Anexos</a>
             </aside>
         </section>
     </main>

@@ -9,13 +9,13 @@
     {% include "includes/style_bundle.html" %}
 </head>
 
-<body class="user-profile-page">
+<body class="user-profile-page app-utility-page">
     <a class="profile-skip-link" href="#profileMain">Ir para o conteúdo</a>
     {% set navbar_context = "Área pessoal" %}
     {% set navbar_current = "perfil" %}
     {% include "includes/app_navbar.html" %}
 
-    <main id="profileMain" class="profile-shell" tabindex="-1">
+    <main id="profileMain" class="profile-shell app-utility-shell page-shell page-shell--medium" tabindex="-1">
         <section id="profileLoading" class="profile-loading" aria-label="Carregando seu perfil">
             <div class="profile-skeleton profile-skeleton--hero"></div>
             <div class="profile-skeleton profile-skeleton--support"></div>
@@ -25,7 +25,7 @@
         <section id="profileError" class="profile-page-error" role="alert" hidden>
             <i class="bi bi-exclamation-circle" aria-hidden="true"></i>
             <div>
-                <h1>Não foi possível abrir seu perfil</h1>
+                <h1 class="page-title">Não foi possível abrir seu perfil</h1>
                 <p id="profileErrorMessage">Tente novamente em alguns instantes.</p>
             </div>
             <button id="profileRetry" class="button button--primary" type="button">
@@ -39,7 +39,7 @@
                 <div id="profileAvatar" class="profile-avatar" aria-hidden="true">...</div>
                 <div class="profile-identity">
                     <span id="profileRole" class="profile-role">Perfil do usuário</span>
-                    <h1 id="profileName">Seu perfil</h1>
+                    <h1 id="profileName" class="page-title">Seu perfil</h1>
                     <p id="profileEmail" class="profile-email"></p>
                     <div id="profileChips" class="profile-chips" aria-label="Vínculos escolares"></div>
                 </div>

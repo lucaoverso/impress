@@ -57,6 +57,10 @@
     --page-width-wide: 1480px;
     --page-width-compact: 1100px;
     --control-height: 44px;
+    --field-height: 48px;
+    --radius-control: var(--radius-md);
+    --radius-surface: var(--radius-lg);
+    --radius-modal: 20px;
     --shadow-low: 0 2px 6px rgba(15, 23, 42, 0.06);
     --shadow-card: var(--shadow-low);
     --shadow-floating: 0 16px 40px rgba(15, 23, 42, 0.14);

@@ -1,6 +1,7 @@
 /* Final responsive layer for the professor printing flow, based on the Stitch proposal. */
 .professor-page .print-wizard-shell {
-    width: min(1280px, 100%);
+    width: min(1180px, 100%);
+    padding: var(--page-padding-start) var(--page-gutter) var(--page-padding-end);
 }
 .professor-page .print-workspace {
     overflow: visible;
@@ -11,9 +12,10 @@
 .professor-page .print-page-header {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
+    align-items: start;
     gap: var(--space-8);
-    padding: var(--space-8) 0;
+    margin-bottom: var(--space-6);
+    padding: 0;
     border: 0;
 }
 .professor-page .print-page-quota {
@@ -107,7 +109,7 @@ html[data-printing-current-step="1"] body.professor-page #grupoProfessorSolicita
 }
 html[data-printing-current-step="1"] body.professor-page #etapaArquivo select,
 html[data-printing-current-step="1"] body.professor-page #turmaImpressaoBusca {
-    min-height: 52px;
+    min-height: var(--field-height);
 }
 html[data-printing-current-step="1"] body.professor-page .print-class-search-control {
     position: relative;
@@ -435,7 +437,8 @@ html[data-printing-current-step="1"] body.professor-page .print-entry-benefits {
         grid-template-columns: 1fr;
         align-items: stretch;
         gap: var(--space-4);
-        padding: var(--space-6) var(--space-4);
+        margin-bottom: var(--space-4);
+        padding: 0;
     }
     .professor-page .print-page-quota {
         width: 100%;

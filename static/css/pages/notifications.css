@@ -57,7 +57,7 @@
     place-items: center;
     width: 48px;
     height: 48px;
-    border-radius: 14px;
+    border-radius: var(--radius-control);
     background: var(--brand-soft);
     color: var(--brand);
     font-size: 22px;
@@ -83,7 +83,7 @@
     border-radius: 12px;
     background: var(--surface-2);
 }
-.notifications-filter button { min-height: 38px; border: 0; background: transparent; }
+.notifications-filter button { min-height: var(--control-height); border: 0; background: transparent; }
 .notifications-filter button.is-active {
     background: var(--surface-0);
     color: var(--brand-strong);
@@ -217,7 +217,7 @@
 .notifications-batch strong,
 .notifications-batch span { display: block; }
 .notifications-batch span { margin-top: 4px; color: var(--text-muted); font-size: 13px; }
-.notifications-batch button { margin-top: 10px; min-height: 38px; color: var(--error); }
+.notifications-batch button { margin-top: 10px; min-height: var(--control-height); color: var(--error); }
 .notification-confirm-dialog {
     width: min(480px, calc(100% - 28px));
     margin: auto;

@@ -55,6 +55,73 @@ class DesignSystemContractTests(unittest.TestCase):
             self.assertIn("item-list", template)
             self.assertIn("empty-state", template)
 
+    def test_product_pages_use_the_canonical_shell_and_heading(self):
+        paths = (
+            "templates/download.html",
+            "templates/horario_escolar.html",
+            "templates/apc/index.html",
+            "templates/apc/calendario/index.html",
+            "templates/coordenacao.html",
+            "templates/notifications/index.html",
+            "templates/notifications/manage.html",
+            "templates/users/profile.html",
+            "modules/admin/templates/admin/professores.html",
+            "modules/admin/templates/admin/atribuicoes.html",
+            "modules/admin/templates/admin/turmas.html",
+            "modules/admin/templates/admin/aulas.html",
+            "modules/admin/templates/admin/impressao.html",
+            "modules/admin/templates/admin/recursos.html",
+            "modules/admin/templates/admin/relatorios.html",
+            "modules/admin/templates/admin/auditoria.html",
+        )
+
+        for relative_path in paths:
+            with self.subTest(relative_path=relative_path):
+                template = (ROOT / relative_path).read_text(encoding="utf-8")
+                self.assertIn("page-shell", template)
+                self.assertIn("page-title", template)
+
+    def test_shared_shell_owns_content_width_and_heading_scale(self):
+        sidebar = (ROOT / "static/css/components/app-sidebar.css").read_text(encoding="utf-8")
+        design_system = (ROOT / "static/css/design-system.css").read_text(encoding="utf-8")
+
+        self.assertIn("var(--app-main-max-width, var(--page-width))", sidebar)
+        self.assertIn("main.page-shell--wide", sidebar)
+        self.assertIn("main.page-shell--medium", sidebar)
+        self.assertIn("main.page-shell--compact", sidebar)
+        self.assertIn("h1.page-title {\n    font-size: 2.125rem;", design_system)
+        self.assertIn("h1.page-title { font-size: 1.5rem;", design_system)
+
+    def test_shared_components_own_control_and_surface_geometry(self):
+        base = (ROOT / "static/css/base.css").read_text(encoding="utf-8")
+        design_system = (ROOT / "static/css/design-system.css").read_text(encoding="utf-8")
+        surfaces = (
+            ROOT / "static/css/components/continuous-surfaces.css"
+        ).read_text(encoding="utf-8")
+
+        for contract in (
+            "--control-height: 44px;",
+            "--field-height: 48px;",
+            "--radius-control: var(--radius-md);",
+            "--radius-surface: var(--radius-lg);",
+            "--radius-modal: 20px;",
+        ):
+            self.assertIn(contract, base)
+
+        self.assertIn("Shared field contract", design_system)
+        self.assertIn("Legacy action names", surfaces)
+        self.assertIn("min-height: var(--control-height);", surfaces)
+        self.assertIn("height: var(--field-height);", design_system)
+        self.assertIn("border-radius: var(--radius-control);", design_system)
+        self.assertIn("border-radius: var(--radius-surface);", surfaces)
+        self.assertIn("box-shadow: none;", surfaces)
+
+    def test_scheduling_does_not_import_printing_page_styles(self):
+        template = (ROOT / "templates/scheduling/index.html").read_text(encoding="utf-8")
+
+        self.assertNotIn('"css/printing/', template)
+        self.assertNotIn('"css/pages/professor.css"', template)
+
     def test_scheduling_dynamic_content_keeps_shared_classes(self):
         bookings = (ROOT / "static/js/scheduling/bookings_pages.js").read_text(encoding="utf-8")
         flow = (ROOT / "static/js/agendamento.js").read_text(encoding="utf-8")

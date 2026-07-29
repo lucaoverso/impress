@@ -71,13 +71,13 @@ class P2UiContractTest(unittest.TestCase):
 
         self.assertIn(".app-sidebar-link[hidden] { display: none; }", css)
 
-    def test_central_mobile_tem_navegacao_inferior_e_safe_area(self):
+    def test_central_mobile_reutiliza_sidebar_compartilhada(self):
         template = (ROOT / "templates" / "servicos.html").read_text(encoding="utf-8")
         css = (ROOT / "static" / "css" / "pages" / "services-scheduler.css").read_text(encoding="utf-8")
 
         self.assertIn("viewport-fit=cover", template)
-        self.assertIn(".services-dashboard-body .app-sidebar {", css)
-        self.assertIn("padding-bottom: env(safe-area-inset-bottom);", css)
+        self.assertNotIn(".services-dashboard-body .app-sidebar {", css)
+        self.assertNotIn(".services-dashboard-body .app-topbar.app-navbar", css)
         self.assertIn("grid-template-columns: 48px minmax(0, 1fr) 20px;", css)
         self.assertIn('mobile_label": "Início"', (ROOT / "templates" / "includes" / "app_sidebar_config.html").read_text(encoding="utf-8"))
 
@@ -112,6 +112,16 @@ class P2UiContractTest(unittest.TestCase):
         self.assertIn(".booking-sort-controls button {\n    min-height: 44px;", scheduling)
         self.assertIn(".booking-item-actions .print-secondary-btn { min-height: 44px; }", scheduling)
         self.assertRegex(history, r"\.print-history-item-actions button \{\n    min-height: 44px;")
+
+    def test_catalogo_de_recursos_nao_forca_selecao_e_aceita_clique_no_card(self):
+        script = (ROOT / "static" / "js" / "scheduling" / "resource_catalog.js").read_text(encoding="utf-8")
+
+        self.assertIn('article.addEventListener("click"', script)
+        self.assertIn('article.addEventListener("keydown"', script)
+        self.assertIn('article.setAttribute("aria-pressed"', script)
+        self.assertIn("resetDrawer();", script)
+        self.assertNotIn("selectedResourceId = Number(filtered[0].id)", script)
+        self.assertNotIn("openDrawer(selected, null, true)", script)
 
     def test_acoes_de_revisao_apc_ficam_ocultas_para_professores(self):
         template = (ROOT / "templates" / "apc" / "index.html").read_text(encoding="utf-8")

@@ -104,8 +104,8 @@
 
 .pcpi-field input,
 .pcpi-field select {
-    height: 44px;
-    padding: 0 10px;
+    height: var(--field-height);
+    padding: 0 14px;
 }
 
 .pcpi-field textarea,

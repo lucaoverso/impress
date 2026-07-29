@@ -20,8 +20,8 @@
 }
 
 .coordenacao-page-header {
-    padding: 28px 32px 20px;
-    border-bottom: 1px solid var(--line-soft);
+    padding: 0;
+    border: 0;
 }
 
 .coordenacao-page-header .admin-header-main {
@@ -1297,7 +1297,7 @@ body.coordenacao-modal-open {
 .coordenacao-occurrence-modal-panel .coordenacao-field input:not([type="color"]),
 .coordenacao-occurrence-modal-panel .coordenacao-field select,
 .coordenacao-occurrence-modal-panel .coordenacao-field textarea {
-    border-radius: 8px;
+    border-radius: var(--radius-control);
 }
 
 .coordenacao-autocomplete-shell {

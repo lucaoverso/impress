@@ -243,7 +243,7 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn('id="btnVoltarServicos"', html)
         self.assertIn("Serviços", html)
         self.assertIn('id="apcUsuario"', html)
-        self.assertIn("<h1>Central de Anexos</h1>", html)
+        self.assertIn('<h1 class="page-title">Central de Anexos</h1>', html)
         self.assertNotIn('id="apcModeTabs"', html)
         self.assertIn("Solicitações", html)
         self.assertNotIn("apc-calendar-toggle", html)
@@ -291,7 +291,7 @@ class PagesRouterAssetsTest(unittest.TestCase):
         html = resposta.body.decode("utf-8")
 
         self.assertEqual(resposta.headers.get("Cache-Control"), "no-store")
-        self.assertIn("<h1>Calendário mensal</h1>", html)
+        self.assertIn('<h1 class="page-title">Calendário mensal</h1>', html)
         self.assertIn('id="apcCalendarioGrid"', html)
         self.assertIn('id="apcAgendaLista"', html)
         self.assertIn('href="/apc/calendario/"', html)

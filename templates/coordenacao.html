@@ -18,15 +18,15 @@
     {% set navbar_current = "coordenacao" %}
     {% include "includes/app_navbar.html" %}
     {% include "includes/app_sidebar_config.html" %}
-    <main class="coordenacao-page">
-        <section class="coordenacao-workspace">
-            <header class="admin-header admin-header-shell coordenacao-page-header">
-                <div class="admin-header-main">
-                    <h1>Central de registros da coordenação</h1>
-                    <p>Centralize pendências, acompanhe históricos e mantenha a base legal pronta para cada registro.</p>
-                </div>
-            </header>
+    <main class="coordenacao-page page-shell page-shell--wide">
+        <header class="admin-header admin-header-shell coordenacao-page-header page-header page-header--flush">
+            <div class="admin-header-main page-header-main">
+                <h1 class="page-title">Central de registros da coordenação</h1>
+                <p class="page-lead">Centralize pendências, acompanhe históricos e mantenha a base legal pronta para cada registro.</p>
+            </div>
+        </header>
 
+        <section class="coordenacao-workspace">
             <section id="painelProfessorPreRegistro" class="coordenacao-professor-pre-page" hidden>
                 <article class="coordenacao-card coordenacao-pre-registration-card">
                     <div class="coordenacao-panel-header">

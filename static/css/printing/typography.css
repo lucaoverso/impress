@@ -1,8 +1,8 @@
 /* Hierarquia tipografica compartilhada pelo fluxo e pelo historico de impressao. */
 .professor-page .print-page-header .page-title,
 .professor-page .print-history-page-header .page-title {
-    font-size: 2rem;
-    line-height: 1.12;
+    font-size: 2.125rem;
+    line-height: 1.1;
     letter-spacing: -0.02em;
 }
 
@@ -38,7 +38,7 @@
 @media (max-width: 640px) {
     .professor-page .print-page-header .page-title,
     .professor-page .print-history-page-header .page-title {
-        font-size: 1.625rem;
+        font-size: 1.5rem;
     }
 
     .professor-page .print-step-header .section-title {

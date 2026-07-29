@@ -52,6 +52,90 @@ body :is(
     padding: var(--surface-padding);
 }
 
+body > main.page-shell :is(
+    .panel-card,
+    .calendar-card,
+    .admin-card,
+    .coordenacao-card,
+    .download-card,
+    .download-details-card,
+    .horario-summary-card,
+    .horario-board-card,
+    .horario-config-card,
+    .horario-filter-card,
+    .horario-matrix-card,
+    .pcpi-card,
+    .reports-filter-card,
+    .notifications-device-card,
+    .notifications-inbox-card,
+    .notifications-composer,
+    .notifications-history,
+    .scheduling-page-surface,
+    .print-history-surface,
+    .scheduler-repeat-details
+) {
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-surface);
+    background-color: var(--surface-0);
+    box-shadow: none;
+}
+
+body > main.page-shell > :is(
+    .coordenacao-workspace,
+    .print-workspace,
+    .scheduler-workspace,
+    .apc-workspace
+) {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+/* Legacy action names follow the canonical button geometry during migration. */
+body > main.page-shell :is(
+    .button,
+    .btn-destaque,
+    .btn-primario,
+    .btn-perigo,
+    .print-secondary-btn,
+    .admin-form button,
+    .admin-inline button,
+    .page-actions button,
+    .scheduler-actions button,
+    .pcpi-inline-actions button
+) {
+    height: auto;
+    min-height: var(--control-height);
+    padding: 0 var(--space-4);
+    border-radius: var(--radius-control);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+body > main.page-shell :is(.btn-destaque, .btn-primario) {
+    border-color: var(--brand);
+    background: var(--brand);
+    color: #ffffff;
+}
+
+body > main.page-shell :is(.btn-destaque, .btn-primario):hover:not(:disabled) {
+    border-color: var(--brand-strong);
+    background: var(--brand-strong);
+}
+
+body > main.page-shell .btn-perigo {
+    border-color: var(--state-danger-border-strong);
+    background: var(--surface-0);
+    color: var(--state-danger-text);
+}
+
+body > main.page-shell .btn-perigo:hover:not(:disabled) {
+    border-color: var(--error);
+    background: var(--state-danger-bg);
+}
+
 body .admin-tabs {
     gap: var(--space-1);
     margin-bottom: var(--flow-gap);

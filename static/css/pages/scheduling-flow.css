@@ -50,20 +50,6 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     gap: 4px;
 }
 
-.scheduler-flow-page .scheduler-page-header h1 {
-    margin: 0;
-    font-size: 24px;
-    line-height: 1.15;
-    letter-spacing: -0.025em;
-    color: var(--scheduler-text);
-}
-
-.scheduler-flow-page .scheduler-page-lead {
-    margin: 0;
-    font-size: 14px;
-    color: var(--scheduler-muted);
-}
-
 .scheduler-flow-stepper {
     overflow-x: auto;
     padding: 14px 24px;
@@ -1017,10 +1003,6 @@ html[data-scheduler-current-step] .scheduler-flow-page {
         align-items: stretch;
         padding: 16px;
         gap: 12px;
-    }
-
-    .scheduler-flow-page .scheduler-page-header h1 {
-        font-size: 20px;
     }
 
     .scheduler-flow-page .scheduler-page-lead {

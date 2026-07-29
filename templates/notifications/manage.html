@@ -7,18 +7,18 @@
     {% set page_styles = ["css/pages/notifications.css"] %}
     {% include "includes/style_bundle.html" %}
 </head>
-<body class="notifications-page">
+<body class="notifications-page app-utility-page">
     {% set navbar_context = "Gestão de notificações" %}
     {% set navbar_current = "notifications" %}
     {% include "includes/app_navbar.html" %}
 
-    <main class="notifications-shell notifications-manage-shell">
-        <header class="notifications-hero">
-            <div>
+    <main class="notifications-shell notifications-manage-shell app-utility-shell page-shell page-shell--medium">
+        <header class="notifications-hero page-header">
+            <div class="page-header-main">
                 <a class="notifications-back" href="/notificacoes"><i class="bi bi-arrow-left"></i> Voltar à caixa de entrada</a>
                 <span class="notifications-eyebrow">Comunicação interna</span>
-                <h1>Enviar uma notificação</h1>
-                <p>O público é fotografado ao agendar. Revise a estimativa antes de confirmar um envio amplo.</p>
+                <h1 class="page-title">Enviar uma notificação</h1>
+                <p class="page-lead">O público é fotografado ao agendar. Revise a estimativa antes de confirmar um envio amplo.</p>
             </div>
         </header>
 

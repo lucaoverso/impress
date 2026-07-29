@@ -1,31 +1,7 @@
 body.scheduling-module {
-    --app-navbar-height: 64px;
-    --app-sidebar-width: 216px;
     background: #f7faf8;
     color: var(--text-main);
-    font-family: "Nunito Sans", var(--font-sans, system-ui, sans-serif);
 }
-
-.scheduling-module .app-topbar.app-navbar {
-    grid-template-columns: var(--app-sidebar-width) minmax(280px, 520px) 1fr;
-    min-height: var(--app-navbar-height);
-    padding: 0 20px;
-    border-bottom: 1px solid var(--line);
-    background: rgba(255, 255, 255, .96);
-}
-
-.scheduling-module .app-topbar-school-logo { width: 40px; height: 40px; object-fit: contain; }
-.scheduling-module .app-topbar-context { font-size: .8rem; }
-.scheduling-module .app-navbar-search input { height: 38px; border-radius: 8px; background: var(--surface-1); }
-.scheduling-module .app-navbar-avatar { width: 38px; height: 38px; flex-basis: 38px; }
-.scheduling-module .app-sidebar { background: #f1f4f3; }
-.scheduling-module .app-sidebar-panel { background: transparent; }
-.scheduling-module .app-sidebar-header { padding: 16px 14px 12px; }
-.scheduling-module .app-sidebar-header strong { color: var(--brand-strong); font-size: 1rem; }
-.scheduling-module .app-sidebar nav { gap: 2px; padding: 8px; }
-.scheduling-module .app-sidebar-link { min-height: 40px; gap: 9px; padding: 8px 10px; border-radius: 7px; font-size: .82rem; font-weight: 700; }
-.scheduling-module .app-sidebar-link > i { width: 18px; font-size: .9rem; }
-.scheduling-module .app-sidebar-link.is-active { box-shadow: inset -3px 0 0 var(--brand); }
 
 .scheduling-module .scheduling-page-shell,
 .scheduling-module .scheduler-flow-page {
@@ -43,12 +19,10 @@ body.scheduling-module {
     background: transparent;
 }
 
-.scheduling-module .scheduling-page-header h1,
-.scheduling-module .scheduler-flow-page .scheduler-page-header h1 { margin: 0 0 4px; font-size: 1.75rem; line-height: 1.1; }
 .scheduling-module .scheduling-page-header p,
-.scheduling-module .scheduler-flow-page .scheduler-page-lead { max-width: 65ch; font-size: .875rem; }
-.scheduling-module .btn-destaque { border-radius: 7px; box-shadow: none; }
-.scheduling-module .scheduling-page-surface { border-radius: 10px; box-shadow: none; }
+.scheduling-module .scheduler-flow-page .scheduler-page-lead { max-width: 65ch; }
+.scheduling-module .btn-destaque { box-shadow: none; }
+.scheduling-module .scheduling-page-surface { box-shadow: none; }
 
 /* Novo agendamento */
 html[data-scheduler-current-step] body.scheduling-new-page .scheduler-flow-page { max-width: none; }
@@ -124,7 +98,6 @@ html[data-scheduler-current-step] body.scheduling-new-page .scheduler-flow-page 
     display: grid;
     gap: 14px;
 }
-.scheduling-new-page .scheduler-flow-heading h2 { font-size: 1.125rem; }
 .scheduling-new-page .scheduler-flow-page .scheduler-resource-stage-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; overflow: visible; padding: 0; }
 .scheduling-new-page .scheduler-flow-page .scheduler-resource-stage-button {
     position: relative;
@@ -164,7 +137,7 @@ html[data-scheduler-current-step] body.scheduling-new-page .scheduler-flow-page 
 .scheduling-new-page .scheduler-side-wizard .scheduler-context-divider { display: none; }
 .scheduling-new-page .scheduler-side-wizard .scheduler-context-lesson strong { white-space: normal; }
 .scheduling-new-page .scheduler-side-wizard .scheduler-week-header { grid-template-columns: 1fr; align-items: stretch; gap: 10px; }
-.scheduling-new-page .scheduler-side-wizard .scheduler-week-nav { grid-template-columns: 40px minmax(0, 1fr) 40px; }
+.scheduling-new-page .scheduler-side-wizard .scheduler-week-nav { grid-template-columns: 44px minmax(0, 1fr) 44px; }
 .scheduling-new-page .scheduler-side-wizard #btnSemanaHoje { grid-column: 1 / -1; }
 .scheduling-new-page .scheduler-side-wizard .scheduler-week-strip { display: flex; overflow-x: auto; }
 .scheduling-new-page .scheduler-side-wizard .scheduler-week-day { min-width: 76px; flex: 0 0 76px; }
@@ -276,7 +249,6 @@ html[data-scheduler-current-step] body.scheduling-new-page .scheduler-flow-page 
 .scheduling-module .scheduling-filter-bar { padding: 14px 16px; background: var(--surface-0); }
 .scheduling-module .scheduling-list-header { align-items: center; padding: 16px; }
 .scheduling-module .scheduling-list-header h2 { font-size: 1rem; }
-.scheduling-module .booking-sort-controls button { min-height: 36px; padding: 5px 9px; font-size: .7rem; }
 .scheduling-booking-columns { display: grid; grid-template-columns: 118px 1fr 1.1fr 90px 100px; gap: 14px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--surface-1); color: var(--text-muted); font-size: .68rem; font-weight: 800; text-transform: uppercase; }
 .scheduling-module .scheduling-booking-list { padding: 0; }
 .scheduling-module .scheduling-booking-list .booking-item { grid-template-columns: 118px 1fr 1.1fr 90px 100px; gap: 14px; align-items: center; min-height: 72px; padding: 11px 16px; }
@@ -287,16 +259,16 @@ html[data-scheduler-current-step] body.scheduling-new-page .scheduler-flow-page 
 .booking-item span:not(.booking-status) { overflow: hidden; color: var(--text-muted); font-size: .72rem; text-overflow: ellipsis; white-space: nowrap; }
 .scheduling-module .booking-status { margin: 0; justify-self: start; }
 .scheduling-module .booking-item-actions { justify-content: end; }
-.scheduling-module .booking-item-actions .button { min-height: 36px; padding: 5px 10px; font-size: .72rem; }
+.scheduling-module .booking-item-actions .button { min-height: var(--control-height); padding: 0 12px; font-size: .75rem; }
 
 /* Calendário */
 .scheduling-module .scheduling-calendar-toolbar { justify-content: flex-end; padding: 0; border: 0; background: transparent; }
 .scheduling-module .scheduling-calendar-toolbar > label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
-.scheduling-module .scheduling-calendar-toolbar select { min-height: 38px; border-radius: 7px; }
+.scheduling-module .scheduling-calendar-toolbar select { min-height: 48px; }
 .scheduling-module .scheduling-calendar-legend { order: -1; margin: 0 auto 0 0; }
 .scheduling-module .scheduling-calendar-layout { grid-template-columns: minmax(430px, 1.15fr) minmax(340px, .85fr); gap: 16px; }
 .scheduling-module .scheduling-calendar-surface,
-.scheduling-module .scheduling-day-surface { padding: 16px; border-radius: 10px; }
+.scheduling-module .scheduling-day-surface { padding: 16px; }
 .scheduling-module .scheduling-day-surface { background: var(--surface-1); }
 .scheduling-module .scheduling-calendar-surface .calendar-day { min-height: 62px; border-radius: 7px; }
 .booking-shift-heading { padding: 12px 0 6px; color: var(--brand-strong); font-size: .68rem; font-weight: 800; text-transform: uppercase; }
@@ -311,24 +283,10 @@ html[data-scheduler-current-step] body.scheduling-new-page .scheduler-flow-page 
 .scheduling-day-surface .booking-item-actions { grid-area: actions; }
 
 @media (max-width: 900px) {
-    body.scheduling-module { --app-navbar-height: 56px; }
-    .scheduling-module .app-topbar.app-navbar { grid-template-columns: auto 1fr auto; gap: 8px; padding: 0 10px 0 46px; }
-    .scheduling-module .app-topbar-school-logo { width: 32px; height: 32px; }
-    .scheduling-module .app-navbar-search { justify-self: end; width: 44px; }
-    .scheduling-module .app-navbar-search input { width: 44px; padding: 0; border: 0; background: transparent; }
-    .scheduling-module .app-navbar-search > .bi-search { left: 14px; color: var(--text-main); }
-    .scheduling-module .app-sidebar { height: 0; border: 0; }
-    .scheduling-module .app-sidebar-mobile-toggle { position: fixed; z-index: calc(var(--z-navbar) + 1); top: 6px; left: 6px; width: 40px; min-height: 44px; padding: 0; background: transparent; }
-    .scheduling-module .app-sidebar-mobile-toggle span,
-    .scheduling-module .app-sidebar-mobile-toggle > i { display: none; }
-    .scheduling-module .app-sidebar-mobile-toggle::before { content: "\F479"; font-family: bootstrap-icons; font-size: 1rem; }
-    .scheduling-module .app-sidebar-panel { position: fixed; top: var(--app-navbar-height); right: auto; bottom: 0; width: min(280px, 86vw); height: auto; border-right: 1px solid var(--line); box-shadow: var(--shadow-floating); }
     .scheduling-module .scheduling-page-shell,
     .scheduling-module .scheduler-flow-page { width: 100%; max-width: none; padding: 16px 12px 36px; }
     .scheduling-module .scheduling-page-header,
     .scheduling-module .scheduler-flow-page .scheduler-page-header { align-items: stretch; }
-    .scheduling-module .scheduling-page-header h1,
-    .scheduling-module .scheduler-flow-page .scheduler-page-header h1 { font-size: 1.5rem; }
     .scheduling-module .scheduling-page-header .btn-destaque { width: 100%; }
     .scheduling-new-page .scheduler-flow-stepper { padding: 18px 14px 16px; }
     .scheduling-new-page .scheduler-stepper-summary { margin-bottom: 13px; }

@@ -34,6 +34,23 @@ class SharedAccessibilityContractTest(unittest.TestCase):
         self.assertIn(".coordenacao-autocomplete-empty {\n    color: var(--text-muted);", css)
         self.assertIn(".coordenacao-rich-editor-area:empty::before {\n    content: attr(data-placeholder);\n    color: var(--text-muted);", css)
 
+    def test_campos_de_impressao_e_pcpi_possuem_nome_acessivel(self):
+        printing = (ROOT / "templates" / "printing" / "index.html").read_text(encoding="utf-8")
+        pcpi = (ROOT / "templates" / "pcpi.html").read_text(encoding="utf-8")
+
+        self.assertIn('aria-label="Arquivo da atividade para impressão"', printing)
+        self.assertIn('<label class="sr-only" for="pcpiTextoFinal">', pcpi)
+
+    def test_filtros_interativos_respeitam_altura_minima_de_toque(self):
+        scheduling = (ROOT / "static/css/pages/scheduling-controls.css").read_text(encoding="utf-8")
+        notifications = (ROOT / "static/css/pages/notifications.css").read_text(encoding="utf-8")
+
+        self.assertIn(".scheduling-filter-chip {\n    min-height: var(--control-height);", scheduling)
+        self.assertIn(
+            ".notifications-filter button { min-height: var(--control-height);",
+            notifications,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

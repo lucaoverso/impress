@@ -39,6 +39,23 @@ class PageStyleBundlesTest(unittest.TestCase):
             with self.subTest(class_name=class_name):
                 self.assertRegex(components, rf"(?m)^\.{re.escape(class_name)}\s*\{{")
 
+    def test_shell_com_sidebar_controla_alinhamento_e_titulo_globalmente(self):
+        sidebar = (
+            ROOT / "static" / "css" / "components" / "app-sidebar.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertIn("body.has-app-sidebar > main.page-shell {", sidebar)
+        self.assertIn(
+            "padding: var(--page-padding-start) var(--page-gutter) var(--page-padding-end);",
+            sidebar,
+        )
+        self.assertIn(
+            "body.has-app-sidebar > main.page-shell h1.page-title {",
+            sidebar,
+        )
+        self.assertIn("font-size: 2.125rem;", sidebar)
+        self.assertIn("font-size: 1.5rem;", sidebar)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -44,6 +44,34 @@ class SchedulingFlowLayoutContractTest(unittest.TestCase):
         self.assertIn("grid-template-columns: repeat(7, minmax(0, 1fr));", flow_styles)
         self.assertIn(".scheduler-repeat-final {\n    display: grid;\n    gap: 16px;\n    padding: 0;\n    border: 0;", repeat_styles)
 
+    def test_agendamento_nao_sobrescreve_componentes_globais_do_app_shell(self):
+        stitch_styles = (
+            ROOT / "static" / "css" / "pages" / "scheduling-stitch.css"
+        ).read_text(encoding="utf-8")
+        flow_styles = (
+            ROOT / "static" / "css" / "pages" / "scheduling-flow.css"
+        ).read_text(encoding="utf-8")
+        legacy_styles = (
+            ROOT / "static" / "css" / "pages" / "services-scheduler.css"
+        ).read_text(encoding="utf-8")
+
+        self.assertNotIn("--app-navbar-height:", stitch_styles)
+        self.assertNotIn("--app-sidebar-width:", stitch_styles)
+        self.assertNotIn(".scheduling-module .app-", stitch_styles)
+        self.assertNotIn("font-family:", stitch_styles)
+        self.assertNotIn(
+            ".scheduler-flow-page .scheduler-page-header h1",
+            flow_styles,
+        )
+        self.assertIn(
+            ".scheduler-flow-page .scheduler-page-header h1:not(.page-title)",
+            legacy_styles,
+        )
+        self.assertIn(
+            ".scheduler-flow-page .scheduler-page-lead:not(.page-lead)",
+            legacy_styles,
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

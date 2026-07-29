@@ -4,11 +4,37 @@
 }
 
 body.has-app-sidebar > main {
-    width: auto;
+    width: min(
+        var(--app-main-max-width, var(--page-width)),
+        calc(100vw - var(--app-sidebar-width) - 24px)
+    );
     max-width: calc(100vw - var(--app-sidebar-width) - 24px);
     box-sizing: border-box;
     margin-left: calc(var(--app-sidebar-width) + 24px);
     margin-right: auto;
+}
+
+body.has-app-sidebar > main.page-shell {
+    gap: var(--flow-gap);
+    padding: var(--page-padding-start) var(--page-gutter) var(--page-padding-end);
+}
+
+body.has-app-sidebar > main.page-shell h1.page-title {
+    font-size: 2.125rem;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+}
+
+body.has-app-sidebar > main.page-shell--wide {
+    --app-main-max-width: var(--page-width-wide);
+}
+
+body.has-app-sidebar > main.page-shell--medium {
+    --app-main-max-width: 1180px;
+}
+
+body.has-app-sidebar > main.page-shell--compact {
+    --app-main-max-width: var(--page-width-compact);
 }
 
 .app-sidebar {
@@ -119,6 +145,11 @@ body.has-app-sidebar .admin-section-content { min-width: 0; }
 
 @media (max-width: 760px) {
     :root { --app-navbar-height: 70px; }
+
+    body.has-app-sidebar > main.page-shell h1.page-title {
+        font-size: 1.5rem;
+        line-height: 1.15;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {

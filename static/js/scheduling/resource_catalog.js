@@ -44,6 +44,7 @@
     function openDrawer(resource, trigger, initial = false) {
         selectedResourceId = Number(resource.id || 0);
         lastFocusedElement = trigger || document.activeElement;
+        el("catalogDrawer").classList.remove("is-empty");
         el("catalogDrawerType").textContent = resource.tipo || "Recurso";
         el("catalogDrawerTitle").textContent = resource.nome || "Recurso sem nome";
         el("catalogDrawerDescription").textContent = resource.descricao || "Sem descrição cadastrada.";
@@ -55,7 +56,11 @@
         drawer.inert = false;
         drawer.classList.add("is-open");
         drawer.setAttribute("aria-hidden", "false");
-        document.querySelectorAll(".catalog-card").forEach((card) => card.classList.toggle("is-selected", Number(card.dataset.resourceId) === selectedResourceId));
+        document.querySelectorAll(".catalog-card").forEach((card) => {
+            const selected = Number(card.dataset.resourceId) === selectedResourceId;
+            card.classList.toggle("is-selected", selected);
+            card.setAttribute("aria-pressed", String(selected));
+        });
         if (isMobile()) {
             document.body.classList.add("catalog-drawer-open");
             if (!initial) document.querySelector(".catalog-drawer-close")?.focus();
@@ -71,10 +76,27 @@
         lastFocusedElement?.focus();
     }
 
+    function resetDrawer() {
+        selectedResourceId = 0;
+        const drawer = el("catalogDrawer");
+        drawer.classList.add("is-empty");
+        drawer.classList.remove("is-open");
+        drawer.setAttribute("aria-hidden", String(isMobile()));
+        drawer.inert = isMobile();
+        el("catalogDrawerType").textContent = "Catálogo";
+        el("catalogDrawerTitle").textContent = "Selecione um recurso";
+        el("catalogDrawerDescription").textContent = "Clique em um card para consultar os detalhes e iniciar um agendamento.";
+        document.body.classList.remove("catalog-drawer-open");
+    }
+
     function card(resource) {
         const article = document.createElement("article");
         article.className = "catalog-card";
         article.dataset.resourceId = String(resource.id);
+        article.tabIndex = 0;
+        article.setAttribute("role", "button");
+        article.setAttribute("aria-label", `Ver detalhes de ${resource.nome || "recurso"}`);
+        article.setAttribute("aria-pressed", String(Number(resource.id) === selectedResourceId));
         article.classList.toggle("is-selected", Number(resource.id) === selectedResourceId);
         article.appendChild(cover(resource, "catalog-card-cover"));
 
@@ -116,6 +138,15 @@
         actions.append(schedule, details);
         body.append(heading, meta, actions);
         article.appendChild(body);
+        article.addEventListener("click", (event) => {
+            if (event.target.closest("a, button")) return;
+            openDrawer(resource, article);
+        });
+        article.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault();
+            openDrawer(resource, article);
+        });
         return article;
     }
 
@@ -157,10 +188,8 @@
             grid.appendChild(empty);
             return;
         }
-        if (!filtered.some((resource) => Number(resource.id) === selectedResourceId)) selectedResourceId = Number(filtered[0].id);
+        if (!filtered.some((resource) => Number(resource.id) === selectedResourceId)) resetDrawer();
         filtered.forEach((resource) => grid.appendChild(card(resource)));
-        const selected = filtered.find((resource) => Number(resource.id) === selectedResourceId) || filtered[0];
-        if (!isMobile()) openDrawer(selected, null, true);
     }
 
     async function init() {

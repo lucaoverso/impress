@@ -150,7 +150,7 @@
 .booking-sort-controls button {
     min-height: 44px;
     padding: 6px 10px;
-    font-size: 12px;
+    font-size: 14px;
 }
 
 .booking-sort-controls button:hover,
@@ -221,7 +221,7 @@
     .booking-sort-controls { justify-content: flex-start; }
     .scheduling-calendar-surface,
     .scheduling-day-surface { padding: 16px; }
-    .scheduling-calendar-surface .calendar-header { grid-template-columns: 40px minmax(0, 1fr) 40px; }
+    .scheduling-calendar-surface .calendar-header { grid-template-columns: 44px minmax(0, 1fr) 44px; }
     .scheduling-calendar-surface #btnMesHoje { grid-column: 1 / -1; }
     .scheduling-calendar-surface .calendar-day,
     .scheduling-calendar-surface .calendar-empty { min-height: 54px; padding: 6px; }

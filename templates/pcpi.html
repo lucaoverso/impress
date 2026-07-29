@@ -17,18 +17,18 @@
 
     <main class="pcpi-page page-shell">
         <header class="admin-header admin-header-shell page-header">
-            <div class="admin-header-main page-header-main"></div>
+            <div class="admin-header-main page-header-main">
+                <h1 class="page-title">Registro PCPI</h1>
+                <p class="page-lead">Selecione o turno, confira os agendamentos importados, registre ações complementares e gere o texto final do PCPI.</p>
+                <p id="pcpiUsuario" class="pcpi-user-copy page-user-copy"></p>
+            </div>
         </header>
 
         <section class="pcpi-grid">
             <article class="calendar-card panel-card pcpi-card pcpi-card-full">
                 <div class="pcpi-card-header section-header">
                     <div class="section-header-main">
-                        <h1 class="page-title">Registro PCPI</h1>
-                        <p class="page-lead">Selecione o turno, confira os agendamentos importados, registre ações
-                            complementares e gere o texto final do PCPI.</p>
-                        <p id="pcpiUsuario" class="pcpi-user-copy page-user-copy"></p>
-                        <h2>Filtro do turno</h2>
+                        <h2 class="section-title">Filtro do turno</h2>
                         <p>Defina a data e o turno para importar os agendamentos e carregar os registros do PCPI.</p>
                     </div>
                 </div>
@@ -157,6 +157,7 @@
                 </div>
 
                 <p id="pcpiResumoTexto" class="pcpi-hint hint-copy"></p>
+                <label class="sr-only" for="pcpiTextoFinal">Texto final do PCPI</label>
                 <textarea id="pcpiTextoFinal" class="pcpi-textarea" rows="12"
                     placeholder="O texto gerado do PCPI aparecera aqui."></textarea>
             </article>
