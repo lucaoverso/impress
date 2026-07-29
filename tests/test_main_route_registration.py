@@ -4,13 +4,30 @@ from collections import Counter
 import main
 
 
+def _registered_routes(routes, prefix=""):
+    registered = []
+    for route in routes:
+        included_router = getattr(route, "original_router", None)
+        if included_router is not None:
+            context = getattr(route, "include_context", None)
+            included_prefix = getattr(context, "prefix", "")
+            registered.extend(
+                _registered_routes(included_router.routes, prefix + included_prefix)
+            )
+            continue
+
+        path = getattr(route, "path", None)
+        if path is not None:
+            registered.extend(
+                (method, prefix + path)
+                for method in getattr(route, "methods", set())
+            )
+    return registered
+
+
 class MainRouteRegistrationTest(unittest.TestCase):
     def test_registra_modulos_recuperados_sem_rotas_duplicadas(self):
-        routes = [
-            (method, route.path)
-            for route in main.app.routes
-            for method in getattr(route, "methods", set())
-        ]
+        routes = _registered_routes(main.app.routes)
         registered = set(routes)
 
         self.assertIn(("GET", "/admin"), registered)
