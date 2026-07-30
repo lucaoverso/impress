@@ -196,6 +196,10 @@
     gap: 8px;
 }
 
+.print-history-item-actions button {
+    min-height: 44px;
+}
+
 .print-history-item-actions a {
     text-decoration: none;
 }

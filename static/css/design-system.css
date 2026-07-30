@@ -197,7 +197,7 @@ body > main.page-shell :is(
     select,
     textarea
 ):disabled {
-    background: var(--surface-muted);
+    background: var(--surface-2);
     color: var(--text-muted);
     cursor: not-allowed;
 }
