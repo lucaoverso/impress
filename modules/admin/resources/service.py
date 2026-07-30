@@ -1,4 +1,5 @@
 import re
+import shutil
 import sqlite3
 from pathlib import Path
 from uuid import uuid4
@@ -17,6 +18,18 @@ class ResourceConflictError(Exception):
 
 class ResourceNotFoundError(Exception):
     pass
+
+
+def prepare_resource_image_storage(image_dir: Path, legacy_dir: Path) -> None:
+    image_dir.mkdir(parents=True, exist_ok=True)
+    if not legacy_dir.is_dir() or image_dir.resolve() == legacy_dir.resolve():
+        return
+
+    for source in legacy_dir.iterdir():
+        if source.is_file() and source.suffix.lower() in IMAGE_EXTENSIONS:
+            target = image_dir / source.name
+            if not target.exists():
+                shutil.copy2(source, target)
 
 
 def list_resources(include_inactive: bool):

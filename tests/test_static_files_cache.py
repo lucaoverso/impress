@@ -46,6 +46,31 @@ class StaticFilesCacheTest(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.headers.get("Cache-Control"), IMMUTABLE_CACHE_CONTROL)
 
+    def test_dedicated_resource_image_mount_uses_long_immutable_cache(self):
+        app = FastAPI()
+        resource_dir = Path(self.temp_dir.name) / "persistent-resource-images"
+        resource_dir.mkdir()
+        (resource_dir / "projetor-a1b2c3d4e5.webp").write_bytes(b"persistent")
+        app.mount(
+            "/static/img/resources",
+            CachedStaticFiles(directory=resource_dir),
+            name="resource-images",
+        )
+        app.mount(
+            "/static",
+            CachedStaticFiles(directory=self.temp_dir.name),
+            name="static",
+        )
+
+        with TestClient(app) as client:
+            response = client.get(
+                "/static/img/resources/projetor-a1b2c3d4e5.webp"
+            )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, b"persistent")
+        self.assertEqual(response.headers.get("Cache-Control"), IMMUTABLE_CACHE_CONTROL)
+
     def test_versioned_asset_uses_long_immutable_cache(self):
         response = self.client.get("/static/js/app.js?v=build-123")
 

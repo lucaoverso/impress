@@ -44,6 +44,25 @@ class AdminResourcesServiceTests(unittest.TestCase):
             self.assertTrue(path.startswith("/static/img/resources/minha-imagem-"))
             self.assertEqual(len(list(Path(directory).iterdir())), 1)
 
+    def test_prepara_diretorio_persistente_copiando_imagem_legada(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            legacy_dir = root / "static" / "img" / "resources"
+            image_dir = root / "data" / "resource-images"
+            legacy_dir.mkdir(parents=True)
+            (legacy_dir / "projetor.webp").write_bytes(b"legada")
+            (legacy_dir / "ignorar.txt").write_text("texto", encoding="utf-8")
+
+            service.prepare_resource_image_storage(image_dir, legacy_dir)
+
+            self.assertEqual((image_dir / "projetor.webp").read_bytes(), b"legada")
+            self.assertFalse((image_dir / "ignorar.txt").exists())
+
+            (image_dir / "projetor.webp").write_bytes(b"persistente")
+            (legacy_dir / "projetor.webp").write_bytes(b"legada-atualizada")
+            service.prepare_resource_image_storage(image_dir, legacy_dir)
+            self.assertEqual((image_dir / "projetor.webp").read_bytes(), b"persistente")
+
 
 class AdminResourcesRepositoryTests(unittest.TestCase):
     def test_crud_modular_e_compatibilidade_legada(self):

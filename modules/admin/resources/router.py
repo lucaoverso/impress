@@ -4,13 +4,13 @@ from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from auth import get_usuario_logado
 from routers.common import exigir_gestor
-from routers.config import STATIC_DIR
+from routers.config import RESOURCE_IMAGE_DIR
 
 from . import service
 from .schemas import RecursoCreateIn, RecursoStatusIn, RecursoUpdateIn
 
 router = APIRouter()
-IMAGE_DIR = Path(STATIC_DIR) / "img" / "resources"
+IMAGE_DIR = Path(RESOURCE_IMAGE_DIR)
 
 
 def _raise_http_error(exc: Exception):

@@ -20,6 +20,7 @@ import modules.teacher_followup.router as teacher_followup_router_module
 import modules.users.router as users_router_module
 import modules.notifications.router as notifications_router_module
 import modules.admin.resources.router as admin_resources_router_module
+import modules.admin.resources.service as resources_service
 import modules.admin.classes.router as admin_classes_router_module
 import modules.admin.router as admin_pages_router_module
 import routers.admin_router as admin_router_module
@@ -76,6 +77,7 @@ notifications_router_module = _reload_or_import(notifications_router_module)
 
 ENABLE_EMBEDDED_WORKER = config_module.ENABLE_EMBEDDED_WORKER
 STATIC_DIR = config_module.STATIC_DIR
+RESOURCE_IMAGE_DIR = config_module.RESOURCE_IMAGE_DIR
 
 system_router = system_router_module.router
 pages_router = pages_router_module.router
@@ -162,6 +164,10 @@ async def lifespan(app: FastAPI):
     app.state.worker_mode = "embedded" if ENABLE_EMBEDDED_WORKER else "external"
 
     try:
+        resources_service.prepare_resource_image_storage(
+            RESOURCE_IMAGE_DIR,
+            STATIC_DIR / "img" / "resources",
+        )
         criar_tabelas()
 
         criar_usuario_se_nao_existir(
@@ -228,4 +234,9 @@ app.include_router(teacher_followup_router)
 app.include_router(users_router)
 app.include_router(notifications_router)
 
+app.mount(
+    "/static/img/resources",
+    CachedStaticFiles(directory=str(RESOURCE_IMAGE_DIR), check_dir=False),
+    name="resource-images",
+)
 app.mount("/static", CachedStaticFiles(directory=str(STATIC_DIR)), name="static")

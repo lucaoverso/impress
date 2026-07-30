@@ -23,8 +23,15 @@ class CachedStaticFiles(StaticFiles):
     def _cache_control(path: str, scope) -> str:
         normalized_path = path.replace("\\", "/").lstrip("/")
         has_version_query = bool(scope.get("query_string", b""))
+        resource_image_mount = str(scope.get("root_path", "")).rstrip("/").endswith(
+            "/static/img/resources"
+        )
 
-        if normalized_path.startswith("img/resources/") or has_version_query:
+        if (
+            resource_image_mount
+            or normalized_path.startswith("img/resources/")
+            or has_version_query
+        ):
             return IMMUTABLE_CACHE_CONTROL
 
         if PurePosixPath(normalized_path).suffix.lower() in IMAGE_EXTENSIONS:

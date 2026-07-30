@@ -85,8 +85,9 @@ Ajuste obrigatório em `.env`:
 - `SPOOL_DIR=/var/spool/sistema-impress`
 - `ENABLE_EMBEDDED_WORKER=false`
 
-Ajuste recomendado em `.env` para o banco fora da pasta do código:
+Ajuste recomendado em `.env` para dados persistentes fora da pasta do código:
 - `DB_PATH=/opt/sistema-impress-data/impressao.db`
+- `RESOURCE_IMAGE_DIR=/opt/sistema-impress-data/resource-images`
 - `LOG_LEVEL=INFO`
 
 Ajuste recomendado para o módulo de downloads do YouTube:
@@ -105,6 +106,7 @@ Ajuste recomendado para integração FreeRADIUS:
 ```bash
 sudo mkdir -p /var/spool/sistema-impress
 sudo mkdir -p /opt/sistema-impress-data
+sudo mkdir -p /opt/sistema-impress-data/resource-images
 sudo chown -R sistema-impress:lp /var/spool/sistema-impress
 sudo chown -R sistema-impress:lp /opt/sistema-impress
 sudo chown -R sistema-impress:lp /opt/sistema-impress-data
