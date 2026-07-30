@@ -823,8 +823,6 @@ body.scheduler-drawer-open {
 .scheduler-step-note {
     margin: 0;
     flex: 1 1 auto;
-    font-size: 13px;
-    color: var(--text-muted);
 }
 
 .scheduler-resource-stage-card,
@@ -1118,17 +1116,6 @@ body.scheduler-drawer-open {
 
 .scheduler-day-professor-filter[hidden] {
     display: none !important;
-}
-
-.scheduler-day-professor-filter label {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--text-main);
-}
-
-.scheduler-day-professor-filter select {
-    min-height: 38px;
-    border-radius: var(--radius-md);
 }
 
 .scheduler-day-lessons-list {
@@ -1467,38 +1454,6 @@ body.scheduler-drawer-open {
 
 .scheduler-feedback-panel-inline {
     padding: 0;
-}
-
-.scheduler-feedback-message {
-    margin: 0;
-    min-height: 20px;
-    font-size: 13px;
-    border-radius: 14px;
-    transition:
-        border-color var(--motion-fast),
-        background-color var(--motion-fast),
-        color var(--motion-fast),
-        box-shadow var(--motion-fast);
-}
-
-.scheduler-feedback-message:not(:empty) {
-    padding: 12px 14px;
-    border: 1px solid var(--line-soft);
-    background: rgba(255, 255, 255, 0.92);
-    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.05);
-    line-height: 1.45;
-}
-
-.scheduler-feedback-message[data-variant="erro"] {
-    color: var(--state-danger-text);
-    border-color: var(--state-danger-border);
-    background: var(--state-danger-bg);
-}
-
-.scheduler-feedback-message[data-variant="info"] {
-    color: var(--brand-strong);
-    border-color: rgba(15, 118, 110, 0.20);
-    background: #f1fbf8;
 }
 
 .scheduler-actions {
@@ -3521,27 +3476,6 @@ html[data-scheduler-current-step] .scheduler-flow-page {
     border-bottom: 0;
 }
 
-.scheduler-flow-page .print-field-group {
-    display: grid;
-    gap: 7px;
-}
-
-.scheduler-flow-page .print-field-group input,
-.scheduler-flow-page .print-field-group textarea {
-    width: 100%;
-    min-height: var(--field-height);
-    padding: 10px 12px;
-    border: 1px solid var(--scheduler-border);
-    border-radius: var(--radius-control);
-    background: var(--scheduler-surface);
-    color: var(--scheduler-text);
-}
-
-.scheduler-flow-page .print-field-group textarea {
-    min-height: 92px;
-    resize: vertical;
-}
-
 .scheduler-flow-page :focus-visible {
     outline: 3px solid rgba(44, 127, 125, 0.34);
     outline-offset: 2px;
@@ -3549,11 +3483,6 @@ html[data-scheduler-current-step] .scheduler-flow-page {
 
 .scheduler-summary-section .print-summary-list > div {
     padding: 12px 0;
-}
-
-.scheduler-flow-page .scheduler-feedback-message:not(:empty) {
-    border-radius: 8px;
-    box-shadow: none;
 }
 
 .scheduler-side-panel {

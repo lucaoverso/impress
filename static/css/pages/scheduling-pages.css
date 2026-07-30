@@ -162,12 +162,8 @@
 
 .scheduler-feedback-message:not(:empty) {
     margin: 16px 24px 0;
-    padding: 11px 13px;
-    border-radius: 10px;
-    background: var(--surface-2);
 }
 
-.scheduler-feedback-message[data-variant="erro"] { background: var(--state-danger-bg-strong); color: var(--state-danger-text); }
 .scheduling-day-surface .scheduler-feedback-message:not(:empty) { margin-inline: 0; }
 
 .scheduling-booking-list {

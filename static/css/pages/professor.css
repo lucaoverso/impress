@@ -571,22 +571,6 @@ html[data-printing-current-step="1"] #etapaArquivo .print-step-actions {
     color: var(--print-color-text-muted);
 }
 
-.print-wizard-shell .btn-destaque,
-.print-send-btn {
-    min-height: 44px;
-    border-radius: var(--print-radius-md);
-    border: 1px solid var(--print-color-primary);
-    background: var(--print-color-primary);
-    color: #ffffff;
-    box-shadow: var(--print-shadow-sm);
-}
-
-.print-wizard-shell .btn-destaque:hover,
-.print-send-btn:hover:not(:disabled) {
-    background: var(--print-color-primary-hover);
-    border-color: var(--print-color-primary-hover);
-}
-
 .print-stepper {
     display: grid;
     gap: var(--print-space-3);
@@ -868,32 +852,10 @@ html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
     box-shadow: 0 0 0 1px rgba(13, 122, 111, 0.12);
 }
 
-.print-field-group {
-    display: grid;
-    gap: var(--print-space-2);
-}
-
-.print-field-group[hidden] {
-    display: none !important;
-}
-
-.print-field-group label,
 .print-tags-toolbar span:first-child {
     font-size: 14px;
     font-weight: 700;
     color: var(--print-color-text);
-}
-
-.print-field-group input[type="text"],
-.print-field-group input[type="number"],
-.print-field-group select {
-    width: 100%;
-    min-height: 44px;
-    border-radius: var(--print-radius-md);
-    border: 1px solid var(--print-color-border-strong);
-    background: var(--print-color-surface);
-    color: var(--print-color-text);
-    padding: 0 12px;
 }
 
 #copias {
@@ -1372,42 +1334,14 @@ html[data-printing-current-step="1"] #etapaArquivo .print-upload-dropzone {
     gap: var(--print-space-3);
 }
 
-.print-send-btn {
-    min-height: 48px;
-    border-radius: 14px;
-    border: none;
-    font-size: 15px;
-}
-
-.print-send-btn:disabled {
-    opacity: 0.55;
-    cursor: not-allowed;
-}
-
 .print-send-btn.is-loading {
-    background: linear-gradient(135deg, var(--print-color-primary-hover), #094b44);
+    background: var(--print-color-primary-hover);
     color: #fff;
 }
 
 .print-submit-state {
-    min-height: 28px;
-    padding: 0 10px;
-    border-radius: 12px;
-    border: 1px solid transparent;
-    color: transparent;
     display: flex;
     align-items: center;
-    transition:
-        border-color var(--motion-fast),
-        background-color var(--motion-fast),
-        color var(--motion-fast);
-}
-
-.print-submit-state.is-active {
-    padding: 10px 12px;
-    border-color: var(--print-color-border-strong);
-    background: var(--print-color-surface-muted);
-    color: var(--print-color-text-muted);
 }
 
 .print-status {
@@ -2560,12 +2494,6 @@ html[data-printing-current-step="1"] .print-wizard-left {
     min-width: 170px;
 }
 
-.print-wizard-shell .btn-destaque,
-.print-send-btn {
-    border-radius: var(--radius-sm);
-    box-shadow: none;
-}
-
 .print-preview-stage {
     min-height: var(--print-preview-stage-height);
     height: var(--print-preview-stage-height);
@@ -2640,28 +2568,6 @@ html[data-printing-current-step="1"] .print-wizard-left {
 
 .print-visible-feedback p {
     margin: 0;
-}
-
-.print-visible-feedback p:not(:empty) {
-    padding: 12px 14px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-sm);
-    background: var(--surface-1);
-    color: var(--text-main);
-    font-size: 14px;
-    font-weight: 600;
-}
-
-.print-visible-feedback p[data-variant="error"]:not(:empty) {
-    border-color: var(--state-danger-border);
-    background: var(--state-danger-bg);
-    color: var(--state-danger-text);
-}
-
-.print-visible-feedback p[data-variant="success"]:not(:empty) {
-    border-color: var(--state-success-border);
-    background: var(--state-success-bg);
-    color: var(--state-success-text);
 }
 
 .print-history-panel {

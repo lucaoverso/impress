@@ -330,6 +330,19 @@ html[data-scheduler-current-step] body.scheduling-new-page .scheduler-flow-page 
         max-height: none;
         overflow: visible;
     }
+    .scheduling-new-page :is(
+        .scheduler-resource-stage-type,
+        .scheduler-resource-stage-capacity,
+        .scheduler-lesson-list-period,
+        .scheduler-lesson-list-class,
+        .scheduler-lesson-list-time
+    ) {
+        font-size: .875rem;
+        line-height: 1.4;
+    }
+    .scheduling-new-page .scheduler-day-professor-filter small {
+        max-width: 45ch;
+    }
     .scheduling-new-page .scheduler-agenda-column .scheduler-day-overview-list { min-height: 0; }
     .scheduling-booking-columns { display: none; }
     .scheduling-module .scheduling-booking-list { padding: 0 14px 14px; }

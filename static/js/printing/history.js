@@ -50,7 +50,7 @@
         const feedback = el("printHistoryFeedback");
         if (!feedback) return;
         feedback.textContent = message;
-        feedback.classList.toggle("is-error", isError);
+        feedback.dataset.variant = isError ? "error" : "info";
         feedback.hidden = !message;
     }
 

@@ -1210,10 +1210,11 @@ function renderCamposDetalhesAulasAgendamento() {
         cabecalho.appendChild(meta);
 
         const grupoTema = document.createElement("article");
-        grupoTema.className = "print-field-group";
+        grupoTema.className = "field";
         const labelTema = document.createElement("label");
+        labelTema.className = "field-label";
         labelTema.setAttribute("for", `temaAulaReserva-${chave}`);
-        labelTema.innerText = "Tema da aula";
+        labelTema.innerText = "Tema da aula (obrigatório)";
         const inputTema = document.createElement("input");
         inputTema.id = `temaAulaReserva-${chave}`;
         inputTema.type = "text";
@@ -1229,10 +1230,11 @@ function renderCamposDetalhesAulasAgendamento() {
         grupoTema.appendChild(inputTema);
 
         const grupoObs = document.createElement("article");
-        grupoObs.className = "print-field-group";
+        grupoObs.className = "field";
         const labelObs = document.createElement("label");
+        labelObs.className = "field-label";
         labelObs.setAttribute("for", `observacaoReserva-${chave}`);
-        labelObs.innerText = "Observação";
+        labelObs.innerText = "Observação (opcional)";
         const inputObs = document.createElement("textarea");
         inputObs.id = `observacaoReserva-${chave}`;
         inputObs.rows = 3;

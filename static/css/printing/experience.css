@@ -103,7 +103,7 @@ html[data-printing-current-step="1"] body.professor-page #etapaArquivo {
 html[data-printing-current-step="1"] body.professor-page #etapaArquivo .print-step-header {
     display: none;
 }
-html[data-printing-current-step="1"] body.professor-page #etapaArquivo > .print-field-group,
+html[data-printing-current-step="1"] body.professor-page #etapaArquivo > .field,
 html[data-printing-current-step="1"] body.professor-page #grupoProfessorSolicitante {
     width: min(100%, 360px);
 }

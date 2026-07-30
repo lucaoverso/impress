@@ -90,35 +90,16 @@
     display: none;
 }
 
-.print-history-owner label {
-    color: var(--print-color-text);
-    font-weight: 800;
-}
-
 .print-history-owner select {
     width: 100%;
-    min-height: 44px;
 }
 
 .print-history-owner p {
     margin: 0;
-    color: var(--print-color-text-muted);
-    font-size: 13px;
 }
 
 .print-history-feedback {
     margin: 16px 24px 0;
-    padding: 12px 14px;
-    border: 1px solid var(--print-color-border);
-    border-radius: var(--print-radius-md);
-    background: var(--print-color-surface-muted);
-    color: var(--print-color-text);
-}
-
-.print-history-feedback.is-error {
-    border-color: #fca5a5;
-    background: var(--print-color-danger-light);
-    color: var(--state-danger-text);
 }
 
 .print-history-list-heading {
@@ -215,29 +196,8 @@
     gap: 8px;
 }
 
-.print-history-item-actions a,
-.print-history-item-actions button {
-    min-height: 44px;
-    padding: 8px 12px;
-    border-radius: var(--print-radius-md);
-    font: inherit;
-    font-size: 14px;
-    font-weight: 800;
-}
-
 .print-history-item-actions a {
-    display: inline-flex;
-    align-items: center;
-    border: 1px solid var(--print-color-primary);
-    background: var(--print-color-primary);
-    color: #fff;
     text-decoration: none;
-}
-
-.print-history-cancel {
-    border: 1px solid #fca5a5;
-    background: #fff;
-    color: #b91c1c;
 }
 
 .print-history-empty {

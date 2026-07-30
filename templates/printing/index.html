@@ -123,8 +123,8 @@
                     </header>
 
                     <section id="painelProfessorEtapaArquivo" class="print-request-owner" hidden>
-                        <article id="grupoProfessorSolicitante" class="print-field-group field">
-                            <label class="field-label" for="professorSolicitante">Professor solicitante</label>
+                        <article id="grupoProfessorSolicitante" class="field">
+                            <label class="field-label" for="professorSolicitante">Professor solicitante (obrigatório)</label>
                             <select id="professorSolicitante">
                                 <option value="">Selecione um professor</option>
                             </select>
@@ -132,8 +132,8 @@
                         </article>
                     </section>
 
-                    <article class="print-field-group field">
-                        <label class="field-label" for="turmaImpressaoBusca">Selecione a turma</label>
+                    <article class="field">
+                        <label class="field-label" for="turmaImpressaoBusca">Selecione a turma (obrigatório)</label>
                         <div class="print-class-search-control">
                             <svg class="print-class-search-icon" viewBox="0 0 24 24" aria-hidden="true">
                                 <circle cx="11" cy="11" r="6"></circle>
@@ -189,8 +189,8 @@
                     </header>
 
                     <section class="print-config-section">
-                        <article class="print-field-group field">
-                            <label class="field-label" for="copias">Cópias</label>
+                        <article class="field">
+                            <label class="field-label" for="copias">Cópias (obrigatório)</label>
                             <div class="print-copy-counter" role="group" aria-label="Quantidade de cópias">
                                 <button type="button" data-copy-change="-1" aria-label="Diminuir uma cópia">−</button>
                                 <input type="number" id="copias" min="1" step="1" value="1" inputmode="numeric">
@@ -207,8 +207,8 @@
                             <label class="print-choice-chip"><input type="radio" name="modoPaginas" value="all" checked><span>Todas as páginas</span></label>
                             <label class="print-choice-chip"><input type="radio" name="modoPaginas" value="custom"><span>Intervalo personalizado</span></label>
                         </div>
-                        <article id="grupoIntervaloPaginas" class="print-field-group field" hidden>
-                            <label class="field-label" for="intervaloPaginas">Intervalo de páginas</label>
+                        <article id="grupoIntervaloPaginas" class="field" hidden>
+                            <label class="field-label" for="intervaloPaginas">Intervalo de páginas (obrigatório)</label>
                             <input type="text" id="intervaloPaginas" placeholder="Ex.: 1-5, 8, 10-14">
                         </article>
                     </section>

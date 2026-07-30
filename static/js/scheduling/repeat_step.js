@@ -144,11 +144,11 @@ function criarCampoTextoRepeticao({
     onInput
 }) {
     const grupo = document.createElement("article");
-    grupo.className = "print-field-group field";
+    grupo.className = "field";
     const rotulo = document.createElement("label");
     rotulo.className = "field-label";
     rotulo.setAttribute("for", id);
-    rotulo.innerText = label;
+    rotulo.innerText = `${label} (${required ? "obrigatório" : "opcional"})`;
     const campo = document.createElement(textarea ? "textarea" : "input");
     campo.id = id;
     if (!textarea) {
