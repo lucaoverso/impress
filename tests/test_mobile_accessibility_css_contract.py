@@ -15,6 +15,9 @@ class MobileAccessibilityCssContractTests(unittest.TestCase):
         cls.bundle = (ROOT / "templates" / "includes" / "style_bundle.html").read_text(
             encoding="utf-8"
         )
+        cls.viewport_script = (
+            ROOT / "static" / "js" / "core" / "mobile_viewport.js"
+        ).read_text(encoding="utf-8")
 
     def test_mobile_contract_is_loaded_after_all_other_styles(self):
         mobile_position = self.bundle.index("css/components/mobile-accessibility.css")
@@ -42,6 +45,19 @@ class MobileAccessibilityCssContractTests(unittest.TestCase):
         self.assertIn("touch-action: manipulation", self.mobile)
         self.assertNotIn("user-scalable", self.mobile)
         self.assertNotIn("maximum-scale", self.mobile)
+
+    def test_ios_focus_zoom_is_disabled_without_affecting_other_platforms(self):
+        self.assertIn("js/core/mobile_viewport.js", self.bundle)
+        self.assertIn("isIosDevice", self.viewport_script)
+        self.assertIn('directives.set("maximum-scale", "1")', self.viewport_script)
+        self.assertNotIn("user-scalable", self.viewport_script)
+
+    def test_scheduling_resource_carousel_allows_vertical_page_pan(self):
+        scheduling = (
+            ROOT / "static" / "css" / "pages" / "scheduling-flow.css"
+        ).read_text(encoding="utf-8")
+        self.assertIn("touch-action: pan-x pan-y pinch-zoom", scheduling)
+        self.assertNotIn("touch-action: pan-x;", scheduling)
 
 
 if __name__ == "__main__":
