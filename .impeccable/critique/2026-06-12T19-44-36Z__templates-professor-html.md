@@ -3,6 +3,9 @@ target: templates/professor.html
 total_score: 22
 p0_count: 0
 p1_count: 4
+score: 22
+p0: 0
+p1: 4
 timestamp: 2026-06-12T19-44-36Z
 slug: templates-professor-html
 ---

@@ -19,27 +19,58 @@
             </header>
 
             <form id="formCadastroProfessor" class="register-form">
-                <input id="cadNome" type="text" placeholder="Nome completo" required>
-                <input id="cadEmail" type="email" autocomplete="email" placeholder="Email" required>
-                <input id="cadSenha" type="password" autocomplete="new-password" placeholder="Senha" required>
-                <p id="cadSenhaHint" class="booking-detail">Mínimo 8 caracteres com maiúscula, minúscula, número e caractere especial.</p>
-                <input id="cadSenhaConfirmacao" type="password" autocomplete="new-password" placeholder="Confirmar senha" required>
-                <input id="cadDataNascimento" type="date" required>
-                <input id="cadAulas" type="number" min="0" placeholder="Quantidade de aulas semanais" value="" required>
+                <p class="register-required-note">Todos os campos são obrigatórios.</p>
 
-                <div class="register-fieldset">
-                    <p>Turmas atendidas</p>
+                <div class="register-field">
+                    <label for="cadNome">Nome completo</label>
+                    <input id="cadNome" name="nome" type="text" autocomplete="name" required>
+                </div>
+
+                <div class="register-field">
+                    <label for="cadEmail">E-mail</label>
+                    <input id="cadEmail" name="email" type="email" autocomplete="email" inputmode="email" required>
+                </div>
+
+                <div class="register-field">
+                    <label for="cadSenha">Senha</label>
+                    <input id="cadSenha" name="senha" type="password" autocomplete="new-password"
+                        aria-describedby="cadSenhaHint cadSenhaErro" required>
+                    <p id="cadSenhaHint" class="register-field-hint">Mínimo 8 caracteres com maiúscula, minúscula, número e caractere especial.</p>
+                    <p id="cadSenhaErro" class="register-field-error" aria-live="polite"></p>
+                </div>
+
+                <div class="register-field">
+                    <label for="cadSenhaConfirmacao">Confirmar senha</label>
+                    <input id="cadSenhaConfirmacao" name="senha_confirmacao" type="password" autocomplete="new-password"
+                        aria-describedby="cadSenhaConfirmacaoErro" required>
+                    <p id="cadSenhaConfirmacaoErro" class="register-field-error" aria-live="polite"></p>
+                </div>
+
+                <div class="register-field">
+                    <label for="cadDataNascimento">Data de nascimento</label>
+                    <input id="cadDataNascimento" name="data_nascimento" type="date" autocomplete="bday" required>
+                </div>
+
+                <div class="register-field">
+                    <label for="cadAulas">Quantidade de aulas semanais</label>
+                    <input id="cadAulas" name="aulas_semanais" type="number" min="0" inputmode="numeric" required>
+                </div>
+
+                <fieldset id="cadTurmasGrupo" class="register-fieldset" aria-describedby="cadTurmasErro">
+                    <legend>Turmas atendidas</legend>
                     <div id="cadTurmasLista" class="register-checkbox-grid"></div>
-                </div>
+                    <p id="cadTurmasErro" class="register-field-error" aria-live="polite"></p>
+                </fieldset>
 
-                <div class="register-fieldset">
-                    <p>Disciplinas</p>
+                <fieldset id="cadDisciplinasGrupo" class="register-fieldset" aria-describedby="cadDisciplinasErro">
+                    <legend>Disciplinas</legend>
                     <div id="cadDisciplinasLista" class="register-checkbox-grid"></div>
-                </div>
+                    <p id="cadDisciplinasErro" class="register-field-error" aria-live="polite"></p>
+                </fieldset>
 
                 <button type="submit" class="btn-destaque">Criar conta</button>
                 <button id="btnVoltarLogin" type="button" class="register-secondary-btn">Voltar para login</button>
-                <p id="msgCadastro" role="alert" aria-live="polite"></p>
+                <p id="msgCadastro" role="status" aria-live="polite"></p>
             </form>
         </section>
     </main>

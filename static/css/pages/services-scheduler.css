@@ -38,6 +38,55 @@
     gap: 16px;
 }
 
+.services-catalog {
+    display: grid;
+    gap: 24px;
+}
+
+.services-section-title {
+    margin: 0 0 12px;
+    color: var(--text-main);
+    font-size: 18px;
+    line-height: 1.25;
+}
+
+.services-more {
+    border-top: 1px solid var(--line-soft);
+    padding-top: 12px;
+}
+
+.services-more[hidden] {
+    display: none;
+}
+
+.services-more > summary {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    cursor: pointer;
+    color: var(--brand-strong);
+    font-size: 16px;
+    font-weight: 800;
+}
+
+.services-more > summary:focus-visible {
+    border-radius: var(--radius-sm);
+    outline: 3px solid var(--brand-outline);
+    outline-offset: 2px;
+}
+
+.services-more-count {
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.services-grid--secondary {
+    margin-top: 12px;
+}
+
 .services-dashboard-body--teacher .services-dashboard-layout {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 330px;
@@ -2343,7 +2392,7 @@ body.scheduler-drawer-open {
     }
 
     .service-card p {
-        font-size: 0.8125rem;
+        font-size: 0.875rem;
         line-height: 1.45;
     }
 

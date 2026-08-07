@@ -23,7 +23,10 @@
         </header>
 
         <div class="services-dashboard-layout">
-        <section class="services-grid" aria-label="Serviços disponíveis">
+        <div class="services-catalog">
+        <section aria-labelledby="servicesPrimaryTitle">
+            <h2 id="servicesPrimaryTitle" class="services-section-title">Acessos principais</h2>
+            <div id="servicesPrimaryGrid" class="services-grid">
             <a id="cardImpressao" class="service-card" data-modulo="impressao" href="/impressao" hidden>
                 <span class="service-card-icon service-card-icon--primary" aria-hidden="true">
                     <i class="bi bi-printer"></i>
@@ -133,7 +136,17 @@
                 </div>
                 <i class="bi bi-arrow-right service-card-arrow" aria-hidden="true"></i>
             </a>
+            </div>
         </section>
+
+        <details id="servicesMore" class="services-more" hidden>
+            <summary>
+                <span>Mais serviços</span>
+                <span id="servicesMoreCount" class="services-more-count"></span>
+            </summary>
+            <div id="servicesMoreGrid" class="services-grid services-grid--secondary"></div>
+        </details>
+        </div>
 
         <aside id="teacherDashboardRail" class="teacher-dashboard-rail" aria-label="Resumo do professor" hidden>
             <section class="teacher-upcoming-card" aria-labelledby="teacherUpcomingTitle">

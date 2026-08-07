@@ -386,3 +386,56 @@ html[data-scheduler-current-step] body.scheduling-new-page .scheduler-flow-page 
 @media (prefers-reduced-motion: reduce) {
     .scheduling-module * { transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+/* Mobile accessibility contract for the active scheduling flow. */
+@media (max-width: 760px) {
+    .scheduling-new-page .scheduler-stepper-summary span,
+    .scheduling-new-page .scheduler-resource-stage-type,
+    .scheduling-new-page .scheduler-week-day-label,
+    .scheduling-new-page .scheduler-week-day-state,
+    .scheduling-new-page .scheduler-lesson-list-period,
+    .scheduling-new-page .scheduler-lesson-list-class,
+    .scheduling-new-page .scheduler-lesson-list-time,
+    .scheduling-new-page .scheduler-lesson-list-status,
+    .scheduling-new-page .scheduler-day-overview-copy span,
+    .scheduling-new-page .scheduler-booking-card-meta,
+    .scheduling-new-page .scheduler-booking-card-theme,
+    .scheduling-new-page .scheduler-availability-badge {
+        font-size: 14px;
+        line-height: 1.4;
+    }
+
+    .scheduling-new-page .scheduler-flow-page .scheduler-week-nav button,
+    .scheduling-new-page .scheduler-side-wizard .scheduler-week-nav button {
+        min-width: 44px;
+        min-height: 44px;
+        height: 44px;
+    }
+
+    .scheduling-new-page .scheduler-flow-page .scheduler-week-day,
+    .scheduling-new-page .scheduler-side-wizard .scheduler-week-day {
+        min-width: 88px;
+        min-height: 84px;
+        padding: 10px 8px;
+    }
+
+    .scheduling-new-page .scheduler-lesson-option-row,
+    .scheduling-new-page .scheduler-day-slot-row {
+        min-height: 64px;
+    }
+
+    .scheduling-new-page .scheduler-availability-badge {
+        min-height: 28px;
+        padding-inline: 9px;
+    }
+
+    .scheduling-new-page .scheduler-side-wizard .scheduler-flow-actions {
+        position: sticky;
+        bottom: 0;
+        z-index: var(--z-sticky);
+        margin-inline: -2px;
+        padding: 12px 2px max(12px, env(safe-area-inset-bottom));
+        border-top: 1px solid var(--line-strong);
+        background: var(--surface-overlay);
+    }
+}

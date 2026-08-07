@@ -9,6 +9,12 @@ const { fetchComAuth } = window.AppApi;
 const token = garantirToken();
 const headers = criarHeadersAuth(token);
 
+const MODULOS_PRIORITARIOS = {
+    ADMIN: ["gestao", "relatorios", "horario"],
+    COORDENADOR: ["coordenacao", "preconselho", "apc"],
+    PROFESSOR: ["impressao", "agendamento", "horario"],
+};
+
 function modulosPermitidos(usuario = {}) {
     usuario = usuario && typeof usuario === "object" ? usuario : {};
     if (Array.isArray(usuario.modulos) && usuario.modulos.length > 0) {
@@ -26,6 +32,30 @@ function aplicarVisibilidadeModulos(modulos) {
         const modulo = String(elemento.dataset.modulo || "").trim().toLowerCase();
         elemento.hidden = !modulos.has(modulo);
     });
+}
+
+function organizarModulos(usuario) {
+    const principal = document.getElementById("servicesPrimaryGrid");
+    const secundarios = document.getElementById("servicesMoreGrid");
+    const disclosure = document.getElementById("servicesMore");
+    const cargo = normalizarCargoUsuario(usuario);
+    const prioridade = MODULOS_PRIORITARIOS[cargo] || MODULOS_PRIORITARIOS.PROFESSOR;
+    const disponiveis = Array.from(document.querySelectorAll(".service-card:not([hidden])"));
+    const porModulo = new Map(disponiveis.map((card) => [card.dataset.modulo, card]));
+    const destaques = prioridade.map((modulo) => porModulo.get(modulo)).filter(Boolean);
+
+    disponiveis.forEach((card) => {
+        if (destaques.length < 3 && !destaques.includes(card)) destaques.push(card);
+    });
+
+    destaques.forEach((card) => principal.appendChild(card));
+    disponiveis.filter((card) => !destaques.includes(card)).forEach((card) => secundarios.appendChild(card));
+
+    const quantidadeSecundaria = secundarios.querySelectorAll(".service-card:not([hidden])").length;
+    disclosure.hidden = quantidadeSecundaria === 0;
+    document.getElementById("servicesMoreCount").textContent = quantidadeSecundaria
+        ? `${quantidadeSecundaria} opç${quantidadeSecundaria === 1 ? "ão" : "ões"}`
+        : "";
 }
 
 function estadoProximasAulas(mensagem, icone = "bi-calendar2") {
@@ -112,6 +142,7 @@ async function carregarUsuario() {
         const primeiroNome = String(usuario.nome || "usuário").trim().split(/\s+/)[0];
         titulo.innerText = `Olá, ${primeiroNome}. Escolha o serviço`;
         aplicarVisibilidadeModulos(modulosPermitidos(usuario));
+        organizarModulos(usuario);
         if (usuario.eh_professor) {
             document.body.classList.add("services-dashboard-body--teacher");
             document.getElementById("servicesPageLead").textContent =

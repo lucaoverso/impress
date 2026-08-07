@@ -5,17 +5,42 @@ const { fetchJson } = window.AppApi;
 function setMensagem(texto, erro = false) {
     const target = el("msgCadastro");
     target.innerText = texto || "";
-    target.style.color = erro ? "#b42318" : "#0f766e";
+    target.dataset.variant = erro ? "error" : "success";
+    target.setAttribute("role", erro ? "alert" : "status");
+}
+
+function setErroCampo(inputId, erroId, texto) {
+    const input = el(inputId);
+    el(erroId).innerText = texto || "";
+    input.setAttribute("aria-invalid", texto ? "true" : "false");
+    if (texto) input.focus();
+}
+
+function setErroGrupo(grupoId, erroId, texto) {
+    const grupo = el(grupoId);
+    el(erroId).innerText = texto || "";
+    grupo.setAttribute("aria-invalid", texto ? "true" : "false");
+    if (texto) {
+        const primeiraOpcao = grupo.querySelector("input[type='checkbox']");
+        (primeiraOpcao || grupo).focus();
+    }
+}
+
+function limparErrosValidacao() {
+    setErroCampo("cadSenha", "cadSenhaErro", "");
+    setErroCampo("cadSenhaConfirmacao", "cadSenhaConfirmacaoErro", "");
+    setErroGrupo("cadTurmasGrupo", "cadTurmasErro", "");
+    setErroGrupo("cadDisciplinasGrupo", "cadDisciplinasErro", "");
 }
 
 function atualizarHintSenha() {
     const senha = el("cadSenha").value.trim();
     const hint = el("cadSenhaHint");
     if (!senha) {
-        hint.style.color = "#4b5563";
+        hint.removeAttribute("data-valid");
         return;
     }
-    hint.style.color = validarSenhaForte(senha) ? "#0f766e" : "#b42318";
+    hint.dataset.valid = validarSenhaForte(senha) ? "true" : "false";
 }
 
 function renderCheckboxes(containerId, opcoes, prefixo) {
@@ -70,6 +95,7 @@ async function carregarOpcoes() {
 async function cadastrarProfessor(event) {
     event.preventDefault();
     setMensagem("");
+    limparErrosValidacao();
 
     const nome = el("cadNome").value.trim();
     const email = el("cadEmail").value.trim();
@@ -81,26 +107,31 @@ async function cadastrarProfessor(event) {
     const disciplinas = listarSelecionados("cadDisciplinasLista");
 
     if (!validarSenhaForte(senha)) {
-        setMensagem("Senha fora do padrão de segurança.", true);
+        setErroCampo("cadSenha", "cadSenhaErro", "A senha ainda não atende a todos os requisitos.");
         return;
     }
 
     if (senha !== senhaConfirmacao) {
-        setMensagem("A confirmação de senha não confere.", true);
+        setErroCampo("cadSenhaConfirmacao", "cadSenhaConfirmacaoErro", "As senhas digitadas não são iguais.");
         return;
     }
 
     if (turmas.length === 0) {
-        setMensagem("Selecione ao menos uma turma.", true);
+        setErroGrupo("cadTurmasGrupo", "cadTurmasErro", "Selecione ao menos uma turma.");
         return;
     }
 
     if (disciplinas.length === 0) {
-        setMensagem("Selecione ao menos uma disciplina.", true);
+        setErroGrupo("cadDisciplinasGrupo", "cadDisciplinasErro", "Selecione ao menos uma disciplina.");
         return;
     }
 
+    const submit = event.currentTarget.querySelector("button[type='submit']");
+    let cadastroConcluido = false;
     try {
+        submit.disabled = true;
+        event.currentTarget.setAttribute("aria-busy", "true");
+        submit.innerText = "Criando conta...";
         await fetchJson("/professores/cadastro", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -115,12 +146,20 @@ async function cadastrarProfessor(event) {
             })
         });
 
+        cadastroConcluido = true;
         setMensagem("Conta criada com sucesso. Redirecionando para o login...");
+        submit.innerText = "Conta criada";
         setTimeout(() => {
             window.location.href = `/login-page?email=${encodeURIComponent(email)}`;
         }, 1000);
     } catch (err) {
         setMensagem(err.message, true);
+    } finally {
+        event.currentTarget.removeAttribute("aria-busy");
+        if (!cadastroConcluido) {
+            submit.disabled = false;
+            submit.innerText = "Criar conta";
+        }
     }
 }
 

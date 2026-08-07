@@ -3,6 +3,9 @@ target: comparação visual da Central de Anexos com o Stitch
 total_score: 23
 p0_count: 0
 p1_count: 3
+score: 23
+p0: 0
+p1: 3
 timestamp: 2026-07-22T23-48-24Z
 slug: templates-apc-index-html
 ---

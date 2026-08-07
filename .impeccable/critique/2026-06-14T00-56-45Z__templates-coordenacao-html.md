@@ -3,6 +3,9 @@ target: coordenacao.html
 total_score: 21
 p0_count: 0
 p1_count: 4
+score: 21
+p0: 0
+p1: 4
 timestamp: 2026-06-14T00-56-45Z
 slug: templates-coordenacao-html
 ---

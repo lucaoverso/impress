@@ -3,6 +3,9 @@ target: critique templates/agendamento.html adequado ao DESIGN.md
 total_score: 24
 p0_count: 0
 p1_count: 3
+score: 24
+p0: 0
+p1: 3
 timestamp: 2026-06-12T11-51-54Z
 slug: templates-agendamento-html
 ---
