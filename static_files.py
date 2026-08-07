@@ -11,6 +11,7 @@ IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable"
 IMAGE_CACHE_CONTROL = "public, max-age=86400"
 REVALIDATE_CACHE_CONTROL = "public, max-age=0, must-revalidate"
 IMAGE_EXTENSIONS = {".avif", ".gif", ".jpeg", ".jpg", ".png", ".svg", ".webp"}
+FONT_EXTENSIONS = {".woff", ".woff2"}
 
 
 class CachedStaticFiles(StaticFiles):
@@ -23,6 +24,7 @@ class CachedStaticFiles(StaticFiles):
     def _cache_control(path: str, scope) -> str:
         normalized_path = path.replace("\\", "/").lstrip("/")
         has_version_query = bool(scope.get("query_string", b""))
+        extension = PurePosixPath(normalized_path).suffix.lower()
         resource_image_mount = str(scope.get("root_path", "")).rstrip("/").endswith(
             "/static/img/resources"
         )
@@ -30,11 +32,13 @@ class CachedStaticFiles(StaticFiles):
         if (
             resource_image_mount
             or normalized_path.startswith("img/resources/")
-            or has_version_query
+            or (extension in FONT_EXTENSIONS and has_version_query)
         ):
             return IMMUTABLE_CACHE_CONTROL
 
-        if PurePosixPath(normalized_path).suffix.lower() in IMAGE_EXTENSIONS:
+        if extension in IMAGE_EXTENSIONS:
             return IMAGE_CACHE_CONTROL
 
+        # CSS and JavaScript must revalidate even if a deployment accidentally
+        # reuses STATIC_ASSET_VERSION. ETags keep unchanged responses cheap.
         return REVALIDATE_CACHE_CONTROL

@@ -71,11 +71,11 @@ class StaticFilesCacheTest(unittest.TestCase):
         self.assertEqual(response.content, b"persistent")
         self.assertEqual(response.headers.get("Cache-Control"), IMMUTABLE_CACHE_CONTROL)
 
-    def test_versioned_asset_uses_long_immutable_cache(self):
+    def test_versioned_script_still_revalidates_if_release_version_is_reused(self):
         response = self.client.get("/static/js/app.js?v=build-123")
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.headers.get("Cache-Control"), IMMUTABLE_CACHE_CONTROL)
+        self.assertEqual(response.headers.get("Cache-Control"), REVALIDATE_CACHE_CONTROL)
 
     def test_hashed_font_query_uses_immutable_cache_and_font_content_type(self):
         response = self.client.get("/static/fonts/icons.woff2?e34853135f9e39ac")
@@ -109,7 +109,7 @@ class StaticFilesCacheTest(unittest.TestCase):
         self.assertEqual(second_response.status_code, 304)
         self.assertEqual(
             second_response.headers.get("Cache-Control"),
-            IMMUTABLE_CACHE_CONTROL,
+            REVALIDATE_CACHE_CONTROL,
         )
 
 

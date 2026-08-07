@@ -13,7 +13,7 @@
 .catalog-type { position: relative; display: flex; align-items: center; min-height: 40px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface-0); }
 .catalog-search > i { position: absolute; z-index: 1; left: 12px; color: var(--text-muted); pointer-events: none; }
 .scheduling-catalog-page .catalog-search input,
-.catalog-type select { width: 100%; min-width: 0; min-height: var(--field-height); border: 0 !important; outline: 0; background: transparent !important; box-shadow: none !important; color: var(--text-main); font: inherit; font-size: .78rem; }
+.catalog-type select { width: 100%; min-width: 0; min-height: var(--field-height); border: 0 !important; outline: 0; background: transparent !important; box-shadow: none !important; color: var(--text-main); font: inherit; }
 .scheduling-catalog-page .catalog-search input { padding: 7px 10px 7px 36px !important; }
 .catalog-type { padding-left: 10px; }
 .catalog-type span { color: var(--text-muted); font-size: .62rem; font-weight: 800; text-transform: uppercase; }

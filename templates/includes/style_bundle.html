@@ -21,6 +21,8 @@
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/design-system.css') }}?v={{ css_version }}">
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/components/continuous-surfaces.css') }}?v={{ css_version }}">
 <link rel="stylesheet" href="{{ request.url_for('static', path='css/components/app-sidebar.css') }}?v={{ css_version }}">
+{# Must stay last: protects mobile text and controls from page-level density overrides. #}
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/components/mobile-accessibility.css') }}?v={{ css_version }}">
 <script defer src="{{ request.url_for('static', path='js/core/dialog_accessibility.js') }}?v={{ css_version }}"></script>
 {% if app_help_enabled %}
 <script defer src="{{ request.url_for('static', path='js/core/app_help.js') }}?v={{ css_version }}"></script>
