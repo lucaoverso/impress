@@ -4,12 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Turmas e disciplinas - Administração</title>
-    {% set page_styles = ["css/pages/admin.css"] %}
+    {% set page_styles = ["css/pages/admin.css"] + (["css/pages/secretaria.css"] if secretaria_mode | default(false) else []) %}
     {% include "includes/style_bundle.html" %}
 </head>
-<body data-admin-active-tab="turmas">
-    {% set navbar_context = "Painel de gestão" %}
-    {% set navbar_current = "gestao" %}
+<body class="{% if secretaria_mode | default(false) %}secretaria-module-page secretaria-turmas-page{% endif %}" data-admin-active-tab="turmas">
+    {% set navbar_context = "Secretaria" if secretaria_mode | default(false) else "Painel de gestão" %}
+    {% set navbar_current = "secretaria" if secretaria_mode | default(false) else "gestao" %}
     {% include "includes/app_navbar.html" %}
     {% set admin_active_tab = "turmas" %}
     {% include "includes/app_sidebar_config.html" %}

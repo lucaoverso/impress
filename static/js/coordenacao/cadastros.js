@@ -2,6 +2,21 @@ let laudoEstudanteEmEdicao = null;
 let apoiosEstudanteCatalogo = [];
 let focoAnteriorModalEstudante = null;
 
+function selecionarSecaoEditorEstudante(secao = "dados") {
+    const formulario = el("formEstudante");
+    const laudos = el("secaoLaudosEstudante");
+    document.querySelectorAll("[data-estudante-editor-section]").forEach((botao) => {
+        const ativo = botao.dataset.estudanteEditorSection === secao;
+        botao.classList.toggle("is-active", ativo);
+        botao.setAttribute("aria-selected", String(ativo));
+        botao.tabIndex = ativo ? 0 : -1;
+    });
+    if (formulario) formulario.hidden = secao !== "dados";
+    if (laudos) laudos.hidden = secao !== "apoios";
+    if (secao === "apoios") el("estudanteLaudoCondicao")?.focus();
+    else el("estudanteNome")?.focus();
+}
+
 function restaurarFormularioEstudanteNaPagina() {
     const ancora = el("ancoraFormularioEstudante");
     const formulario = el("formEstudante");
@@ -34,7 +49,15 @@ function abrirModalEdicaoEstudante() {
     focoAnteriorModalEstudante = document.activeElement;
     conteudo.append(el("formEstudante"), el("secaoLaudosEstudante"));
     modal.showModal();
-    window.requestAnimationFrame(() => el("estudanteNome").focus());
+    window.requestAnimationFrame(() => selecionarSecaoEditorEstudante("dados"));
+}
+
+function abrirModalCadastroEstudante() {
+    limparFormularioEstudante();
+    el("tituloModalEdicaoEstudante").textContent = "Novo estudante";
+    el("secaoLaudosEstudante").hidden = true;
+    document.querySelector('[data-estudante-editor-section="apoios"]')?.setAttribute("disabled", "");
+    abrirModalEdicaoEstudante();
 }
 
 function limparFormularioEstudante() {
@@ -60,6 +83,7 @@ function iniciarEdicaoEstudante(estudante) {
     el("tituloModalEdicaoEstudante").textContent = `Editar ${estudante.nome || "estudante"}`;
     el("btnCancelarEdicaoEstudante").style.display = "inline-block";
     el("secaoLaudosEstudante").hidden = false;
+    document.querySelector('[data-estudante-editor-section="apoios"]')?.removeAttribute("disabled");
     limparFormularioLaudoEstudante();
     carregarLaudosEstudante();
     ativarAbaCoordenacao("estudantes");
@@ -540,6 +564,7 @@ function limparFormularioLaudoEstudante() {
 }
 
 function iniciarEdicaoLaudoEstudante(laudo) {
+    if (el("detalhesLaudosEstudante")) el("detalhesLaudosEstudante").open = true;
     laudoEstudanteEmEdicao = laudo;
     el("estudanteLaudoId").value = String(laudo.id);
     el("estudanteLaudoCondicao").value = String(laudo.condicao_necessidade || "");
@@ -549,9 +574,6 @@ function iniciarEdicaoLaudoEstudante(laudo) {
     el("estudanteLaudoDescricao").value = String(laudo.descricao_laudo || "");
     el("estudanteLaudoPossui").checked = Boolean(laudo.possui_laudo);
     el("estudanteLaudoData").value = String(laudo.data_laudo || "");
-    el("estudanteLaudoObservacoesRestritas").value = String(laudo.observacoes_restritas || "");
-    el("estudanteLaudoRelatoApoio").value = String(laudo.relato_professora_apoio || "");
-    el("estudanteLaudoRecomendacoes").value = String(laudo.recomendacoes_pedagogicas || "");
     document.querySelectorAll('[data-apoio-estudante-id]').forEach((input) => {
         input.checked = (laudo.apoio_ids || []).includes(Number(input.value));
     });
@@ -673,9 +695,6 @@ async function salvarLaudoEstudante(event) {
         descricao_laudo: el("estudanteLaudoDescricao").value.trim() || null,
         possui_laudo: el("estudanteLaudoPossui").checked,
         data_laudo: el("estudanteLaudoData").value || null,
-        observacoes_restritas: el("estudanteLaudoObservacoesRestritas").value.trim() || null,
-        relato_professora_apoio: el("estudanteLaudoRelatoApoio").value.trim() || null,
-        recomendacoes_pedagogicas: el("estudanteLaudoRecomendacoes").value.trim() || null,
         apoio_ids: Array.from(document.querySelectorAll('[data-apoio-estudante-id]:checked'))
             .map((input) => Number(input.value))
     };

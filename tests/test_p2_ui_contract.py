@@ -53,14 +53,14 @@ class P2UiContractTest(unittest.TestCase):
         template = (ROOT / "templates" / "servicos.html").read_text(encoding="utf-8")
         icons = re.findall(r'<span class="service-card-icon [^"]+" aria-hidden="true">', template)
 
-        self.assertEqual(len(icons), 10)
+        self.assertEqual(len(icons), 11)
         self.assertNotIn("fonts.googleapis.com", template)
         self.assertNotIn("tailwindcss.com", template)
 
     def test_cards_da_central_sao_links_nativos(self):
         template = (ROOT / "templates" / "servicos.html").read_text(encoding="utf-8")
 
-        self.assertEqual(len(re.findall(r'<a id="card\w+" class="service-card"[^>]+href="/[^"]+"', template)), 10)
+        self.assertEqual(len(re.findall(r'<a id="card\w+" class="service-card"[^>]+href="/[^"]+"', template)), 11)
         self.assertNotIn('<article id="card', template)
 
     def test_cards_da_central_usam_grade_responsiva_de_tres_colunas(self):

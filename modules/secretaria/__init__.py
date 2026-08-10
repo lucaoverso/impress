@@ -1,0 +1,2 @@
+"""School office (Secretaria) domain."""
+

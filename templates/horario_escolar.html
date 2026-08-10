@@ -4,15 +4,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Horário Escolar</title>
-    {% set page_styles = ["css/pages/horario-escolar.css"] %}
+    <title>{% if secretaria_edicao | default(false) %}Edição de horários - Secretaria{% else %}Horário Escolar{% endif %}</title>
+    {% set page_styles = ["css/pages/horario-escolar.css"] + (["css/pages/secretaria.css"] if secretaria_edicao | default(false) else []) %}
     {% include "includes/style_bundle.html" %}
 </head>
 
-<body>
-    {% set navbar_context = "Gestão escolar" %}
+<body class="{% if somente_leitura | default(false) %}horario-readonly{% else %}horario-editor{% endif %}{% if secretaria_edicao | default(false) %} secretaria-module-page secretaria-horarios-page{% endif %}">
+    {% set navbar_context = "Secretaria" if secretaria_edicao | default(false) else "Gestão escolar" %}
     {% set navbar_context_id = "horarioTopbarContext" %}
-    {% set navbar_current = "horario" %}
+    {% set navbar_current = "secretaria" if secretaria_edicao | default(false) else "horario" %}
     {% set navbar_extra_actions = [
         {"id": "btnIrAdmin", "label": "Painel de gestão", "hidden": true}
     ] %}
@@ -21,8 +21,8 @@
     <main class="horario-page page-shell page-shell--wide">
         <header class="admin-header admin-header-shell page-header">
             <div class="admin-header-main page-header-main">
-                <h1 class="page-title">Horário escolar</h1>
-                <p id="horarioHeaderDescricao" class="page-lead">Organize a grade por turma e acompanhe uma leitura complementar por professor para preparar os próximos módulos operacionais.</p>
+                <h1 class="page-title">{% if secretaria_edicao | default(false) %}Edição de horários{% else %}Horário escolar{% endif %}</h1>
+                <p id="horarioHeaderDescricao" class="page-lead">{% if secretaria_edicao | default(false) %}Monte a grade semanal por turma ou professor e confira conflitos antes de publicar.{% else %}Consulte a grade por turma ou professor. As alterações são realizadas pela Secretaria.{% endif %}</p>
             </div>
         </header>
 

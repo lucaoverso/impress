@@ -12,14 +12,14 @@ class ServicesProgressiveDisclosureContractTests(unittest.TestCase):
         self.assertIn('id="servicesPrimaryGrid"', html)
         self.assertIn('<details id="servicesMore"', html)
         self.assertIn('id="servicesMoreGrid"', html)
-        self.assertEqual(html.count('data-modulo="'), 10)
+        self.assertEqual(html.count('data-modulo="'), 11)
 
     def test_role_priorities_and_fallback_keep_every_visible_module(self):
         script = (ROOT / "static" / "js" / "servicos.js").read_text(encoding="utf-8")
 
         self.assertIn("const MODULOS_PRIORITARIOS", script)
-        self.assertIn('ADMIN: ["gestao", "relatorios", "horario"]', script)
-        self.assertIn('COORDENADOR: ["coordenacao", "preconselho", "apc"]', script)
+        self.assertIn('ADMIN: ["secretaria", "gestao", "relatorios"]', script)
+        self.assertIn('COORDENADOR: ["secretaria", "coordenacao", "preconselho"]', script)
         self.assertIn('PROFESSOR: ["impressao", "agendamento", "horario"]', script)
         self.assertIn("disponiveis.filter((card) => !destaques.includes(card))", script)
 

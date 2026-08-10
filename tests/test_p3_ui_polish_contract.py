@@ -68,7 +68,7 @@ class P3UiPolishContractTest(unittest.TestCase):
 
         self.assertEqual(len(consumers), 8)
         for template in consumers:
-            self.assertIn('navbar_context = "Painel de gestão"', template.read_text(encoding="utf-8"))
+                self.assertIn('"Painel de gestão"', template.read_text(encoding="utf-8"))
 
     def test_preview_de_impressao_se_adapta_a_desktop_e_mobile(self):
         template = (ROOT / "templates" / "printing" / "index.html").read_text(encoding="utf-8")

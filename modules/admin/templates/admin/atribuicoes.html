@@ -7,9 +7,9 @@
     {% set page_styles = ["css/pages/admin.css"] %}
     {% include "includes/style_bundle.html" %}
 </head>
-<body data-admin-active-tab="atribuicoes">
-    {% set navbar_context = "Painel de gestão" %}
-    {% set navbar_current = "gestao" %}
+<body class="{% if secretaria_mode | default(false) %}secretaria-module-page secretaria-atribuicoes-page{% endif %}" data-admin-active-tab="atribuicoes">
+    {% set navbar_context = "Secretaria" if secretaria_mode | default(false) else "Painel de gestão" %}
+    {% set navbar_current = "secretaria" if secretaria_mode | default(false) else "gestao" %}
     {% include "includes/app_navbar.html" %}
     {% set admin_active_tab = "atribuicoes" %}
     {% include "includes/app_sidebar_config.html" %}

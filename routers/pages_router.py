@@ -124,7 +124,7 @@ def horario_escolar_page(request: Request):
     return render_template_response(
         request,
         "horario_escolar.html",
-        {"asset_version": ASSET_VERSION},
+        {"asset_version": ASSET_VERSION, "somente_leitura": True},
         cache_control="no-store",
     )
 

@@ -188,6 +188,19 @@ function registrarEventosEstudantes() {
     el("filtroEstudanteStatus").addEventListener("change", renderTabelaEstudantes);
     el("formLaudoEstudante").addEventListener("submit", salvarLaudoEstudante);
     el("btnCancelarEdicaoLaudoEstudante").addEventListener("click", limparFormularioLaudoEstudante);
+    el("btnNovoEstudanteSecretaria")?.addEventListener("click", abrirModalCadastroEstudante);
+    document.querySelectorAll("[data-estudante-editor-section]").forEach((botao) => {
+        botao.addEventListener("click", () => selecionarSecaoEditorEstudante(botao.dataset.estudanteEditorSection));
+        botao.addEventListener("keydown", (event) => {
+            if (!["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown"].includes(event.key)) return;
+            event.preventDefault();
+            const abas = [...document.querySelectorAll("[data-estudante-editor-section]:not(:disabled)")];
+            const atual = abas.indexOf(botao);
+            const passo = ["ArrowRight", "ArrowDown"].includes(event.key) ? 1 : -1;
+            const proxima = abas[(atual + passo + abas.length) % abas.length];
+            selecionarSecaoEditorEstudante(proxima.dataset.estudanteEditorSection);
+        });
+    });
     el("btnAdicionarNecessidadePedagogica").addEventListener("click", () =>
         adicionarOpcaoApoio("necessidade_pedagogica", "novaNecessidadePedagogica"));
     el("btnAdicionarRecursoAcessibilidade").addEventListener("click", () =>
@@ -275,10 +288,19 @@ async function init() {
         }
 
         el("painelProfessorPreRegistro").hidden = true;
+        const modoSecretariaEstudantes = document.body.dataset.secretariaEstudantes === "true";
+        if (modoSecretariaEstudantes) {
+            registrarEventosEstudantes();
+            await carregarOpcoesOcorrencias();
+            limparFormularioEstudante();
+            ativarAbaCoordenacao("estudantes");
+            await Promise.all([carregarEstudantes(), carregarCatalogoApoios()]);
+            return;
+        }
+
         registrarEventosAbas();
         registrarEventosOcorrencias();
         registrarEventosRelatorios();
-        registrarEventosEstudantes();
         registrarEventosRegimento();
         registrarEventosPreRegistrosGestao();
         registrarEventosAcompanhamentoDocente();
@@ -286,7 +308,6 @@ async function init() {
 
         await carregarOpcoesOcorrencias();
         limparFormularioOcorrencia();
-        limparFormularioEstudante();
         limparFormularioRegimento();
         renderDetalhesOcorrencia(null);
         renderRelatorioOcorrencias();
@@ -294,7 +315,6 @@ async function init() {
 
         await Promise.all([
             carregarOcorrencias(),
-            carregarEstudantes(),
             carregarCatalogosBaseLegal(),
             carregarRegimentoItens(),
             carregarPreRegistros({ manager: true }),

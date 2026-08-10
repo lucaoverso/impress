@@ -23,9 +23,9 @@ CARGO_ADMIN = "ADMIN"
 CARGO_PROFESSOR = "PROFESSOR"
 CARGO_COORDENADOR = "COORDENADOR"
 MODULOS_POR_CARGO = {
-    CARGO_ADMIN: ["impressao", "agendamento", "download", "gestao", "relatorios", "coordenacao", "horario", "apc", "pcpi", "preconselho"],
+    CARGO_ADMIN: ["impressao", "agendamento", "download", "gestao", "secretaria", "relatorios", "coordenacao", "horario", "apc", "pcpi", "preconselho"],
     CARGO_PROFESSOR: ["impressao", "agendamento", "download", "coordenacao", "horario", "apc", "preconselho"],
-    CARGO_COORDENADOR: ["impressao", "download", "relatorios", "coordenacao", "horario", "apc", "pcpi", "preconselho"],
+    CARGO_COORDENADOR: ["impressao", "download", "secretaria", "relatorios", "coordenacao", "horario", "apc", "pcpi", "preconselho"],
 }
 
 

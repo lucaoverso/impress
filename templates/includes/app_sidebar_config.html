@@ -3,6 +3,7 @@
     {% set sidebar_items = [
         {"label": "Central de serviços", "mobile_label": "Início", "icon": "bi-grid", "href": "/servicos", "active": true},
         {"label": "Coordenação", "mobile_label": "Coord.", "icon": "bi-clipboard2-check", "href": "/coordenacao", "module": "coordenacao"},
+        {"label": "Secretaria", "mobile_label": "Secret.", "icon": "bi-building", "href": "/secretaria", "module": "secretaria"},
         {"label": "Agendamento", "mobile_label": "Agenda", "icon": "bi-calendar-check", "href": "/agendamento", "module": "agendamento"},
         {"label": "Gestão", "mobile_label": "Gestão", "icon": "bi-gear", "href": "/admin", "module": "gestao"},
         {"label": "Relatórios", "mobile_label": "Relatórios", "icon": "bi-bar-chart", "href": "/relatorios", "module": "relatorios"}
@@ -32,6 +33,17 @@
     {% set sidebar_items = [
         {"label": "Grade de horários", "icon": "bi-calendar-week", "href": "/horario-escolar", "active": true}
     ] %}
+{% elif navbar_current == "secretaria" %}
+    {% set sidebar_title = "Secretaria" %}
+    {% set sidebar_items = [
+        {"label": "Visão geral", "icon": "bi-grid", "href": "/secretaria"},
+        {"label": "Estudantes", "icon": "bi-people", "href": "/secretaria/estudantes"},
+        {"label": "Professores", "icon": "bi-person-badge", "href": "/secretaria/professores", "admin_only": true},
+        {"label": "Turmas e disciplinas", "icon": "bi-journal-bookmark", "href": "/secretaria/turmas"},
+        {"label": "Atribuições docentes", "icon": "bi-person-vcard", "href": "/secretaria/atribuicoes", "admin_only": true},
+        {"label": "Configuração das aulas", "icon": "bi-clock", "href": "/secretaria/aulas"},
+        {"label": "Edição de horários", "icon": "bi-calendar-week", "href": "/secretaria/horarios"}
+    ] %}
 {% elif navbar_current == "apc" %}
     {% set sidebar_title = "Central de anexos" %}
     {% set sidebar_items = [
@@ -50,7 +62,6 @@
         {"label": "Registros pendentes", "icon": "bi-hourglass-split", "tab_group": "coord", "tab_value": "registros-pendentes"},
         {"label": "Fluxo do professor", "icon": "bi-person-check", "tab_group": "coord", "tab_value": "pre-registros"},
         {"label": "Base legal", "icon": "bi-journal-bookmark", "tab_group": "coord", "tab_value": "regimento"},
-        {"label": "Estudantes", "icon": "bi-people", "tab_group": "coord", "tab_value": "estudantes"},
         {"label": "Acompanhamento docente", "icon": "bi-person-lines-fill", "tab_group": "coord", "tab_value": "acompanhamento-docente"},
         {"label": "Relatórios", "icon": "bi-bar-chart", "tab_group": "coord", "tab_value": "relatorios"}
     ] %}

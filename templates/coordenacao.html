@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coordenação - Central de Registros</title>
+    <title>{% if secretaria_estudantes | default(false) %}Estudantes - Secretaria{% else %}Coordenação - Central de Registros{% endif %}</title>
     {% set page_styles = [
         "css/pages/coordenacao.css",
         "css/coordenacao/ocorrencias.css",
@@ -13,17 +13,22 @@
     {% include "includes/style_bundle.html" %}
 </head>
 
-<body>
-    {% set navbar_context = "Gestão escolar" %}
-    {% set navbar_current = "coordenacao" %}
+<body{% if secretaria_estudantes | default(false) %} class="secretaria-estudantes-view" data-secretaria-estudantes="true"{% endif %}>
+    {% set navbar_context = "Secretaria" if secretaria_estudantes | default(false) else "Gestão escolar" %}
+    {% set navbar_current = "secretaria" if secretaria_estudantes | default(false) else "coordenacao" %}
     {% include "includes/app_navbar.html" %}
     {% include "includes/app_sidebar_config.html" %}
     <main class="coordenacao-page page-shell page-shell--wide">
         <header class="admin-header admin-header-shell coordenacao-page-header page-header page-header--flush">
             <div class="admin-header-main page-header-main">
-                <h1 class="page-title">Central de registros da coordenação</h1>
-                <p class="page-lead">Centralize pendências, acompanhe históricos e mantenha a base legal pronta para cada registro.</p>
+                <h1 class="page-title">{% if secretaria_estudantes | default(false) %}Estudantes{% else %}Central de registros da coordenação{% endif %}</h1>
+                <p class="page-lead">{% if secretaria_estudantes | default(false) %}Cadastre estudantes, organize os dados de turma e mantenha apoios e documentos em um fluxo claro.{% else %}Centralize pendências, acompanhe históricos e mantenha a base legal pronta para cada registro.{% endif %}</p>
             </div>
+            {% if secretaria_estudantes | default(false) %}
+            <button id="btnNovoEstudanteSecretaria" class="btn-destaque secretaria-new-student" type="button">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i> Novo estudante
+            </button>
+            {% endif %}
         </header>
 
         <section class="coordenacao-workspace">
@@ -98,7 +103,7 @@
                         Base legal
                     </button>
                     <button class="admin-tab-btn" data-coord-tab-trigger="estudantes" aria-controls="coord-tab-estudantes"
-                        aria-selected="false" type="button">
+                        aria-selected="false" type="button"{% if not secretaria_estudantes | default(false) %} hidden{% endif %}>
                         Estudantes
                     </button>
                     <button class="admin-tab-btn" data-coord-tab-trigger="acompanhamento-docente"
@@ -767,13 +772,12 @@
                                 <h2 id="tituloFormEstudante">Cadastrar estudante</h2>
                                 <p>Mantenha a base atualizada para agilizar a abertura de novas ocorrências.</p>
                             </div>
-                            <p id="msgEstudantes" role="status" aria-live="polite"></p>
                         </div>
                         <div id="ancoraFormularioEstudante"></div>
-                        <form id="formEstudante" class="coordenacao-form">
+                        <form id="formEstudante" class="coordenacao-form" role="tabpanel" aria-labelledby="tabEstudanteDados">
                             <label class="coordenacao-field" for="estudanteNome">
                                 <span>Nome completo do estudante</span>
-                                <input id="estudanteNome" type="text" placeholder="Nome completo do estudante" required>
+                                <input id="estudanteNome" type="text" autocomplete="name" required>
                             </label>
                             <label class="coordenacao-field" for="estudanteTurmaId">
                                 <span>Turma</span>
@@ -801,7 +805,8 @@
                             </div>
                         </form>
 
-                        <section id="secaoLaudosEstudante" class="estudante-laudos" hidden>
+                        <section id="secaoLaudosEstudante" class="estudante-laudos" role="tabpanel"
+                            aria-labelledby="tabEstudanteApoios" hidden>
                             <div class="coordenacao-section-header">
                                 <div>
                                     <h3>Diagnósticos e laudos</h3>
@@ -814,7 +819,7 @@
                                 <div class="coordenacao-form-grid">
                                     <label class="coordenacao-field" for="estudanteLaudoCondicao">
                                         <span>Condição ou necessidade</span>
-                                        <input id="estudanteLaudoCondicao" type="text" maxlength="150"
+                                        <input id="estudanteLaudoCondicao" type="text" maxlength="150" autocomplete="off"
                                             placeholder="Ex.: Transtorno do Espectro Autista" required>
                                     </label>
                                     <label class="coordenacao-field" for="estudanteLaudoClassificacao">
@@ -856,26 +861,6 @@
                                         <div class="coordenacao-inline"><input id="novoRecursoAcessibilidade" type="text" maxlength="150" placeholder="Novo recurso">
                                             <button id="btnAdicionarRecursoAcessibilidade" type="button">Adicionar opção</button></div>
                                     </fieldset>
-                                    <label class="coordenacao-field coordenacao-field-wide"
-                                        for="estudanteLaudoRelatoApoio">
-                                        <span>Relato da professora de apoio</span>
-                                        <textarea id="estudanteLaudoRelatoApoio" maxlength="2000" rows="4"
-                                            placeholder="Ex.: realiza as atividades adaptadas com boa participação..."></textarea>
-                                        <small class="coordenacao-field-hint">Este texto poderá compor o trecho do conselho de classe.</small>
-                                    </label>
-                                    <label class="coordenacao-field coordenacao-field-wide"
-                                        for="estudanteLaudoRecomendacoes">
-                                        <span>Recomendações pedagógicas</span>
-                                        <textarea id="estudanteLaudoRecomendacoes" maxlength="2000" rows="4"
-                                            placeholder="Ex.: intensificar a rotina visual e as instruções objetivas..."></textarea>
-                                        <small class="coordenacao-field-hint">Usado para o fechamento do trecho do estudante.</small>
-                                    </label>
-                                    <label class="coordenacao-field coordenacao-field-wide"
-                                        for="estudanteLaudoObservacoesRestritas">
-                                        <span>Observações restritas</span>
-                                        <textarea id="estudanteLaudoObservacoesRestritas" maxlength="2000" rows="3"
-                                            placeholder="Visível somente para a equipe autorizada."></textarea>
-                                    </label>
                                 </div>
                                 <div class="coordenacao-inline coordenacao-form-actions">
                                     <button id="btnSalvarLaudoEstudante" class="btn-destaque" type="submit">
@@ -888,9 +873,13 @@
                             </form>
                         </section>
 
-                        <section class="coordenacao-import-box">
+                        <details class="coordenacao-import-box">
+                            <summary>
+                                <span><strong>Importar estudantes</strong><small>Use um arquivo JSON ou CSV para cadastrar uma turma em lote.</small></span>
+                                <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                            </summary>
+                            <div class="coordenacao-import-content">
                             <div>
-                                <h3>Importar estudantes via JSON</h3>
                                 <p>Envie um arquivo JSON estruturado por <strong>turma</strong> com a lista de
                                     <strong>estudantes</strong>. O CSV antigo continua aceito por compatibilidade.</p>
                             </div>
@@ -911,7 +900,8 @@
                                     <button id="btnBaixarModeloEstudantesCsv" type="button">Baixar modelo JSON</button>
                                 </div>
                             </form>
-                        </section>
+                            </div>
+                        </details>
                     </article>
 
                     <article class="coordenacao-card">
@@ -920,6 +910,7 @@
                                 <h2>Estudantes cadastrados</h2>
                                 <p>Selecione a turma e atribua o sexo diretamente na lista. A alteração é salva automaticamente.</p>
                             </div>
+                            <p id="msgEstudantes" role="status" aria-live="polite" aria-atomic="true"></p>
                         </div>
                         <form id="formFiltrosEstudantes" class="coordenacao-filter-grid coordenacao-filter-inline">
                             <label class="coordenacao-field" for="filtroEstudanteNome">
@@ -954,7 +945,7 @@
                                         <th>Laudos</th>
                                         <th>Status</th>
                                         <th>Atualizado em</th>
-                                        <th>Acoes</th>
+                                        <th>Ações</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tbodyEstudantes"></tbody>
@@ -969,12 +960,26 @@
                     <header class="estudante-editor-header">
                         <div>
                             <h2 id="tituloModalEdicaoEstudante">Editar estudante</h2>
-                            <p>Atualize os dados pessoais, condições, laudos e apoios pedagógicos.</p>
+                            <p>Revise primeiro os dados principais. Abra a seção de laudos apenas quando precisar registrar informações de apoio.</p>
                         </div>
                         <button id="btnFecharModalEdicaoEstudante" class="estudante-editor-close" type="button"
                             aria-label="Fechar edição">×</button>
                     </header>
-                    <div id="conteudoModalEdicaoEstudante" class="estudante-editor-content"></div>
+                    <div class="estudante-editor-layout">
+                        <nav class="estudante-editor-nav" role="tablist" aria-label="Seções do cadastro">
+                            <button id="tabEstudanteDados" class="is-active" type="button" role="tab"
+                                aria-selected="true" aria-controls="formEstudante" tabindex="0"
+                                data-estudante-editor-section="dados">
+                                <i class="bi bi-person" aria-hidden="true"></i> Dados pessoais
+                            </button>
+                            <button id="tabEstudanteApoios" type="button" role="tab" aria-selected="false"
+                                aria-controls="secaoLaudosEstudante" tabindex="-1"
+                                data-estudante-editor-section="apoios">
+                                <i class="bi bi-universal-access" aria-hidden="true"></i> Laudos e apoios
+                            </button>
+                        </nav>
+                        <div id="conteudoModalEdicaoEstudante" class="estudante-editor-content"></div>
+                    </div>
                 </div>
             </dialog>
 
