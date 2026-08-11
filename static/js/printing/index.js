@@ -351,12 +351,20 @@
 
         const currentState = window.PrintingUI.state.getState();
         const domState = readLegacyDomState(overrides);
+        const uploadSourceWasOverridden = Object.prototype.hasOwnProperty.call(
+            overrides?.upload || {},
+            "source",
+        );
         if (
-            !domState.upload.fileName
+            !uploadSourceWasOverridden
             && currentState?.upload?.source === "history"
             && currentState?.upload?.fileName
+            && (
+                !domState.upload.fileName
+                || domState.upload.fileName === currentState.upload.fileName
+            )
         ) {
-            domState.upload.fileName = currentState.upload.fileName;
+            domState.upload.fileName = domState.upload.fileName || currentState.upload.fileName;
             domState.upload.source = "history";
             domState.upload.valid = true;
         }

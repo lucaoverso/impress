@@ -121,6 +121,8 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn("canAdvanceFromInitialStep", workflow)
         self.assertIn('state?.upload?.source === "history"', workflow)
         self.assertIn("advanceInitialStepIfReady", printing_ui)
+        self.assertIn("uploadSourceWasOverridden", printing_ui)
+        self.assertIn("domState.upload.fileName === currentState.upload.fileName", printing_ui)
         self.assertLess(html.index('id="cotaPainelEtapaArquivo"'), html.index('id="printStepperCard"'))
         self.assertIn('id="printSelectionContext"', html)
         self.assertIn('id="resumoDuplex"', html)
