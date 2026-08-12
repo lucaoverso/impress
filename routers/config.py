@@ -79,6 +79,8 @@ def render_template_response(
     if extra_context:
         context.update(extra_context)
     context["asset_version"] = get_asset_version()
+    root_path = str(request.scope.get("root_path", "")).rstrip("/")
+    context["help_contexts_url"] = f"{root_path}/help/contexts.json"
 
     response = templates.TemplateResponse(request, template_name, context)
     response.charset = "utf-8"

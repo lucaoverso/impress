@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 
 import main
 
@@ -114,7 +115,7 @@ class ContextualHelpUiContractTests(unittest.TestCase):
             'role="dialog"',
             'aria-modal="true"',
             'id="appHelpClose"',
-            "help_contexts",
+            "help_contexts_url",
         ):
             self.assertIn(fragment, navbar)
         self.assertIn("dialog.showModal()", script)
@@ -145,6 +146,29 @@ class ContextualHelpUiContractTests(unittest.TestCase):
             self.assertNotIn("app_help.js", response.text)
             self.assertNotIn('id="appNavbarHelpToggle"', response.text)
             self.assertNotIn('id="appHelpDialog"', response.text)
+
+    def test_help_url_respects_proxy_root_path_without_route_lookup(self):
+        from routers.config import render_template_response
+
+        request = Request(
+            {
+                "type": "http",
+                "method": "GET",
+                "path": "/servicos",
+                "root_path": "/escola",
+                "headers": [],
+                "query_string": b"",
+                "scheme": "http",
+                "server": ("testserver", 80),
+                "client": ("testclient", 50000),
+                "app": main.app,
+            }
+        )
+        response = render_template_response(request, "servicos.html")
+
+        self.assertIn(
+            'data-help-content-url="/escola/help/contexts.json?', response.body.decode()
+        )
 
     def test_all_current_navbar_consumers_receive_help(self):
         templates = [

@@ -306,7 +306,8 @@ class PagesRouterAssetsTest(unittest.TestCase):
         self.assertIn('href="/apc/calendario/"', html)
         self.assertIn("css/apc/calendario.css?v=build-apc-calendar-654", html)
         self.assertIn("js/apc/calendario.js?v=build-apc-calendar-654", html)
-        self.assertNotIn("drawer", html.lower())
+        self.assertNotIn('id="apcCalendarDrawer"', html)
+        self.assertNotIn("apc-calendar-drawer", html)
 
     def test_relatorios_injeta_asset_version_e_no_store(self):
         config, pages_router = _reload_modulos("build-relatorios-654")

@@ -29,8 +29,8 @@ class UserProfileUiContractTests(unittest.TestCase):
             self.assertEqual(self.client.get(asset).status_code, 200)
 
     def test_navbar_links_profile_and_no_longer_contains_editor_dialog(self):
-        template = (ROOT / "templates/includes/app_navbar.html").read_text()
-        script = (ROOT / "static/js/core/app_navbar.js").read_text()
+        template = (ROOT / "templates/includes/app_navbar.html").read_text(encoding="utf-8")
+        script = (ROOT / "static/js/core/app_navbar.js").read_text(encoding="utf-8")
 
         self.assertIn('href="/meu-perfil"', template)
         self.assertIn('id="appNavbarToggleName"', template)
@@ -38,8 +38,8 @@ class UserProfileUiContractTests(unittest.TestCase):
         self.assertNotIn("openProfileDialog", script)
 
     def test_profile_has_mobile_schedule_and_reduced_motion_rules(self):
-        css = (ROOT / "static/css/pages/user-profile.css").read_text()
-        renderer = (ROOT / "static/js/users/profile_renderers.js").read_text()
+        css = (ROOT / "static/css/pages/user-profile.css").read_text(encoding="utf-8")
+        renderer = (ROOT / "static/js/users/profile_renderers.js").read_text(encoding="utf-8")
 
         self.assertIn("@media (max-width: 720px)", css)
         self.assertIn(".profile-schedule-mobile:not([hidden])", css)

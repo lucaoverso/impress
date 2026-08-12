@@ -41,7 +41,7 @@
         {% endif %}
         <button id="appNavbarHelpToggle" class="app-navbar-help-toggle" type="button"
             aria-expanded="false" aria-controls="appHelpDialog" aria-label="Ajuda desta tela"
-            data-help-content-url="{{ request.url_for('help_contexts') }}?v={{ asset_version | default('1') }}">
+            data-help-content-url="{{ help_contexts_url | default('/help/contexts.json', true) }}?v={{ asset_version | default('1') }}">
             <i class="bi bi-question-circle" aria-hidden="true"></i>
         </button>
         <button id="appNavbarNotificationsToggle" class="app-navbar-notifications-toggle" type="button"
