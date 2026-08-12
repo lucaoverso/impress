@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog da escola - Administração</title>
+    {% set page_styles = ["css/blog/admin.css", "css/blog/library.css", "css/blog/editor.css"] %}
+    {% include "includes/style_bundle.html" %}
+</head>
+<body data-admin-active-tab="blog">
+    {% set navbar_context = "Painel de gestão" %}
+    {% set navbar_current = "gestao" %}
+    {% include "includes/app_navbar.html" %}
+    {% set admin_active_tab = "blog" %}
+    {% include "includes/app_sidebar_config.html" %}
+
+    <main class="blog-admin-page admin-only page-shell page-shell--wide" data-admin-only="true">
+        <header class="blog-page-header page-header">
+            <div class="page-header-main">
+                <h1 class="page-title">Blog da escola</h1>
+                <p class="page-lead">Escreva notícias, organize imagens e publique no site da escola.</p>
+            </div>
+            <button id="blogNewPost" class="btn-destaque blog-new-button" type="button">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                Novo artigo
+            </button>
+        </header>
+
+        <p id="blogPageMessage" class="blog-page-message" role="status" aria-live="polite"></p>
+
+        <div class="blog-workspace">
+            <aside class="blog-library" aria-labelledby="blogLibraryTitle">
+                <header class="blog-library-header">
+                    <div>
+                        <h2 id="blogLibraryTitle">Artigos</h2>
+                        <p id="blogPostCount">Carregando...</p>
+                    </div>
+                    <button id="blogRefresh" class="blog-icon-button" type="button" aria-label="Atualizar artigos" title="Atualizar artigos">
+                        <i class="bi bi-arrow-clockwise" aria-hidden="true"></i>
+                    </button>
+                </header>
+
+                <div class="blog-library-filters">
+                    <label class="blog-search-field" for="blogSearch">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                        <span class="sr-only">Buscar artigos</span>
+                        <input id="blogSearch" type="search" placeholder="Buscar por título">
+                    </label>
+                    <label for="blogStatusFilter" class="sr-only">Filtrar por situação</label>
+                    <select id="blogStatusFilter">
+                        <option value="">Todas as situações</option>
+                        <option value="DRAFT">Rascunhos</option>
+                        <option value="PUBLISHED">Publicados</option>
+                        <option value="ARCHIVED">Arquivados</option>
+                    </select>
+                </div>
+
+                <div id="blogPostList" class="blog-post-list" aria-live="polite">
+                    <div class="blog-list-skeleton" aria-label="Carregando artigos">
+                        <span></span><span></span><span></span>
+                    </div>
+                </div>
+            </aside>
+
+            <section class="blog-editor-shell" aria-label="Editor do artigo">
+                <div id="blogEditorEmpty" class="blog-editor-empty">
+                    <i class="bi bi-journal-richtext" aria-hidden="true"></i>
+                    <h2 id="blogEditorHeading">Comece um artigo</h2>
+                    <p>Crie uma notícia ou selecione um artigo para continuar a edição.</p>
+                    <button id="blogEmptyNewPost" class="btn-destaque" type="button">Criar primeiro artigo</button>
+                </div>
+
+                <div id="blogEditorPanel" class="blog-editor-panel" hidden>
+                    <header class="blog-editor-header">
+                        <div class="blog-editor-title-row">
+                            <span id="blogEditorStatus" class="blog-status is-draft">Rascunho</span>
+                            <p id="blogEditorMeta">Novo artigo ainda não salvo</p>
+                        </div>
+                        <div class="blog-editor-actions" aria-label="Ações do artigo">
+                            <button id="blogArchivePost" class="blog-quiet-danger" type="button" hidden>Arquivar</button>
+                            <button id="blogRestorePost" type="button" hidden>Restaurar</button>
+                            <button id="blogUnpublishPost" type="button" hidden>Retirar do ar</button>
+                            <button id="blogPublishPost" type="button" hidden>
+                                <i class="bi bi-send" aria-hidden="true"></i>
+                                Publicar
+                            </button>
+                            <button id="blogSavePost" class="btn-destaque" type="button">
+                                <i class="bi bi-check2" aria-hidden="true"></i>
+                                Salvar alterações
+                            </button>
+                        </div>
+                    </header>
+
+                    <form id="blogPostForm" class="blog-post-form">
+                        <label class="blog-field blog-title-field" for="blogPostTitle">
+                            <span>Título do artigo</span>
+                            <input id="blogPostTitle" type="text" maxlength="180" required placeholder="Ex.: Feira cultural reúne a comunidade escolar">
+                            <small><span id="blogTitleCount">0</span>/180</small>
+                        </label>
+
+                        <label class="blog-field" for="blogPostSummary">
+                            <span>Resumo</span>
+                            <textarea id="blogPostSummary" rows="3" maxlength="500" placeholder="Uma introdução curta para a página inicial do Blog."></textarea>
+                            <small><span id="blogSummaryCount">0</span>/500 · necessário para publicar</small>
+                        </label>
+
+                        <section class="blog-content-section" aria-labelledby="blogContentTitle">
+                            <div class="blog-section-heading">
+                                <div>
+                                    <h2 id="blogContentTitle">Conteúdo</h2>
+                                    <p>Use a barra para estruturar o texto. As imagens podem ser inseridas pela galeria.</p>
+                                </div>
+                            </div>
+                            <div id="blogEditorToolbar" class="blog-rich-toolbar" role="toolbar" aria-label="Formatação do conteúdo">
+                                <button type="button" data-blog-command="bold" aria-label="Negrito" title="Negrito"><strong>B</strong></button>
+                                <button type="button" data-blog-command="italic" aria-label="Itálico" title="Itálico"><em>I</em></button>
+                                <button type="button" data-blog-command="underline" aria-label="Sublinhado" title="Sublinhado"><u>U</u></button>
+                                <span class="blog-toolbar-divider" aria-hidden="true"></span>
+                                <button type="button" data-blog-block="p" aria-label="Texto normal">Texto</button>
+                                <button type="button" data-blog-block="h2" aria-label="Título de seção">Título</button>
+                                <button type="button" data-blog-command="insertUnorderedList" aria-label="Lista com marcadores" title="Lista com marcadores"><i class="bi bi-list-ul" aria-hidden="true"></i></button>
+                                <button type="button" data-blog-command="insertOrderedList" aria-label="Lista numerada" title="Lista numerada"><i class="bi bi-list-ol" aria-hidden="true"></i></button>
+                                <span class="blog-toolbar-divider" aria-hidden="true"></span>
+                                <button type="button" data-blog-command="justifyLeft" aria-label="Alinhar à esquerda"><i class="bi bi-text-left" aria-hidden="true"></i></button>
+                                <button type="button" data-blog-command="justifyCenter" aria-label="Centralizar"><i class="bi bi-text-center" aria-hidden="true"></i></button>
+                                <button type="button" data-blog-command="removeFormat" aria-label="Limpar formatação" title="Limpar formatação"><i class="bi bi-eraser" aria-hidden="true"></i></button>
+                            </div>
+                            <div id="blogRichEditor" class="blog-rich-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Conteúdo do artigo" data-placeholder="Escreva a notícia aqui..."></div>
+                            <p class="blog-editor-hint"><i class="bi bi-info-circle" aria-hidden="true"></i> Para inserir uma imagem no texto, envie-a e escolha “Inserir no artigo”.</p>
+                        </section>
+
+                        <section class="blog-images-section" aria-labelledby="blogImagesTitle">
+                            <div class="blog-section-heading">
+                                <div>
+                                    <h2 id="blogImagesTitle">Imagens</h2>
+                                    <p>Envie até 20 imagens. Texto alternativo é obrigatório para publicar; legenda é opcional.</p>
+                                </div>
+                                <span id="blogImageCount" class="blog-count-badge">0 de 20</span>
+                            </div>
+
+                            <fieldset id="blogImageUpload" class="blog-image-upload" disabled>
+                                <legend class="sr-only">Enviar imagem</legend>
+                                <label class="blog-file-picker" for="blogImageFile">
+                                    <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
+                                    <span><strong>Escolher imagem</strong><small>JPEG, PNG ou WebP · até 8 MB</small></span>
+                                    <input id="blogImageFile" type="file" accept="image/jpeg,image/png,image/webp">
+                                </label>
+                                <label class="blog-field" for="blogImageAlt">
+                                    <span>Texto alternativo</span>
+                                    <input id="blogImageAlt" type="text" maxlength="180" placeholder="Descreva o que aparece na imagem">
+                                </label>
+                                <label class="blog-field" for="blogImageCaption">
+                                    <span>Legenda <small>(opcional)</small></span>
+                                    <input id="blogImageCaption" type="text" maxlength="500" placeholder="Contexto, nomes ou crédito da foto">
+                                </label>
+                                <label class="blog-check-field">
+                                    <input id="blogImageCover" type="checkbox">
+                                    <span>Usar como capa</span>
+                                </label>
+                                <button id="blogUploadImage" type="button">
+                                    <i class="bi bi-upload" aria-hidden="true"></i>
+                                    Enviar imagem
+                                </button>
+                            </fieldset>
+                            <p id="blogUploadHint" class="blog-upload-hint">Salve o artigo antes de enviar imagens.</p>
+                            <div id="blogImageGallery" class="blog-image-gallery"></div>
+                        </section>
+                    </form>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    {% include "admin/_base_scripts.html" %}
+    <script src="{{ request.url_for('static', path='js/blog/state.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/blog/api.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/blog/editor.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/blog/images.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/blog/page.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+</html>

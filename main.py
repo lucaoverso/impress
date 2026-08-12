@@ -19,6 +19,7 @@ import modules.audit.router as audit_router_module
 import modules.teacher_followup.router as teacher_followup_router_module
 import modules.users.router as users_router_module
 import modules.notifications.router as notifications_router_module
+import modules.blog.router as blog_router_module
 import modules.secretaria.router as secretaria_router_module
 import modules.admin.resources.router as admin_resources_router_module
 import modules.admin.resources.service as resources_service
@@ -43,6 +44,7 @@ from static_files import CachedStaticFiles
 
 setup_logging()
 logger = logging.getLogger(__name__)
+
 
 def _reload_or_import(module):
     nome_modulo = module.__name__
@@ -75,6 +77,7 @@ audit_router_module = _reload_or_import(audit_router_module)
 teacher_followup_router_module = _reload_or_import(teacher_followup_router_module)
 users_router_module = _reload_or_import(users_router_module)
 notifications_router_module = _reload_or_import(notifications_router_module)
+blog_router_module = _reload_or_import(blog_router_module)
 secretaria_router_module = _reload_or_import(secretaria_router_module)
 
 ENABLE_EMBEDDED_WORKER = config_module.ENABLE_EMBEDDED_WORKER
@@ -100,6 +103,7 @@ audit_router = audit_router_module.router
 teacher_followup_router = teacher_followup_router_module.router
 users_router = users_router_module.router
 notifications_router = notifications_router_module.router
+blog_router = blog_router_module.router
 secretaria_router = secretaria_router_module.router
 
 root = system_router_module.root
@@ -237,6 +241,7 @@ app.include_router(audit_router)
 app.include_router(teacher_followup_router)
 app.include_router(users_router)
 app.include_router(notifications_router)
+app.include_router(blog_router)
 
 app.mount(
     "/static/img/resources",

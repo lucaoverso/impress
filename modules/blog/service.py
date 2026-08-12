@@ -92,6 +92,11 @@ def get_post(post_id: int) -> dict:
     return post
 
 
+def get_post_details(post_id: int) -> dict:
+    post = get_post(post_id)
+    return {**post, "images": repository.list_images(int(post_id))}
+
+
 def list_posts(*, status: BlogPostStatus | None = None, limit: int = 50, offset: int = 0):
     return repository.list_posts(
         status=status.value if status else None,
@@ -149,10 +154,8 @@ def unpublish_post(post_id: int) -> dict:
 
 
 def archive_post(post_id: int) -> dict:
-    get_post(post_id)
-    return repository.set_post_status(int(post_id), BlogPostStatus.ARCHIVED.value) or get_post(
-        post_id
-    )
+    post = get_post(post_id)
+    return repository.set_post_status(int(post_id), BlogPostStatus.ARCHIVED.value) or post
 
 
 def restore_post(post_id: int) -> dict:
@@ -223,7 +226,10 @@ def upload_image(
         raise
 
 
-def update_image(image_id: int, payload: BlogImageUpdateIn) -> dict:
+def update_image(post_id: int, image_id: int, payload: BlogImageUpdateIn) -> dict:
+    image = repository.get_image(image_id)
+    if not image or int(image["post_id"]) != int(post_id):
+        raise BlogNotFoundError("Imagem nao encontrada neste artigo.")
     updated = repository.update_image(
         int(image_id), alt_text=_clean_line(payload.alt_text), caption=_clean_line(payload.caption)
     )

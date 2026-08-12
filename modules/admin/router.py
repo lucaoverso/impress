@@ -13,6 +13,7 @@ PAGE_TITLES = {
     "impressao": "Gestão de impressão",
     "relatorios": "Relatórios administrativos",
     "auditoria": "Atividades do sistema",
+    "blog": "Blog da escola",
 }
 
 DEDICATED_TEMPLATES = {
@@ -24,6 +25,7 @@ DEDICATED_TEMPLATES = {
     "recursos": "admin/recursos.html",
     "relatorios": "admin/relatorios.html",
     "auditoria": "admin/auditoria.html",
+    "blog": "admin/blog.html",
 }
 
 
@@ -78,3 +80,8 @@ def admin_relatorios_page(request: Request):
 @router.get("/admin/auditoria")
 def admin_auditoria_page(request: Request):
     return _render_admin_page(request, "auditoria")
+
+
+@router.get("/admin/blog")
+def admin_blog_page(request: Request):
+    return _render_admin_page(request, "blog")

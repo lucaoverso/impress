@@ -35,7 +35,9 @@ class ContextualHelpUiContractTests(unittest.TestCase):
                 for field in ("decisions", "steps"):
                     self.assertIsInstance(content.get(field), list)
                     self.assertTrue(content[field])
-                    self.assertTrue(all(isinstance(item, str) and item.strip() for item in content[field]))
+                    self.assertTrue(
+                        all(isinstance(item, str) and item.strip() for item in content[field])
+                    )
                 self.assertIsInstance(content.get("cautions", []), list)
                 serialized = json.dumps(content, ensure_ascii=False)
                 self.assertNotRegex(serialized, r"</?[a-z][^>]*>", re.IGNORECASE)
@@ -71,10 +73,7 @@ class ContextualHelpUiContractTests(unittest.TestCase):
                     "relatorios",
                 )
             },
-            *{
-                f"/coordenacao|tab=ocorrencias|step={step}"
-                for step in range(1, 4)
-            },
+            *{f"/coordenacao|tab=ocorrencias|step={step}" for step in range(1, 4)},
             "/relatorios",
             *{
                 f"/relatorios|tab={tab}"
@@ -96,6 +95,7 @@ class ContextualHelpUiContractTests(unittest.TestCase):
                     "impressao",
                     "relatorios",
                     "auditoria",
+                    "blog",
                 )
             },
         }
@@ -107,7 +107,9 @@ class ContextualHelpUiContractTests(unittest.TestCase):
         navbar = (ROOT / "templates/includes/app_navbar.html").read_text(encoding="utf-8")
         script = (ROOT / "static/js/core/app_help.js").read_text(encoding="utf-8")
 
-        self.assertLess(navbar.index('id="appNavbarHelpToggle"'), navbar.index('id="appNavbarProfileToggle"'))
+        self.assertLess(
+            navbar.index('id="appNavbarHelpToggle"'), navbar.index('id="appNavbarProfileToggle"')
+        )
         for fragment in (
             'aria-label="Ajuda desta tela"',
             'aria-controls="appHelpDialog"',
@@ -119,9 +121,9 @@ class ContextualHelpUiContractTests(unittest.TestCase):
         ):
             self.assertIn(fragment, navbar)
         self.assertIn("dialog.showModal()", script)
-        self.assertIn('event.preventDefault()', script)
+        self.assertIn("event.preventDefault()", script)
         self.assertIn('event.key === "Escape"', script)
-        self.assertIn('toggle.focus({ preventScroll: true })', script)
+        self.assertIn("toggle.focus({ preventScroll: true })", script)
         self.assertNotIn("innerHTML", script)
 
     def test_help_assets_only_load_on_authenticated_surfaces(self):
@@ -166,9 +168,7 @@ class ContextualHelpUiContractTests(unittest.TestCase):
         )
         response = render_template_response(request, "servicos.html")
 
-        self.assertIn(
-            'data-help-content-url="/escola/help/contexts.json?', response.body.decode()
-        )
+        self.assertIn('data-help-content-url="/escola/help/contexts.json?', response.body.decode())
 
     def test_all_current_navbar_consumers_receive_help(self):
         templates = [
@@ -181,7 +181,7 @@ class ContextualHelpUiContractTests(unittest.TestCase):
             if 'include "includes/app_navbar.html"' in path.read_text(encoding="utf-8")
         ]
 
-        self.assertEqual(len(consumers), 27)
+        self.assertEqual(len(consumers), 28)
         for template in consumers:
             with self.subTest(template=template.relative_to(ROOT)):
                 text = template.read_text(encoding="utf-8")

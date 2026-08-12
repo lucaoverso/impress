@@ -19,14 +19,27 @@ class AdminPageAssetsTests(unittest.TestCase):
 
     def test_paginas_renderizam_e_carregam_apenas_scripts_existentes(self):
         scripts_por_pagina = {
-            "professores": {"professores-form.js", "professores-lista.js", "professores.js", "professores-page.js"},
+            "professores": {
+                "professores-form.js",
+                "professores-lista.js",
+                "professores.js",
+                "professores-page.js",
+            },
             "atribuicoes": {"atribuicoes-form.js", "atribuicoes.js", "atribuicoes-page.js"},
-            "turmas": {"grade-aulas.js", "turmas-disciplinas-base.js", "turmas-disciplinas.js", "turmas-cadastro.js", "disciplinas.js", "turmas-page.js"},
+            "turmas": {
+                "grade-aulas.js",
+                "turmas-disciplinas-base.js",
+                "turmas-disciplinas.js",
+                "turmas-cadastro.js",
+                "disciplinas.js",
+                "turmas-page.js",
+            },
             "aulas": {"grade-aulas.js", "aulas.js", "aulas-page.js"},
             "recursos": {"recursos.js", "recursos-page.js"},
             "impressao": {"impressao.js", "impressao-page.js"},
             "relatorios": {"relatorios.js", "relatorios-page.js"},
             "auditoria": {"audit.js", "auditoria-page.js"},
+            "blog": set(),
         }
 
         for pagina, esperados in scripts_por_pagina.items():

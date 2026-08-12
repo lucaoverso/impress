@@ -54,3 +54,7 @@ class BlogImageOut(BaseModel):
     height: int
     is_cover: bool
     created_at: str
+
+
+class BlogPostDetailsOut(BlogPostOut):
+    images: list[BlogImageOut] = Field(default_factory=list)

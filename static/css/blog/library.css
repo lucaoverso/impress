@@ -1,0 +1,145 @@
+.blog-library {
+    padding: 20px 16px;
+    border-right: 1px solid var(--line);
+    background: var(--surface-1);
+}
+
+.blog-library-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.blog-library-header h2 {
+    font-size: 18px;
+}
+
+.blog-library-header p {
+    color: var(--text-muted);
+    font-size: 14px;
+}
+
+.blog-icon-button {
+    width: 44px;
+    padding: 0;
+}
+
+.blog-library-filters {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.blog-library-filters select,
+.blog-search-field input {
+    width: 100%;
+}
+
+.blog-search-field {
+    position: relative;
+    display: block;
+}
+
+.blog-search-field i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    color: var(--text-muted);
+    transform: translateY(-50%);
+    pointer-events: none;
+}
+
+.blog-search-field input {
+    padding-left: 42px !important;
+}
+
+.blog-post-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.blog-post-item {
+    width: 100%;
+    min-height: 0;
+    padding: 12px;
+    border-color: transparent;
+    background: transparent;
+    text-align: left;
+}
+
+.blog-post-item:hover {
+    border-color: var(--line-strong);
+    background: var(--surface-0);
+}
+
+.blog-post-item.is-active {
+    border-color: #8bc7bf;
+    background: var(--brand-soft);
+    color: var(--brand-strong);
+}
+
+.blog-post-item strong,
+.blog-post-item span,
+.blog-post-item small {
+    display: block;
+}
+
+.blog-post-item strong {
+    margin-bottom: 5px;
+    font-size: 15px;
+    line-height: 1.35;
+}
+
+.blog-post-item span {
+    margin-bottom: 3px;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.blog-post-item small {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+.blog-list-empty {
+    padding: 28px 12px;
+    color: var(--text-muted);
+    text-align: center;
+}
+
+.blog-list-empty i {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 28px;
+}
+
+.blog-list-skeleton {
+    display: grid;
+    gap: 10px;
+}
+
+.blog-list-skeleton span {
+    height: 72px;
+    border-radius: var(--radius-md);
+    background: var(--surface-2);
+    animation: blog-pulse 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes blog-pulse {
+    to { opacity: 0.5; }
+}
+
+@media (max-width: 1000px) {
+    .blog-library {
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+    }
+
+    .blog-post-list {
+        max-height: 280px;
+        overflow: auto;
+    }
+}
