@@ -1,0 +1,59 @@
+{% extends "blog/base.html" %}
+
+{% block page_styles %}
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/blog/public-index.css') }}?v={{ asset_version }}">
+{% endblock %}
+
+{% block content %}
+<section class="blog-home-intro">
+    <div class="blog-shell">
+        <p class="blog-home-intro__kicker">A escola em movimento</p>
+        <h1>Notícias da nossa escola</h1>
+        <p>Projetos, encontros e aprendizados que fazem parte da vida da nossa comunidade.</p>
+    </div>
+</section>
+
+{% if featured_post %}
+<section class="blog-shell blog-featured" aria-labelledby="destaque-titulo">
+    <a class="blog-featured__image" href="{{ featured_post.article_url }}" tabindex="-1" aria-hidden="true">
+        <img src="{{ featured_post.cover_url }}" alt="{{ featured_post.cover_alt_text }}" width="1200" height="800" fetchpriority="high">
+    </a>
+    <div class="blog-featured__content">
+        <p class="blog-post-date">{{ featured_post.published_label }}</p>
+        <h2 id="destaque-titulo"><a href="{{ featured_post.article_url }}">{{ featured_post.title }}</a></h2>
+        <p>{{ featured_post.summary }}</p>
+        <a class="blog-read-link" href="{{ featured_post.article_url }}">Ler a notícia <span aria-hidden="true">→</span></a>
+    </div>
+</section>
+
+{% if remaining_posts %}
+<section class="blog-shell blog-latest" aria-labelledby="ultimas-noticias">
+    <div class="blog-section-heading">
+        <h2 id="ultimas-noticias">Mais notícias</h2>
+        <span>{{ remaining_posts | length }} {% if remaining_posts | length == 1 %}publicação{% else %}publicações{% endif %}</span>
+    </div>
+    <div class="blog-post-list">
+        {% for post in remaining_posts %}
+        <article class="blog-post-row">
+            <a class="blog-post-row__image" href="{{ post.article_url }}" tabindex="-1" aria-hidden="true">
+                <img src="{{ post.cover_thumbnail_url }}" alt="{{ post.cover_alt_text }}" width="560" height="360" loading="lazy" decoding="async">
+            </a>
+            <div>
+                <p class="blog-post-date">{{ post.published_label }}</p>
+                <h3><a href="{{ post.article_url }}">{{ post.title }}</a></h3>
+                <p>{{ post.summary }}</p>
+                <a class="blog-read-link" href="{{ post.article_url }}">Continuar lendo <span aria-hidden="true">→</span></a>
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+</section>
+{% endif %}
+{% else %}
+<section class="blog-shell blog-empty-state">
+    <img src="{{ request.url_for('static', path='img/logo_escola-256.webp') }}" alt="" width="88" height="88">
+    <h2>As primeiras notícias estão a caminho</h2>
+    <p>Em breve, este espaço reunirá projetos e acontecimentos da nossa escola.</p>
+</section>
+{% endif %}
+{% endblock %}

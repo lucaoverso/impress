@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ page_title }} · E.E. Padre João D'Ávila</title>
+    <meta name="description" content="{{ page_description }}">
+    <meta name="theme-color" content="#0b5b55">
+    <link rel="canonical" href="{{ canonical_url }}">
+    <link rel="icon" href="{{ request.url_for('static', path='img/logo_escola-256.webp') }}">
+    <meta property="og:locale" content="pt_BR">
+    <meta property="og:site_name" content="Blog da E.E. Padre João D'Ávila">
+    <meta property="og:title" content="{{ page_title }}">
+    <meta property="og:description" content="{{ page_description }}">
+    <meta property="og:url" content="{{ canonical_url }}">
+    <meta property="og:type" content="{% block og_type %}website{% endblock %}">
+    {% if og_image_url %}<meta property="og:image" content="{{ og_image_url }}">{% endif %}
+    <link rel="stylesheet" href="{{ request.url_for('static', path='css/base.css') }}?v={{ asset_version }}">
+    <link rel="stylesheet" href="{{ request.url_for('static', path='css/blog/public-base.css') }}?v={{ asset_version }}">
+    {% block page_styles %}{% endblock %}
+</head>
+<body class="public-blog">
+    <a class="blog-skip-link" href="#conteudo">Pular para o conteúdo</a>
+    <header class="blog-site-header">
+        <div class="blog-shell blog-site-header__inner">
+            <a class="blog-brand" href="{{ blog_base_path }}/" aria-label="Página inicial do Blog da Escola">
+                <img src="{{ request.url_for('static', path='img/logo_escola-256.webp') }}" alt="" width="52" height="52">
+                <span>
+                    <strong>Blog da Escola</strong>
+                    <small>E.E. Padre João D'Ávila</small>
+                </span>
+            </a>
+            <nav aria-label="Navegação principal">
+                <a href="{{ blog_base_path }}/">Notícias</a>
+            </nav>
+        </div>
+    </header>
+
+    <main id="conteudo">{% block content %}{% endblock %}</main>
+
+    <footer class="blog-site-footer">
+        <div class="blog-shell blog-site-footer__inner">
+            <div>
+                <strong>E.E. Padre João D'Ávila</strong>
+                <p>Notícias, projetos e histórias da nossa comunidade escolar.</p>
+            </div>
+            <a href="{{ blog_base_path }}/">Voltar ao início</a>
+        </div>
+    </footer>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

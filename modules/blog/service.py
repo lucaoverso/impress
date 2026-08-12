@@ -296,4 +296,4 @@ def get_public_post(slug: str) -> dict:
     post = repository.get_public_post_by_slug(slugify(slug))
     if not post:
         raise BlogNotFoundError("Artigo nao encontrado.")
-    return post
+    return {**post, "images": repository.list_images(int(post["id"]))}

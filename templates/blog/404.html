@@ -1,0 +1,10 @@
+{% extends "blog/base.html" %}
+
+{% block content %}
+<section class="blog-shell blog-not-found">
+    <p class="blog-not-found__code">404</p>
+    <h1>Esta notícia não está disponível</h1>
+    <p>Ela pode ter sido removida ou ainda não foi publicada.</p>
+    <a class="blog-primary-link" href="{{ blog_base_path }}/">Ver as notícias da escola</a>
+</section>
+{% endblock %}

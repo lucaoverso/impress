@@ -1,0 +1,47 @@
+{% extends "blog/base.html" %}
+
+{% block og_type %}article{% endblock %}
+
+{% block page_styles %}
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/blog/public-article.css') }}?v={{ asset_version }}">
+<link rel="stylesheet" href="{{ request.url_for('static', path='css/blog/lightbox.css') }}?v={{ asset_version }}">
+{% endblock %}
+
+{% block content %}
+<article class="blog-article">
+    <header class="blog-shell blog-article__header">
+        <a class="blog-back-link" href="{{ blog_base_path }}/"><span aria-hidden="true">←</span> Todas as notícias</a>
+        <p class="blog-post-date">{{ post.published_label }}</p>
+        <h1>{{ post.title }}</h1>
+        <p class="blog-article__summary">{{ post.summary }}</p>
+    </header>
+
+    {% if post.cover_url %}
+    <figure class="blog-shell blog-article__cover">
+        <img src="{{ post.cover_url }}" data-blog-image="{{ post.cover_token }}" alt="{{ post.cover_alt_text }}" width="1400" height="900" fetchpriority="high">
+        {% if post.cover_caption %}<figcaption>{{ post.cover_caption }}</figcaption>{% endif %}
+    </figure>
+    {% endif %}
+
+    <div class="blog-shell blog-article__body" data-blog-article-body>
+        {{ post.body_public_html | safe }}
+    </div>
+</article>
+
+<dialog class="blog-lightbox" data-blog-lightbox aria-label="Visualização das imagens do artigo">
+    <div class="blog-lightbox__toolbar">
+        <p data-blog-lightbox-count aria-live="polite"></p>
+        <button type="button" data-blog-lightbox-close aria-label="Fechar imagem">×</button>
+    </div>
+    <div class="blog-lightbox__stage">
+        <button type="button" class="blog-lightbox__nav blog-lightbox__nav--prev" data-blog-lightbox-prev aria-label="Imagem anterior">←</button>
+        <img data-blog-lightbox-image alt="">
+        <button type="button" class="blog-lightbox__nav blog-lightbox__nav--next" data-blog-lightbox-next aria-label="Próxima imagem">→</button>
+    </div>
+    <p class="blog-lightbox__caption" data-blog-lightbox-caption></p>
+</dialog>
+{% endblock %}
+
+{% block scripts %}
+<script defer src="{{ request.url_for('static', path='js/blog/public-carousel.js') }}?v={{ asset_version }}"></script>
+{% endblock %}

@@ -9,3 +9,8 @@ BLOG_IMAGE_DIR = Path(
         str(BASE_DIR.parent / "sistema-impress-data" / "blog-images"),
     )
 ).expanduser()
+
+BLOG_PUBLIC_HOST = os.getenv("BLOG_PUBLIC_HOST", "blog.eepjd.com.br").strip().lower()
+BLOG_PUBLIC_URL = os.getenv(
+    "BLOG_PUBLIC_URL", f"https://{BLOG_PUBLIC_HOST}"
+).strip().rstrip("/")

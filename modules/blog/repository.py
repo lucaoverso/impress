@@ -133,10 +133,12 @@ def list_public_posts(*, limit: int = 20, offset: int = 0) -> list[dict]:
     try:
         rows = conn.execute(
             """
-            SELECT * FROM blog_posts
-            WHERE status = ? AND published_at IS NOT NULL
-              AND published_at <= datetime('now')
-            ORDER BY published_at DESC, id DESC
+            SELECT p.*, c.token AS cover_token, c.alt_text AS cover_alt_text, c.caption AS cover_caption
+            FROM blog_posts AS p
+            LEFT JOIN blog_images AS c ON c.post_id = p.id AND c.is_cover = 1
+            WHERE p.status = ? AND p.published_at IS NOT NULL
+              AND p.published_at <= datetime('now')
+            ORDER BY p.published_at DESC, p.id DESC
             LIMIT ? OFFSET ?
             """,
             (PUBLIC_STATUS, max(1, int(limit)), max(0, int(offset))),
@@ -151,9 +153,11 @@ def get_public_post_by_slug(slug: str) -> dict | None:
     try:
         row = conn.execute(
             """
-            SELECT * FROM blog_posts
-            WHERE slug = ? AND status = ? AND published_at IS NOT NULL
-              AND published_at <= datetime('now')
+            SELECT p.*, c.token AS cover_token, c.alt_text AS cover_alt_text, c.caption AS cover_caption
+            FROM blog_posts AS p
+            LEFT JOIN blog_images AS c ON c.post_id = p.id AND c.is_cover = 1
+            WHERE p.slug = ? AND p.status = ? AND p.published_at IS NOT NULL
+              AND p.published_at <= datetime('now')
             """,
             (slug, PUBLIC_STATUS),
         ).fetchone()

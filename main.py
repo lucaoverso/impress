@@ -20,6 +20,8 @@ import modules.teacher_followup.router as teacher_followup_router_module
 import modules.users.router as users_router_module
 import modules.notifications.router as notifications_router_module
 import modules.blog.router as blog_router_module
+import modules.blog.public_router as blog_public_router_module
+import modules.blog.host_middleware as blog_host_middleware_module
 import modules.secretaria.router as secretaria_router_module
 import modules.admin.resources.router as admin_resources_router_module
 import modules.admin.resources.service as resources_service
@@ -78,6 +80,8 @@ teacher_followup_router_module = _reload_or_import(teacher_followup_router_modul
 users_router_module = _reload_or_import(users_router_module)
 notifications_router_module = _reload_or_import(notifications_router_module)
 blog_router_module = _reload_or_import(blog_router_module)
+blog_public_router_module = _reload_or_import(blog_public_router_module)
+blog_host_middleware_module = _reload_or_import(blog_host_middleware_module)
 secretaria_router_module = _reload_or_import(secretaria_router_module)
 
 ENABLE_EMBEDDED_WORKER = config_module.ENABLE_EMBEDDED_WORKER
@@ -104,6 +108,7 @@ teacher_followup_router = teacher_followup_router_module.router
 users_router = users_router_module.router
 notifications_router = notifications_router_module.router
 blog_router = blog_router_module.router
+blog_public_router = blog_public_router_module.router
 secretaria_router = secretaria_router_module.router
 
 root = system_router_module.root
@@ -217,6 +222,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Suite de Servicos Escolares", lifespan=lifespan)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
+app.add_middleware(
+    blog_host_middleware_module.BlogSubdomainMiddleware,
+    public_host=blog_public_router_module.BLOG_PUBLIC_HOST,
+)
 
 app.include_router(auth_router)
 app.include_router(system_router)
@@ -242,6 +251,7 @@ app.include_router(teacher_followup_router)
 app.include_router(users_router)
 app.include_router(notifications_router)
 app.include_router(blog_router)
+app.include_router(blog_public_router)
 
 app.mount(
     "/static/img/resources",
