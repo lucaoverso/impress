@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, Header, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 
 from auth import get_usuario_logado
 from db.core import get_connection
@@ -18,7 +18,7 @@ from .common import (
     usuario_pode_gerir_impressoes,
     usuario_tem_acesso_coordenacao,
 )
-from .config import ENABLE_EMBEDDED_WORKER, RADIUS_INTERNAL_SECRET
+from .config import ENABLE_EMBEDDED_WORKER, RADIUS_INTERNAL_SECRET, STATIC_DIR
 
 router = APIRouter()
 
@@ -26,6 +26,15 @@ router = APIRouter()
 @router.get("/")
 def root():
     return RedirectResponse(url="/login-page", status_code=302)
+
+
+@router.get("/help/contexts.json", name="help_contexts", include_in_schema=False)
+def help_contexts():
+    return FileResponse(
+        STATIC_DIR / "data" / "help-contexts.json",
+        media_type="application/json",
+        headers={"Cache-Control": "public, max-age=0, must-revalidate"},
+    )
 
 
 def _serializar_datetime_iso(valor) -> str | None:

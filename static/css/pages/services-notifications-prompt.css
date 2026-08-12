@@ -1,0 +1,153 @@
+.services-notifications-prompt {
+    width: min(390px, calc(100% - 32px));
+    max-height: calc(100dvh - 32px);
+    margin: auto;
+    padding: 0;
+    overflow: hidden auto;
+    border: 0;
+    border-radius: 18px;
+    background: var(--surface-0);
+    color: var(--text-main);
+    box-shadow: var(--shadow-floating);
+}
+
+.services-notifications-prompt::backdrop {
+    background: rgba(15, 23, 42, .48);
+    backdrop-filter: blur(4px);
+}
+
+.services-notifications-prompt[open] {
+    animation: services-notifications-prompt-enter 220ms cubic-bezier(.22, 1, .36, 1);
+}
+
+.services-notifications-prompt-visual {
+    position: relative;
+    min-height: 132px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    background: var(--surface-1);
+}
+
+.services-notifications-prompt-visual::before,
+.services-notifications-prompt-visual::after {
+    content: "";
+    position: absolute;
+    width: 82px;
+    height: 82px;
+    border-radius: 50%;
+    background: var(--brand-soft);
+    opacity: .55;
+}
+
+.services-notifications-prompt-visual::before { right: -30px; top: -34px; }
+.services-notifications-prompt-visual::after { left: -38px; bottom: -48px; }
+
+.services-notifications-prompt-visual > span {
+    position: relative;
+    z-index: 1;
+    width: 68px;
+    height: 68px;
+    display: grid;
+    place-items: center;
+    border-radius: 16px;
+    background: var(--brand-soft);
+    color: var(--brand-strong);
+    box-shadow: var(--shadow-low);
+    font-size: 28px;
+}
+
+.services-notifications-prompt-content {
+    display: grid;
+    gap: 14px;
+    padding: 24px;
+    text-align: center;
+}
+
+.services-notifications-prompt-content h2 {
+    margin: 0;
+    font-size: 20px;
+    line-height: 1.25;
+    text-wrap: balance;
+}
+
+.services-notifications-prompt-content p {
+    margin: 0;
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.55;
+    text-wrap: pretty;
+}
+
+.services-notifications-prompt-content p[data-state="denied"],
+.services-notifications-prompt-content p[data-state="error"] {
+    color: var(--state-danger-text);
+}
+
+.services-notifications-install-steps {
+    margin: 2px 0 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+    list-style: none;
+    text-align: left;
+    counter-reset: install-step;
+}
+
+.services-notifications-install-steps[hidden] { display: none; }
+
+.services-notifications-install-steps li {
+    display: grid;
+    grid-template-columns: 28px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+    color: var(--text-main);
+    font-size: 14px;
+    line-height: 1.45;
+    counter-increment: install-step;
+}
+
+.services-notifications-install-steps li::before {
+    content: counter(install-step);
+    width: 28px;
+    height: 28px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--brand-soft);
+    color: var(--brand-strong);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.services-notifications-prompt-actions {
+    display: grid;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.services-notifications-prompt-actions .button { width: 100%; }
+
+.services-notifications-prompt-content small {
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+@keyframes services-notifications-prompt-enter {
+    from { opacity: 0; transform: translateY(12px) scale(.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@media (max-width: 480px) {
+    .services-notifications-prompt {
+        width: min(100% - 24px, 390px);
+        border-radius: 16px;
+    }
+    .services-notifications-prompt-visual { min-height: 112px; }
+    .services-notifications-prompt-content { padding: 20px 18px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .services-notifications-prompt[open] { animation: none; }
+}

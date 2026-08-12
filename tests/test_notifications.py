@@ -161,6 +161,57 @@ class NotificationsTest(unittest.TestCase):
             self.assertEqual(row["active"], 1)
             self.assertEqual(row["total"], 1)
 
+    def test_batch_recipient_status_reports_reads_and_active_devices(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            database, service, repository, _integration = _reload(
+                os.path.join(tmp, "db.sqlite")
+            )
+            delivery_repo = importlib.import_module(
+                "modules.notifications.delivery_repository"
+            )
+            first = self._teacher(database, "receipt-first")
+            second = self._teacher(database, "receipt-second")
+            batch_id = "batch-read-receipts"
+            first_notice = service.create_notification(
+                recipient_user_id=first,
+                category="manual",
+                title="Reunião pedagógica",
+                body="Confira o horário da reunião.",
+                batch_id=batch_id,
+            )
+            service.create_notification(
+                recipient_user_id=second,
+                category="manual",
+                title="Reunião pedagógica",
+                body="Confira o horário da reunião.",
+                batch_id=batch_id,
+            )
+            repository.mark_read(first_notice["id"], first)
+            delivery_repo.upsert_subscription(
+                first, "https://push.example/device-one",
+                "p256dh-value-that-is-long-enough", "auth-value", "device one",
+            )
+            delivery_repo.upsert_subscription(
+                first, "https://push.example/device-two",
+                "p256dh-value-that-is-long-enough", "auth-value", "device two",
+            )
+
+            result = service.list_batch_recipients(batch_id)
+            recipients = {item["user_id"]: item for item in result["items"]}
+            self.assertEqual(result["total"], 2)
+            self.assertEqual(result["read_count"], 1)
+            self.assertEqual(result["push_active_count"], 1)
+            self.assertIsNotNone(recipients[first]["read_at"])
+            self.assertEqual(recipients[first]["active_devices"], 2)
+            self.assertTrue(recipients[first]["push_active"])
+            self.assertIsNone(recipients[second]["read_at"])
+            self.assertEqual(recipients[second]["active_devices"], 0)
+            self.assertFalse(recipients[second]["push_active"])
+
+            with self.assertRaises(HTTPException) as context:
+                service.list_batch_recipients("missing-batch")
+            self.assertEqual(context.exception.status_code, 404)
+
     def test_apc_creates_initial_and_two_deadline_markers_without_duplicates(self):
         with tempfile.TemporaryDirectory() as tmp:
             database, _service, _repository, integration = _reload(
@@ -371,6 +422,11 @@ class NotificationsTest(unittest.TestCase):
             with self.assertRaises(HTTPException) as context:
                 router.get_recipients(
                     search="", user={"id": 1, "cargo": "PROFESSOR"}
+                )
+            self.assertEqual(context.exception.status_code, 403)
+            with self.assertRaises(HTTPException) as context:
+                router.get_notification_batch_recipients(
+                    "batch-id", user={"id": 1, "cargo": "PROFESSOR"}
                 )
             self.assertEqual(context.exception.status_code, 403)
 

@@ -7,7 +7,7 @@ from fastapi import HTTPException
 from modules.audit.models import AuditCategory, AuditOutcome
 from modules.audit.service import record_event
 
-from . import delivery_repository, repository
+from . import delivery_repository, management_repository, repository
 from .config import app_timezone, push_settings
 
 
@@ -162,6 +162,24 @@ def list_batches() -> dict:
         else:
             item["status"] = "sent"
     return {"items": items}
+
+
+def list_batch_recipients(batch_id: str) -> dict:
+    normalized_batch_id = str(batch_id or "").strip()
+    items = management_repository.list_batch_recipients(normalized_batch_id)
+    if not items:
+        raise HTTPException(404, "Lote de notificações não encontrado.")
+    for item in items:
+        item["active_devices"] = int(item.get("active_devices") or 0)
+        item["push_active"] = item["active_devices"] > 0
+    return {
+        "batch_id": normalized_batch_id,
+        "title": items[0]["title"],
+        "items": items,
+        "total": len(items),
+        "read_count": sum(1 for item in items if item.get("read_at")),
+        "push_active_count": sum(1 for item in items if item["push_active"]),
+    }
 
 
 def create_batch(payload, actor: dict) -> dict:

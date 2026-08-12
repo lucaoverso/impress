@@ -29,5 +29,6 @@
 <script defer src="{{ request.url_for('static', path='js/core/app_help.js') }}?v={{ css_version }}"></script>
 {% endif %}
 {% if app_shell_enabled %}
+<script defer src="{{ request.url_for('static', path='js/core/app_notifications_drawer.js') }}?v={{ css_version }}"></script>
 <script defer src="{{ request.url_for('static', path='js/core/app_notifications.js') }}?v={{ css_version }}"></script>
 {% endif %}

@@ -143,6 +143,7 @@ async function carregarUsuario() {
         titulo.innerText = `Olá, ${primeiroNome}. Escolha o serviço`;
         aplicarVisibilidadeModulos(modulosPermitidos(usuario));
         organizarModulos(usuario);
+        window.ServicesNotificationsPrompt?.init(usuario);
         if (usuario.eh_professor) {
             document.body.classList.add("services-dashboard-body--teacher");
             document.getElementById("servicesPageLead").textContent =

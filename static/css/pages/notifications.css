@@ -218,6 +218,8 @@
 .notifications-batch span { display: block; }
 .notifications-batch span { margin-top: 4px; color: var(--text-muted); font-size: 13px; }
 .notifications-batch button { margin-top: 10px; min-height: var(--control-height); color: var(--error); }
+.notifications-batch-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.notifications-batch-actions button:first-child { color: var(--brand-strong); }
 .notification-confirm-dialog {
     width: min(480px, calc(100% - 28px));
     margin: auto;

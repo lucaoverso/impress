@@ -114,7 +114,7 @@ class ContextualHelpUiContractTests(unittest.TestCase):
             'role="dialog"',
             'aria-modal="true"',
             'id="appHelpClose"',
-            "data/help-contexts.json",
+            "help_contexts",
         ):
             self.assertIn(fragment, navbar)
         self.assertIn("dialog.showModal()", script)
@@ -129,12 +129,13 @@ class ContextualHelpUiContractTests(unittest.TestCase):
         for asset in (
             "/static/css/components/app-help.css",
             "/static/js/core/app_help.js",
-            "/static/data/help-contexts.json",
         ):
-            if asset.endswith(".json"):
-                self.assertEqual(self.client.get(asset).status_code, 200)
-            else:
-                self.assertIn(asset, authenticated.text)
+            self.assertIn(asset, authenticated.text)
+        help_response = self.client.get("/help/contexts.json")
+        self.assertEqual(help_response.status_code, 200)
+        self.assertEqual(help_response.headers["content-type"], "application/json")
+        self.assertIn("must-revalidate", help_response.headers["cache-control"])
+        self.assertIn("/help/contexts.json", authenticated.text)
         self.assertIn('id="appNavbarHelpToggle"', authenticated.text)
 
         for path in ("/login-page", "/cadastro-professor"):

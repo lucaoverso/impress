@@ -191,14 +191,22 @@
                     `Push: ${batch.push_sent || 0} enviados · ${batch.push_failed || 0} falhas`;
                 item.appendChild(delivery);
             }
+            const actions = document.createElement("div");
+            actions.className = "notifications-batch-actions";
+            const details = document.createElement("button");
+            details.type = "button";
+            details.textContent = "Ver destinatários";
+            details.addEventListener("click", () => window.NotificationsManageDetails.open(batch));
+            actions.appendChild(details);
             const scheduled = parseUtc(batch.scheduled_at) > new Date() && !batch.cancelled;
             if (scheduled) {
                 const cancel = document.createElement("button");
                 cancel.type = "button";
                 cancel.textContent = "Cancelar agendamento";
                 cancel.addEventListener("click", () => cancelBatch(batch.batch_id));
-                item.appendChild(cancel);
+                actions.appendChild(cancel);
             }
+            item.appendChild(actions);
             wrap.appendChild(item);
         });
     }
@@ -215,6 +223,7 @@
             return;
         }
         el("notificationsManageContent").hidden = false;
+        window.NotificationsManageDetails.init();
         ["notificationTitle", "notificationBody"].forEach((id) => {
             el(id).addEventListener("input", () => {
                 el(`${id}Count`).textContent = el(id).value.length;

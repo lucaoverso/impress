@@ -104,6 +104,54 @@
 .app-notification-item:hover { background: var(--surface-1, #f8fafc); }
 .app-notification-item.is-unread { background: color-mix(in srgb, var(--brand-soft, #d6f2ef) 44%, #fff); }
 .app-notification-item.is-urgent { box-shadow: inset 3px 0 var(--warning, #b54708); }
+.app-notification-item--dismissible {
+    grid-template-columns: minmax(0, 1fr) 52px;
+    gap: 0;
+    padding: 0 8px 0 0;
+    transition: opacity 160ms cubic-bezier(.25, 1, .5, 1),
+                transform 160ms cubic-bezier(.25, 1, .5, 1);
+}
+.app-notification-item--dismissible.is-completing {
+    opacity: 0;
+    transform: translateX(12px);
+    pointer-events: none;
+}
+.app-notification-open {
+    display: grid;
+    grid-template-columns: 10px minmax(0, 1fr);
+    gap: 11px;
+    min-width: 0;
+    padding: 14px 10px 14px 18px;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+.app-notification-complete {
+    align-self: center;
+    display: inline-grid;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: 1px solid var(--brand, #0f766e);
+    border-radius: 50%;
+    background: var(--surface-0, #fff);
+    color: var(--brand, #0f766e);
+    cursor: pointer;
+    transition: background-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+.app-notification-complete:hover,
+.app-notification-complete:focus-visible {
+    background: var(--brand-soft, #d6f2ef);
+}
+.app-notification-complete:active { transform: scale(.96); }
+.app-notification-complete:disabled { cursor: wait; opacity: .65; }
+.app-notification-complete.has-error {
+    border-color: var(--error, #b42318);
+    color: var(--error, #b42318);
+}
 .app-notification-dot {
     width: 8px;
     height: 8px;
@@ -162,4 +210,6 @@
 
 @media (prefers-reduced-motion: reduce) {
     .app-notifications-spinner { animation: none; }
+    .app-notification-item--dismissible,
+    .app-notification-complete { transition: none; }
 }

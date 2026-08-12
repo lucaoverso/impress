@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Suíte Escolar - Serviços</title>
-    {% set page_styles = ["css/pages/services-scheduler.css"] %}
+    {% set page_styles = ["css/pages/services-scheduler.css", "css/pages/services-notifications-prompt.css"] %}
     {% include "includes/style_bundle.html" %}
 </head>
 
@@ -187,11 +187,43 @@
         </footer>
     </main>
 
+    <dialog id="servicesNotificationsPrompt" class="services-notifications-prompt"
+        role="dialog" aria-modal="true" aria-labelledby="servicesNotificationsPromptTitle"
+        aria-describedby="servicesNotificationsPromptCopy servicesNotificationsPromptNote">
+        <div class="services-notifications-prompt-visual" aria-hidden="true">
+            <span><i id="servicesNotificationsPromptIcon" class="bi bi-bell-fill"></i></span>
+        </div>
+        <div class="services-notifications-prompt-content">
+            <h2 id="servicesNotificationsPromptTitle">Não perca prazos importantes</h2>
+            <p id="servicesNotificationsPromptCopy" aria-live="polite">
+                Ative as notificações para receber avisos sobre prazos de anexos,
+                comunicados e outras atualizações importantes, mesmo com o sistema fechado.
+            </p>
+            <ol id="servicesNotificationsInstallSteps" class="services-notifications-install-steps" hidden>
+                <li id="servicesNotificationsInstallStepOne">No Safari, toque no botão Compartilhar.</li>
+                <li id="servicesNotificationsInstallStepTwo">Escolha “Adicionar à Tela de Início”.</li>
+                <li id="servicesNotificationsInstallStepThree">Se aparecer, ative “Abrir como App da Web” e toque em “Adicionar”.</li>
+            </ol>
+            <div class="services-notifications-prompt-actions">
+                <button id="servicesNotificationsPromptEnable" class="button button--primary" type="button">
+                    Ativar notificações
+                </button>
+                <button id="servicesNotificationsPromptLater" class="button" type="button">
+                    Agora não
+                </button>
+            </div>
+            <small id="servicesNotificationsPromptNote">
+                Você pode alterar isso a qualquer momento na Central de Notificações.
+            </small>
+        </div>
+    </dialog>
+
     <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/formatters.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/services_notifications_prompt.js') }}?v={{ asset_version | default('1') }}"></script>
     <script src="{{ request.url_for('static', path='js/servicos.js') }}?v={{ asset_version | default('1') }}"></script>
 </body>
 

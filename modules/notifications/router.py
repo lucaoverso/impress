@@ -129,6 +129,14 @@ def get_notification_batches(user=Depends(get_usuario_logado)):
     return service.list_batches()
 
 
+@router.get("/notifications/manage/batches/{batch_id}/recipients")
+def get_notification_batch_recipients(
+    batch_id: str, user=Depends(get_usuario_logado)
+):
+    exigir_gestor(user)
+    return service.list_batch_recipients(batch_id)
+
+
 @router.post("/notifications/manage/batches/{batch_id}/cancel")
 def cancel_notification_batch(
     batch_id: str, user=Depends(get_usuario_logado)

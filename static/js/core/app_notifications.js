@@ -63,34 +63,12 @@
     }
 
     function makeItem(item) {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "app-notification-item";
-        if (!item.read_at) button.classList.add("is-unread");
-        if (item.priority === "urgent") button.classList.add("is-urgent");
-        const dot = document.createElement("span");
-        dot.className = "app-notification-dot";
-        dot.setAttribute("aria-hidden", "true");
-        const copy = document.createElement("span");
-        copy.className = "app-notification-copy";
-        const title = document.createElement("strong");
-        title.textContent = item.title;
-        const body = document.createElement("span");
-        body.textContent = item.body;
-        const time = document.createElement("time");
-        time.dateTime = item.available_at;
-        time.textContent = formatTime(item.available_at);
-        copy.append(title, body, time);
-        button.append(dot, copy);
-        button.addEventListener("click", async () => {
-            if (!item.read_at) {
-                await window.AppApi.fetchJson(`/notifications/${item.id}/read`, {
-                    method: "POST", headers: headers(),
-                }).catch(() => null);
-            }
-            window.location.href = item.action_url || "/notificacoes";
+        return window.AppNotificationsDrawer.makeItem(item, {
+            formatTime,
+            headers,
+            setBadge,
+            reload: loadInbox,
         });
-        return button;
     }
 
     function renderItems(items) {
@@ -131,7 +109,9 @@
             return;
         }
         try {
-            const result = await window.AppApi.fetchJson("/notifications?page_size=8", { headers: headers() });
+            const result = await window.AppApi.fetchJson(
+                "/notifications?filter=unread&page_size=8", { headers: headers() }
+            );
             setBadge(result.unread_count);
             renderItems(result.items || []);
         } catch (_error) {

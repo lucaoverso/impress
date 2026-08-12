@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Gestão de notificações</title>
-    {% set page_styles = ["css/pages/notifications.css"] %}
+    {% set page_styles = ["css/pages/notifications.css", "css/pages/notifications-management-status.css"] %}
     {% include "includes/style_bundle.html" %}
 </head>
 <body class="notifications-page app-utility-page">
@@ -102,6 +102,33 @@
                 <div id="notificationsBatchHistory"></div>
             </aside>
         </div>
+
+        <section id="notificationBatchRecipients" class="notifications-recipient-status" hidden
+            aria-labelledby="notificationBatchRecipientsTitle">
+            <header>
+                <div>
+                    <h2 id="notificationBatchRecipientsTitle">Destinatários do aviso</h2>
+                    <p id="notificationBatchRecipientsSummary">Carregando situação dos destinatários...</p>
+                </div>
+                <button id="notificationBatchRecipientsClose" class="button" type="button">
+                    Fechar detalhes
+                </button>
+            </header>
+            <div id="notificationBatchRecipientsState" class="notifications-page-state" aria-live="polite"></div>
+            <div id="notificationBatchRecipientsTableWrap" class="notifications-recipient-status-table" hidden>
+                <table>
+                    <thead>
+                        <tr>
+                            <th scope="col">Pessoa</th>
+                            <th scope="col">Leitura</th>
+                            <th scope="col">Push</th>
+                            <th scope="col">Dispositivos</th>
+                        </tr>
+                    </thead>
+                    <tbody id="notificationBatchRecipientsBody"></tbody>
+                </table>
+            </div>
+        </section>
     </main>
 
     <dialog id="notificationConfirmDialog" class="notification-confirm-dialog">
@@ -120,6 +147,7 @@
     <script src="{{ request.url_for('static', path='js/core/auth.js') }}?v={{ asset_version }}"></script>
     <script src="{{ request.url_for('static', path='js/core/api.js') }}?v={{ asset_version }}"></script>
     <script src="{{ request.url_for('static', path='js/core/app_navbar.js') }}?v={{ asset_version }}"></script>
+    <script src="{{ request.url_for('static', path='js/notifications/manage_details.js') }}?v={{ asset_version }}"></script>
     <script src="{{ request.url_for('static', path='js/notifications/manage.js') }}?v={{ asset_version }}"></script>
 </body>
 </html>
