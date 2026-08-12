@@ -42,14 +42,6 @@ def get_post_by_id(post_id: int) -> dict | None:
         conn.close()
 
 
-def get_post_by_slug(slug: str) -> dict | None:
-    conn = get_connection()
-    try:
-        return _one(conn.execute("SELECT * FROM blog_posts WHERE slug = ?", (slug,)).fetchone())
-    finally:
-        conn.close()
-
-
 def slug_exists(slug: str, *, exclude_post_id: int | None = None) -> bool:
     conn = get_connection()
     try:
@@ -214,6 +206,34 @@ def get_image(image_id: int) -> dict | None:
         conn.close()
 
 
+def get_image_by_token(token: str) -> dict | None:
+    conn = get_connection()
+    try:
+        return _one(conn.execute("SELECT * FROM blog_images WHERE token = ?", (token,)).fetchone())
+    finally:
+        conn.close()
+
+
+def get_public_image_by_token(token: str) -> dict | None:
+    conn = get_connection()
+    try:
+        row = conn.execute(
+            """
+            SELECT i.*
+            FROM blog_images i
+            INNER JOIN blog_posts p ON p.id = i.post_id
+            WHERE i.token = ?
+              AND p.status = ?
+              AND p.published_at IS NOT NULL
+              AND p.published_at <= datetime('now')
+            """,
+            (token, PUBLIC_STATUS),
+        ).fetchone()
+        return _one(row)
+    finally:
+        conn.close()
+
+
 def list_images(post_id: int) -> list[dict]:
     conn = get_connection()
     try:
@@ -254,7 +274,9 @@ def set_cover_image(post_id: int, image_id: int) -> dict | None:
         conn.execute("UPDATE blog_images SET is_cover = 0 WHERE post_id = ?", (int(post_id),))
         conn.execute("UPDATE blog_images SET is_cover = 1 WHERE id = ?", (int(image_id),))
         conn.commit()
-        return get_image(image_id)
+        return _one(
+            conn.execute("SELECT * FROM blog_images WHERE id = ?", (int(image_id),)).fetchone()
+        )
     finally:
         conn.close()
 

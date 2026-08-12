@@ -2,8 +2,9 @@ import re
 import sqlite3
 import unicodedata
 from html.parser import HTMLParser
+from pathlib import Path
 
-from . import repository
+from . import image_service, repository
 from .models import BlogPostStatus
 from .schemas import BlogImageCreateIn, BlogImageUpdateIn, BlogPostCreateIn, BlogPostUpdateIn
 
@@ -115,7 +116,7 @@ def update_post(post_id: int, payload: BlogPostUpdateIn) -> dict:
     return updated
 
 
-def _validate_for_publication(post: dict) -> None:
+def _validate_for_publication(post: dict, *, image_dir: Path | None = None) -> None:
     if not _clean_line(post.get("summary")):
         raise BlogValidationError("Informe o resumo antes de publicar.")
     if not _visible_text(post.get("body_html", "")):
@@ -125,11 +126,20 @@ def _validate_for_publication(post: dict) -> None:
         raise BlogValidationError("Defina uma imagem de capa antes de publicar.")
     if any(not _clean_line(image.get("alt_text")) for image in images):
         raise BlogValidationError("Informe o texto alternativo de todas as imagens.")
+    for image in images:
+        stored = image_service.resolve_blog_image(
+            str(image.get("stored_name") or ""), image_dir=image_dir
+        )
+        thumbnail = image_service.resolve_blog_image(
+            str(image.get("thumbnail_name") or ""), image_dir=image_dir
+        )
+        if stored is None or thumbnail is None:
+            raise BlogValidationError("Uma ou mais imagens do artigo nao estao disponiveis.")
 
 
-def publish_post(post_id: int) -> dict:
+def publish_post(post_id: int, *, image_dir: Path | None = None) -> dict:
     post = get_post(post_id)
-    _validate_for_publication(post)
+    _validate_for_publication(post, image_dir=image_dir)
     return repository.set_post_status(int(post_id), BlogPostStatus.PUBLISHED.value) or post
 
 
@@ -165,6 +175,54 @@ def add_image(post_id: int, payload: BlogImageCreateIn) -> dict:
         raise BlogConflictError("Esta imagem ja foi vinculada a um artigo.") from exc
 
 
+def upload_image(
+    post_id: int,
+    *,
+    content: bytes,
+    content_type: str = "",
+    original_filename: str = "",
+    alt_text: str = "",
+    caption: str = "",
+    is_cover: bool = False,
+    image_dir: Path | None = None,
+) -> dict:
+    get_post(post_id)
+    if len(repository.list_images(int(post_id))) >= 20:
+        raise BlogValidationError("O artigo pode conter no maximo 20 imagens.")
+    try:
+        stored = image_service.store_blog_image(
+            content,
+            content_type=content_type,
+            original_filename=original_filename,
+            image_dir=image_dir,
+        )
+    except image_service.BlogImageValidationError as exc:
+        raise BlogValidationError(str(exc)) from exc
+
+    try:
+        return add_image(
+            int(post_id),
+            BlogImageCreateIn(
+                token=stored["token"],
+                stored_name=stored["stored_name"],
+                thumbnail_name=stored["thumbnail_name"],
+                alt_text=_clean_line(alt_text),
+                caption=_clean_line(caption),
+                width=stored["width"],
+                height=stored["height"],
+                is_cover=is_cover,
+            ),
+        )
+    except Exception:
+        try:
+            image_service.delete_blog_image_files(
+                stored["stored_name"], stored["thumbnail_name"], image_dir=image_dir
+            )
+        except OSError:
+            pass
+        raise
+
+
 def update_image(image_id: int, payload: BlogImageUpdateIn) -> dict:
     updated = repository.update_image(
         int(image_id), alt_text=_clean_line(payload.alt_text), caption=_clean_line(payload.caption)
@@ -182,11 +240,44 @@ def set_cover_image(post_id: int, image_id: int) -> dict:
     return image
 
 
-def remove_image(post_id: int, image_id: int) -> dict:
+def remove_image(post_id: int, image_id: int, *, image_dir: Path | None = None) -> dict:
     image = repository.get_image(image_id)
     if not image or int(image["post_id"]) != int(post_id):
         raise BlogNotFoundError("Imagem nao encontrada neste artigo.")
-    return repository.delete_image(image_id) or image
+    removed = repository.delete_image(image_id) or image
+    image_service.delete_blog_image_files(
+        removed["stored_name"], removed.get("thumbnail_name", ""), image_dir=image_dir
+    )
+    return removed
+
+
+def resolve_image(
+    token: str,
+    *,
+    public: bool,
+    thumbnail: bool = False,
+    image_dir: Path | None = None,
+) -> dict:
+    normalized_token = str(token or "").strip().lower()
+    image = (
+        repository.get_public_image_by_token(normalized_token)
+        if public
+        else repository.get_image_by_token(normalized_token)
+    )
+    if not image:
+        raise BlogNotFoundError("Imagem nao encontrada.")
+    filename = image.get("thumbnail_name") if thumbnail else image.get("stored_name")
+    if thumbnail and not filename:
+        filename = image.get("stored_name")
+    path = image_service.resolve_blog_image(str(filename or ""), image_dir=image_dir)
+    if path is None:
+        raise BlogNotFoundError("Imagem nao encontrada.")
+    return {
+        "path": path,
+        "filename": path.name,
+        "media_type": "image/webp",
+        "image": image,
+    }
 
 
 def list_public_posts(*, limit: int = 20, offset: int = 0) -> list[dict]:
