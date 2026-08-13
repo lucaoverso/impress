@@ -226,6 +226,42 @@
         }
     }
 
+    async function uploadPastedImage(file, insertionRange) {
+        const post = Blog.state.currentPost;
+        if (!post?.id) {
+            Blog.setMessage("Salve o artigo antes de colar imagens no texto.", "error");
+            return;
+        }
+        if (post.status === "ARCHIVED") {
+            Blog.setMessage("Restaure o artigo antes de adicionar imagens.", "error");
+            return;
+        }
+
+        const form = new FormData();
+        form.append("file", file, file.name || "imagem-colada.png");
+        form.append("alt_text", "");
+        form.append("caption", "");
+        form.append("is_cover", String((post.images || []).length === 0));
+        const richEditor = Blog.el("blogRichEditor");
+        richEditor.setAttribute("aria-busy", "true");
+        Blog.setMessage("Enviando a imagem colada...");
+        try {
+            const image = await Blog.Api.uploadImage(post.id, form);
+            post.images.push(image);
+            render();
+            Blog.Editor.insertImage(image, await getUrl(image.token), insertionRange);
+            Blog.markDirty(true);
+            Blog.setMessage(
+                "Imagem colada no texto. Preencha o texto alternativo e, se quiser, a legenda na seção Imagens.",
+                "success"
+            );
+        } catch (error) {
+            Blog.setMessage(error.message || "Não foi possível colar a imagem.", "error");
+        } finally {
+            richEditor.removeAttribute("aria-busy");
+        }
+    }
+
     function setup() {
         Blog.el("blogUploadImage").addEventListener("click", () => void upload());
         Blog.el("blogImageFile").addEventListener("change", (event) => {
@@ -235,5 +271,5 @@
         });
     }
 
-    window.BlogAdmin.Images = { setup, render, releaseUrls, getUrl };
+    window.BlogAdmin.Images = { setup, render, releaseUrls, getUrl, uploadPastedImage };
 })(window);

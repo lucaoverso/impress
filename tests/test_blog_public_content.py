@@ -43,18 +43,37 @@ class BlogPublicContentTests(unittest.TestCase):
 
     def test_only_renders_images_owned_by_the_article(self):
         result = self.sanitize(
-            f'<figure data-blog-image="{self.token}">'
+            f'<figure data-blog-image="{self.token}" data-width="50">'
             f'<img data-blog-image="{self.token}" src="https://example.com/x" onerror="x()">'
             '<figcaption>Turma apresentando o projeto</figcaption></figure>'
             f'<img data-blog-image="{"b" * 32}">'
         )
 
         self.assertIn(f'src="/blog/images/{self.token}"', result)
+        self.assertIn('data-width="50"', result)
         self.assertIn('alt="Feira de ciencias &quot;na escola&quot;"', result)
         self.assertIn("<figcaption>Turma apresentando o projeto</figcaption>", result)
         self.assertNotIn("example.com", result)
         self.assertNotIn("onerror", result)
         self.assertNotIn("b" * 32, result)
+
+    def test_image_width_uses_safe_presets_and_preserves_legacy_full_width(self):
+        resized = self.sanitize(
+            f'<figure data-blog-image="{self.token}" data-width="25">'
+            f'<img data-blog-image="{self.token}"></figure>'
+        )
+        invalid = self.sanitize(
+            f'<figure data-blog-image="{self.token}" data-width="999">'
+            f'<img data-blog-image="{self.token}"></figure>'
+        )
+        legacy = self.sanitize(
+            f'<figure data-blog-image="{self.token}">'
+            f'<img data-blog-image="{self.token}"></figure>'
+        )
+
+        self.assertIn('data-width="25"', resized)
+        self.assertIn('data-width="100"', invalid)
+        self.assertIn('data-width="100"', legacy)
 
 
 if __name__ == "__main__":

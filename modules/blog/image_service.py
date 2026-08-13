@@ -12,8 +12,7 @@ MAX_IMAGE_BYTES = 8 * 1024 * 1024
 MAX_IMAGE_DIMENSION = 2400
 THUMBNAIL_DIMENSION = 720
 MAX_SOURCE_PIXELS = 30_000_000
-ALLOWED_IMAGE_FORMATS = {"JPEG", "PNG", "WEBP"}
-ALLOWED_MIME_TYPES = {"image/jpeg", "image/jpg", "image/png", "image/webp"}
+ALLOWED_IMAGE_FORMATS = {"JPEG", "MPO", "PNG", "WEBP"}
 STORED_IMAGE_RE = re.compile(r"^[a-f0-9]{32}(?:-thumb)?\.webp$")
 
 
@@ -42,7 +41,9 @@ def _normalized_image(content: bytes) -> Image.Image:
     try:
         with Image.open(io.BytesIO(content)) as source:
             if source.format not in ALLOWED_IMAGE_FORMATS:
-                raise BlogImageValidationError("Use uma imagem JPG, PNG ou WEBP.")
+                raise BlogImageValidationError(
+                    "O arquivo deve conter uma imagem JPG, JPEG, PNG ou WEBP valida."
+                )
             if source.width * source.height > MAX_SOURCE_PIXELS:
                 raise BlogImageValidationError("A imagem possui dimensoes maiores que o permitido.")
             source.verify()
@@ -70,10 +71,8 @@ def store_blog_image(
         raise BlogImageValidationError("Selecione uma imagem.")
     if len(content) > MAX_IMAGE_BYTES:
         raise BlogImageValidationError("A imagem deve ter no maximo 8 MB.")
-    normalized_type = str(content_type or "").strip().lower()
-    if normalized_type and normalized_type not in ALLOWED_MIME_TYPES:
-        raise BlogImageValidationError("Use uma imagem JPG, PNG ou WEBP.")
-
+    # O MIME e informado pelo cliente e varia entre navegadores e sistemas.
+    # A validacao confiavel e feita pelo conteudo real decodificado pelo Pillow.
     image = _normalized_image(content)
     image.thumbnail(
         (MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION),

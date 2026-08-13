@@ -31,6 +31,20 @@
     background: var(--line);
 }
 
+.blog-image-size-controls {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 4px; padding-left: 10px;
+    border-left: 1px solid var(--line);
+}
+
+.blog-image-size-controls[hidden] { display: none; }
+
+.blog-image-size-controls > span { margin-right: 2px; color: var(--text-muted); font-size: 13px; font-weight: 700; }
+
+.blog-image-size-controls button[aria-pressed="true"] { border-color: var(--brand); background: var(--brand-soft); color: var(--brand-strong); }
+
 .blog-rich-editor {
     min-height: 360px;
     padding: 24px;
@@ -71,12 +85,18 @@
 }
 
 .blog-rich-editor figure {
-    padding: 12px;
-    border: 1px solid var(--line);
-    border-radius: var(--radius-md);
+    width: 100%;
+    padding: 12px; border: 1px solid var(--line); border-radius: var(--radius-md);
     background: var(--surface-1);
     text-align: center;
 }
+
+.blog-rich-editor figure[data-width="25"] { width: 25%; }
+.blog-rich-editor figure[data-width="50"] { width: 50%; }
+.blog-rich-editor figure[data-width="75"] { width: 75%; }
+.blog-rich-editor figure[data-width="100"] { width: 100%; }
+
+.blog-rich-editor figure[data-blog-image] { margin-inline: auto; }
 
 .blog-rich-editor figure.is-selected {
     border-color: var(--brand);
@@ -266,6 +286,7 @@
 @media (max-width: 700px) {
     .blog-rich-toolbar { overflow-x: auto; flex-wrap: nowrap; }
     .blog-rich-toolbar button { flex: 0 0 auto; }
+    .blog-image-size-controls { flex: 0 0 auto; }
     .blog-rich-editor { min-height: 300px; padding: 18px 14px; }
     .blog-image-upload { grid-template-columns: 1fr; padding: 12px; }
     .blog-file-picker { grid-column: auto; }

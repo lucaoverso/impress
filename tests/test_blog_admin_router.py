@@ -97,6 +97,16 @@ class BlogAdminRouterTests(unittest.TestCase):
         self.assertEqual(response.status_code, 201)
         return response.json()
 
+    def test_valid_jpeg_is_accepted_with_generic_browser_mime(self):
+        post = self._create_post("Imagem com MIME generico")
+        response = self.client.post(
+            f"/api/admin/blog/posts/{post['id']}/images",
+            files={"file": ("foto.JPG", _jpeg_bytes(), "application/octet-stream")},
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(response.json()["width"], 1200)
+
     def test_admin_can_manage_article_images_and_publication_lifecycle(self):
         post = self._create_post("Ação da escola")
         self.assertEqual(post["slug"], "acao-da-escola")

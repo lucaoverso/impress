@@ -108,7 +108,7 @@
                             <div class="blog-section-heading">
                                 <div>
                                     <h2 id="blogContentTitle">Conteúdo</h2>
-                                    <p>Use a barra para estruturar o texto. As imagens podem ser inseridas pela galeria.</p>
+                                    <p>Use a barra para estruturar o texto. Você também pode colar uma imagem no ponto do cursor.</p>
                                 </div>
                             </div>
                             <div id="blogEditorToolbar" class="blog-rich-toolbar" role="toolbar" aria-label="Formatação do conteúdo">
@@ -124,16 +124,22 @@
                                 <button type="button" data-blog-command="justifyLeft" aria-label="Alinhar à esquerda"><i class="bi bi-text-left" aria-hidden="true"></i></button>
                                 <button type="button" data-blog-command="justifyCenter" aria-label="Centralizar"><i class="bi bi-text-center" aria-hidden="true"></i></button>
                                 <button type="button" data-blog-command="removeFormat" aria-label="Limpar formatação" title="Limpar formatação"><i class="bi bi-eraser" aria-hidden="true"></i></button>
+                                <span id="blogImageSizeControls" class="blog-image-size-controls" role="group" aria-label="Tamanho da imagem selecionada" hidden>
+                                    <span aria-hidden="true">Imagem:</span>
+                                    {% for width in (25, 50, 75, 100) %}
+                                    <button type="button" data-blog-image-width="{{ width }}" aria-label="Usar {{ width }}% da largura" aria-pressed="false">{{ width }}%</button>
+                                    {% endfor %}
+                                </span>
                             </div>
                             <div id="blogRichEditor" class="blog-rich-editor" contenteditable="true" role="textbox" aria-multiline="true" aria-label="Conteúdo do artigo" data-placeholder="Escreva a notícia aqui..."></div>
-                            <p class="blog-editor-hint"><i class="bi bi-info-circle" aria-hidden="true"></i> Para inserir uma imagem no texto, envie-a e escolha “Inserir no artigo”.</p>
+                            <p class="blog-editor-hint"><i class="bi bi-info-circle" aria-hidden="true"></i> Cole uma imagem diretamente no texto ou, após enviá-la abaixo, posicione o cursor e escolha “Inserir no artigo”. Selecione a imagem para ajustar seu tamanho.</p>
                         </section>
 
                         <section class="blog-images-section" aria-labelledby="blogImagesTitle">
                             <div class="blog-section-heading">
                                 <div>
                                     <h2 id="blogImagesTitle">Imagens</h2>
-                                    <p>Envie até 20 imagens. Texto alternativo é obrigatório para publicar; legenda é opcional.</p>
+                                    <p>Envie até 20 imagens para a capa ou galeria. Texto alternativo é obrigatório para publicar; legenda é opcional.</p>
                                 </div>
                                 <span id="blogImageCount" class="blog-count-badge">0 de 20</span>
                             </div>
@@ -143,7 +149,7 @@
                                 <label class="blog-file-picker" for="blogImageFile">
                                     <i class="bi bi-cloud-arrow-up" aria-hidden="true"></i>
                                     <span><strong>Escolher imagem</strong><small>JPEG, PNG ou WebP · até 8 MB</small></span>
-                                    <input id="blogImageFile" type="file" accept="image/jpeg,image/png,image/webp">
+                                    <input id="blogImageFile" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
                                 </label>
                                 <label class="blog-field" for="blogImageAlt">
                                     <span>Texto alternativo</span>

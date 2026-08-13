@@ -6,6 +6,7 @@ from html.parser import HTMLParser
 _TOKEN_PATTERN = re.compile(r"^[a-f0-9]{32}$")
 _CONTAINER_TAGS = {"p", "strong", "b", "em", "i", "u", "ul", "ol", "li", "h2", "figure", "figcaption"}
 _ALIGN_PATTERN = re.compile(r"^\s*text-align\s*:\s*(left|center|right)\s*;?\s*$", re.I)
+_IMAGE_WIDTHS = {"25", "50", "75", "100"}
 
 
 class _PublicContentSanitizer(HTMLParser):
@@ -42,7 +43,9 @@ class _PublicContentSanitizer(HTMLParser):
                 rendered_attrs = f' style="text-align: {match.group(1).lower()}"'
         elif tag == "figure":
             token = values.get("data-blog-image", "").lower()
-            rendered_attrs = ' class="blog-article-figure"'
+            width = values.get("data-width", "100")
+            width = width if width in _IMAGE_WIDTHS else "100"
+            rendered_attrs = f' class="blog-article-figure" data-width="{width}"'
             if self._valid_token(token):
                 rendered_attrs += f' data-blog-image="{token}"'
 

@@ -88,12 +88,27 @@ class BlogImageProcessingTests(unittest.TestCase):
         with Image.open(self.image_dir / stored["stored_name"]) as output:
             self.assertEqual(output.mode, "RGBA")
 
+    def test_accepts_valid_jpeg_when_browser_reports_unusual_mime(self):
+        stored = image_service.store_blog_image(
+            _image_bytes(),
+            content_type="application/octet-stream",
+            original_filename="foto.JPG",
+            image_dir=self.image_dir,
+        )
+
+        self.assertEqual(stored["original_filename"], "foto.JPG")
+        self.assertTrue((self.image_dir / stored["stored_name"]).is_file())
+
     def test_rejects_invalid_type_content_and_excessive_pixels(self):
         with self.assertRaises(image_service.BlogImageValidationError):
             image_service.store_blog_image(b"nao e imagem", image_dir=self.image_dir)
-        with self.assertRaises(image_service.BlogImageValidationError):
+        with self.assertRaisesRegex(
+            image_service.BlogImageValidationError, "JPG, JPEG, PNG ou WEBP"
+        ):
             image_service.store_blog_image(
-                _image_bytes(), content_type="application/pdf", image_dir=self.image_dir
+                _image_bytes(image_format="GIF"),
+                content_type="image/jpeg",
+                image_dir=self.image_dir,
             )
         with self.assertRaises(image_service.BlogImageValidationError):
             image_service.store_blog_image(
