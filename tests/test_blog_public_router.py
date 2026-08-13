@@ -4,6 +4,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+from xml.etree import ElementTree
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
@@ -122,6 +123,7 @@ class BlogPublicRouterTests(unittest.TestCase):
         response = self.client.get("/blog/")
 
         self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["x-robots-tag"], "noindex, nofollow")
         self.assertIn("Feira cultural da escola", response.text)
         self.assertNotIn("Noticia ainda em revisao", response.text)
         self.assertIn(f"/blog/artigos/{self.published['slug']}", response.text)
@@ -146,6 +148,7 @@ class BlogPublicRouterTests(unittest.TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, b"public-image")
         self.assertIn("immutable", response.headers["cache-control"])
+        self.assertEqual(response.headers["x-robots-tag"], "noindex, noimageindex")
         self.assertEqual(
             self.client.get(f"/blog/images/{self.draft_token}").status_code,
             404,
@@ -163,6 +166,49 @@ class BlogPublicRouterTests(unittest.TestCase):
         )
         self.assertEqual(article.status_code, 200)
         self.assertIn(f'src="/images/{self.published_token}"', article.text)
+        self.assertNotIn("x-robots-tag", article.headers)
+
+    def test_robots_and_sitemap_only_advertise_public_urls(self):
+        robots = self.client.get(
+            "/robots.txt", headers={"host": "blog.eepjd.com.br"}
+        )
+        sitemap = self.client.get(
+            "/sitemap.xml", headers={"host": "blog.eepjd.com.br"}
+        )
+
+        self.assertEqual(robots.status_code, 200)
+        self.assertIn("User-agent: *", robots.text)
+        self.assertIn("Sitemap: https://blog.eepjd.com.br/sitemap.xml", robots.text)
+        self.assertEqual(sitemap.status_code, 200)
+        ElementTree.fromstring(sitemap.content)
+        self.assertIn("https://blog.eepjd.com.br/</loc>", sitemap.text)
+        self.assertIn(
+            f"https://blog.eepjd.com.br/artigos/{self.published['slug']}",
+            sitemap.text,
+        )
+        self.assertNotIn(self.draft["slug"], sitemap.text)
+        self.assertNotIn("/blog/artigos/", sitemap.text)
+
+    def test_public_host_adds_security_headers_and_removes_blog_prefix(self):
+        response = self.client.get(
+            "https://blog.eepjd.com.br/", follow_redirects=False
+        )
+        redirect = self.client.get(
+            f"/blog/artigos/{self.published['slug']}?origem=teste",
+            headers={"host": "blog.eepjd.com.br"},
+            follow_redirects=False,
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn("default-src 'self'", response.headers["content-security-policy"])
+        self.assertEqual(response.headers["x-frame-options"], "DENY")
+        self.assertEqual(response.headers["x-content-type-options"], "nosniff")
+        self.assertIn("max-age=31536000", response.headers["strict-transport-security"])
+        self.assertEqual(redirect.status_code, 308)
+        self.assertEqual(
+            redirect.headers["location"],
+            f"/artigos/{self.published['slug']}?origem=teste",
+        )
 
 
 if __name__ == "__main__":

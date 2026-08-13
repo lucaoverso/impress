@@ -88,7 +88,15 @@ Ajuste obrigatório em `.env`:
 Ajuste recomendado em `.env` para dados persistentes fora da pasta do código:
 - `DB_PATH=/opt/sistema-impress-data/impressao.db`
 - `RESOURCE_IMAGE_DIR=/opt/sistema-impress-data/resource-images`
+- `BLOG_IMAGE_DIR=/opt/sistema-impress-data/blog-images`
 - `LOG_LEVEL=INFO`
+
+Para publicar o Blog, configure também:
+- `BLOG_PUBLIC_HOST=blog.eepjd.com.br`
+- `BLOG_PUBLIC_URL=https://blog.eepjd.com.br`
+
+O procedimento completo de subdomínio, Cloudflare e validação está em
+[`docs/blog-producao.md`](docs/blog-producao.md).
 
 Ajuste recomendado para o módulo de downloads do YouTube:
 - confirme que `node` está instalado com `node --version`
@@ -107,6 +115,7 @@ Ajuste recomendado para integração FreeRADIUS:
 sudo mkdir -p /var/spool/sistema-impress
 sudo mkdir -p /opt/sistema-impress-data
 sudo mkdir -p /opt/sistema-impress-data/resource-images
+sudo mkdir -p /opt/sistema-impress-data/blog-images
 sudo chown -R sistema-impress:lp /var/spool/sistema-impress
 sudo chown -R sistema-impress:lp /opt/sistema-impress
 sudo chown -R sistema-impress:lp /opt/sistema-impress-data
@@ -175,6 +184,7 @@ sudo systemctl reload nginx
 ```bash
 curl http://127.0.0.1:8000/health
 curl http://127.0.0.1/health
+curl -I -H 'Host: blog.eepjd.com.br' http://127.0.0.1/
 ```
 
 Resultado esperado:
