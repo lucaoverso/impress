@@ -5,44 +5,55 @@
 {% endblock %}
 
 {% block content %}
-<section class="blog-home-intro">
-    <div class="blog-shell">
-        <p class="blog-home-intro__kicker">A escola em movimento</p>
-        <h1>Notícias da nossa escola</h1>
-        <p>Projetos, encontros e aprendizados que fazem parte da vida da nossa comunidade.</p>
-    </div>
+{% if featured_post %}
+<section class="blog-shell blog-hero-wrap" aria-labelledby="destaque-titulo">
+    <article class="blog-hero">
+        <a href="{{ featured_post.article_url }}" aria-labelledby="destaque-titulo">
+            <img src="{{ featured_post.cover_url }}" alt="{{ featured_post.cover_alt_text }}" width="1440" height="820" fetchpriority="high">
+            <div class="blog-hero__shade" aria-hidden="true"></div>
+            <div class="blog-hero__content">
+                <span class="blog-hero__tag">{{ featured_post.tags[0].name if featured_post.tags else "Em destaque" }}</span>
+                <h1 id="destaque-titulo">{{ featured_post.title }}</h1>
+                <p>{{ featured_post.summary }}</p>
+                <div class="blog-hero__meta">
+                    <span>{{ featured_post.published_label }}</span>
+                    <span>{{ featured_post.reading_minutes }} min de leitura</span>
+                </div>
+            </div>
+        </a>
+    </article>
 </section>
 
-{% if featured_post %}
-<section class="blog-shell blog-featured" aria-labelledby="destaque-titulo">
-    <a class="blog-featured__image" href="{{ featured_post.article_url }}" tabindex="-1" aria-hidden="true">
-        <img src="{{ featured_post.cover_url }}" alt="{{ featured_post.cover_alt_text }}" width="1200" height="800" fetchpriority="high">
-    </a>
-    <div class="blog-featured__content">
-        <p class="blog-post-date">{{ featured_post.published_label }}</p>
-        <h2 id="destaque-titulo"><a href="{{ featured_post.article_url }}">{{ featured_post.title }}</a></h2>
-        <p>{{ featured_post.summary }}</p>
-        <a class="blog-read-link" href="{{ featured_post.article_url }}">Ler a notícia <span aria-hidden="true">→</span></a>
+<nav class="blog-filter-bar" aria-label="Filtrar publicações por tag">
+    <div class="blog-shell blog-filter-bar__inner">
+        <a href="{{ blog_base_path }}/" class="blog-filter-chip{% if not selected_tag %} is-active{% endif %}"{% if not selected_tag %} aria-current="page"{% endif %}>Todos</a>
+        {% for tag in public_tags %}
+        <a href="{{ tag.url }}" class="blog-filter-chip{% if selected_tag and selected_tag.slug == tag.slug %} is-active{% endif %}"{% if selected_tag and selected_tag.slug == tag.slug %} aria-current="page"{% endif %}>{{ tag.name }} <span>{{ tag.post_count }}</span></a>
+        {% endfor %}
     </div>
-</section>
+</nav>
 
 {% if remaining_posts %}
-<section class="blog-shell blog-latest" aria-labelledby="ultimas-noticias">
+<section class="blog-shell blog-latest" aria-labelledby="ultimas-publicacoes">
     <div class="blog-section-heading">
-        <h2 id="ultimas-noticias">Mais notícias</h2>
-        <span>{{ remaining_posts | length }} {% if remaining_posts | length == 1 %}publicação{% else %}publicações{% endif %}</span>
+        <div>
+            <p>{{ selected_tag.name if selected_tag else "A escola em movimento" }}</p>
+            <h2 id="ultimas-publicacoes">Mais publicações</h2>
+        </div>
+        <span>{{ remaining_posts | length }} {% if remaining_posts | length == 1 %}artigo{% else %}artigos{% endif %}</span>
     </div>
-    <div class="blog-post-list">
+    <div class="blog-card-grid">
         {% for post in remaining_posts %}
-        <article class="blog-post-row">
-            <a class="blog-post-row__image" href="{{ post.article_url }}" tabindex="-1" aria-hidden="true">
-                <img src="{{ post.cover_thumbnail_url }}" alt="{{ post.cover_alt_text }}" width="560" height="360" loading="lazy" decoding="async">
+        <article class="blog-card">
+            <a class="blog-card__image" href="{{ post.article_url }}" tabindex="-1" aria-hidden="true">
+                <img src="{{ post.cover_thumbnail_url }}" alt="" width="640" height="420" loading="lazy" decoding="async">
             </a>
-            <div>
-                <p class="blog-post-date">{{ post.published_label }}</p>
+            <div class="blog-card__content">
+                {% if post.tags %}<a class="blog-card__tag" href="{{ post.tags[0].url }}">{{ post.tags[0].name }}</a>{% endif %}
+                <p class="blog-card__meta">{{ post.published_label }} <span aria-hidden="true">·</span> {{ post.reading_minutes }} min de leitura</p>
                 <h3><a href="{{ post.article_url }}">{{ post.title }}</a></h3>
                 <p>{{ post.summary }}</p>
-                <a class="blog-read-link" href="{{ post.article_url }}">Continuar lendo <span aria-hidden="true">→</span></a>
+                <a class="blog-card__read" href="{{ post.article_url }}">Ler artigo <span aria-hidden="true">→</span></a>
             </div>
         </article>
         {% endfor %}
@@ -52,8 +63,9 @@
 {% else %}
 <section class="blog-shell blog-empty-state">
     <img src="{{ request.url_for('static', path='img/logo_escola-256.webp') }}" alt="" width="88" height="88">
-    <h2>As primeiras notícias estão a caminho</h2>
-    <p>Em breve, este espaço reunirá projetos e acontecimentos da nossa escola.</p>
+    <h1>{% if selected_tag %}Nenhuma publicação nesta tag{% else %}As primeiras notícias estão a caminho{% endif %}</h1>
+    <p>{% if selected_tag %}Novos conteúdos de {{ selected_tag.name }} aparecerão aqui.{% else %}Em breve, este espaço reunirá projetos e acontecimentos da nossa escola.{% endif %}</p>
+    {% if selected_tag %}<a class="blog-primary-link" href="{{ blog_base_path }}/">Ver todas as publicações</a>{% endif %}
 </section>
 {% endif %}
 {% endblock %}

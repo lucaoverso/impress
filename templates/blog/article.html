@@ -10,10 +10,21 @@
 {% block content %}
 <article class="blog-article">
     <header class="blog-shell blog-article__header">
-        <a class="blog-back-link" href="{{ blog_base_path }}/"><span aria-hidden="true">←</span> Todas as notícias</a>
-        <p class="blog-post-date">{{ post.published_label }}</p>
+        {% if post.tags %}
+        <div class="blog-article__tags" aria-label="Tags do artigo">
+            {% for tag in post.tags %}<a href="{{ tag.url }}">{{ tag.name }}</a>{% endfor %}
+        </div>
+        {% endif %}
         <h1>{{ post.title }}</h1>
         <p class="blog-article__summary">{{ post.summary }}</p>
+        <div class="blog-article__meta">
+            <span class="blog-author-mark" aria-hidden="true">EP</span>
+            <span>Equipe da Escola</span>
+            <span aria-hidden="true">·</span>
+            <time>{{ post.published_label }}</time>
+            <span aria-hidden="true">·</span>
+            <span>{{ post.reading_minutes }} min de leitura</span>
+        </div>
     </header>
 
     {% if post.cover_url %}
@@ -27,6 +38,17 @@
         {{ post.body_public_html | safe }}
     </div>
 </article>
+
+{% if previous_post or next_post %}
+<nav class="blog-shell blog-post-navigation" aria-label="Navegação entre artigos">
+    {% if previous_post %}
+    <a href="{{ previous_post.article_url }}"><small>← Artigo anterior</small><strong>{{ previous_post.title }}</strong></a>
+    {% else %}<span></span>{% endif %}
+    {% if next_post %}
+    <a href="{{ next_post.article_url }}"><small>Próximo artigo →</small><strong>{{ next_post.title }}</strong></a>
+    {% endif %}
+</nav>
+{% endif %}
 
 <dialog class="blog-lightbox" data-blog-lightbox aria-label="Visualização das imagens do artigo">
     <div class="blog-lightbox__toolbar">

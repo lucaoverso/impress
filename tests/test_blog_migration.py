@@ -1,26 +1,13 @@
-import importlib.util
 import sqlite3
 import unittest
-from pathlib import Path
 
-
-MIGRATION_PATH = (
-    Path(__file__).resolve().parents[1] / "migrations" / "20260812_create_blog_module.py"
-)
-
-
-def _load_migration():
-    spec = importlib.util.spec_from_file_location("test_blog_migration_module", MIGRATION_PATH)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("Nao foi possivel carregar a migration do Blog.")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+from tests.blog_test_support import apply_blog_migrations, load_blog_migration
 
 
 class BlogMigrationTests(unittest.TestCase):
     def setUp(self):
-        self.migration = _load_migration()
+        self.migration = load_blog_migration("20260812_create_blog_module.py")
+        self.tags_migration = load_blog_migration("20260813_add_blog_tags.py")
         self.conn = sqlite3.connect(":memory:")
         self.conn.execute("PRAGMA foreign_keys = ON")
         self.conn.execute("CREATE TABLE usuarios (id INTEGER PRIMARY KEY)")
@@ -95,6 +82,24 @@ class BlogMigrationTests(unittest.TestCase):
         }
         self.assertNotIn("blog_posts", tables)
         self.assertNotIn("blog_images", tables)
+
+    def test_tag_migration_preserves_posts_and_cascades_relations(self):
+        apply_blog_migrations(self.conn)
+        post_id = self.conn.execute(
+            "INSERT INTO blog_posts (author_user_id, title, slug) VALUES (7, 'Projeto', 'projeto')"
+        ).lastrowid
+        tag_id = self.conn.execute(
+            "INSERT INTO blog_tags (name, slug) VALUES ('Projetos', 'projetos')"
+        ).lastrowid
+        self.conn.execute(
+            "INSERT INTO blog_post_tags (post_id, tag_id, position) VALUES (?, ?, 0)",
+            (post_id, tag_id),
+        )
+
+        self.tags_migration.upgrade(self.conn)
+        self.assertEqual(self.conn.execute("SELECT COUNT(*) FROM blog_posts").fetchone()[0], 1)
+        self.conn.execute("DELETE FROM blog_posts WHERE id = ?", (post_id,))
+        self.assertEqual(self.conn.execute("SELECT COUNT(*) FROM blog_post_tags").fetchone()[0], 0)
 
 
 if __name__ == "__main__":

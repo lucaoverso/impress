@@ -4,7 +4,7 @@ import unicodedata
 from html.parser import HTMLParser
 from pathlib import Path
 
-from . import image_service, repository
+from . import image_service, repository, tag_service
 from .models import BlogPostStatus
 from .schemas import BlogImageCreateIn, BlogImageUpdateIn, BlogPostCreateIn, BlogPostUpdateIn
 
@@ -71,7 +71,11 @@ def _post_values(payload: BlogPostCreateIn | BlogPostUpdateIn) -> dict:
         raise BlogValidationError("O resumo deve ter no maximo 500 caracteres.")
     if len(body_html) > 200_000:
         raise BlogValidationError("O conteudo do artigo excede o limite permitido.")
-    return {"title": title, "summary": summary, "body_html": body_html}
+    try:
+        tags = tag_service.normalize_tags(payload.tags)
+    except ValueError as exc:
+        raise BlogValidationError(str(exc)) from exc
+    return {"title": title, "summary": summary, "body_html": body_html, "tags": tags}
 
 
 def create_post(*, author_user_id: int, payload: BlogPostCreateIn) -> dict:
@@ -286,10 +290,15 @@ def resolve_image(
     }
 
 
-def list_public_posts(*, limit: int = 20, offset: int = 0) -> list[dict]:
+def list_public_posts(*, limit: int = 20, offset: int = 0, tag_slug: str = "") -> list[dict]:
     return repository.list_public_posts(
-        limit=min(50, max(1, int(limit))), offset=max(0, int(offset))
+        limit=min(50, max(1, int(limit))), offset=max(0, int(offset)),
+        tag_slug=tag_service.slugify_tag(tag_slug) if tag_slug else "",
     )
+
+
+def list_public_tags() -> list[dict]:
+    return repository.list_public_tags()
 
 
 def get_public_post(slug: str) -> dict:

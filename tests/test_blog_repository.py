@@ -1,4 +1,3 @@
-import importlib.util
 import sqlite3
 import tempfile
 import unittest
@@ -6,20 +5,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from modules.blog import repository
-
-
-MIGRATION_PATH = (
-    Path(__file__).resolve().parents[1] / "migrations" / "20260812_create_blog_module.py"
-)
-
-
-def _load_migration():
-    spec = importlib.util.spec_from_file_location("test_blog_repository_migration", MIGRATION_PATH)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("Nao foi possivel carregar a migration do Blog.")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+from tests.blog_test_support import apply_blog_migrations
 
 
 class BlogRepositoryTests(unittest.TestCase):
@@ -29,7 +15,7 @@ class BlogRepositoryTests(unittest.TestCase):
         conn = self._connect()
         conn.execute("CREATE TABLE usuarios (id INTEGER PRIMARY KEY)")
         conn.execute("INSERT INTO usuarios (id) VALUES (7)")
-        _load_migration().upgrade(conn)
+        apply_blog_migrations(conn)
         conn.close()
         self.connection_patch = patch(
             "modules.blog.repository.get_connection", side_effect=self._connect
@@ -113,6 +99,26 @@ class BlogRepositoryTests(unittest.TestCase):
 
         self.assertEqual([image["id"] for image in covers], [second["id"]])
         self.assertFalse(repository.get_image(first["id"])["is_cover"])
+
+    def test_public_posts_can_be_filtered_by_tag(self):
+        project = repository.create_post(
+            author_user_id=7, title="Projeto", slug="projeto", summary="Resumo",
+            body_html="<p>Projeto escolar</p>",
+            tags=[{"name": "Projetos", "slug": "projetos"}],
+        )
+        news = repository.create_post(
+            author_user_id=7, title="Noticia", slug="noticia", summary="Resumo",
+            body_html="<p>Noticia escolar</p>",
+            tags=[{"name": "Noticias", "slug": "noticias"}],
+        )
+        repository.set_post_status(project["id"], "PUBLISHED")
+        repository.set_post_status(news["id"], "PUBLISHED")
+
+        filtered = repository.list_public_posts(tag_slug="projetos")
+        self.assertEqual([post["id"] for post in filtered], [project["id"]])
+        self.assertEqual(filtered[0]["tags"][0]["name"], "Projetos")
+        counts = {tag["slug"]: tag["post_count"] for tag in repository.list_public_tags()}
+        self.assertEqual(counts, {"noticias": 1, "projetos": 1})
 
 
 if __name__ == "__main__":

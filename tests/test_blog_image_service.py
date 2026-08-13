@@ -1,4 +1,3 @@
-import importlib.util
 import io
 import sqlite3
 import tempfile
@@ -11,20 +10,7 @@ from PIL import Image
 from modules.blog import image_service, service
 from modules.blog.schemas import BlogPostCreateIn
 from modules.blog.service import BlogConflictError, BlogNotFoundError, BlogValidationError
-
-
-MIGRATION_PATH = (
-    Path(__file__).resolve().parents[1] / "migrations" / "20260812_create_blog_module.py"
-)
-
-
-def _load_migration():
-    spec = importlib.util.spec_from_file_location("test_blog_image_migration", MIGRATION_PATH)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("Nao foi possivel carregar a migration do Blog.")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+from tests.blog_test_support import apply_blog_migrations
 
 
 def _image_bytes(
@@ -148,7 +134,7 @@ class BlogImageAccessTests(unittest.TestCase):
         conn = self._connect()
         conn.execute("CREATE TABLE usuarios (id INTEGER PRIMARY KEY)")
         conn.execute("INSERT INTO usuarios (id) VALUES (7)")
-        _load_migration().upgrade(conn)
+        apply_blog_migrations(conn)
         conn.close()
         self.connection_patch = patch(
             "modules.blog.repository.get_connection", side_effect=self._connect

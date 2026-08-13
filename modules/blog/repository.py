@@ -1,6 +1,7 @@
 from db.core import get_connection
 
 from .models import PUBLIC_STATUS
+from . import tag_repository
 
 
 def _one(row) -> dict | None:
@@ -12,7 +13,8 @@ def _many(rows) -> list[dict]:
 
 
 def create_post(
-    *, author_user_id: int, title: str, slug: str, summary: str, body_html: str
+    *, author_user_id: int, title: str, slug: str, summary: str, body_html: str,
+    tags: list[dict] | None = None,
 ) -> dict:
     conn = get_connection()
     try:
@@ -24,10 +26,10 @@ def create_post(
             (int(author_user_id), title, slug, summary, body_html),
         )
         post_id = int(cursor.lastrowid)
+        tag_repository.replace_post_tags(conn, post_id, tags or [])
         conn.commit()
-        return (
-            _one(conn.execute("SELECT * FROM blog_posts WHERE id = ?", (post_id,)).fetchone()) or {}
-        )
+        post = _one(conn.execute("SELECT * FROM blog_posts WHERE id = ?", (post_id,)).fetchone())
+        return tag_repository.attach_tags(conn, [post])[0] if post else {}
     finally:
         conn.close()
 
@@ -35,9 +37,8 @@ def create_post(
 def get_post_by_id(post_id: int) -> dict | None:
     conn = get_connection()
     try:
-        return _one(
-            conn.execute("SELECT * FROM blog_posts WHERE id = ?", (int(post_id),)).fetchone()
-        )
+        post = _one(conn.execute("SELECT * FROM blog_posts WHERE id = ?", (int(post_id),)).fetchone())
+        return tag_repository.attach_tags(conn, [post])[0] if post else None
     finally:
         conn.close()
 
@@ -73,13 +74,14 @@ def list_posts(*, status: str | None = None, limit: int = 50, offset: int = 0) -
             """,
             params,
         ).fetchall()
-        return _many(rows)
+        return tag_repository.attach_tags(conn, _many(rows))
     finally:
         conn.close()
 
 
 def update_post(
-    post_id: int, *, title: str, slug: str, summary: str, body_html: str
+    post_id: int, *, title: str, slug: str, summary: str, body_html: str,
+    tags: list[dict] | None = None,
 ) -> dict | None:
     conn = get_connection()
     try:
@@ -92,12 +94,13 @@ def update_post(
             """,
             (title, slug, summary, body_html, int(post_id)),
         )
-        conn.commit()
         if cursor.rowcount <= 0:
+            conn.rollback()
             return None
-        return _one(
-            conn.execute("SELECT * FROM blog_posts WHERE id = ?", (int(post_id),)).fetchone()
-        )
+        tag_repository.replace_post_tags(conn, post_id, tags or [])
+        conn.commit()
+        post = _one(conn.execute("SELECT * FROM blog_posts WHERE id = ?", (int(post_id),)).fetchone())
+        return tag_repository.attach_tags(conn, [post])[0] if post else None
     finally:
         conn.close()
 
@@ -121,29 +124,35 @@ def set_post_status(post_id: int, status: str) -> dict | None:
         conn.commit()
         if cursor.rowcount <= 0:
             return None
-        return _one(
-            conn.execute("SELECT * FROM blog_posts WHERE id = ?", (int(post_id),)).fetchone()
-        )
+        post = _one(conn.execute("SELECT * FROM blog_posts WHERE id = ?", (int(post_id),)).fetchone())
+        return tag_repository.attach_tags(conn, [post])[0] if post else None
     finally:
         conn.close()
 
 
-def list_public_posts(*, limit: int = 20, offset: int = 0) -> list[dict]:
+def list_public_posts(*, limit: int = 20, offset: int = 0, tag_slug: str = "") -> list[dict]:
     conn = get_connection()
     try:
+        tag_join = "INNER JOIN blog_post_tags pt ON pt.post_id = p.id INNER JOIN blog_tags t ON t.id = pt.tag_id" if tag_slug else ""
+        tag_where = "AND t.slug = ?" if tag_slug else ""
+        params: list = [PUBLIC_STATUS]
+        if tag_slug:
+            params.append(tag_slug)
+        params.extend((max(1, int(limit)), max(0, int(offset))))
         rows = conn.execute(
-            """
+            f"""
             SELECT p.*, c.token AS cover_token, c.alt_text AS cover_alt_text, c.caption AS cover_caption
             FROM blog_posts AS p
             LEFT JOIN blog_images AS c ON c.post_id = p.id AND c.is_cover = 1
+            {tag_join}
             WHERE p.status = ? AND p.published_at IS NOT NULL
               AND p.published_at <= datetime('now')
+              {tag_where}
             ORDER BY p.published_at DESC, p.id DESC
             LIMIT ? OFFSET ?
-            """,
-            (PUBLIC_STATUS, max(1, int(limit)), max(0, int(offset))),
+            """, params,
         ).fetchall()
-        return _many(rows)
+        return tag_repository.attach_tags(conn, _many(rows))
     finally:
         conn.close()
 
@@ -161,7 +170,16 @@ def get_public_post_by_slug(slug: str) -> dict | None:
             """,
             (slug, PUBLIC_STATUS),
         ).fetchone()
-        return _one(row)
+        post = _one(row)
+        return tag_repository.attach_tags(conn, [post])[0] if post else None
+    finally:
+        conn.close()
+
+
+def list_public_tags() -> list[dict]:
+    conn = get_connection()
+    try:
+        return tag_repository.list_public_tags(conn)
     finally:
         conn.close()
 

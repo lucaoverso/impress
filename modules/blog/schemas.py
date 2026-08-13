@@ -7,6 +7,7 @@ class BlogPostCreateIn(BaseModel):
     title: str = Field(min_length=1, max_length=180)
     summary: str = Field(default="", max_length=500)
     body_html: str = Field(default="", max_length=200_000)
+    tags: list[str] = Field(default_factory=list, max_length=5)
 
 
 class BlogPostUpdateIn(BlogPostCreateIn):
@@ -24,6 +25,7 @@ class BlogPostOut(BaseModel):
     published_at: str | None = None
     created_at: str
     updated_at: str
+    tags: list[dict[str, str]] = Field(default_factory=list)
 
 
 class BlogImageCreateIn(BaseModel):

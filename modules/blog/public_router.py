@@ -1,4 +1,5 @@
 from datetime import datetime
+import re
 from xml.sax.saxutils import escape
 
 from fastapi import APIRouter, HTTPException, Query, Request, Response, status
@@ -6,7 +7,7 @@ from fastapi.responses import FileResponse
 
 from routers.config import render_template_response
 
-from . import service
+from . import service, tag_service
 from .config import BLOG_PUBLIC_HOST, BLOG_PUBLIC_URL
 from .public_content import sanitize_public_html
 
@@ -44,15 +45,29 @@ def _date_label(value) -> str:
 
 def _public_post_summary(post: dict, *, base_path: str) -> dict:
     cover_token = str(post.get("cover_token") or "")
+    words = re.findall(r"\w+", re.sub(r"<[^>]+>", " ", str(post.get("body_html") or "")))
+    tags = [
+        {**tag, "url": f"{base_path}/?tag={tag['slug']}"}
+        for tag in post.get("tags") or []
+    ]
     return {
         **post,
+        "tags": tags,
         "published_label": _date_label(post.get("published_at")),
+        "reading_minutes": max(1, round(len(words) / 200)),
         "article_url": f"{base_path}/artigos/{post['slug']}",
         "cover_url": f"{base_path}/images/{cover_token}" if cover_token else "",
         "cover_thumbnail_url": (
             f"{base_path}/images/{cover_token}?thumbnail=true" if cover_token else ""
         ),
     }
+
+
+def _public_tags(*, base_path: str) -> list[dict]:
+    return [
+        {**tag, "url": f"{base_path}/?tag={tag['slug']}"}
+        for tag in service.list_public_tags()
+    ]
 
 
 def _all_public_posts() -> list[dict]:
@@ -72,12 +87,18 @@ def _last_modified(value) -> str:
 
 
 @router.get("/", include_in_schema=False)
-def public_blog_home(request: Request):
+def public_blog_home(request: Request, tag: str = Query(default="", max_length=48)):
     base_path = _base_path(request)
+    tags = _public_tags(base_path=base_path)
+    selected_slug = tag_service.slugify_tag(tag) if tag else ""
+    selected_tag = next((item for item in tags if item["slug"] == selected_slug), None)
     posts = [
         _public_post_summary(post, base_path=base_path)
-        for post in service.list_public_posts(limit=30)
+        for post in service.list_public_posts(limit=30, tag_slug=selected_tag["slug"] if selected_tag else "")
     ]
+    canonical_url = f"{BLOG_PUBLIC_URL}/"
+    if selected_tag:
+        canonical_url += f"?tag={selected_tag['slug']}"
     response = render_template_response(
         request,
         "blog/index.html",
@@ -85,9 +106,12 @@ def public_blog_home(request: Request):
             "posts": posts,
             "featured_post": posts[0] if posts else None,
             "remaining_posts": posts[1:],
+            "public_tags": tags,
+            "navigation_tags": tags[:3],
+            "selected_tag": selected_tag,
             "blog_base_path": base_path,
-            "canonical_url": f"{BLOG_PUBLIC_URL}/",
-            "page_title": "Blog da Escola",
+            "canonical_url": canonical_url,
+            "page_title": selected_tag["name"] if selected_tag else "Blog da Escola",
             "page_description": "Noticias, projetos e historias da nossa comunidade escolar.",
         },
         cache_control="public, max-age=60, stale-while-revalidate=300",
@@ -121,12 +145,26 @@ def public_blog_article(request: Request, slug: str):
         image_base_path=f"{base_path}/images",
         images=post.get("images") or [],
     )
+    all_posts = [
+        _public_post_summary(item, base_path=base_path)
+        for item in _all_public_posts()
+    ]
+    current_index = next(
+        (index for index, item in enumerate(all_posts) if int(item["id"]) == int(post["id"])),
+        -1,
+    )
+    previous_post = all_posts[current_index + 1] if 0 <= current_index < len(all_posts) - 1 else None
+    next_post = all_posts[current_index - 1] if current_index > 0 else None
+    tags = _public_tags(base_path=base_path)
     canonical_url = f"{BLOG_PUBLIC_URL}/artigos/{post['slug']}"
     response = render_template_response(
         request,
         "blog/article.html",
         {
             "post": view,
+            "previous_post": previous_post,
+            "next_post": next_post,
+            "navigation_tags": tags[:3],
             "blog_base_path": base_path,
             "canonical_url": canonical_url,
             "page_title": str(post.get("title") or "Blog da Escola"),

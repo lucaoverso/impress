@@ -5,7 +5,8 @@
         const query = Blog.el("blogSearch").value.trim().toLocaleLowerCase("pt-BR");
         const status = Blog.el("blogStatusFilter").value;
         return Blog.state.posts.filter((post) => {
-            const matchesText = !query || String(post.title || "").toLocaleLowerCase("pt-BR").includes(query);
+            const searchable = `${post.title || ""} ${(post.tags || []).map((tag) => tag.name).join(" ")}`;
+            const matchesText = !query || searchable.toLocaleLowerCase("pt-BR").includes(query);
             return matchesText && (!status || post.status === status);
         });
     }
@@ -41,7 +42,12 @@
             status.textContent = Blog.statusInfo(post.status).label;
             const date = document.createElement("small");
             date.textContent = `Atualizado em ${Blog.formatDate(post.updated_at)}`;
-            item.append(title, status, date);
+            const tags = document.createElement("small");
+            tags.className = "blog-post-item__tags";
+            tags.textContent = (post.tags || []).map((tag) => tag.name).join(" · ");
+            item.append(title, status);
+            if (tags.textContent) item.append(tags);
+            item.append(date);
             item.addEventListener("click", () => void selectPost(post.id));
             list.appendChild(item);
         });
@@ -59,6 +65,7 @@
     function setFormLocked(locked) {
         Blog.el("blogPostTitle").disabled = locked;
         Blog.el("blogPostSummary").disabled = locked;
+        Blog.el("blogPostTags").disabled = locked;
         Blog.el("blogRichEditor").contentEditable = locked ? "false" : "true";
         Blog.el("blogEditorToolbar").querySelectorAll("button").forEach((button) => {
             button.disabled = locked;
@@ -92,6 +99,7 @@
         Blog.el("blogEditorPanel").hidden = false;
         Blog.el("blogPostTitle").value = post.title || "";
         Blog.el("blogPostSummary").value = post.summary || "";
+        Blog.el("blogPostTags").value = (post.tags || []).map((tag) => tag.name).join(", ");
         Blog.Editor.setContent(post.body_html || "");
         updateCounters();
         updateEditorHeader();
@@ -107,6 +115,7 @@
             title: "",
             summary: "",
             body_html: "",
+            tags: [],
             status: "DRAFT",
             updated_at: null,
             images: [],
@@ -127,11 +136,16 @@
     }
 
     function currentPayload() {
+        const tags = Blog.el("blogPostTags").value
+            .split(",")
+            .map((tag) => tag.trim())
+            .filter(Boolean);
         return {
             id: Blog.state.currentPost?.id || null,
             title: Blog.el("blogPostTitle").value.trim(),
             summary: Blog.el("blogPostSummary").value.trim(),
             body_html: Blog.Editor.getContent(),
+            tags,
         };
     }
 
@@ -209,7 +223,7 @@
         ["blogSearch", "blogStatusFilter"].forEach((id) => {
             Blog.el(id).addEventListener("input", renderPostList);
         });
-        ["blogPostTitle", "blogPostSummary"].forEach((id) => {
+        ["blogPostTitle", "blogPostSummary", "blogPostTags"].forEach((id) => {
             Blog.el(id).addEventListener("input", () => {
                 updateCounters();
                 Blog.markDirty(true);

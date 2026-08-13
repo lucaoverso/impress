@@ -87,6 +87,15 @@
     display: block;
 }
 
+.blog-post-item .blog-post-item__tags {
+    overflow: hidden;
+    margin-bottom: 4px;
+    color: var(--brand-strong);
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .blog-post-item strong {
     margin-bottom: 5px;
     font-size: 15px;

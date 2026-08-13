@@ -1,4 +1,3 @@
-import importlib.util
 import sqlite3
 import tempfile
 import unittest
@@ -9,20 +8,7 @@ from modules.blog.models import BlogPostStatus
 from modules.blog.schemas import BlogImageCreateIn, BlogPostCreateIn, BlogPostUpdateIn
 from modules.blog.service import BlogValidationError
 from modules.blog import service
-
-
-MIGRATION_PATH = (
-    Path(__file__).resolve().parents[1] / "migrations" / "20260812_create_blog_module.py"
-)
-
-
-def _load_migration():
-    spec = importlib.util.spec_from_file_location("test_blog_service_migration", MIGRATION_PATH)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("Nao foi possivel carregar a migration do Blog.")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+from tests.blog_test_support import apply_blog_migrations
 
 
 class BlogServiceTests(unittest.TestCase):
@@ -34,7 +20,7 @@ class BlogServiceTests(unittest.TestCase):
         conn = self._connect()
         conn.execute("CREATE TABLE usuarios (id INTEGER PRIMARY KEY)")
         conn.execute("INSERT INTO usuarios (id) VALUES (7)")
-        _load_migration().upgrade(conn)
+        apply_blog_migrations(conn)
         conn.close()
         self.connection_patch = patch(
             "modules.blog.repository.get_connection", side_effect=self._connect
@@ -130,6 +116,26 @@ class BlogServiceTests(unittest.TestCase):
 
         service.archive_post(post["id"])
         self.assertEqual(service.list_public_posts(), [])
+
+    def test_tags_are_normalized_deduplicated_and_replaced(self):
+        payload = self._payload("Projeto com tags")
+        payload.tags = [" #Projetos ", "projetos", "Vida Escolar"]
+        post = service.create_post(author_user_id=7, payload=payload)
+        self.assertEqual(post["tags"], [
+            {"name": "Projetos", "slug": "projetos"},
+            {"name": "Vida Escolar", "slug": "vida-escolar"},
+        ])
+
+        values = payload.model_dump()
+        values["tags"] = ["Eventos"]
+        updated = service.update_post(post["id"], BlogPostUpdateIn(**values))
+        self.assertEqual(updated["tags"], [{"name": "Eventos", "slug": "eventos"}])
+
+    def test_rejects_more_than_five_distinct_tags(self):
+        payload = self._payload("Tags demais")
+        payload.tags = ["Um", "Dois", "Tres", "Quatro", "Cinco", "Seis"]
+        with self.assertRaisesRegex(BlogValidationError, "no maximo 5"):
+            service.create_post(author_user_id=7, payload=payload)
 
 
 if __name__ == "__main__":

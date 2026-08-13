@@ -1,4 +1,3 @@
-import importlib.util
 import sqlite3
 import tempfile
 import unittest
@@ -13,20 +12,7 @@ from fastapi.testclient import TestClient
 from modules.blog import public_router, repository
 from modules.blog.host_middleware import BlogSubdomainMiddleware
 from routers.config import STATIC_DIR
-
-
-MIGRATION_PATH = (
-    Path(__file__).resolve().parents[1] / "migrations" / "20260812_create_blog_module.py"
-)
-
-
-def _load_migration():
-    spec = importlib.util.spec_from_file_location("test_blog_public_migration", MIGRATION_PATH)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("Nao foi possivel carregar a migration do Blog.")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+from tests.blog_test_support import apply_blog_migrations
 
 
 class BlogPublicRouterTests(unittest.TestCase):
@@ -40,7 +26,7 @@ class BlogPublicRouterTests(unittest.TestCase):
         conn = self._connect()
         conn.execute("CREATE TABLE usuarios (id INTEGER PRIMARY KEY)")
         conn.execute("INSERT INTO usuarios (id) VALUES (7)")
-        _load_migration().upgrade(conn)
+        apply_blog_migrations(conn)
         conn.close()
 
         self.connection_patch = patch(
@@ -99,6 +85,7 @@ class BlogPublicRouterTests(unittest.TestCase):
             slug=slug,
             summary="Um encontro de aprendizagem e comunidade.",
             body_html=body_html,
+            tags=[{"name": "Projetos", "slug": "projetos"}] if published else [],
         )
         repository.create_image(
             post["id"],
@@ -127,6 +114,12 @@ class BlogPublicRouterTests(unittest.TestCase):
         self.assertIn("Feira cultural da escola", response.text)
         self.assertNotIn("Noticia ainda em revisao", response.text)
         self.assertIn(f"/blog/artigos/{self.published['slug']}", response.text)
+        self.assertIn("Projetos", response.text)
+
+        filtered = self.client.get("/blog/", params={"tag": "projetos"})
+        self.assertEqual(filtered.status_code, 200)
+        self.assertIn('aria-current="page">Projetos', filtered.text)
+        self.assertIn("?tag=projetos", filtered.text)
 
     def test_article_is_sanitized_and_draft_returns_404(self):
         response = self.client.get(f"/blog/artigos/{self.published['slug']}")

@@ -1,4 +1,3 @@
-import importlib.util
 import io
 import sqlite3
 import tempfile
@@ -12,20 +11,7 @@ from PIL import Image
 
 from auth import get_usuario_logado
 from modules.blog.router import router
-
-
-MIGRATION_PATH = (
-    Path(__file__).resolve().parents[1] / "migrations" / "20260812_create_blog_module.py"
-)
-
-
-def _load_migration():
-    spec = importlib.util.spec_from_file_location("test_blog_router_migration", MIGRATION_PATH)
-    if spec is None or spec.loader is None:
-        raise RuntimeError("Nao foi possivel carregar a migration do Blog.")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
+from tests.blog_test_support import apply_blog_migrations
 
 
 def _jpeg_bytes() -> bytes:
@@ -44,7 +30,7 @@ class BlogAdminRouterTests(unittest.TestCase):
         conn = self._connect()
         conn.execute("CREATE TABLE usuarios (id INTEGER PRIMARY KEY)")
         conn.execute("INSERT INTO usuarios (id) VALUES (7)")
-        _load_migration().upgrade(conn)
+        apply_blog_migrations(conn)
         conn.close()
 
         self.connection_patch = patch(
@@ -79,6 +65,7 @@ class BlogAdminRouterTests(unittest.TestCase):
                 "title": title,
                 "summary": "Noticia da comunidade escolar",
                 "body_html": "<p>Conteudo da noticia.</p>",
+                "tags": [" Projetos ", "projetos", "Vida escolar"],
             },
         )
         self.assertEqual(response.status_code, 201)
@@ -111,6 +98,10 @@ class BlogAdminRouterTests(unittest.TestCase):
         post = self._create_post("Ação da escola")
         self.assertEqual(post["slug"], "acao-da-escola")
         self.assertEqual(post["status"], "DRAFT")
+        self.assertEqual(post["tags"], [
+            {"name": "Projetos", "slug": "projetos"},
+            {"name": "Vida escolar", "slug": "vida-escolar"},
+        ])
 
         updated = self.client.put(
             f"/api/admin/blog/posts/{post['id']}",
@@ -118,10 +109,12 @@ class BlogAdminRouterTests(unittest.TestCase):
                 "title": "Ação cultural da escola",
                 "summary": "Resumo atualizado",
                 "body_html": "<p>Conteudo atualizado.</p>",
+                "tags": ["Eventos"],
             },
         )
         self.assertEqual(updated.status_code, 200)
         self.assertEqual(updated.json()["slug"], "acao-cultural-da-escola")
+        self.assertEqual(updated.json()["tags"][0]["slug"], "eventos")
 
         image = self._upload_image(post["id"])
         cover = self.client.put(f"/api/admin/blog/posts/{post['id']}/cover/{image['id']}")

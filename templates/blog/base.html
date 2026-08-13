@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ page_title }} · Escola Estadual Padre José Daniel</title>
     <meta name="description" content="{{ page_description }}">
-    <meta name="theme-color" content="#0b5b55">
+    <meta name="theme-color" content="#075f57">
     <link rel="canonical" href="{{ canonical_url }}">
     <link rel="icon" href="{{ request.url_for('static', path='img/logo_escola-256.webp') }}">
     <meta property="og:locale" content="pt_BR">
@@ -24,15 +24,19 @@
     <header class="blog-site-header">
         <div class="blog-shell blog-site-header__inner">
             <a class="blog-brand" href="{{ blog_base_path }}/" aria-label="Página inicial do Blog da Escola">
-                <img src="{{ request.url_for('static', path='img/logo_escola-256.webp') }}" alt="" width="52" height="52">
+                <img src="{{ request.url_for('static', path='img/logo_escola-256.webp') }}" alt="" width="44" height="44">
                 <span>
-                    <strong>Blog da Escola</strong>
-                    <small>Escola Estadual Padre José Daniel</small>
+                    <strong>Escola Estadual Padre José Daniel</strong>
+                    <small>Blog da Escola</small>
                 </span>
             </a>
-            <nav aria-label="Navegação principal">
-                <a href="{{ blog_base_path }}/">Notícias</a>
+            <nav class="blog-main-nav" aria-label="Navegação principal">
+                <a href="{{ blog_base_path }}/"{% if not selected_tag %} aria-current="page"{% endif %}>Todos</a>
+                {% for nav_tag in navigation_tags | default([]) %}
+                <a href="{{ nav_tag.url }}"{% if selected_tag and selected_tag.slug == nav_tag.slug %} aria-current="page"{% endif %}>{{ nav_tag.name }}</a>
+                {% endfor %}
             </nav>
+            <a class="blog-suite-link" href="https://sistema.eepjd.com.br/">Acesso restrito</a>
         </div>
     </header>
 
@@ -40,11 +44,15 @@
 
     <footer class="blog-site-footer">
         <div class="blog-shell blog-site-footer__inner">
-            <div>
-                <strong>Escola Estadual Padre José Daniel</strong>
-                <p>Notícias, projetos e histórias da nossa comunidade escolar.</p>
-            </div>
-            <a href="{{ blog_base_path }}/">Voltar ao início</a>
+            <a class="blog-footer-brand" href="{{ blog_base_path }}/">
+                <img src="{{ request.url_for('static', path='img/logo_escola-256.webp') }}" alt="" width="38" height="38">
+                <span>Escola Estadual Padre José Daniel</span>
+            </a>
+            <nav aria-label="Navegação do rodapé">
+                <a href="{{ blog_base_path }}/">Início</a>
+                <a href="https://sistema.eepjd.com.br/">Suíte Escolar</a>
+            </nav>
+            <small>Conteúdo produzido pela comunidade escolar.</small>
         </div>
     </footer>
     {% block scripts %}{% endblock %}
