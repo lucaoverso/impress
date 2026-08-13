@@ -158,6 +158,8 @@ class BlogPublicRouterTests(unittest.TestCase):
         response = self.client.get("/", headers={"host": "blog.eepjd.com.br"})
 
         self.assertEqual(response.status_code, 200)
+        self.assertIn("Escola Estadual Padre José Daniel", response.text)
+        self.assertNotIn("Padre João D'Ávila", response.text)
         self.assertIn(f'href="/artigos/{self.published["slug"]}"', response.text)
         self.assertNotIn(f'href="/blog/artigos/{self.published["slug"]}"', response.text)
         article = self.client.get(
