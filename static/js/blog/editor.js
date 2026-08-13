@@ -17,6 +17,7 @@
             return;
         }
         if (node.nodeType !== Node.ELEMENT_NODE) return;
+        if (["FIGURE", "IMG"].includes(node.tagName) && !node.dataset.blogImage) return;
         const tag = allowedTags.has(node.tagName) ? node.tagName.toLowerCase() : null;
         const target = tag ? document.createElement(tag) : destination;
         if (tag) {
@@ -58,11 +59,40 @@
         return editor().contains(range.commonAncestorContainer) ? range.cloneRange() : null;
     }
 
-    function clipboardImage(clipboardData) {
-        return Array.from(clipboardData?.items || [])
-            .filter((item) => item.kind === "file" && item.type.startsWith("image/"))
+    function isImageFile(file) {
+        const type = String(file?.type || "").toLowerCase();
+        const name = String(file?.name || "").toLowerCase();
+        return type.startsWith("image/") || /\.(?:jpe?g|png|webp)$/.test(name);
+    }
+
+    function transferredImage(transfer) {
+        const files = Array.from(transfer?.files || []);
+        const itemFiles = Array.from(transfer?.items || [])
+            .filter((item) => item.kind === "file")
             .map((item) => item.getAsFile())
-            .find(Boolean) || null;
+            .filter(Boolean);
+        return [...files, ...itemFiles].find(isImageFile) || null;
+    }
+
+    function insertionRangeAtPoint(x, y) {
+        let range = document.caretRangeFromPoint?.(x, y) || null;
+        if (!range && document.caretPositionFromPoint) {
+            const position = document.caretPositionFromPoint(x, y);
+            if (position) {
+                range = document.createRange();
+                range.setStart(position.offsetNode, position.offset);
+                range.collapse(true);
+            }
+        }
+        return range && editor().contains(range.commonAncestorContainer)
+            ? range.cloneRange()
+            : currentInsertionRange();
+    }
+
+    function htmlContainsImage(html) {
+        if (!html) return false;
+        const parsed = new DOMParser().parseFromString(html, "text/html");
+        return Boolean(parsed.querySelector("img"));
     }
 
     function execute(command, value = null) {
@@ -111,16 +141,52 @@
         });
 
         editor().addEventListener("paste", (event) => {
-            const imageFile = clipboardImage(event.clipboardData);
+            const imageFile = transferredImage(event.clipboardData);
             if (imageFile) {
                 event.preventDefault();
-                void Blog.Images.uploadPastedImage(imageFile, currentInsertionRange());
+                void Blog.Images.uploadInlineImage(imageFile, currentInsertionRange(), "colada");
                 return;
             }
             const html = event.clipboardData?.getData("text/html");
             if (!html) return;
             event.preventDefault();
             document.execCommand("insertHTML", false, sanitizeHtml(html));
+            if (htmlContainsImage(html)) {
+                Blog.setMessage(
+                    "A imagem copiada não forneceu um arquivo. Baixe-a e arraste o arquivo para o editor.",
+                    "error"
+                );
+            }
+        });
+        editor().addEventListener("dragover", (event) => {
+            if (!Array.from(event.dataTransfer?.types || []).includes("Files")) return;
+            event.preventDefault();
+            if (event.dataTransfer) event.dataTransfer.dropEffect = "copy";
+            editor().classList.add("is-drag-over");
+        });
+        editor().addEventListener("dragleave", (event) => {
+            if (!editor().contains(event.relatedTarget)) {
+                editor().classList.remove("is-drag-over");
+            }
+        });
+        editor().addEventListener("drop", (event) => {
+            editor().classList.remove("is-drag-over");
+            const imageFile = transferredImage(event.dataTransfer);
+            const html = event.dataTransfer?.getData("text/html") || "";
+            if (!imageFile && !htmlContainsImage(html)) return;
+            event.preventDefault();
+            if (!imageFile) {
+                Blog.setMessage(
+                    "Arraste o arquivo da imagem, não a imagem diretamente de outro site.",
+                    "error"
+                );
+                return;
+            }
+            void Blog.Images.uploadInlineImage(
+                imageFile,
+                insertionRangeAtPoint(event.clientX, event.clientY),
+                "arrastada"
+            );
         });
         editor().addEventListener("click", (event) => {
             editor().querySelectorAll("figure.is-selected").forEach((item) => {

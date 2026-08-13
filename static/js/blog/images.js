@@ -226,10 +226,10 @@
         }
     }
 
-    async function uploadPastedImage(file, insertionRange) {
+    async function uploadInlineImage(file, insertionRange, source = "colada") {
         const post = Blog.state.currentPost;
         if (!post?.id) {
-            Blog.setMessage("Salve o artigo antes de colar imagens no texto.", "error");
+            Blog.setMessage("Salve o artigo antes de colar ou arrastar imagens no texto.", "error");
             return;
         }
         if (post.status === "ARCHIVED") {
@@ -238,13 +238,13 @@
         }
 
         const form = new FormData();
-        form.append("file", file, file.name || "imagem-colada.png");
+        form.append("file", file, file.name || `imagem-${source}.png`);
         form.append("alt_text", "");
         form.append("caption", "");
         form.append("is_cover", String((post.images || []).length === 0));
         const richEditor = Blog.el("blogRichEditor");
         richEditor.setAttribute("aria-busy", "true");
-        Blog.setMessage("Enviando a imagem colada...");
+        Blog.setMessage(`Enviando a imagem ${source}...`);
         try {
             const image = await Blog.Api.uploadImage(post.id, form);
             post.images.push(image);
@@ -252,11 +252,11 @@
             Blog.Editor.insertImage(image, await getUrl(image.token), insertionRange);
             Blog.markDirty(true);
             Blog.setMessage(
-                "Imagem colada no texto. Preencha o texto alternativo e, se quiser, a legenda na seção Imagens.",
+                `Imagem ${source} e selecionada. Escolha 25%, 50%, 75% ou 100% na barra e preencha o texto alternativo.`,
                 "success"
             );
         } catch (error) {
-            Blog.setMessage(error.message || "Não foi possível colar a imagem.", "error");
+            Blog.setMessage(error.message || "Não foi possível inserir a imagem.", "error");
         } finally {
             richEditor.removeAttribute("aria-busy");
         }
@@ -271,5 +271,5 @@
         });
     }
 
-    window.BlogAdmin.Images = { setup, render, releaseUrls, getUrl, uploadPastedImage };
+    window.BlogAdmin.Images = { setup, render, releaseUrls, getUrl, uploadInlineImage };
 })(window);

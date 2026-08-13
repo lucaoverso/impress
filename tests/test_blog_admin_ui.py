@@ -29,7 +29,7 @@ class BlogAdminUiTests(unittest.TestCase):
             'id="blogPageMessage"',
             'aria-live="polite"',
             'accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"',
-            "Cole uma imagem diretamente no texto",
+            "colar ou arrastar uma imagem",
             'id="blogImageSizeControls"',
             'data-blog-image-width="25"',
             'data-blog-image-width="100"',
@@ -71,11 +71,13 @@ class BlogAdminUiTests(unittest.TestCase):
         self.assertIn('const baseUrl = "/api/admin/blog"', api_script)
         self.assertIn("sanitizeHtml", editor_script)
         self.assertIn("data-blog-image", editor_script)
-        self.assertIn("clipboardImage", editor_script)
-        self.assertIn("uploadPastedImage", editor_script)
+        self.assertIn("transferredImage", editor_script)
+        self.assertIn('addEventListener("drop"', editor_script)
+        self.assertIn("uploadInlineImage", editor_script)
         self.assertIn("allowedImageWidths", editor_script)
         self.assertIn("setSelectedImageWidth", editor_script)
         self.assertIn('figure[data-width="25"]', editor_css)
+        self.assertIn(".blog-rich-editor.is-drag-over", editor_css)
         self.assertIn('.blog-article-figure[data-width="75"]', public_article_css)
         self.assertIn("Não foi possível conectar ao servidor", state_script)
         self.assertIn(".blog-editor-empty[hidden]", admin_css)
