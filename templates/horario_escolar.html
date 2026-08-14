@@ -26,6 +26,7 @@
             </div>
         </header>
 
+        {% if not somente_leitura | default(false) %}
         <section class="horario-summary-grid">
             <article class="horario-summary-card is-primary">
                 <span class="horario-summary-label">Registros carregados</span>
@@ -43,6 +44,7 @@
                 <span class="horario-summary-meta">Leitura complementar por docente.</span>
             </article>
         </section>
+        {% endif %}
 
         <section id="horarioBuilderGrid" class="horario-builder-grid">
             <article class="coordenacao-card horario-config-card">
@@ -123,6 +125,31 @@
             </article>
         </section>
 
+        {% if somente_leitura | default(false) %}
+        <section class="horario-consulta" aria-labelledby="horarioFiltroTitulo">
+            <div class="horario-consulta-heading">
+                <h2 id="horarioFiltroTitulo">Consultar horários</h2>
+                <p id="horarioFiltroDescricao">Pesquise um professor e escolha como deseja visualizar a grade.</p>
+            </div>
+            <form id="formFiltrosHorarioEscolar" class="horario-consulta-filter" role="search">
+                <label class="horario-consulta-field" for="filtroHorarioProfessorBusca">
+                    <span>Pesquisar professor</span>
+                    <input id="filtroHorarioProfessorBusca" type="search" autocomplete="off" placeholder="Digite o nome do professor">
+                </label>
+
+                <label class="horario-consulta-field" for="filtroHorarioVisualizacao">
+                    <span>Visualização</span>
+                    <select id="filtroHorarioVisualizacao">
+                        <option value="turmas">Por turma</option>
+                        <option value="professores">Por professor</option>
+                        <option value="atividades">Por aula-atividade</option>
+                    </select>
+                </label>
+
+                <button class="button button--primary btn-destaque horario-consulta-submit" type="submit">Filtrar</button>
+            </form>
+        </section>
+        {% else %}
         <section class="horario-grid">
             <article class="coordenacao-card horario-filter-card">
                 <div class="coordenacao-section-header">
@@ -131,25 +158,6 @@
                         <h2>Filtrar a grade</h2>
                         <p id="horarioFiltroDescricao">Aplique filtros para revisar a grade por turma e a leitura espelhada por professor.</p>
                     </div>
-                </div>
-
-                <div id="horarioEscopoProfessorCard" class="horario-professor-scope" hidden>
-                    <span class="horario-professor-scope-label">Modo de visualização</span>
-                    <div class="horario-professor-scope-options">
-                        <label class="horario-professor-scope-option">
-                            <input type="radio" name="horarioEscopoProfessor" value="geral" checked>
-                            <span>Horário geral</span>
-                        </label>
-                        <label class="horario-professor-scope-option">
-                            <input type="radio" name="horarioEscopoProfessor" value="colegas">
-                            <span>Somente colegas</span>
-                        </label>
-                        <label class="horario-professor-scope-option">
-                            <input type="radio" name="horarioEscopoProfessor" value="minhas">
-                            <span>Ver meu horario</span>
-                        </label>
-                    </div>
-                    <p class="horario-professor-scope-help">As aulas do professor logado aparecem destacadas no horario geral e podem ser vistas em uma grade unica ao selecionar "Ver meu horario".</p>
                 </div>
 
                 <div id="horarioVisualizacaoGestorCard" class="horario-professor-scope" hidden>
@@ -195,7 +203,20 @@
                 </form>
             </article>
         </section>
+        {% endif %}
 
+        {% if somente_leitura | default(false) %}
+        <section class="horario-board horario-consulta-board" aria-labelledby="horarioTurmasTitulo">
+            <div class="horario-consulta-results-header">
+                <div>
+                    <h2 id="horarioTurmasTitulo">Horários por turma</h2>
+                    <p id="horarioTurmasDescricao">Grade semanal organizada para consulta rápida.</p>
+                </div>
+                <span id="horarioResultadoContagem" class="horario-results-count" aria-live="polite"></span>
+            </div>
+            <div id="horarioListaTurmas" class="horario-group-stack" aria-live="polite"></div>
+        </section>
+        {% else %}
         <section class="horario-board">
             <article class="coordenacao-card horario-board-card">
                 <div class="coordenacao-section-header">
@@ -219,6 +240,7 @@
                 <div id="horarioListaProfessores" class="horario-group-stack"></div>
             </article>
         </section>
+        {% endif %}
     </main>
 
     <script src="{{ request.url_for('static', path='js/core/dom.js') }}?v={{ asset_version | default('1') }}"></script>
