@@ -2,7 +2,6 @@
     const state = { transactions: [], editingId: null, cancelId: null };
     const byId = (id) => document.getElementById(id);
     const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
-
     function currentMonth() {
         const now = new Date();
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -12,7 +11,6 @@
         const now = new Date();
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     }
-
     function dateBr(value) {
         const [year, month, day] = String(value || "").split("-");
         return day ? `${day}/${month}/${year}` : String(value || "-");
@@ -22,9 +20,8 @@
         const target = byId("financeMessage");
         target.textContent = text;
         target.classList.toggle("is-error", error);
-        if (text) target.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        if (text) target.scrollIntoView({ behavior: "auto", block: "nearest" });
     }
-
     function button(label, className, onClick, icon = "") {
         const element = document.createElement("button");
         element.type = "button";
@@ -39,7 +36,6 @@
         element.addEventListener("click", onClick);
         return element;
     }
-
     function renderSummary(summary) {
         byId("financeIncome").textContent = money.format(Number(summary.income_cents || 0) / 100);
         byId("financeExpense").textContent = money.format(Number(summary.expense_cents || 0) / 100);
@@ -53,7 +49,6 @@
             ? `${active} lançamento(s) ativo(s) e ${canceled} cancelado(s).`
             : "Nenhum lançamento neste mês.";
     }
-
     function attachmentList(transaction) {
         const list = document.createElement("div");
         list.className = "finance-attachments";
@@ -74,7 +69,6 @@
         });
         return list;
     }
-
     function cell(label, content, className = "") {
         const td = document.createElement("td");
         td.dataset.label = label;
@@ -183,7 +177,7 @@
         }
         byId("financeFormPanel").hidden = false;
         byId("financeDescription").focus();
-        byId("financeFormPanel").scrollIntoView({ behavior: "smooth", block: "start" });
+        byId("financeFormPanel").scrollIntoView({ behavior: "auto", block: "start" });
     }
 
     function closeForm() {

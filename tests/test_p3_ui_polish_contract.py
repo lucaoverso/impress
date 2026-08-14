@@ -66,7 +66,7 @@ class P3UiPolishContractTest(unittest.TestCase):
         templates = list((ROOT / "modules" / "admin" / "templates" / "admin").glob("*.html"))
         consumers = [path for path in templates if "navbar_context" in path.read_text(encoding="utf-8")]
 
-        self.assertEqual(len(consumers), 9)
+        self.assertEqual(len(consumers), 10)
         for template in consumers:
                 self.assertIn('"Painel de gestão"', template.read_text(encoding="utf-8"))
 
