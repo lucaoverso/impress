@@ -40,6 +40,7 @@ class AdminPageAssetsTests(unittest.TestCase):
             "relatorios": {"relatorios.js", "relatorios-page.js"},
             "auditoria": {"audit.js", "auditoria-page.js"},
             "blog": set(),
+            "financeiro": {"finance/api.js", "finance/page.js"},
         }
 
         for pagina, esperados in scripts_por_pagina.items():

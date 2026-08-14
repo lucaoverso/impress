@@ -1,0 +1,202 @@
+.finance-ledger {
+    min-height: 280px;
+}
+
+.finance-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+}
+
+.finance-table {
+    width: 100%;
+    min-width: 900px;
+    border-collapse: collapse;
+}
+
+.finance-table th,
+.finance-table td {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--line-soft);
+    text-align: left;
+    vertical-align: top;
+}
+
+.finance-table th {
+    background: var(--surface-1);
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.finance-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.finance-table tbody tr:hover {
+    background: #f8fcfb;
+}
+
+.finance-table tr.is-canceled {
+    background: var(--surface-2);
+    color: var(--text-muted);
+}
+
+.finance-description {
+    display: grid;
+    gap: var(--space-1);
+    min-width: 240px;
+}
+
+.finance-description small {
+    color: var(--text-muted);
+}
+
+.finance-cancellation-reason {
+    color: var(--state-danger-text) !important;
+}
+
+.finance-value {
+    white-space: nowrap;
+    font-weight: 700;
+}
+
+.finance-type,
+.finance-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.finance-type.is-income {
+    background: var(--state-success-bg);
+    color: var(--state-success-text);
+}
+
+.finance-type.is-expense {
+    background: var(--surface-2);
+    color: var(--text-main);
+}
+
+.finance-status {
+    background: var(--state-danger-bg-strong);
+    color: var(--state-danger-text);
+}
+
+.finance-row-actions {
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.finance-row-actions .button {
+    min-height: 36px;
+    padding: 6px 9px;
+}
+
+.finance-row-actions .button i,
+.finance-header .button i,
+.finance-toolbar .button i,
+.finance-attachment-link i {
+    margin-right: 6px;
+}
+
+.finance-row-actions .is-danger,
+.finance-attachment-remove {
+    color: var(--state-danger-text);
+}
+
+.finance-attachments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-2);
+    margin-top: var(--space-1);
+}
+
+.finance-attachments > span {
+    display: inline-flex;
+    align-items: center;
+    border: 1px solid var(--line-soft);
+    border-radius: var(--radius-sm);
+    background: var(--surface-0);
+}
+
+.finance-attachment-link,
+.finance-attachment-remove {
+    min-height: 32px;
+    padding: 4px 8px;
+    border: 0;
+    border-radius: var(--radius-sm);
+    background: transparent;
+    font-size: 12px;
+}
+
+.finance-loading,
+.finance-empty {
+    padding: 44px var(--space-6);
+    text-align: center;
+    color: var(--text-muted);
+}
+
+.finance-empty i {
+    display: block;
+    color: var(--brand);
+    font-size: 34px;
+    margin-bottom: var(--space-2);
+}
+
+.finance-empty h3 {
+    font-size: 18px;
+    margin-bottom: var(--space-1);
+}
+
+.finance-empty p {
+    margin: 0 auto var(--space-4);
+    max-width: 52ch;
+}
+
+.finance-message {
+    min-height: 24px;
+    margin-top: var(--space-4);
+    color: var(--brand-strong);
+    font-weight: 700;
+}
+
+.finance-message.is-error {
+    color: var(--state-danger-text);
+}
+
+.finance-dialog {
+    width: min(520px, calc(100% - 24px));
+    margin: auto;
+    padding: 0;
+    border: 0;
+    border-radius: var(--radius-modal);
+    box-shadow: var(--shadow-floating);
+}
+
+.finance-dialog::backdrop {
+    background: var(--overlay-scrim);
+}
+
+.finance-dialog form {
+    display: grid;
+    gap: var(--space-3);
+    padding: var(--space-6);
+}
+
+.finance-dialog h2 {
+    font-size: 22px;
+}
+
+.finance-dialog p {
+    color: var(--text-muted);
+}
+
+.finance-dialog-actions {
+    justify-content: flex-end;
+    margin-top: var(--space-2);
+}

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão financeira - Administração</title>
+    {% set page_styles = [
+        "css/pages/admin.css",
+        "css/pages/admin-finance.css",
+        "css/pages/admin-finance-ledger.css",
+        "css/pages/admin-finance-responsive.css"
+    ] %}
+    {% include "includes/style_bundle.html" %}
+</head>
+<body data-admin-active-tab="financeiro">
+    {% set navbar_context = "Painel de gestão" %}
+    {% set navbar_current = "gestao" %}
+    {% include "includes/app_navbar.html" %}
+    {% set admin_active_tab = "financeiro" %}
+    {% include "includes/app_sidebar_config.html" %}
+
+    <main class="finance-page admin-only page-shell page-shell--wide" data-admin-only="true">
+        <header class="finance-header page-header">
+            <div class="page-header-main">
+                <h1 class="page-title">Gestão financeira</h1>
+                <p>Registre entradas e gastos e prepare a prestação de contas de cada mês.</p>
+            </div>
+            <button id="financeNewButton" class="button button--primary" type="button">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                Novo lançamento
+            </button>
+        </header>
+
+        <section class="finance-toolbar" aria-label="Período da prestação de contas">
+            <label for="financeMonth">Mês de referência</label>
+            <input id="financeMonth" type="month">
+            <label class="finance-status-filter" for="financeStatusFilter">Exibir</label>
+            <select id="financeStatusFilter">
+                <option value="">Todos os lançamentos</option>
+                <option value="ACTIVE">Somente ativos</option>
+                <option value="CANCELED">Somente cancelados</option>
+            </select>
+            <button id="financeReportButton" class="button button--secondary" type="button">
+                <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+                Gerar prestação de contas
+            </button>
+        </section>
+
+        <section class="finance-summary" aria-label="Resumo financeiro do mês">
+            <div>
+                <span>Entradas</span>
+                <strong id="financeIncome">R$ 0,00</strong>
+            </div>
+            <div>
+                <span>Gastos</span>
+                <strong id="financeExpense">R$ 0,00</strong>
+            </div>
+            <div>
+                <span>Saldo do período</span>
+                <strong id="financeBalance">R$ 0,00</strong>
+            </div>
+            <p id="financeSummaryMeta">Nenhum lançamento neste mês.</p>
+        </section>
+
+        <section id="financeFormPanel" class="finance-form-panel" aria-labelledby="financeFormTitle" hidden>
+            <div class="finance-section-heading">
+                <div>
+                    <h2 id="financeFormTitle">Novo lançamento</h2>
+                    <p>Preencha os dados do movimento. O comprovante pode ser PDF, JPG ou PNG.</p>
+                </div>
+                <button id="financeCloseForm" class="button button--quiet" type="button" aria-label="Fechar formulário">
+                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                    Fechar
+                </button>
+            </div>
+
+            <form id="financeForm" class="finance-form">
+                <div class="finance-field">
+                    <label for="financeType">Tipo</label>
+                    <select id="financeType" required>
+                        <option value="EXPENSE">Gasto</option>
+                        <option value="INCOME">Entrada</option>
+                    </select>
+                </div>
+                <div class="finance-field">
+                    <label for="financeDate">Data</label>
+                    <input id="financeDate" type="date" required>
+                </div>
+                <div class="finance-field finance-field--wide">
+                    <label for="financeDescription">Descrição</label>
+                    <input id="financeDescription" type="text" maxlength="180" required placeholder="Ex.: Compra de materiais para a biblioteca">
+                </div>
+                <div class="finance-field">
+                    <label for="financeCategory">Categoria</label>
+                    <input id="financeCategory" type="text" maxlength="100" required list="financeCategorySuggestions" placeholder="Selecione ou digite">
+                    <datalist id="financeCategorySuggestions">
+                        <option value="Alimentação"></option>
+                        <option value="Doações"></option>
+                        <option value="Eventos"></option>
+                        <option value="Manutenção"></option>
+                        <option value="Material pedagógico"></option>
+                        <option value="Repasses"></option>
+                        <option value="Serviços"></option>
+                        <option value="Transporte"></option>
+                        <option value="Outros"></option>
+                    </datalist>
+                </div>
+                <div class="finance-field">
+                    <label for="financeAmount">Valor</label>
+                    <div class="finance-money-field">
+                        <span aria-hidden="true">R$</span>
+                        <input id="financeAmount" type="number" min="0.01" max="9999999999.99" step="0.01" inputmode="decimal" required placeholder="0,00">
+                    </div>
+                </div>
+                <div class="finance-field finance-field--wide">
+                    <label for="financeCounterparty">Origem ou destinatário <span>(opcional)</span></label>
+                    <input id="financeCounterparty" type="text" maxlength="160" placeholder="Ex.: Associação de pais ou Papelaria Central">
+                </div>
+                <div class="finance-field finance-field--wide">
+                    <label for="financeNotes">Observações <span>(opcional)</span></label>
+                    <textarea id="financeNotes" maxlength="1000" rows="3" placeholder="Informações que ajudem a explicar este lançamento"></textarea>
+                </div>
+                <div class="finance-field finance-field--wide">
+                    <label for="financeAttachment">Nota fiscal ou comprovante <span>(opcional, até 10 MB)</span></label>
+                    <input id="financeAttachment" type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+                    <small>Ao editar, um novo arquivo será acrescentado aos comprovantes existentes.</small>
+                </div>
+                <div class="finance-form-actions">
+                    <button id="financeSaveButton" class="button button--primary" type="submit">Salvar lançamento</button>
+                    <button id="financeCancelForm" class="button button--secondary" type="button">Cancelar</button>
+                </div>
+            </form>
+        </section>
+
+        <section class="finance-ledger" aria-labelledby="financeLedgerTitle">
+            <div class="finance-section-heading">
+                <div>
+                    <h2 id="financeLedgerTitle">Movimentações do mês</h2>
+                    <p id="financeLedgerDescription">Entradas e gastos registrados no período selecionado.</p>
+                </div>
+            </div>
+
+            <div id="financeLoading" class="finance-loading" role="status">Carregando lançamentos…</div>
+            <div id="financeTableWrap" class="finance-table-wrap" hidden>
+                <table class="finance-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">Data</th>
+                            <th scope="col">Descrição</th>
+                            <th scope="col">Categoria</th>
+                            <th scope="col">Tipo</th>
+                            <th scope="col">Valor</th>
+                            <th scope="col"><span class="sr-only">Ações</span></th>
+                        </tr>
+                    </thead>
+                    <tbody id="financeTransactions"></tbody>
+                </table>
+            </div>
+            <div id="financeEmpty" class="finance-empty" hidden>
+                <i class="bi bi-receipt" aria-hidden="true"></i>
+                <h3>Nenhum lançamento neste período</h3>
+                <p>Registre a primeira entrada ou gasto para começar a prestação de contas.</p>
+                <button id="financeEmptyAction" class="button button--primary" type="button">Criar lançamento</button>
+            </div>
+        </section>
+
+        <p id="financeMessage" class="finance-message" role="status" aria-live="polite"></p>
+    </main>
+
+    <dialog id="financeCancelDialog" class="finance-dialog" aria-labelledby="financeCancelTitle">
+        <form id="financeCancelDialogForm" method="dialog">
+            <h2 id="financeCancelTitle">Cancelar lançamento</h2>
+            <p>O registro continuará no histórico, mas deixará de compor os totais e o relatório mensal.</p>
+            <label for="financeCancellationReason">Motivo do cancelamento</label>
+            <textarea id="financeCancellationReason" maxlength="300" required rows="3"></textarea>
+            <div class="finance-dialog-actions">
+                <button id="financeConfirmCancel" class="button button--danger" type="submit" value="confirm">Confirmar cancelamento</button>
+                <button class="button button--secondary" type="submit" value="close">Voltar</button>
+            </div>
+        </form>
+    </dialog>
+
+    {% include "admin/_base_scripts.html" %}
+    <script src="{{ request.url_for('static', path='js/admin/finance/api.js') }}?v={{ asset_version | default('1') }}"></script>
+    <script src="{{ request.url_for('static', path='js/admin/finance/page.js') }}?v={{ asset_version | default('1') }}"></script>
+</body>
+</html>

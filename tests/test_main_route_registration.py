@@ -33,6 +33,8 @@ class MainRouteRegistrationTest(unittest.TestCase):
         self.assertIn(("GET", "/admin"), registered)
         self.assertIn(("GET", "/admin/turmas"), registered)
         self.assertIn(("GET", "/admin/recursos"), registered)
+        self.assertIn(("GET", "/admin/financeiro"), registered)
+        self.assertIn(("GET", "/api/admin/finance/summary"), registered)
         self.assertIn(("PATCH", "/me/profile"), registered)
         self.assertIn(("GET", "/me/profile/overview"), registered)
         self.assertIn(("GET", "/me/profile/students"), registered)

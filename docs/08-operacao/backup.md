@@ -8,6 +8,7 @@
 | Spool | `SPOOL_DIR`, recomendado como `/var/spool/sistema-impress`. | Contem arquivos enviados/preparados e historico reutilizavel para preview/reimpressao quando `KEEP_SPOOL_FILES=true`. | Confirmada pelo codigo |
 | `.env` | `/opt/sistema-impress/.env` no deploy local. | Contem configuracoes operacionais e segredos como `RADIUS_INTERNAL_SECRET`. | Confirmada pela documentacao |
 | Arquivos APC/downloads | `APC_DIR` e subpastas dentro de `SPOOL_DIR`. | Dados de apoio operacional. | Inferida |
+| Comprovantes financeiros | `FINANCE_ATTACHMENT_DIR`, recomendado como `/opt/sistema-impress-data/finance-attachments`. | Contem notas fiscais e comprovantes vinculados aos lancamentos financeiros. | Confirmada pelo codigo |
 
 ## Backup automatico
 
@@ -23,6 +24,7 @@ Pelo desenho atual, uma restauracao manual precisaria preservar coerencia entre:
 
 - arquivo SQLite apontado por `DB_PATH`;
 - arquivos fisicos em `SPOOL_DIR`;
+- comprovantes privados em `FINANCE_ATTACHMENT_DIR`;
 - configuracoes em `.env`;
 - versao do codigo/migrations.
 
